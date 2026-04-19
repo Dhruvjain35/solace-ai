@@ -266,7 +266,7 @@ export default function ClinicianDashboard() {
           <img
             src="/solace-logo.png"
             alt="Solace"
-            className="h-28 w-auto -ml-3 select-none"
+            className="h-16 w-auto select-none"
             draggable={false}
           />
           <p className="text-sm text-text-muted leading-tight mt-2">Clinician Terminal</p>
