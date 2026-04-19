@@ -1,23 +1,17 @@
 import { useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-import { loadRuntimeConfig } from "../lib/runtime-config";
-import { useEffect, useState } from "react";
 
 /**
  * Standalone QR-code page for the demo. Shows a large, high-contrast code
  * pointing at the patient-intake URL for the given hospital. Intended to be
  * displayed on a laptop / kiosk so judges can scan from their phones.
+ *
+ * Uses window.location.origin so each deployment (Amplify, Vercel, local
+ * tunnel) self-references — the QR always points at the same host serving it.
  */
 export default function QRCard() {
   const { hospitalId = "demo" } = useParams();
-  const [origin, setOrigin] = useState<string>("");
-
-  useEffect(() => {
-    loadRuntimeConfig()
-      .then((cfg) => setOrigin(cfg.publicUrl || window.location.origin))
-      .catch(() => setOrigin(window.location.origin));
-  }, []);
-
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const intakeUrl = origin ? `${origin.replace(/\/$/, "")}/${hospitalId}` : "";
 
   return (
