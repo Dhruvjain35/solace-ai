@@ -66,7 +66,15 @@ export function InsuranceScanner({ hospitalId, value, onChange, onSkip }: Props)
         onChange({ ...EMPTY, ...resp.fields });
       }
     } catch (e: any) {
-      setError(e?.message || "Scan failed.");
+      const status = e?.response?.status;
+      const detail: string | undefined = e?.response?.data?.detail;
+      const msg =
+        status === 415
+          ? "Try a JPEG or PNG — your phone's HEIC format isn't supported."
+          : status === 413
+          ? "Photo is too large — try a closer crop."
+          : detail || e?.message || "Couldn't send the photo. Check your connection and retake.";
+      setError(msg);
       onChange({ ...EMPTY });
     } finally {
       setBusy(false);
