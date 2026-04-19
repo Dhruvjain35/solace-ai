@@ -30,8 +30,6 @@ const emptyMedical: MedicalInfo = {
   smoker: null,
 };
 
-const HOSPITAL_NAME = "Solace";
-
 const stepOrder: Step[] = ["welcome", "medical", "insurance", "record", "followups", "submitting"];
 
 export default function PatientIntake() {
@@ -214,15 +212,12 @@ export default function PatientIntake() {
               <ArrowLeft size={20} />
             </button>
           )}
-          <div className="flex flex-col gap-0.5">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-text-muted">{HOSPITAL_NAME}</div>
-            <img
-              src="/solace-logo.png"
-              alt="Solace"
-              className="h-10 w-auto -ml-1 select-none"
-              draggable={false}
-            />
-          </div>
+          <img
+            src="/solace-logo.png"
+            alt="Solace"
+            className="h-20 w-auto -ml-2 select-none"
+            draggable={false}
+          />
         </div>
         {step !== "submitting" && <ProgressDots total={stepOrder.length - 1} current={stepIndex} />}
       </header>

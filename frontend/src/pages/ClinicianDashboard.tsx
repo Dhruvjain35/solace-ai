@@ -266,10 +266,10 @@ export default function ClinicianDashboard() {
           <img
             src="/solace-logo.png"
             alt="Solace"
-            className="h-16 w-auto -ml-2 select-none"
+            className="h-28 w-auto -ml-3 select-none"
             draggable={false}
           />
-          <p className="text-sm text-text-muted leading-tight mt-1">Clinician Terminal</p>
+          <p className="text-sm text-text-muted leading-tight mt-2">Clinician Terminal</p>
         </div>
         {session && (
           <div className="flex items-center gap-3 bg-surface-lowest rounded-lg px-3 py-2.5 shadow-soft">

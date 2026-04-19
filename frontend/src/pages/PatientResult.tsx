@@ -71,17 +71,12 @@ export default function PatientResult() {
           className="flex items-start justify-between pt-6"
           style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))" }}
         >
-          <div className="flex flex-col gap-1">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-text-muted">
-              Your ER companion
-            </div>
-            <img
-              src="/solace-logo.png"
-              alt="Solace"
-              className="h-12 w-auto -ml-1 select-none"
-              draggable={false}
-            />
-          </div>
+          <img
+            src="/solace-logo.png"
+            alt="Solace"
+            className="h-20 w-auto -ml-2 select-none"
+            draggable={false}
+          />
           {result.language && result.language !== "en" && (
             <span className="text-[11px] uppercase tracking-wide text-text-muted bg-surface-low px-2 py-1 rounded font-mono">
               {result.language}
