@@ -25,13 +25,13 @@ apigw = boto3.client("apigatewayv2", region_name=REGION)
 
 NONCE_TABLE = "solace-intake-nonces"
 ROUTE_THROTTLES = {
-    # Expensive endpoints — tight burst so 5 parallel hits can't instantly burn cost
-    "POST /api/{hospital_id}/intake":            {"rps": 0.5, "burst": 2},
-    "POST /api/{hospital_id}/transcribe":        {"rps": 0.5, "burst": 2},
-    "POST /api/{hospital_id}/scan-insurance":    {"rps": 0.5, "burst": 2},
-    # Cheap endpoints — can absorb normal traffic spikes
-    "POST /api/{hospital_id}/start-intake":      {"rps": 1.0, "burst": 10},
-    "GET /api/{hospital_id}/public-patients/{patient_id}": {"rps": 2.0, "burst": 20},
+    # Per-identity quota + blocklist do the cost-bounding; the API-GW layer just
+    # has to stay out of the way of legitimate demos. 0.5rps was 429ing real users.
+    "POST /api/{hospital_id}/intake":            {"rps": 5.0, "burst": 15},
+    "POST /api/{hospital_id}/transcribe":        {"rps": 5.0, "burst": 15},
+    "POST /api/{hospital_id}/scan-insurance":    {"rps": 5.0, "burst": 15},
+    "POST /api/{hospital_id}/start-intake":      {"rps": 5.0, "burst": 25},
+    "GET /api/{hospital_id}/public-patients/{patient_id}": {"rps": 10.0, "burst": 40},
 }
 
 EXTRA_TABLES = [
