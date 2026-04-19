@@ -1,0 +1,201 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DynamoDBSolaceTables",
+      "Effect": "Allow",
+      "Action": "dynamodb:*",
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:704229156617:table/solace-*",
+        "arn:aws:dynamodb:us-east-1:704229156617:table/solace-*/index/*"
+      ]
+    },
+    {
+      "Sid": "S3SolaceBuckets",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::solace-*",
+        "arn:aws:s3:::solace-*/*"
+      ]
+    },
+    {
+      "Sid": "S3ListAll",
+      "Effect": "Allow",
+      "Action": "s3:ListAllMyBuckets",
+      "Resource": "*"
+    },
+    {
+      "Sid": "LambdaSolaceFunction",
+      "Effect": "Allow",
+      "Action": "lambda:*",
+      "Resource": [
+        "arn:aws:lambda:us-east-1:704229156617:function:solace-*",
+        "arn:aws:lambda:us-east-1:704229156617:function:solace-*:*"
+      ]
+    },
+    {
+      "Sid": "LambdaListAll",
+      "Effect": "Allow",
+      "Action": ["lambda:ListFunctions", "lambda:GetAccountSettings"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECRSolaceRepo",
+      "Effect": "Allow",
+      "Action": ["ecr:*"],
+      "Resource": "arn:aws:ecr:us-east-1:704229156617:repository/solace-*"
+    },
+    {
+      "Sid": "ECRAuthToken",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "APIGatewayV2",
+      "Effect": "Allow",
+      "Action": "apigateway:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudFrontFullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:GetDistribution",
+        "cloudfront:GetDistributionConfig",
+        "cloudfront:UpdateDistribution",
+        "cloudfront:CreateDistribution",
+        "cloudfront:ListDistributions",
+        "cloudfront:CreateInvalidation",
+        "cloudfront:ListInvalidations"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "WAFv2",
+      "Effect": "Allow",
+      "Action": "wafv2:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AmplifyHosting",
+      "Effect": "Allow",
+      "Action": "amplify:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudTrail",
+      "Effect": "Allow",
+      "Action": ["cloudtrail:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KMSSolaceKey",
+      "Effect": "Allow",
+      "Action": "kms:*",
+      "Resource": "arn:aws:kms:us-east-1:704229156617:key/66c32010-5752-4b1d-8efe-bc317a44cb23"
+    },
+    {
+      "Sid": "KMSList",
+      "Effect": "Allow",
+      "Action": ["kms:ListKeys", "kms:ListAliases", "kms:DescribeKey"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManagerSolace",
+      "Effect": "Allow",
+      "Action": "secretsmanager:*",
+      "Resource": [
+        "arn:aws:secretsmanager:us-east-1:704229156617:secret:solace/*"
+      ]
+    },
+    {
+      "Sid": "EventBridgeSolace",
+      "Effect": "Allow",
+      "Action": "events:*",
+      "Resource": [
+        "arn:aws:events:us-east-1:704229156617:rule/solace-*"
+      ]
+    },
+    {
+      "Sid": "SNSSolace",
+      "Effect": "Allow",
+      "Action": "sns:*",
+      "Resource": "arn:aws:sns:us-east-1:704229156617:solace-*"
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:StartQuery",
+        "logs:GetQueryResults",
+        "logs:PutRetentionPolicy",
+        "logs:CreateLogGroup"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-1:704229156617:log-group:/aws/lambda/solace-*",
+        "arn:aws:logs:us-east-1:704229156617:log-group:/aws/lambda/solace-*:*"
+      ]
+    },
+    {
+      "Sid": "CloudWatchMetrics",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:GetMetricData",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "iam:List*",
+        "iam:Get*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMManageSolaceRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PutRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::704229156617:role/solace-*"
+      ]
+    },
+    {
+      "Sid": "STSIdentity",
+      "Effect": "Allow",
+      "Action": ["sts:GetCallerIdentity", "sts:GetAccessKeyInfo"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "GuardDuty",
+      "Effect": "Allow",
+      "Action": ["guardduty:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AccountServiceQuotas",
+      "Effect": "Allow",
+      "Action": [
+        "servicequotas:GetServiceQuota",
+        "servicequotas:RequestServiceQuotaIncrease",
+        "servicequotas:ListServiceQuotas"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

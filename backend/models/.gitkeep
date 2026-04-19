@@ -1,0 +1,6 @@
+# Drop Triageist pickle files here:
+#   - lgbm_model.pkl
+#   - xgb_model.pkl
+#   - catboost_model.cbm
+#
+# Until they're here, backend/services/triage.py falls back to a heuristic stub.

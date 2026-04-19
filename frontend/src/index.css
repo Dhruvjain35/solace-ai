@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Clinical Sanctuary tokens */
+  --color-primary: #2a474e;
+  --color-primary-container: #3b5e67;
+  --color-primary-hover: #223b41;
+  --color-primary-fixed: #cbe3e9;
+  --color-primary-dim: #d8ecf0;
+  --color-secondary: #406372;
+  --color-secondary-container: #cadce7;
+
+  --surface: #f8f9f9;
+  --surface-lowest: #ffffff;
+  --surface-low: #f3f4f4;
+  --surface-high: #e7e8e8;
+
+  --ink: #1a2023;
+  --text-muted: #4a5557;
+  --line: rgba(74, 85, 87, 0.2);
+
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+
+  --shadow-soft: 0 4px 16px rgba(42, 71, 78, 0.04);
+  --shadow-card: 0 8px 24px rgba(42, 71, 78, 0.06);
+  --shadow-lifted: 0 16px 48px rgba(42, 71, 78, 0.08);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+.editorial {
+  letter-spacing: -0.03em;
+  font-feature-settings: "ss01", "cv11";
+}
+
+h1 {
+  letter-spacing: -0.04em;
+}
+
+/* No-line rule enforcement — sections rely on surface tiers. */
+.section-surface {
+  background: var(--surface);
+}
+.section-low {
+  background: var(--surface-low);
+}
+.section-lowest {
+  background: var(--surface-lowest);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

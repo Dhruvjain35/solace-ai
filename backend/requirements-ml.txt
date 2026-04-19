@@ -1,0 +1,10 @@
+# ML deps for the real Triageist ensemble. Heavy install (~5 min first time on macOS).
+# Install AFTER requirements.txt, only needed when pickle files are in backend/models/.
+
+numpy==2.1.2
+pandas==2.2.3
+scikit-learn==1.5.2
+lightgbm==4.5.0
+xgboost==2.1.1
+catboost==1.2.7
+shap==0.46.0

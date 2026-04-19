@@ -1,0 +1,75 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.pnpm-store/
+.vite/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local dev artifacts
+backend/tmp/media/audio/*
+backend/tmp/media/photos/*
+!backend/tmp/media/audio/.gitkeep
+!backend/tmp/media/photos/.gitkeep
+
+# AWS
+.aws-sam/
+samconfig.toml
+lambda-deploy.zip
+
+# ML models (too big for git; rehydrated from Triageist repo / S3)
+backend/models/*.pkl
+backend/models/*.cbm
+backend/models/*.joblib
+backend/models/*.txt
+backend/models/*.gz
+!backend/models/.gitkeep
+
+# Kaggle / Triageist training data (licensed competition data, not code)
+data/
+
+# Remotion rendered videos and demo outputs
+demo/out/
+demo/public/*.mp4
+demo/public/*.webm
+
+# Backend-local transient files (media cache, tmp uploads)
+backend/tmp/
+
+# OS
+.DS_Store
+Thumbs.db

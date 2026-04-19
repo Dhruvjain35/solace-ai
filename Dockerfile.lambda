@@ -1,0 +1,25 @@
+# Container Lambda for Solace — no 250MB zip ceiling, no scipy stripping,
+# models baked in (no S3 cold-fetch), libgomp from AL2023 dnf (no Debian mirror).
+FROM public.ecr.aws/lambda/python:3.12
+
+# OpenMP runtime for LightGBM (native AL2023 package — stable, no external mirror)
+RUN dnf install -y libgomp && dnf clean all
+
+# Python deps — full versions, no manylinux cross-compile or stripping needed
+# because we're building IN the Lambda runtime environment
+COPY requirements-lambda.txt /tmp/requirements-lambda.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-lambda.txt
+
+# App code
+COPY backend/main.py ${LAMBDA_TASK_ROOT}/
+COPY backend/lib ${LAMBDA_TASK_ROOT}/lib
+COPY backend/db ${LAMBDA_TASK_ROOT}/db
+COPY backend/routers ${LAMBDA_TASK_ROOT}/routers
+COPY backend/services ${LAMBDA_TASK_ROOT}/services
+
+# Baked-in trained model — no S3 cold-fetch on scale-out
+RUN mkdir -p ${LAMBDA_TASK_ROOT}/models
+COPY backend/models/artifacts.pkl ${LAMBDA_TASK_ROOT}/models/
+COPY backend/models/lgbm_fold*.txt ${LAMBDA_TASK_ROOT}/models/
+
+CMD ["main.handler"]

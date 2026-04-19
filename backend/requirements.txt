@@ -1,0 +1,21 @@
+# Core deps — fast install, enough for local dev without Triageist pickles.
+# For the real ML ensemble, also: pip install -r requirements-ml.txt
+
+fastapi==0.115.0
+mangum==0.17.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-multipart==0.0.10
+python-dotenv==1.0.1
+
+# AI providers
+openai==1.52.0
+anthropic==0.39.0
+httpx==0.27.2
+
+# AWS (only used when SOLACE_MODE=aws)
+boto3==1.35.36
+
+# Dev
+pytest==8.3.3
