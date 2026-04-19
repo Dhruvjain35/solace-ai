@@ -75,7 +75,7 @@ def get_patient_detail(
         "shap_values": _maybe_json(p.get("shap_values")),
         "comfort_protocol": _maybe_json(p.get("comfort_protocol")) or [],
         "patient_explanation": p.get("patient_explanation", ""),
-        "audio_url": p.get("audio_url"),
+        "audio_url": _audio_url(p),
         "triage_source": p.get("triage_source"),
         "clinical_flags": _maybe_json(p.get("clinical_flags")) or [],
         "composites": _maybe_json(p.get("composites")) or {},
@@ -123,7 +123,7 @@ def get_public_patient(
         "patient_id": p["patient_id"],
         "patient_explanation": p.get("patient_explanation", ""),
         "comfort_protocol": _maybe_json(p.get("comfort_protocol")) or [],
-        "audio_url": p.get("audio_url"),
+        "audio_url": _audio_url(p),
         "patient_education": _maybe_json(p.get("patient_education")),
         "patient_education_published_at": p.get("patient_education_published_at"),
         "status": p.get("status"),
@@ -167,6 +167,17 @@ def _photo_url(p: dict[str, Any]) -> str | None:
     from db import media
 
     return media.presigned_get("photos", filename)
+
+
+def _audio_url(p: dict[str, Any]) -> str | None:
+    """Regenerate a fresh presigned URL every read — the cached one in DDB
+    expires after 15 min (S3 presign limit) but patients often don't open the
+    result until much later."""
+    if not p.get("audio_url"):
+        return None
+    from db import media
+
+    return media.presigned_get("audio", f"{p['patient_id']}.mp3")
 
 
 def _maybe_json(raw: Any) -> Any:

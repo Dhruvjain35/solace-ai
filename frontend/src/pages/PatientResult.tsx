@@ -74,7 +74,7 @@ export default function PatientResult() {
           <img
             src="/solace-logo.png"
             alt="Solace"
-            className="h-14 w-auto select-none"
+            className="h-20 w-auto select-none"
             draggable={false}
           />
           {result.language && result.language !== "en" && (

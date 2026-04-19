@@ -215,7 +215,7 @@ export default function PatientIntake() {
           <img
             src="/solace-logo.png"
             alt="Solace"
-            className="h-12 w-auto select-none"
+            className="h-20 w-auto select-none"
             draggable={false}
           />
         </div>
