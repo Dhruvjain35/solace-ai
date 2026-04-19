@@ -263,8 +263,13 @@ export default function ClinicianDashboard() {
     <div className="min-h-full grid grid-cols-[280px_1fr] gap-0">
       <aside className="bg-surface-low p-6 flex flex-col gap-6 min-h-screen">
         <div>
-          <h1 className="text-xl font-extrabold">Solace</h1>
-          <p className="text-sm text-text-muted leading-tight">Clinician Terminal</p>
+          <img
+            src="/solace-logo.png"
+            alt="Solace"
+            className="h-16 w-auto -ml-2 select-none"
+            draggable={false}
+          />
+          <p className="text-sm text-text-muted leading-tight mt-1">Clinician Terminal</p>
         </div>
         {session && (
           <div className="flex items-center gap-3 bg-surface-lowest rounded-lg px-3 py-2.5 shadow-soft">

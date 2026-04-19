@@ -214,9 +214,14 @@ export default function PatientIntake() {
               <ArrowLeft size={20} />
             </button>
           )}
-          <div>
+          <div className="flex flex-col gap-0.5">
             <div className="text-[11px] uppercase tracking-[0.14em] text-text-muted">{HOSPITAL_NAME}</div>
-            <div className="font-bold tracking-editorial-tight text-lg leading-tight">Solace</div>
+            <img
+              src="/solace-logo.png"
+              alt="Solace"
+              className="h-10 w-auto -ml-1 select-none"
+              draggable={false}
+            />
           </div>
         </div>
         {step !== "submitting" && <ProgressDots total={stepOrder.length - 1} current={stepIndex} />}
