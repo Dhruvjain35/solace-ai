@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, X, RotateCcw } from "lucide-react";
+import { Camera, ImagePlus, Loader2, RotateCcw, X } from "lucide-react";
 
 type Props = {
   onCapture: (file: File) => void;
@@ -92,10 +92,19 @@ export function InAppCamera({ onCapture, onClose, label, aspectHint = "free" }: 
     }
   }
 
+  // File-picker fallback — always wired, surfaced when the camera can't start
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  function pickFromGallery() {
+    fileInputRef.current?.click();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="flex items-center justify-between px-4 py-4 bg-black text-white"
-           style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
+    <div className="fixed inset-0 z-50 bg-black flex flex-col" style={{ height: "100dvh" }}>
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-4 bg-black text-white shrink-0"
+        style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }}
+      >
         <button
           onClick={onClose}
           className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"
@@ -106,29 +115,46 @@ export function InAppCamera({ onCapture, onClose, label, aspectHint = "free" }: 
         <div className="text-sm font-medium">{label || "Camera"}</div>
         <button
           onClick={flipCamera}
-          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"
+          disabled={!ready || !!error}
+          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center disabled:opacity-40"
           aria-label="Flip camera"
         >
           <RotateCcw size={18} />
         </button>
       </div>
 
-      <div className="relative flex-1 bg-black flex items-center justify-center">
+      {/* Preview */}
+      <div className="relative flex-1 min-h-0 bg-black flex items-center justify-center overflow-hidden">
         {error ? (
           <div className="text-white text-center p-6 max-w-sm">
-            <p className="mb-2">{error}</p>
-            <p className="text-xs opacity-70">
-              Safari/Chrome need camera permission. Try Settings → Safari → Camera.
+            <p className="mb-3">{error}</p>
+            <p className="text-xs opacity-70 mb-5">
+              Safari/Chrome need camera permission. On iOS, check
+              Settings → Safari → Camera.
             </p>
+            <button
+              type="button"
+              onClick={pickFromGallery}
+              className="inline-flex items-center gap-2 bg-white text-black rounded-full px-5 py-2 text-sm font-semibold"
+            >
+              <ImagePlus size={16} /> Upload a photo instead
+            </button>
           </div>
         ) : (
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            autoPlay
-            className="max-w-full max-h-full object-contain"
-          />
+          <>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              autoPlay
+              className="max-w-full max-h-full object-contain"
+            />
+            {!ready && (
+              <div className="absolute inset-0 flex items-center justify-center text-white/80">
+                <Loader2 className="animate-spin" size={32} />
+              </div>
+            )}
+          </>
         )}
         {aspectHint === "card" && ready && !error && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -138,10 +164,19 @@ export function InAppCamera({ onCapture, onClose, label, aspectHint = "free" }: 
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
+      {/* Controls — always visible, even while loading */}
       <div
-        className="bg-black flex items-center justify-center p-6"
-        style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
+        className="bg-black flex items-center justify-center gap-6 px-6 py-5 shrink-0"
+        style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
       >
+        <button
+          type="button"
+          onClick={pickFromGallery}
+          className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center"
+          aria-label="Upload from gallery"
+        >
+          <ImagePlus size={20} />
+        </button>
         <button
           onClick={capture}
           disabled={!ready || !!error}
@@ -150,7 +185,21 @@ export function InAppCamera({ onCapture, onClose, label, aspectHint = "free" }: 
         >
           <Camera size={28} className="text-black" />
         </button>
+        {/* spacer to balance the gallery icon so the capture button stays centered */}
+        <div className="w-12 h-12" aria-hidden />
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onCapture(f);
+        }}
+      />
     </div>
   );
 }
