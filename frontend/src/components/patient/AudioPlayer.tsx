@@ -5,19 +5,21 @@ type Props = { audioUrl: string | null };
 
 export function AudioPlayer({ audioUrl }: Props) {
   const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    setFailed(false);
     if (!audioUrl) return;
     const t = window.setTimeout(() => {
       ref.current?.play().catch(() => {
-        /* autoplay may be blocked; user can tap play */
+        /* autoplay may be blocked by the browser; user can tap play */
       });
     }, 1500);
     return () => window.clearTimeout(t);
   }, [audioUrl]);
 
-  if (!audioUrl) {
+  if (!audioUrl || failed) {
     return (
       <div className="mx-4 mb-4 rounded-lg bg-surface-low px-4 py-3 text-sm text-text-muted">
         Audio unavailable — please read the guidance above.
@@ -32,9 +34,14 @@ export function AudioPlayer({ audioUrl }: Props) {
         className="w-12 h-12 rounded-full bg-primary-gradient text-white flex items-center justify-center shadow-soft"
         aria-label={playing ? "Pause audio" : "Play audio"}
         onClick={() => {
-          if (!ref.current) return;
-          if (playing) ref.current.pause();
-          else void ref.current.play();
+          const el = ref.current;
+          if (!el) return;
+          if (playing) {
+            el.pause();
+          } else {
+            const p = el.play();
+            if (p && typeof p.catch === "function") p.catch(() => setFailed(true));
+          }
         }}
       >
         {playing ? <Pause size={22} /> : <Play size={22} fill="white" />}
@@ -54,9 +61,12 @@ export function AudioPlayer({ audioUrl }: Props) {
       <audio
         ref={ref}
         src={audioUrl}
+        preload="auto"
+        crossOrigin="anonymous"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
+        onError={() => setFailed(true)}
       />
     </div>
   );
