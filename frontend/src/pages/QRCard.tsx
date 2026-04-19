@@ -6,13 +6,15 @@ import { QRCodeSVG } from "qrcode.react";
  * pointing at the patient-intake URL for the given hospital. Intended to be
  * displayed on a laptop / kiosk so judges can scan from their phones.
  *
- * Uses window.location.origin so each deployment (Amplify, Vercel, local
- * tunnel) self-references — the QR always points at the same host serving it.
+ * Always targets the Vercel production URL, regardless of which host is
+ * serving this page — that way the Amplify dashboard-view and the Vercel
+ * public-facing deploy both hand patients the same canonical intake URL.
  */
+const PATIENT_PUBLIC_ORIGIN = "https://solacedemoai.vercel.app";
+
 export default function QRCard() {
   const { hospitalId = "demo" } = useParams();
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const intakeUrl = origin ? `${origin.replace(/\/$/, "")}/${hospitalId}` : "";
+  const intakeUrl = `${PATIENT_PUBLIC_ORIGIN}/${hospitalId}`;
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-surface px-8 py-12 gap-10">
