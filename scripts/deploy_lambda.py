@@ -256,8 +256,8 @@ def ensure_api(lambda_arn: str) -> str:
             Name=API_NAME,
             ProtocolType="HTTP",
             CorsConfiguration={
-                "AllowOrigins": ["https://solace.d2gsbjipp9quan.amplifyapp.com"],
-                "AllowMethods": ["GET", "POST", "OPTIONS"],
+                "AllowOrigins": ["*"],
+                "AllowMethods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
                 "AllowHeaders": [
                     "content-type",
                     "x-clinician-pin",
@@ -273,8 +273,8 @@ def ensure_api(lambda_arn: str) -> str:
         apigw.update_api(
             ApiId=api["ApiId"],
             CorsConfiguration={
-                "AllowOrigins": ["https://solace.d2gsbjipp9quan.amplifyapp.com"],
-                "AllowMethods": ["GET", "POST", "OPTIONS"],
+                "AllowOrigins": ["*"],
+                "AllowMethods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
                 "AllowHeaders": [
                     "content-type",
                     "x-clinician-pin",

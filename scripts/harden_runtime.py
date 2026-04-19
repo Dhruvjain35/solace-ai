@@ -62,11 +62,15 @@ def get_api_id() -> str:
 
 
 def scope_cors(api_id: str) -> None:
+    # Open CORS to any origin — security is enforced at WAF (rate-limit + OWASP
+    # common rule set) + per-identity quota + JWT auth. Locking CORS to a single
+    # host breaks multi-env testing (Amplify + Vercel + local dev tunnels) with
+    # no real security upside for a public API.
     apigw.update_api(
         ApiId=api_id,
         CorsConfiguration={
-            "AllowOrigins": [AMPLIFY_ORIGIN],
-            "AllowMethods": ["GET", "POST", "OPTIONS"],
+            "AllowOrigins": ["*"],
+            "AllowMethods": ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
             "AllowHeaders": [
                 "content-type",
                 "x-clinician-pin",
