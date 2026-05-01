@@ -60,6 +60,8 @@ export type PatientSummary = {
   language: string;
   pain_flagged: boolean;
   pain_flagged_at: string | null;
+  pain_flag_acknowledged_at?: string | null;
+  pain_flag_acknowledged_by?: string | null;
   status: "waiting" | "seen";
   seen_by: string | null;
   seen_at: string | null;

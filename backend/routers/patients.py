@@ -35,6 +35,8 @@ def _summary(p: dict[str, Any]) -> dict[str, Any]:
         "language": p.get("language", "en"),
         "pain_flagged": bool(p.get("pain_flagged")),
         "pain_flagged_at": p.get("pain_flagged_at"),
+        "pain_flag_acknowledged_at": p.get("pain_flag_acknowledged_at"),
+        "pain_flag_acknowledged_by": p.get("pain_flag_acknowledged_by"),
         "status": p.get("status", STATUS_WAITING),
         "seen_by": p.get("seen_by"),
         "seen_at": p.get("seen_at"),

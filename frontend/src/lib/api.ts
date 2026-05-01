@@ -61,6 +61,18 @@ export async function postPainFlag(hospitalId: string, patientId: string): Promi
   await api.post(`/api/${hospitalId}/pain-flag`, { patient_id: patientId });
 }
 
+export async function acknowledgePainFlag(
+  hospitalId: string,
+  patientId: string,
+  pin: string,
+): Promise<void> {
+  await api.post(
+    `/api/${hospitalId}/pain-flag/acknowledge`,
+    { patient_id: patientId },
+    { headers: { "X-Clinician-PIN": pin } },
+  );
+}
+
 export async function getPatients(
   hospitalId: string,
   pin: string,

@@ -11,6 +11,7 @@ import { EHRPanel } from "../components/clinician/EHRPanel";
 import { DifferentialPanel } from "../components/clinician/DifferentialPanel";
 import { WorkupPanel } from "../components/clinician/WorkupPanel";
 import { DispositionPanel } from "../components/clinician/DispositionPanel";
+import { PainAlarm } from "../components/clinician/PainAlarm";
 import { Button } from "../components/ui/Button";
 import { usePollingPatients } from "../hooks/usePollingPatients";
 import { getPatientDetail, loginClinician, markSeen } from "../lib/api";
@@ -366,6 +367,15 @@ export default function ClinicianDashboard() {
             "#F8F9F9",
         }}
       >
+        {pin && (
+          <PainAlarm
+            hospitalId={hospitalId}
+            pin={pin}
+            patients={patients}
+            onOpenPatient={(id) => setSelectedId(id)}
+            onAfterAck={refetch}
+          />
+        )}
         {newArrivals.length > 0 && (
           <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-soft animate-pulse">
             <span className="text-xs uppercase tracking-[0.14em] font-bold">New arrival</span>
