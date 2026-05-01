@@ -39,8 +39,17 @@ class TextBlock:
 
 
 @dataclass
+class ToolUseBlock:
+    id: str
+    name: str
+    input: dict
+    type: str = "tool_use"
+    text: str = ""  # kept so consumers can iterate `.text` uniformly without crashing
+
+
+@dataclass
 class Response:
-    content: list[TextBlock]
+    content: list  # list[TextBlock | ToolUseBlock]
 
 
 def provider() -> str:
@@ -89,7 +98,7 @@ def messages_create(
         )
         raise
 
-    output_bytes = sum(len(b.text.encode()) for b in resp.content)
+    output_bytes = sum(len(getattr(b, "text", "").encode()) for b in resp.content)
     ai_log.record(
         provider=prov if prov == "bedrock" else "anthropic",
         model=model, purpose=purpose,
@@ -106,7 +115,14 @@ def _direct_invoke(model, max_tokens, system, messages, temperature, **kwargs) -
         kw["temperature"] = temperature
     kw.update(kwargs)
     r = _anthropic_client().messages.create(**kw)
-    return Response(content=[TextBlock(text=b.text) for b in r.content if getattr(b, "type", None) == "text"])
+    blocks: list = []
+    for b in r.content:
+        btype = getattr(b, "type", None)
+        if btype == "text":
+            blocks.append(TextBlock(text=b.text))
+        elif btype == "tool_use":
+            blocks.append(ToolUseBlock(id=b.id, name=b.name, input=dict(b.input or {})))
+    return Response(content=blocks)
 
 
 def _bedrock_invoke(model, max_tokens, system, messages, temperature, **kwargs) -> Response:
@@ -127,9 +143,13 @@ def _bedrock_invoke(model, max_tokens, system, messages, temperature, **kwargs) 
         accept="application/json",
     )
     payload = json.loads(r["body"].read())
-    return Response(content=[
-        TextBlock(text=b["text"]) for b in payload.get("content", []) if b.get("type") == "text"
-    ])
+    blocks: list = []
+    for b in payload.get("content", []):
+        if b.get("type") == "text":
+            blocks.append(TextBlock(text=b.get("text", "")))
+        elif b.get("type") == "tool_use":
+            blocks.append(ToolUseBlock(id=b.get("id", ""), name=b.get("name", ""), input=dict(b.get("input") or {})))
+    return Response(content=blocks)
 
 
 def _estimate_bytes(s: str | None) -> int:

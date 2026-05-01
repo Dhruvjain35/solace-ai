@@ -212,9 +212,76 @@ def list_notes(patient_id: str) -> list[dict[str, Any]]:
     return list(_notes.get(patient_id, []))
 
 
+# ---- Appointment helpers (voice agent) ----------------------------------------------
+_appointments: dict[str, dict[str, Any]] = {}  # confirmation_code -> record
+
+APPOINTMENTS_TABLE = "solace-appointments"
+
+
+def add_appointment(record: dict[str, Any]) -> None:
+    record.setdefault("created_at", _now_iso())
+    record.setdefault("ttl", int(time.time()) + 30 * 86400)  # 30d
+    if settings.solace_mode == "aws":
+        _boto_table(APPOINTMENTS_TABLE).put_item(Item=_to_ddb(record))
+        return
+    _appointments[record["confirmation_code"]] = record
+
+
+def cancel_appointment(confirmation_code: str, *, hospital_id: str) -> bool:
+    if settings.solace_mode == "aws":
+        try:
+            from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+            tbl = _boto_table(APPOINTMENTS_TABLE)
+            resp = tbl.query(
+                IndexName="confirmation_code-index",
+                KeyConditionExpression=Key("confirmation_code").eq(confirmation_code),
+            )
+            items = resp.get("Items", [])
+            if not items:
+                return False
+            row = _from_ddb(items[0])
+            if row.get("hospital_id") != hospital_id:
+                return False
+            tbl.update_item(
+                Key={"appointment_id": row["appointment_id"]},
+                UpdateExpression="SET #s = :s",
+                ExpressionAttributeNames={"#s": "status"},
+                ExpressionAttributeValues={":s": "cancelled"},
+            )
+            return True
+        except Exception as e:  # noqa: BLE001
+            log.warning("appointment cancel failed: %s", e)
+            return False
+    rec = _appointments.get(confirmation_code)
+    if not rec or rec.get("hospital_id") != hospital_id:
+        return False
+    rec["status"] = "cancelled"
+    return True
+
+
+def list_appointments(*, hospital_id: str) -> list[dict[str, Any]]:
+    if settings.solace_mode == "aws":
+        try:
+            from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+            resp = _boto_table(APPOINTMENTS_TABLE).query(
+                IndexName="hospital_id-created_at-index",
+                KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+                ScanIndexForward=False,
+                Limit=50,
+            )
+            return [_from_ddb(i) for i in resp.get("Items", [])]
+        except Exception as e:  # noqa: BLE001
+            log.warning("appointment list failed: %s", e)
+            return []
+    rows = [r for r in _appointments.values() if r.get("hospital_id") == hospital_id]
+    rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return rows
+
+
 # ---- Test helpers -------------------------------------------------------------------
 def _reset_for_tests() -> None:
     _patients.clear()
     _hospitals.clear()
     _prescriptions.clear()
     _notes.clear()
+    _appointments.clear()

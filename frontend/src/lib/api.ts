@@ -274,6 +274,97 @@ export async function resetDemo(
   return data;
 }
 
+// --- Voice agent ----------------------------------------------------------------------
+
+export type VoiceTurnResponse = {
+  call_id: string;
+  say: string;
+  audio_url: string | null;
+  tool?: string | null;
+  escalate?: "human" | "911" | null;
+};
+
+export async function voiceSimulatorStart(
+  hospitalId: string,
+  language: string
+): Promise<VoiceTurnResponse> {
+  const { data } = await api.post<VoiceTurnResponse>(`/api/voice/simulator/start`, {
+    hospital_id: hospitalId,
+    language,
+  });
+  return data;
+}
+
+export async function voiceSimulatorTurn(
+  callId: string,
+  text: string
+): Promise<VoiceTurnResponse> {
+  const { data } = await api.post<VoiceTurnResponse>(`/api/voice/simulator/turn`, {
+    call_id: callId,
+    text,
+  });
+  return data;
+}
+
+export async function voiceSimulatorEnd(callId: string, disposition = "ended_by_user"): Promise<void> {
+  await api.post(`/api/voice/simulator/end`, { call_id: callId, disposition });
+}
+
+export type VoiceCallSummary = {
+  call_id: string;
+  hospital_id: string;
+  language: string;
+  channel: string;
+  status: string;
+  intent?: string | null;
+  escalation?: string | null;
+  disposition?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+  transcript?: { role: string; text: string; ts: string }[];
+  tools_called?: { name: string; result_summary: string; ts: string }[];
+};
+
+export async function listVoiceCalls(hospitalId: string, pin: string): Promise<VoiceCallSummary[]> {
+  const { data } = await api.get(`/api/voice/calls`, {
+    params: { hospital_id: hospitalId },
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data.calls || [];
+}
+
+export async function getVoiceStats(
+  hospitalId: string,
+  pin: string
+): Promise<{ total: number; intents: Record<string, number>; escalations: number; avg_duration_seconds: number }> {
+  const { data } = await api.get(`/api/voice/stats`, {
+    params: { hospital_id: hospitalId },
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data;
+}
+
+export type VoiceAppointment = {
+  appointment_id: string;
+  hospital_id: string;
+  patient_name: string;
+  patient_phone?: string;
+  reason_short: string;
+  preferred_window?: string;
+  status: string;
+  confirmation_code: string;
+  created_at: string;
+};
+
+export async function listVoiceAppointments(hospitalId: string, pin: string): Promise<VoiceAppointment[]> {
+  const { data } = await api.get(`/api/voice/appointments`, {
+    params: { hospital_id: hospitalId },
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data.appointments || [];
+}
+
 export async function refineTriage(
   hospitalId: string,
   patientId: string,
