@@ -1,9 +1,11 @@
 import { Chip } from "../ui/Chip";
+import { t } from "../../lib/i18n";
 import type { MedicalInfo, Sex } from "../../types";
 
 type Props = {
   value: MedicalInfo;
   onChange: (next: MedicalInfo) => void;
+  language?: string;
 };
 
 const ALLERGY_OPTIONS = ["None", "Penicillin", "Sulfa", "Aspirin", "NSAIDs", "Latex", "Peanuts", "Shellfish"];
@@ -37,7 +39,8 @@ const BLOOD_THINNERS = ["Warfarin", "Apixaban (Eliquis)", "Rivaroxaban (Xarelto)
 
 const SEVERITY_ORDER: Array<"mild" | "moderate" | "anaphylaxis"> = ["mild", "moderate", "anaphylaxis"];
 
-export function MedicalInfoForm({ value, onChange }: Props) {
+export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
+  const lang = language;
   const toggle = (key: "allergies" | "medications" | "conditions", item: string) => {
     const list = value[key];
     let next: string[];
@@ -87,7 +90,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
     <div className="flex flex-col gap-6">
       <div>
         <label className="text-sm font-semibold block mb-2" htmlFor="age">
-          Age
+          {t("form_age", lang)}
         </label>
         <input
           id="age"
@@ -97,18 +100,18 @@ export function MedicalInfoForm({ value, onChange }: Props) {
           max={120}
           value={value.age ?? ""}
           onChange={(e) => onChange({ ...value, age: e.target.value ? Number(e.target.value) : null })}
-          placeholder="38"
+          placeholder={t("form_age_placeholder", lang)}
           className="w-full h-12 px-4 rounded-md bg-surface-lowest shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-lg outline-none transition-all"
         />
       </div>
 
       <div>
-        <div className="text-sm font-semibold mb-2">Sex</div>
+        <div className="text-sm font-semibold mb-2">{t("form_sex", lang)}</div>
         <div className="flex gap-2">
           {(["male", "female", "other"] as Sex[]).map((s) => (
             <Chip
               key={s}
-              label={s[0].toUpperCase() + s.slice(1)}
+              label={t(s === "male" ? "form_male" : s === "female" ? "form_female" : "form_other", lang)}
               selected={value.sex === s}
               onToggle={() =>
                 onChange({
@@ -125,11 +128,11 @@ export function MedicalInfoForm({ value, onChange }: Props) {
 
       {showPregnancy && (
         <div>
-          <div className="text-sm font-semibold mb-2">Pregnant?</div>
+          <div className="text-sm font-semibold mb-2">{t("form_pregnant", lang)}</div>
           <div className="flex gap-2">
-            <Chip label="Yes" selected={value.pregnant === true} onToggle={() => onChange({ ...value, pregnant: true })} />
+            <Chip label={t("form_yes", lang)} selected={value.pregnant === true} onToggle={() => onChange({ ...value, pregnant: true })} />
             <Chip
-              label="No"
+              label={t("form_no", lang)}
               selected={value.pregnant === false}
               onToggle={() => onChange({ ...value, pregnant: false, gestational_weeks: null })}
             />
@@ -140,7 +143,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
       {showGestational && (
         <div className="border-l-2 border-primary-fixed pl-4">
           <label className="text-sm font-semibold block mb-2" htmlFor="gest">
-            Weeks pregnant (approximate)
+            {t("form_gestational_label", lang)}
           </label>
           <input
             id="gest"
@@ -158,9 +161,11 @@ export function MedicalInfoForm({ value, onChange }: Props) {
         </div>
       )}
 
-      {/* Allergies + per-allergy severity follow-up */}
+      {/* Allergies + per-allergy severity follow-up.
+          Chip values stay canonical English (the backend triage engine is English-trained),
+          but the section label + severity labels localize. */}
       <div>
-        <div className="text-sm font-semibold mb-2">Allergies</div>
+        <div className="text-sm font-semibold mb-2">{t("form_allergies", lang)}</div>
         <div className="flex flex-wrap gap-2">
           {ALLERGY_OPTIONS.map((opt) => (
             <Chip key={opt} label={opt} selected={value.allergies.includes(opt)} onToggle={() => toggle("allergies", opt)} />
@@ -168,7 +173,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
         </div>
         {nonNoneAllergies.length > 0 && (
           <div className="mt-3 flex flex-col gap-2 border-l-2 border-primary-fixed pl-4">
-            <div className="text-xs text-text-muted tracking-wide">Severity per allergy:</div>
+            <div className="text-xs text-text-muted tracking-wide">{t("form_severity_per_allergy", lang)}</div>
             {nonNoneAllergies.map((a) => (
               <div key={a} className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-sm font-medium">{a}</span>
@@ -176,7 +181,12 @@ export function MedicalInfoForm({ value, onChange }: Props) {
                   {SEVERITY_ORDER.map((sev) => (
                     <Chip
                       key={sev}
-                      label={sev}
+                      label={t(
+                        sev === "mild" ? "form_severity_mild"
+                          : sev === "moderate" ? "form_severity_moderate"
+                          : "form_severity_anaphylaxis",
+                        lang,
+                      )}
                       selected={value.allergy_severity[a] === sev}
                       onToggle={() => setSeverity(a, sev)}
                     />
@@ -190,7 +200,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
 
       {/* Medications + blood thinner follow-up */}
       <div>
-        <div className="text-sm font-semibold mb-2">Current medications</div>
+        <div className="text-sm font-semibold mb-2">{t("form_medications", lang)}</div>
         <div className="flex flex-wrap gap-2">
           {MEDICATION_OPTIONS.map((opt) => (
             <Chip
@@ -203,7 +213,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
         </div>
         {onBloodThinner && (
           <div className="mt-3 border-l-2 border-primary-fixed pl-4">
-            <div className="text-xs text-text-muted tracking-wide mb-2">Which blood thinner?</div>
+            <div className="text-xs text-text-muted tracking-wide mb-2">{t("form_blood_thinner_which", lang)}</div>
             <div className="flex flex-wrap gap-2">
               {BLOOD_THINNERS.map((bt) => (
                 <Chip
@@ -222,7 +232,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
 
       {/* Conditions + condition-specific follow-ups */}
       <div>
-        <div className="text-sm font-semibold mb-2">Existing conditions</div>
+        <div className="text-sm font-semibold mb-2">{t("form_conditions", lang)}</div>
         <div className="flex flex-wrap gap-2">
           {CONDITION_OPTIONS.map((opt) => (
             <Chip
@@ -236,14 +246,19 @@ export function MedicalInfoForm({ value, onChange }: Props) {
 
         {hasDiabetes && (
           <div className="mt-3 border-l-2 border-primary-fixed pl-4">
-            <div className="text-xs text-text-muted tracking-wide mb-2">Diabetes type?</div>
+            <div className="text-xs text-text-muted tracking-wide mb-2">{t("form_diabetes_type", lang)}</div>
             <div className="flex gap-2">
-              {(["type1", "type2", "gestational"] as const).map((t) => (
+              {(["type1", "type2", "gestational"] as const).map((dt) => (
                 <Chip
-                  key={t}
-                  label={t === "type1" ? "Type 1" : t === "type2" ? "Type 2" : "Gestational"}
-                  selected={value.diabetes_type === t}
-                  onToggle={() => onChange({ ...value, diabetes_type: value.diabetes_type === t ? null : t })}
+                  key={dt}
+                  label={t(
+                    dt === "type1" ? "form_diabetes_type1"
+                      : dt === "type2" ? "form_diabetes_type2"
+                      : "form_diabetes_gestational",
+                    lang,
+                  )}
+                  selected={value.diabetes_type === dt}
+                  onToggle={() => onChange({ ...value, diabetes_type: value.diabetes_type === dt ? null : dt })}
                 />
               ))}
             </div>
@@ -252,7 +267,7 @@ export function MedicalInfoForm({ value, onChange }: Props) {
 
         {hasHeartFailure && (
           <div className="mt-3 border-l-2 border-primary-fixed pl-4">
-            <div className="text-xs text-text-muted tracking-wide mb-2">NYHA class?</div>
+            <div className="text-xs text-text-muted tracking-wide mb-2">{t("form_nyha_class", lang)}</div>
             <div className="flex gap-2">
               {(["I", "II", "III", "IV"] as const).map((c) => (
                 <Chip
@@ -271,11 +286,11 @@ export function MedicalInfoForm({ value, onChange }: Props) {
 
       {/* Smoking — simple boolean, high clinical signal */}
       <div>
-        <div className="text-sm font-semibold mb-2">Do you smoke?</div>
+        <div className="text-sm font-semibold mb-2">{t("form_smoke", lang)}</div>
         <div className="flex gap-2">
-          <Chip label="Yes" selected={value.smoker === true} onToggle={() => onChange({ ...value, smoker: true })} />
+          <Chip label={t("form_yes", lang)} selected={value.smoker === true} onToggle={() => onChange({ ...value, smoker: true })} />
           <Chip
-            label="No"
+            label={t("form_no", lang)}
             selected={value.smoker === false}
             onToggle={() => onChange({ ...value, smoker: false })}
           />

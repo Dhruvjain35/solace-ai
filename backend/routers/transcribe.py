@@ -59,7 +59,11 @@ async def transcribe_and_ask(
         duration = getattr(audio_file, "duration_seconds", 0.0) or 0.0
         quota.check_audio_duration(duration, identity, source_ip=source_ip)
         try:
-            t = transcription.transcribe(audio_bytes, filename=audio_file.filename or "audio.webm")
+            t = transcription.transcribe(
+                audio_bytes,
+                filename=audio_file.filename or "audio.webm",
+                language_hint=selected_lang,
+            )
             transcript = t.text
             # Patient's explicit language pick wins over Whisper auto-detect.
             language = selected_lang or t.language

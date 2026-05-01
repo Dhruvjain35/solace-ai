@@ -363,7 +363,7 @@ export default function PatientIntake() {
                     {t("medical_subtitle", preferredLanguage)}
                   </p>
                 </div>
-                <MedicalInfoForm value={medical} onChange={setMedical} />
+                <MedicalInfoForm value={medical} onChange={setMedical} language={preferredLanguage} />
               </>
             )}
 
@@ -478,6 +478,7 @@ export default function PatientIntake() {
                   questions={followups}
                   answers={answers}
                   onAnswer={(id, _q, a) => setAnswers((prev) => ({ ...prev, [id]: a }))}
+                  language={preferredLanguage}
                 />
               </>
             )}
