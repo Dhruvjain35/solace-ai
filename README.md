@@ -2,11 +2,23 @@
 
 **AI-assisted ER triage. You're not waiting alone.**
 
-Built for Hook'em Hacks 2026.
+Submitted to **[HackFW](https://fwtx.devpost.com)** — Fort Worth's convergent technology hackathon. Built in ~72 hours.
 
 A patient scans the QR on the waiting-room kiosk, speaks their symptoms in any language, and optionally snaps a photo of their injury or insurance card. Within ~7 seconds they hear a warm voice explain their ESI triage level and what to do while they wait. On the other side of the ED, the clinician opens their terminal and sees a full AI-generated pre-brief for every waiting patient — provisional ESI, SHAP explanation, clinician pre-brief, AI scribe draft, EHR match — before the patient is even roomed.
 
 When vitals are taken at bedside, a LightGBM 5-fold ensemble refines the ESI with real numeric signal + conformal prediction intervals.
+
+---
+
+## North Texas Impact
+
+Fort Worth's emergency departments face two compounding problems:
+
+- **JPS Health Network** (the county safety-net hospital) handles one of the highest Medicaid + uninsured patient volumes in Texas — patients who often lack established care and arrive sicker
+- **~38% of Tarrant County residents** speak a language other than English at home; Spanish-speaking patients frequently can't communicate symptoms clearly during intake, leading to under-triage
+- **Baylor Scott & White** and **Texas Health Resources** serve the broader DFW metro with ED wait times consistently above the national average during peak hours
+
+Solace directly targets all three: multilingual voice intake (Whisper + ElevenLabs in any language), AI pre-briefs that compress clinician catch-up time, and a two-stage ESI model that improves triage accuracy when handoff information is thin. The system is deployable on existing hospital Wi-Fi — patients need only a smartphone and a QR code at the door.
 
 - **Live frontend:** https://solace.d2gsbjipp9quan.amplifyapp.com
 - **Patient intake:** `/demo/patient` (QR-scan target)
@@ -228,7 +240,7 @@ Training data + notebook live in the sibling `triagegeist/` repo. Model files (`
 | Cloud / Infra / Backend / ML | Dhruv Jain |
 | Frontend / UX / Product | Sriyan Bodla |
 
-Built in ~72 hours for Hook'em Hacks 2026 @ UT Austin.
+Built in ~72 hours. Originally prototyped at Hook'em Hacks 2026 @ UT Austin; submitted to HackFW 2026 for North Texas deployment.
 
 ---
 
