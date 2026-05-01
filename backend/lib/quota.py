@@ -33,20 +33,18 @@ class Limit:
     per_hour: int       # units (req-count OR cost-units) allowed in a rolling hour
 
 
-# Tuned for the demo. Real ED volume would be higher; these are meant to squash
-# scripted abuse while staying generous enough for a judge testing the flow.
+# Hospital-NAT scenarios put many real patients behind one identity, so ceilings are
+# generous. Cost-runaway is still bounded but legitimate retries / re-records never trip.
 LIMITS: dict[str, Limit] = {
-    # /start-intake is the cheapest endpoint and fires on every page mount —
-    # keep the ceiling high enough that a patient reloading/returning doesn't hit it.
-    "intake.start":      Limit("intake.start", per_hour=120),
-    "intake.submit":     Limit("intake.submit", per_hour=10),
-    "transcribe":        Limit("transcribe", per_hour=20),
-    "scan_insurance":    Limit("scan_insurance", per_hour=20),
-    "audio.seconds":     Limit("audio.seconds", per_hour=300),
+    "intake.start":      Limit("intake.start", per_hour=2000),
+    "intake.submit":     Limit("intake.submit", per_hour=500),
+    "transcribe":        Limit("transcribe", per_hour=2000),
+    "scan_insurance":    Limit("scan_insurance", per_hour=500),
+    "audio.seconds":     Limit("audio.seconds", per_hour=120000),
 }
 
 # Per-upload absolute caps (checked before charging the hourly quota)
-MAX_AUDIO_SECONDS = 120  # 2 min per single upload
+MAX_AUDIO_SECONDS = 300  # 5 min per single upload — covers verbose patients
 
 
 def _table():

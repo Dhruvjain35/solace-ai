@@ -14,7 +14,7 @@ WAF rules (CLOUDFRONT scope, global):
   1. Amazon IP Reputation List   — drops known botnets/scanners
   2. Known Bad Inputs Rule Set   — exploit patterns in headers/body
   3. Common (OWASP Top-10)       — SQLi, XSS, LFI, etc
-  4. SolaceRateLimit 300/5min/IP — aggregate request rate cap
+  4. SolaceRateLimit 10000/5min/IP — aggregate request rate cap (hospital NAT-friendly)
 """
 from __future__ import annotations
 
@@ -68,11 +68,14 @@ def _rules() -> list[dict]:
                                   "MetricName": "solace-waf-common"},
         },
         {
+            # Hospital-NAT puts every patient behind one IP. Ceiling is generous so
+            # legitimate intake (recording, retries, photo upload) never trips it,
+            # while still catching scripted abuse from a single source.
             "Name": "SolaceRateLimit",
             "Priority": 100,
             "Action": {"Block": {}},
             "Statement": {"RateBasedStatement": {
-                "Limit": 300, "EvaluationWindowSec": 300, "AggregateKeyType": "IP"}},
+                "Limit": 10000, "EvaluationWindowSec": 300, "AggregateKeyType": "IP"}},
             "VisibilityConfig": {"SampledRequestsEnabled": True, "CloudWatchMetricsEnabled": True,
                                   "MetricName": "solace-waf-rate-limit"},
         },

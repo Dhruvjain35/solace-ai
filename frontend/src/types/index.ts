@@ -155,6 +155,32 @@ export type RefinedTriage = {
   training_data_note?: string;
 };
 
+export type DifferentialEntry = {
+  diagnosis: string;
+  icd10: string;
+  likelihood: "high" | "moderate" | "low";
+  rule_in: string[];
+  rule_out: string[];
+  must_not_miss: boolean;
+};
+
+export type WorkupOrders = {
+  labs: string[];
+  imaging: string[];
+  monitoring: string[];
+  consults: string[];
+  rationale: string;
+};
+
+export type Disposition = {
+  disposition: "admit" | "observe" | "discharge" | "transfer" | "";
+  level_of_care: string;
+  expected_los_hours: number;
+  rationale: string;
+  discharge_criteria: string[];
+  return_precautions: string[];
+};
+
 export type PatientDetail = PatientSummary & {
   transcript: string;
   photo_url: string | null;
@@ -173,6 +199,9 @@ export type PatientDetail = PatientSummary & {
   insurance_info: InsuranceFields | null;
   prescriptions: Prescription[];
   clinical_scribe_note: string;
+  differential: DifferentialEntry[];
+  workup_orders: WorkupOrders;
+  disposition: Disposition;
   notes: ClinicianNote[];
   patient_education: PatientEducation | null;
   patient_education_published_at: string | null;

@@ -7,13 +7,15 @@ import { MedicalInfoForm } from "../components/patient/MedicalInfoForm";
 import { PhotoCapture } from "../components/patient/PhotoCapture";
 import { FollowupQuestions, toAnswerList } from "../components/patient/FollowupQuestions";
 import { InsuranceScanner } from "../components/patient/InsuranceScanner";
+import { LanguageGate } from "../components/patient/LanguageGate";
 import { Button } from "../components/ui/Button";
 import { ProgressDots } from "../components/ui/ProgressDots";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { postIntake, postTranscribe, startIntake } from "../lib/api";
+import { isRTL, t, type LangCode } from "../lib/i18n";
 import type { FollowupQuestion, InsuranceFields, MedicalInfo } from "../types";
 
-type Step = "welcome" | "medical" | "insurance" | "record" | "followups" | "submitting";
+type Step = "language" | "welcome" | "medical" | "insurance" | "record" | "followups" | "submitting";
 
 const emptyMedical: MedicalInfo = {
   age: null,
@@ -30,14 +32,18 @@ const emptyMedical: MedicalInfo = {
   smoker: null,
 };
 
-const stepOrder: Step[] = ["welcome", "medical", "insurance", "record", "followups", "submitting"];
+const stepOrder: Step[] = ["language", "welcome", "medical", "insurance", "record", "followups", "submitting"];
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 export default function PatientIntake() {
   const { hospitalId = "demo" } = useParams<{ hospitalId: string }>();
   const navigate = useNavigate();
   const recorder = useAudioRecorder();
 
-  const [step, setStep] = useState<Step>("welcome");
+  const [step, setStep] = useState<Step>("language");
   const [name, setName] = useState("");
   const [medical, setMedical] = useState<MedicalInfo>(emptyMedical);
   const [insurance, setInsurance] = useState<InsuranceFields | null>(null);
@@ -49,28 +55,41 @@ export default function PatientIntake() {
 
   const [transcript, setTranscript] = useState<string>("");
   const [, setLanguage] = useState<string>("en");
-  const [preferredLanguage, setPreferredLanguage] = useState<string>("en");
+  const [preferredLanguage, setPreferredLanguage] = useState<LangCode>("en");
   const [followups, setFollowups] = useState<FollowupQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [intakeToken, setIntakeToken] = useState<string | null>(null);
-  // Stable per-session idempotency key — same retry = same result from backend
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
   const [consentGranted, setConsentGranted] = useState(false);
   const CONSENT_VERSION = "1.0";
 
-  // Fetch a one-use intake nonce as soon as the patient lands. Required by /intake.
+  // Mirror the chosen language onto <html dir> so RTL scripts (Arabic/Persian/Urdu)
+  // flow correctly without reshuffling the whole layout module.
+  useEffect(() => {
+    const dir = isRTL(preferredLanguage) ? "rtl" : "ltr";
+    document.documentElement.setAttribute("dir", dir);
+    document.documentElement.setAttribute("lang", preferredLanguage);
+    return () => {
+      document.documentElement.setAttribute("dir", "ltr");
+      document.documentElement.setAttribute("lang", "en");
+    };
+  }, [preferredLanguage]);
+
   useEffect(() => {
     startIntake(hospitalId)
       .then((r) => setIntakeToken(r.token))
       .catch(() => { /* submit will surface a clean error */ });
   }, [hospitalId]);
 
-  const stepIndex = stepOrder.indexOf(step) + 1;
+  // Step counter excludes the language gate and submitting screen — keeps the dots honest.
+  const userSteps = stepOrder.filter((s) => s !== "language" && s !== "submitting");
+  const currentUserStep = userSteps.indexOf(step as (typeof userSteps)[number]);
 
   function canAdvance(): boolean {
+    if (step === "language") return true;
     if (step === "welcome") return name.trim().length > 0 && consentGranted;
     if (step === "medical") return medical.age !== null && !!medical.sex;
-    if (step === "insurance") return true; // optional — can always continue
+    if (step === "insurance") return true;
     if (step === "record") {
       if (inputMode === "type" || recorder.permissionDenied) return textFallback.trim().length > 3;
       return !!recorder.audioBlob;
@@ -79,26 +98,21 @@ export default function PatientIntake() {
     return false;
   }
 
-  async function handleNext() {
-    if (!canAdvance() || busy) return;
-    setError(null);
+  async function transcribeWithRetry(): Promise<void> {
+    const form = new FormData();
+    const usingVoice =
+      inputMode === "voice" && !recorder.permissionDenied && !!recorder.audioBlob;
+    if (usingVoice && recorder.audioBlob) {
+      form.append("audio_file", recorder.audioBlob, "intake.webm");
+    } else {
+      form.append("pre_transcribed_text", textFallback.trim());
+    }
+    form.append("medical_info", JSON.stringify(medical));
+    form.append("preferred_language", preferredLanguage);
 
-    if (step === "welcome") return setStep("medical");
-    if (step === "medical") return setStep("insurance");
-    if (step === "insurance") return setStep("record");
-
-    if (step === "record") {
-      setBusy(true);
+    let attempt = 0;
+    while (true) {
       try {
-        const form = new FormData();
-        const usingVoice =
-          inputMode === "voice" && !recorder.permissionDenied && !!recorder.audioBlob;
-        if (usingVoice && recorder.audioBlob) {
-          form.append("audio_file", recorder.audioBlob, "intake.webm");
-        } else {
-          form.append("pre_transcribed_text", textFallback.trim());
-        }
-        form.append("medical_info", JSON.stringify(medical));
         const resp = await postTranscribe(hospitalId, form);
         setTranscript(resp.transcript);
         setLanguage(resp.language);
@@ -108,17 +122,49 @@ export default function PatientIntake() {
         } else {
           setStep("followups");
         }
+        return;
       } catch (e: any) {
+        const status = e?.response?.status;
+        // Auto-retry once on 429 (rate-limit) or transient 5xx after a short backoff.
+        // Whisper/Claude can be flaky — a single retry usually clears it without
+        // making the patient touch the button again.
+        if (attempt < 1 && (status === 429 || status === 503 || status === 502 || status === 504)) {
+          attempt += 1;
+          await sleep(1500);
+          continue;
+        }
+        throw e;
+      }
+    }
+  }
+
+  async function handleNext() {
+    if (!canAdvance() || busy) return;
+    setError(null);
+
+    if (step === "language") return setStep("welcome");
+    if (step === "welcome") return setStep("medical");
+    if (step === "medical") return setStep("insurance");
+    if (step === "insurance") return setStep("record");
+
+    if (step === "record") {
+      setBusy(true);
+      try {
+        await transcribeWithRetry();
+      } catch (e: any) {
+        const status = e?.response?.status;
         const detail = e?.response?.data?.detail || "";
         const isTranscriptionDown =
-          /transcription/i.test(detail) || /whisper/i.test(detail) || e?.response?.status === 503;
+          /transcription/i.test(detail) || /whisper/i.test(detail) || status === 503;
         if (isTranscriptionDown && inputMode === "voice") {
           setInputMode("type");
-          setError(
-            "Voice transcription is temporarily unavailable — please type your symptoms below and tap Next again."
-          );
+          setError(t("error_transcription_down", preferredLanguage));
+        } else if (status === 429) {
+          setError(t("error_rate_limited", preferredLanguage));
+        } else if (!status && /network|fetch|abort|timeout/i.test(e?.message || "")) {
+          setError(t("error_network", preferredLanguage));
         } else {
-          setError(detail || e?.message || "Something went wrong.");
+          setError(detail || e?.message || t("error_generic", preferredLanguage));
         }
       } finally {
         setBusy(false);
@@ -168,9 +214,6 @@ export default function PatientIntake() {
       try {
         result = await postIntake(hospitalId, form);
       } catch (e: any) {
-        // Nonce expired / already used / device-rebound — re-issue silently and retry
-        // once. The idempotency key stays stable, so the backend dedupes if the first
-        // request actually did land.
         const status = e?.response?.status;
         const detail: string = e?.response?.data?.detail || "";
         const isNonceFault =
@@ -184,7 +227,14 @@ export default function PatientIntake() {
       sessionStorage.setItem(`intake:${result.patient_id}`, JSON.stringify(result));
       navigate(`/${hospitalId}/result/${result.patient_id}`);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Something went wrong.");
+      const status = e?.response?.status;
+      if (status === 429) {
+        setError(t("error_rate_limited", preferredLanguage));
+      } else if (!status && /network|fetch|abort|timeout/i.test(e?.message || "")) {
+        setError(t("error_network", preferredLanguage));
+      } else {
+        setError(e?.response?.data?.detail || e?.message || t("error_generic", preferredLanguage));
+      }
       setStep("followups");
     } finally {
       setBusy(false);
@@ -194,6 +244,19 @@ export default function PatientIntake() {
   function handleBack() {
     const idx = stepOrder.indexOf(step);
     if (idx > 0) setStep(stepOrder[idx - 1]);
+  }
+
+  // Language gate is its own full-screen layout — bypasses the normal header/footer.
+  if (step === "language") {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-surface-lowest">
+        <LanguageGate
+          selected={preferredLanguage}
+          onSelect={setPreferredLanguage}
+          onContinue={() => setStep("welcome")}
+        />
+      </div>
+    );
   }
 
   return (
@@ -206,7 +269,7 @@ export default function PatientIntake() {
           {step !== "welcome" && step !== "submitting" && (
             <button
               onClick={handleBack}
-              aria-label="Back"
+              aria-label={t("back_button", preferredLanguage)}
               className="w-10 h-10 rounded-full hover:bg-surface-low flex items-center justify-center"
             >
               <ArrowLeft size={20} />
@@ -219,7 +282,9 @@ export default function PatientIntake() {
             draggable={false}
           />
         </div>
-        {step !== "submitting" && <ProgressDots total={stepOrder.length - 1} current={stepIndex} />}
+        {step !== "submitting" && (
+          <ProgressDots total={userSteps.length - 1} current={currentUserStep + 1} />
+        )}
       </header>
 
       <main className="flex-1 px-4 py-6 max-w-lg w-full mx-auto flex flex-col gap-6">
@@ -236,15 +301,15 @@ export default function PatientIntake() {
               <>
                 <div>
                   <h1 className="text-3xl font-bold tracking-editorial-tight mb-2">
-                    You're not waiting alone.
+                    {t("welcome_title", preferredLanguage)}
                   </h1>
                   <p className="text-text-muted">
-                    Tell us your story once. By the time a clinician sees you, they'll already know.
+                    {t("welcome_subtitle", preferredLanguage)}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold block mb-2" htmlFor="name">
-                    Your first name
+                    {t("first_name_label", preferredLanguage)}
                   </label>
                   <input
                     id="name"
@@ -253,34 +318,18 @@ export default function PatientIntake() {
                     autoFocus
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Marcus"
+                    placeholder={t("first_name_placeholder", preferredLanguage)}
                     className="w-full h-14 px-4 rounded-md bg-surface-lowest shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-lg outline-none transition-all"
                   />
                 </div>
 
-                <div>
-                  <label className="text-sm font-semibold block mb-2" htmlFor="preferred-lang">
-                    Preferred language
-                  </label>
-                  <select
-                    id="preferred-lang"
-                    value={preferredLanguage}
-                    onChange={(e) => setPreferredLanguage(e.target.value)}
-                    className="w-full h-12 px-3 rounded-md bg-surface-lowest shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none transition-all"
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Español (Spanish)</option>
-                    <option value="zh">中文 (Mandarin)</option>
-                    <option value="vi">Tiếng Việt (Vietnamese)</option>
-                    <option value="ar">العربية (Arabic)</option>
-                    <option value="fr">Français (French)</option>
-                    <option value="pt">Português (Portuguese)</option>
-                    <option value="ko">한국어 (Korean)</option>
-                  </select>
-                  <p className="mt-1 text-[11px] text-text-muted">
-                    We'll transcribe your voice and speak the comfort protocol back in this language.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep("language")}
+                  className="text-xs text-primary underline self-start"
+                >
+                  {t("language_gate_title", preferredLanguage)} →
+                </button>
 
                 <div className="rounded-lg bg-surface-lowest p-4 border border-[rgba(74,85,87,0.12)]">
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -291,16 +340,12 @@ export default function PatientIntake() {
                       className="mt-1 h-4 w-4 rounded border-line accent-primary"
                     />
                     <div className="flex-1 text-[13px] leading-relaxed text-ink">
-                      <span className="font-semibold">I consent to AI processing.</span>{" "}
-                      My voice recording, symptoms, and any photos I upload will be sent to
-                      third-party AI services (<span className="font-mono text-[12px]">OpenAI</span> for
-                      voice transcription, <span className="font-mono text-[12px]">Anthropic</span> for
-                      triage and scribe notes, <span className="font-mono text-[12px]">ElevenLabs</span>{" "}
-                      for the audio response). Each patient visit appends an attribution log so the
-                      clinician can see exactly which provider saw which data.
+                      <span className="font-semibold">
+                        {t("consent_lead", preferredLanguage)}
+                      </span>{" "}
+                      {t("consent_body", preferredLanguage)}
                       <div className="mt-1.5 text-[11px] text-text-muted">
-                        Decline by refreshing the page and asking a front-desk worker to collect your
-                        info manually. Consent version {CONSENT_VERSION}.
+                        {t("consent_decline", preferredLanguage)} (v{CONSENT_VERSION})
                       </div>
                     </div>
                   </label>
@@ -311,8 +356,12 @@ export default function PatientIntake() {
             {step === "medical" && (
               <>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-editorial mb-1">A few medical details</h2>
-                  <p className="text-text-muted text-sm">So the clinician doesn't have to ask later.</p>
+                  <h2 className="text-2xl font-bold tracking-editorial mb-1">
+                    {t("medical_title", preferredLanguage)}
+                  </h2>
+                  <p className="text-text-muted text-sm">
+                    {t("medical_subtitle", preferredLanguage)}
+                  </p>
                 </div>
                 <MedicalInfoForm value={medical} onChange={setMedical} />
               </>
@@ -321,9 +370,11 @@ export default function PatientIntake() {
             {step === "insurance" && (
               <>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-editorial mb-1">Insurance (optional)</h2>
+                  <h2 className="text-2xl font-bold tracking-editorial mb-1">
+                    {t("insurance_title", preferredLanguage)}
+                  </h2>
                   <p className="text-text-muted text-sm">
-                    Snap a picture and we'll auto-fill the details. You can also skip this.
+                    {t("insurance_subtitle", preferredLanguage)}
                   </p>
                 </div>
                 <InsuranceScanner
@@ -338,15 +389,16 @@ export default function PatientIntake() {
             {step === "record" && (
               <>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-editorial mb-1">What's going on?</h2>
+                  <h2 className="text-2xl font-bold tracking-editorial mb-1">
+                    {t("record_title", preferredLanguage)}
+                  </h2>
                   <p className="text-text-muted text-sm">
                     {inputMode === "voice"
-                      ? "Speak naturally for 20-60 seconds. Or type if it's loud."
-                      : "Write what's happening. A few sentences is enough."}
+                      ? t("record_subtitle_voice", preferredLanguage)
+                      : t("record_subtitle_type", preferredLanguage)}
                   </p>
                 </div>
 
-                {/* Mode toggle — mic vs keyboard */}
                 <div className="inline-flex self-start rounded-md bg-surface-low p-1">
                   <button
                     type="button"
@@ -358,7 +410,7 @@ export default function PatientIntake() {
                     }`}
                     disabled={recorder.permissionDenied}
                   >
-                    <Mic size={14} /> Voice
+                    <Mic size={14} /> {t("record_voice_tab", preferredLanguage)}
                   </button>
                   <button
                     type="button"
@@ -369,7 +421,7 @@ export default function PatientIntake() {
                         : "text-text-muted"
                     }`}
                   >
-                    <Keyboard size={14} /> Type
+                    <Keyboard size={14} /> {t("record_type_tab", preferredLanguage)}
                   </button>
                 </div>
 
@@ -380,11 +432,13 @@ export default function PatientIntake() {
                       onChange={(e) => setTextFallback(e.target.value)}
                       rows={6}
                       className="w-full p-4 rounded-md bg-surface-lowest shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none transition-all"
-                      placeholder="Describe your symptoms — what hurts, when it started, how bad it feels, anything else going on."
+                      placeholder={t("record_textarea_placeholder", preferredLanguage)}
                       autoFocus
                     />
                     {recorder.permissionDenied && (
-                      <p className="text-xs text-text-muted">Mic access was denied.</p>
+                      <p className="text-xs text-text-muted">
+                        {t("record_mic_denied", preferredLanguage)}
+                      </p>
                     )}
                   </div>
                 ) : (
@@ -397,9 +451,9 @@ export default function PatientIntake() {
                     />
                     {recorder.audioBlob && !recorder.isRecording && (
                       <div className="text-sm text-primary flex items-center gap-3">
-                        Recording captured ({recorder.elapsed}s)
+                        {t("record_captured", preferredLanguage)} ({recorder.elapsed}s)
                         <button type="button" className="text-text-muted underline" onClick={recorder.reset}>
-                          re-record
+                          {t("record_rerecord", preferredLanguage)}
                         </button>
                       </div>
                     )}
@@ -413,9 +467,11 @@ export default function PatientIntake() {
             {step === "followups" && (
               <>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-editorial mb-1">A few quick questions</h2>
+                  <h2 className="text-2xl font-bold tracking-editorial mb-1">
+                    {t("followups_title", preferredLanguage)}
+                  </h2>
                   <p className="text-text-muted text-sm">
-                    These help us give your clinician a complete picture.
+                    {t("followups_subtitle", preferredLanguage)}
                   </p>
                 </div>
                 <FollowupQuestions
@@ -429,8 +485,12 @@ export default function PatientIntake() {
             {step === "submitting" && (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <Loader2 size={48} className="animate-spin text-primary" />
-                <div className="text-lg font-semibold tracking-editorial">Finalizing your assessment…</div>
-                <div className="text-sm text-text-muted">Generating your pre-brief for the clinician.</div>
+                <div className="text-lg font-semibold tracking-editorial">
+                  {t("submitting_title", preferredLanguage)}
+                </div>
+                <div className="text-sm text-text-muted">
+                  {t("submitting_subtitle", preferredLanguage)}
+                </div>
               </div>
             )}
           </motion.div>
@@ -449,22 +509,22 @@ export default function PatientIntake() {
           <Button variant="primary" fullWidth disabled={!canAdvance() || busy} onClick={handleNext}>
             {busy ? (
               <>
-                <Loader2 size={18} className="animate-spin" /> Working…
+                <Loader2 size={18} className="animate-spin" /> {t("working_button", preferredLanguage)}
               </>
             ) : step === "record" ? (
               <>
-                Continue <ArrowRight size={18} />
+                {t("continue_button", preferredLanguage)} <ArrowRight size={18} />
               </>
             ) : step === "followups" ? (
-              "Submit"
+              t("submit_button", preferredLanguage)
             ) : (
               <>
-                Next <ArrowRight size={18} />
+                {t("next_button", preferredLanguage)} <ArrowRight size={18} />
               </>
             )}
           </Button>
           <div className="text-[10px] text-text-muted text-center mt-2 leading-relaxed">
-            Triage aid only. Clinicians always verify. If life-threatening, go to the front desk now.
+            {t("footer_disclaimer", preferredLanguage)}
           </div>
         </footer>
       )}

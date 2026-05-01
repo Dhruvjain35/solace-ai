@@ -86,6 +86,14 @@ def get_patient_detail(
         "insurance_info": _maybe_json(p.get("insurance_info")),
         "prescriptions": storage.list_prescriptions(patient_id),
         "clinical_scribe_note": p.get("clinical_scribe_note", ""),
+        "differential": _maybe_json(p.get("differential")) or [],
+        "workup_orders": _maybe_json(p.get("workup_orders")) or {
+            "labs": [], "imaging": [], "monitoring": [], "consults": [], "rationale": ""
+        },
+        "disposition": _maybe_json(p.get("disposition")) or {
+            "disposition": "", "level_of_care": "", "expected_los_hours": 0,
+            "rationale": "", "discharge_criteria": [], "return_precautions": []
+        },
         "notes": storage.list_notes(patient_id),
         "patient_education": _maybe_json(p.get("patient_education")),
         "patient_education_published_at": p.get("patient_education_published_at"),

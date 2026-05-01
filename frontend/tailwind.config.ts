@@ -32,6 +32,14 @@ export default {
           DEFAULT: "#BA1A1A",
           container: "#FFDAD6",
         },
+        warning: {
+          DEFAULT: "#B05436",   // burnt amber — same family as the SHAP positive bar
+          container: "#F8E0CF",
+        },
+        success: {
+          DEFAULT: "#557D6E",   // muted clinical green — matches SHAP negative bar
+          container: "#D8E7DF",
+        },
       },
       fontFamily: {
         sans: ['"DM Sans"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],

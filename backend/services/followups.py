@@ -24,9 +24,9 @@ Each question must be answerable in <10 seconds.
 
 Return JSON ONLY, no preamble or markdown fence, in this exact shape:
 [
-  {"id": "q1", "question": "...", "type": "boolean"},
-  {"id": "q2", "question": "...", "type": "choice", "options": ["option1", "option2", "option3"]},
-  {"id": "q3", "question": "...", "type": "text"}
+  {{"id": "q1", "question": "...", "type": "boolean"}},
+  {{"id": "q2", "question": "...", "type": "choice", "options": ["option1", "option2", "option3"]}},
+  {{"id": "q3", "question": "...", "type": "text"}}
 ]
 
 Rules:
@@ -37,7 +37,8 @@ Rules:
 - Focus on: duration, severity escalation, associated symptoms, prior history, triggers.
 - Questions must be plain-language, no clinical jargon ("shortness of breath" OK, "dyspnea" not OK).
 - Do NOT repeat what the patient already said in the transcript.
-- If the transcript already contains a duration, severity, and key associated symptoms, return []."""
+- If the transcript already contains a duration, severity, and key associated symptoms, return [].
+- Write the "question" and any "options" in language code: {language}. Keep "id" and "type" in English."""
 
 
 _FALLBACK: list[dict] = [
@@ -55,8 +56,12 @@ _FALLBACK: list[dict] = [
 ]
 
 
-def generate_questions(transcript: str, medical_info: dict[str, Any] | None = None) -> list[dict]:
-    """Return 0-3 follow-up questions. Falls back to generic questions on failure."""
+def generate_questions(
+    transcript: str,
+    medical_info: dict[str, Any] | None = None,
+    language: str = "en",
+) -> list[dict]:
+    """Return 0-3 follow-up questions in the patient's language. Falls back on failure."""
     if not settings.anthropic_api_key:
         return _FALLBACK
     try:
@@ -72,7 +77,7 @@ Return the JSON array now."""
         resp = claude.messages_create(
             model=_MODEL,
             max_tokens=500,
-            system=_SYSTEM,
+            system=_SYSTEM.format(language=(language or "en")[:2]),
             messages=[{"role": "user", "content": user}],
             purpose="followups",
         )

@@ -28,6 +28,7 @@ async def transcribe_and_ask(
     audio_file: UploadFile | None = File(None),
     pre_transcribed_text: str | None = Form(None),
     medical_info: str | None = Form(None),
+    preferred_language: str | None = Form(None),
     request: Request = None,
 ) -> dict:
     if not storage.get_hospital(hospital_id):
@@ -39,10 +40,14 @@ async def transcribe_and_ask(
     blocklist.enforce(identity, source_ip=source_ip)
     quota.check_and_consume(identity, "transcribe", source_ip=source_ip)
 
+    selected_lang = (preferred_language or "").strip().lower()[:2] or None
+
     # 1. Transcribe (or accept prepared text)
     if pre_transcribed_text:
         transcript = pre_transcribed_text.strip()
-        language = "en"
+        # Trust the patient's language pick when they typed instead of recorded;
+        # Whisper isn't in the loop so we have nothing better to use.
+        language = selected_lang or "en"
         ok, cleaned, _ = content_guard.scan(transcript, label="transcribe.pre_transcribed", source_ip=source_ip, user_agent=user_agent)
         if not ok:
             raise HTTPException(status_code=422, detail="content rejected by abuse scanner")
@@ -56,7 +61,8 @@ async def transcribe_and_ask(
         try:
             t = transcription.transcribe(audio_bytes, filename=audio_file.filename or "audio.webm")
             transcript = t.text
-            language = t.language
+            # Patient's explicit language pick wins over Whisper auto-detect.
+            language = selected_lang or t.language
         except transcription.TranscriptionError as e:
             raise HTTPException(status_code=503, detail=f"Voice transcription unavailable: {e}")
         ok, cleaned, _ = content_guard.scan(transcript, label="transcribe.whisper", source_ip=source_ip, user_agent=user_agent)
@@ -64,13 +70,13 @@ async def transcribe_and_ask(
             raise HTTPException(status_code=422, detail="content rejected by abuse scanner")
         transcript = cleaned
 
-    # 2. Generate follow-up questions
+    # 2. Generate follow-up questions in the patient's language
     info_dict = None
     if medical_info:
         try:
             info_dict = json.loads(medical_info)
         except json.JSONDecodeError:
             log.warning("medical_info JSON parse failed; ignoring")
-    questions = followups.generate_questions(transcript, info_dict)
+    questions = followups.generate_questions(transcript, info_dict, language=language)
 
     return {"transcript": transcript, "language": language, "followups": questions}

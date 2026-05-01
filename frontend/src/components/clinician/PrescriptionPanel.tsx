@@ -1,17 +1,54 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, Loader2, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, Loader2, Plus, ShieldAlert, Sparkles } from "lucide-react";
 import {
   createPrescription,
   listPrescriptions,
   suggestPrescriptions,
 } from "../../lib/api";
-import type { Prescription, PrescriptionSuggestion } from "../../types";
+import type { MedicalInfo, Prescription, PrescriptionSuggestion } from "../../types";
 
 type Props = {
   hospitalId: string;
   patientId: string;
   pin: string;
+  medicalInfo?: MedicalInfo | null;
 };
+
+// Lightweight client-side cross-check: flag if the suggested drug name (or generic
+// keyword) collides with a documented allergy or current medication. The Claude
+// suggester also checks this server-side, but a second client gate is cheap insurance —
+// the clinician sees a red badge before they tap Accept.
+function checkInteractions(
+  drug: string,
+  info: MedicalInfo | null | undefined,
+): { allergy?: string; med?: string } {
+  if (!info || !drug) return {};
+  const norm = drug.toLowerCase();
+  const allergies = (info.allergies || []).map((a) => a.toLowerCase()).filter(Boolean);
+  const meds = (info.medications || []).map((m) => m.toLowerCase()).filter(Boolean);
+  const allergyHit = allergies.find(
+    (a) => a !== "none" && (norm.includes(a) || a.includes(norm) || _classMatch(norm, a)),
+  );
+  const medHit = meds.find(
+    (m) => m !== "none" && (norm.includes(m) || m.includes(norm) || _classMatch(norm, m)),
+  );
+  return { allergy: allergyHit, med: medHit };
+}
+
+// Cheap class-match. Real EHRs use RxNorm/SNOMED; this catches the common ED cases.
+const _CLASS_GROUPS: Record<string, string[]> = {
+  nsaid: ["ibuprofen", "naproxen", "ketorolac", "aspirin", "diclofenac"],
+  opioid: ["morphine", "oxycodone", "hydrocodone", "fentanyl", "tramadol", "codeine"],
+  betalactam: ["penicillin", "amoxicillin", "ampicillin", "cephalexin", "ceftriaxone"],
+  anticoag: ["warfarin", "apixaban", "rivaroxaban", "heparin", "enoxaparin"],
+};
+
+function _classMatch(a: string, b: string): boolean {
+  for (const group of Object.values(_CLASS_GROUPS)) {
+    if (group.some((d) => a.includes(d)) && group.some((d) => b.includes(d))) return true;
+  }
+  return false;
+}
 
 const EMPTY_MANUAL: PrescriptionSuggestion = {
   drug: "",
@@ -23,7 +60,7 @@ const EMPTY_MANUAL: PrescriptionSuggestion = {
   cautions: "",
 };
 
-export function PrescriptionPanel({ hospitalId, patientId, pin }: Props) {
+export function PrescriptionPanel({ hospitalId, patientId, pin, medicalInfo }: Props) {
   const [items, setItems] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<PrescriptionSuggestion[]>([]);
@@ -131,33 +168,48 @@ export function PrescriptionPanel({ hospitalId, patientId, pin }: Props) {
           <div className="text-[11px] uppercase tracking-[0.14em] text-primary font-semibold">
             AI suggestions — verify before prescribing
           </div>
-          {suggestions.map((s, i) => (
-            <div key={i} className="bg-primary-fixed/40 rounded-lg p-3 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-bold tracking-editorial">
-                  {s.drug} {s.dose && <span className="text-sm font-normal">{s.dose}</span>}
+          {suggestions.map((s, i) => {
+            const hits = checkInteractions(s.drug, medicalInfo);
+            return (
+              <div key={i} className="bg-primary-fixed/40 rounded-lg p-3 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold tracking-editorial">
+                    {s.drug} {s.dose && <span className="text-sm font-normal">{s.dose}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => accept(s)}
+                    disabled={saving}
+                    className="inline-flex items-center gap-1 h-8 px-3 rounded-md bg-primary text-white text-xs font-medium"
+                  >
+                    <Check size={14} /> Accept
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => accept(s)}
-                  disabled={saving}
-                  className="inline-flex items-center gap-1 h-8 px-3 rounded-md bg-primary text-white text-xs font-medium"
-                >
-                  <Check size={14} /> Accept
-                </button>
-              </div>
-              <div className="text-xs font-mono text-text-muted">
-                {[s.route, s.frequency, s.duration].filter(Boolean).join(" · ")}
-              </div>
-              {s.indication && <div className="text-sm">{s.indication}</div>}
-              {s.cautions && (
-                <div className="text-xs text-error flex items-start gap-1">
-                  <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-                  <span>{s.cautions}</span>
+                <div className="text-xs font-mono text-text-muted">
+                  {[s.route, s.frequency, s.duration].filter(Boolean).join(" · ")}
                 </div>
-              )}
-            </div>
-          ))}
+                {s.indication && <div className="text-sm">{s.indication}</div>}
+                {hits.allergy && (
+                  <div className="text-xs text-error flex items-start gap-1 font-semibold">
+                    <ShieldAlert size={12} className="mt-0.5 shrink-0" />
+                    <span>Allergy match: {hits.allergy}</span>
+                  </div>
+                )}
+                {hits.med && (
+                  <div className="text-xs text-warning flex items-start gap-1 font-semibold">
+                    <ShieldAlert size={12} className="mt-0.5 shrink-0" />
+                    <span>Interaction with current med: {hits.med}</span>
+                  </div>
+                )}
+                {s.cautions && (
+                  <div className="text-xs text-error flex items-start gap-1">
+                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                    <span>{s.cautions}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -16,7 +16,18 @@ from lib import ai_log, blocklist, content_guard, idempotency, quota, uploads
 
 CONSENT_VERSION_CURRENT = "1.0"
 from lib.fallbacks import ESI_LABELS, GENERIC_PATIENT_EXPLANATION
-from services import comfort_protocol, prebrief, scribe, transcription, triage, tts, vision
+from services import (
+    comfort_protocol,
+    differential,
+    disposition,
+    prebrief,
+    scribe,
+    transcription,
+    triage,
+    tts,
+    vision,
+    workup,
+)
 
 
 def _source_ip(req: Request | None) -> str | None:
@@ -168,7 +179,9 @@ async def create_intake(
     esi_label = ESI_LABELS.get(esi_level, str(esi_level))
     patient_explanation = GENERIC_PATIENT_EXPLANATION.get(esi_level, "")
 
-    # 6. Fire the three Claude calls in parallel — biggest latency win.
+    # 6. Fire the Claude calls in parallel — biggest latency win.
+    # Stage A (text-only): prebrief, scribe, comfort, differential.
+    # We run differential first because workup + disposition depend on its output.
     prebrief_task = asyncio.to_thread(
         prebrief.generate,
         transcript_text, photo_analysis, esi_level,
@@ -183,9 +196,25 @@ async def create_intake(
         transcript_text, photo_analysis, esi_level, language,
         info_dict, qa_list,
     )
-    clinician_prebrief, clinical_scribe_note, protocol = await asyncio.gather(
-        prebrief_task, scribe_task, comfort_task
+    differential_task = asyncio.to_thread(
+        differential.generate,
+        transcript_text, esi_level,
+        info_dict, qa_list, photo_analysis, None,
     )
+    clinician_prebrief, clinical_scribe_note, protocol, ddx_list = await asyncio.gather(
+        prebrief_task, scribe_task, comfort_task, differential_task
+    )
+
+    # Stage B: workup + disposition consume the differential. Both run in parallel.
+    workup_task = asyncio.to_thread(
+        workup.generate,
+        transcript_text, esi_level, ddx_list, info_dict, None,
+    )
+    disposition_task = asyncio.to_thread(
+        disposition.generate,
+        transcript_text, esi_level, ddx_list, info_dict, None,
+    )
+    workup_orders, dispo = await asyncio.gather(workup_task, disposition_task)
 
     # 7. TTS uses the comfort protocol, so it runs after. Still threaded so it doesn't block the event loop.
     audio_script = tts.compose_script(patient_explanation, protocol, patient_name=patient_name)
@@ -215,6 +244,9 @@ async def create_intake(
         "probabilities": json.dumps(triage_result.probabilities),
         "clinician_prebrief": clinician_prebrief,
         "clinical_scribe_note": clinical_scribe_note,
+        "differential": json.dumps(ddx_list),
+        "workup_orders": json.dumps(workup_orders),
+        "disposition": json.dumps(dispo),
         "patient_explanation": patient_explanation,
         "comfort_protocol": json.dumps(protocol),
         "audio_url": audio_url,

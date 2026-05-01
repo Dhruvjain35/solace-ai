@@ -8,6 +8,9 @@ import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
 import { VitalsPanel } from "../components/clinician/VitalsPanel";
 import { EHRPanel } from "../components/clinician/EHRPanel";
+import { DifferentialPanel } from "../components/clinician/DifferentialPanel";
+import { WorkupPanel } from "../components/clinician/WorkupPanel";
+import { DispositionPanel } from "../components/clinician/DispositionPanel";
 import { Button } from "../components/ui/Button";
 import { usePollingPatients } from "../hooks/usePollingPatients";
 import { getPatientDetail, loginClinician, markSeen } from "../lib/api";
@@ -555,6 +558,18 @@ export default function ClinicianDashboard() {
                   </Section>
                 )}
 
+                {detail.differential && detail.differential.length > 0 && (
+                  <DifferentialPanel entries={detail.differential} />
+                )}
+
+                {detail.workup_orders && (
+                  <WorkupPanel orders={detail.workup_orders} />
+                )}
+
+                {detail.disposition && detail.disposition.disposition && (
+                  <DispositionPanel disposition={detail.disposition} />
+                )}
+
                 <Section title="Raw transcript">
                   <pre className="font-mono text-[13px] whitespace-pre-wrap bg-surface-low rounded-lg p-4 leading-relaxed">
                     {detail.transcript}
@@ -668,7 +683,13 @@ export default function ClinicianDashboard() {
                   publishedAt={detail.patient_education_published_at}
                 />
 
-                <PrescriptionPanel hospitalId={hospitalId} patientId={detail.patient_id} pin={session!.token} />
+                <PrescriptionPanel
+                  hospitalId={hospitalId}
+                  patientId={detail.patient_id}
+                  pin={session!.token}
+                  medicalInfo={detail.medical_info}
+                />
+
 
                 {detail.photo_url && (
                   <Section title="Photo">
