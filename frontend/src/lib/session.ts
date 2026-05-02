@@ -15,6 +15,13 @@ export type Session = {
   role: string;
   hospital_id: string;
   expires_at: number; // unix seconds
+  // Optional EHR provenance — present when the clinician signed in via SMART-on-FHIR.
+  // Tells the dashboard which vendor to badge and where to issue live FHIR queries.
+  ehr_vendor?: string;        // "epic" | "cerner" | "athena"
+  ehr_label?: string;         // "Epic" | "Oracle Cerner" | "Athenahealth"
+  ehr_color?: string;         // brand accent hex
+  ehr_sandbox?: boolean;      // true = non-PHI demo / sandbox
+  fhir_base_url?: string;
 };
 
 export function loadSession(): Session | null {

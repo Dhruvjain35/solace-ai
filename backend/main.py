@@ -12,7 +12,7 @@ from mangum import Mangum
 
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
-from routers import admin, auth, ehr, insurance, intake, notes, pain_flag, patients, prescriptions, public, transcribe, triage, voice
+from routers import admin, auth, ehr, ehr_auth, insurance, intake, notes, pain_flag, patients, prescriptions, public, transcribe, triage, voice
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -75,6 +75,10 @@ if settings.solace_mode == "local":
     app.mount("/media", StaticFiles(directory=media_dir), name="media")
 
 # Routers — each is mounted at /api/{hospital_id}/...
+# EHR sign-in (SMART-on-FHIR) is registered FIRST so its fixed `/api/auth/ehr/...`
+# paths win over the parameterized `/api/{hospital_id}/ehr/{mrn}` route that
+# would otherwise match (with hospital_id="auth", mrn="vendors") and require auth.
+app.include_router(ehr_auth.router)
 app.include_router(transcribe.router, prefix="/api/{hospital_id}", tags=["transcribe"])
 app.include_router(intake.router, prefix="/api/{hospital_id}", tags=["intake"])
 app.include_router(insurance.router, prefix="/api/{hospital_id}", tags=["insurance"])

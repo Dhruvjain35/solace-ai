@@ -10,7 +10,12 @@ export type UseAudioRecorder = {
   reset: () => void;
 };
 
-const MAX_SECONDS = 120;
+// API Gateway HTTP API caps integration timeout at 30s. With Whisper + Claude
+// follow-ups inside the same Lambda invocation, audio over ~60s reliably blows
+// past that and surfaces to the patient as a "connection hiccup" 504. Cap the
+// recorder shorter than that mathematical ceiling so the worst-case patient
+// never hits the timeout.
+const MAX_SECONDS = 60;
 
 export function useAudioRecorder(): UseAudioRecorder {
   const [isRecording, setIsRecording] = useState(false);

@@ -227,11 +227,17 @@ export type EHRRecord = {
   }[];
 };
 
+export type EHRLookupResult = {
+  record: EHRRecord | null;
+  reason?: string;
+  match_method?: "insurance_member_id+provider" | "insurance_member_id" | "name_exact";
+};
+
 export async function lookupEHR(
   hospitalId: string,
   patientId: string
-): Promise<{ record: EHRRecord | null; reason?: string }> {
-  const { data } = await api.get<{ record: EHRRecord | null; reason?: string }>(
+): Promise<EHRLookupResult> {
+  const { data } = await api.get<EHRLookupResult>(
     `/api/${hospitalId}/ehr/lookup-by-patient/${patientId}`
   );
   return data;
@@ -261,6 +267,34 @@ export async function loginClinician(
     pin,
   });
   return data;
+}
+
+export type EHRVendorOption = {
+  id: string;        // "epic" | "cerner" | "athena"
+  label: string;
+  color: string;
+  sandbox: boolean;
+};
+
+export async function listEHRVendors(): Promise<EHRVendorOption[]> {
+  const { data } = await api.get<{ vendors: EHRVendorOption[] }>("/api/auth/ehr/vendors");
+  return data.vendors || [];
+}
+
+// Builds the OAuth launch URL — frontend redirects the browser here, which 302s to
+// the vendor's authorize endpoint. Mock provider auto-approves; real vendors show
+// their hosted login screen.
+export function buildEHRLaunchURL(vendorId: string, hospitalId: string, redirectUri: string): string {
+  const base =
+    import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL !== ""
+      ? import.meta.env.VITE_API_BASE_URL
+      : "";
+  const qs = new URLSearchParams({
+    vendor: vendorId,
+    hospital_id: hospitalId,
+    redirect_uri: redirectUri,
+  });
+  return `${base}/api/auth/ehr/launch?${qs.toString()}`;
 }
 
 export async function whoami(hospitalId: string): Promise<{

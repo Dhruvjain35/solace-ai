@@ -74,20 +74,65 @@ def lookup_by_patient(
     patient_id: str = Path(...),
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
-    """Best-effort EHR match for a Solace patient — looks up by display name.
+    """Best-effort EHR match for a Solace patient.
 
-    If no match, returns `{"record": null, "reason": "..."}`. Clinician UI can show
-    a "not in EHR" pill so the absence is surfaced, not hidden.
+    Match priority — most reliable first, since patients reliably misspell names
+    and use nicknames but rarely fake their insurance card:
+      1. Insurance member_id (exact, scoped by provider when available)
+      2. Insurance member_id alone
+      3. Display name (lowercased, exact)
+      4. Display name (lowercased, prefix)
+
+    If no match, returns `{"record": null, "reason": "..."}` so the UI can show
+    a "not in EHR" pill instead of silently hiding the gap.
     """
     audit(caller, "ehr.lookup_by_patient", patient_id=patient_id)
     p = storage.get_patient(patient_id)
     if not p or p.get("hospital_id") != hospital_id:
         raise HTTPException(status_code=404, detail="patient not found")
 
+    insurance_blob = p.get("insurance_info")
+    member_id = ""
+    provider = ""
+    try:
+        import json as _json  # noqa: PLC0415
+        if isinstance(insurance_blob, str) and insurance_blob:
+            ins = _json.loads(insurance_blob)
+        elif isinstance(insurance_blob, dict):
+            ins = insurance_blob
+        else:
+            ins = {}
+        member_id = (ins.get("member_id") or "").strip()
+        provider = (ins.get("provider") or "").strip()
+    except Exception:  # noqa: BLE001
+        ins = {}
+
     name = (p.get("name") or "").strip().lower()
+
+    # 1+2. Try insurance member_id matching first — by far the most reliable key.
+    if member_id:
+        try:
+            resp = _table().query(
+                IndexName="hospital_member-index",
+                KeyConditionExpression="hospital_id = :h AND insurance_member_id = :m",
+                ExpressionAttributeValues={":h": hospital_id, ":m": member_id},
+                Limit=5,
+            )
+            items = [_from_ddb(it) for it in resp.get("Items", [])]
+            # If multiple share a member_id (rare, family plans), prefer matching provider.
+            if items and provider:
+                preferred = [it for it in items if (it.get("insurance") or "").lower().find(provider.lower()) != -1]
+                if preferred:
+                    return {"record": preferred[0], "match_method": "insurance_member_id+provider"}
+            if items:
+                return {"record": items[0], "match_method": "insurance_member_id"}
+        except Exception as e:  # noqa: BLE001
+            # GSI may not exist on older deployments — fall through to name match.
+            log.debug("ehr insurance lookup failed (may be pre-GSI deploy): %s", e)
+
+    # 3+4. Name match.
     if not name:
         return {"record": None, "reason": "patient has no name on file"}
-
     try:
         resp = _table().query(
             IndexName="hospital_name-index",
@@ -102,7 +147,7 @@ def lookup_by_patient(
     items = resp.get("Items", [])
     if not items:
         return {"record": None, "reason": f"no EHR record matching '{name}'"}
-    return {"record": _from_ddb(items[0])}
+    return {"record": _from_ddb(items[0]), "match_method": "name_exact"}
 
 
 @router.get("/ehr/{mrn}")

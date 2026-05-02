@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, ShieldCheck, Activity, Clock3, Bell } from "lucide-react";
 import { PatientCard } from "../components/clinician/PatientCard";
 import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
@@ -14,7 +14,14 @@ import { DispositionPanel } from "../components/clinician/DispositionPanel";
 import { PainAlarm } from "../components/clinician/PainAlarm";
 import { Button } from "../components/ui/Button";
 import { usePollingPatients } from "../hooks/usePollingPatients";
-import { getPatientDetail, loginClinician, markSeen } from "../lib/api";
+import {
+  buildEHRLaunchURL,
+  getPatientDetail,
+  listEHRVendors,
+  loginClinician,
+  markSeen,
+  type EHRVendorOption,
+} from "../lib/api";
 import { getRuntimeConfig } from "../lib/runtime-config";
 import {
   bumpActivity,
@@ -31,7 +38,7 @@ const DEMO_CLINICIANS = ["Dr. Chen", "Dr. Patel", "Dr. Kim"];
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <div className="text-[11px] uppercase tracking-[0.14em] text-text-muted font-semibold mb-2">
+      <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold mb-2">
         {title}
       </div>
       {children}
@@ -90,6 +97,12 @@ export default function ClinicianDashboard() {
   const [statusFilter, setStatusFilter] = useState<"waiting" | "all">("waiting");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<PatientDetail | null>(null);
+  const [ehrVendors, setEhrVendors] = useState<EHRVendorOption[]>([]);
+
+  // Load EHR vendor list for the Sign-in-with buttons. Cheap GET, no auth needed.
+  useEffect(() => {
+    listEHRVendors().then(setEhrVendors).catch(() => setEhrVendors([]));
+  }, []);
   // `pin` remains the dep for polling hook — we pass session.token (string) to re-key polling
   const pin = session?.token ?? null;
   // Track arrivals — whenever the set of patient_ids grows, briefly flash a banner
@@ -203,20 +216,66 @@ export default function ClinicianDashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-          className="w-full max-w-sm bg-surface-lowest rounded-xl shadow-card p-8 flex flex-col gap-5"
+          className="w-full max-w-sm bg-surface-lowest rounded-xl shadow-card p-7 flex flex-col gap-5"
         >
           <div>
-            <div className="text-xs uppercase tracking-[0.14em] text-text-muted mb-1">
+            <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold mb-1">
               Solace · Clinician Terminal
             </div>
-            <h1 className="text-2xl font-bold tracking-editorial-tight">Clinician sign in</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
+            <p className="text-[13px] text-text-muted mt-1.5 leading-snug">
+              Use your hospital's EHR to sign in. We map your Practitioner record to a Solace
+              session and pull the patient list, allergies, meds, and prior encounters from
+              your EHR automatically.
+            </p>
           </div>
-          <label className="flex flex-col gap-1 text-xs text-text-muted">
-            <span className="uppercase tracking-wider">Name</span>
+
+          {ehrVendors.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {ehrVendors.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => {
+                    const redirectUri = `${window.location.origin}/ehr/callback`;
+                    window.location.href = buildEHRLaunchURL(v.id, hospitalId, redirectUri);
+                  }}
+                  className="group h-11 px-4 rounded-md flex items-center justify-between gap-3 text-left transition-all hover:shadow-soft border-2 border-line hover:border-primary/60"
+                  style={{ background: "white" }}
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span
+                      className="h-7 w-7 rounded shrink-0 flex items-center justify-center text-white text-[12px] font-bold"
+                      style={{ background: v.color }}
+                    >
+                      {v.label.slice(0, 1)}
+                    </span>
+                    <span className="text-sm font-semibold truncate">Sign in with {v.label}</span>
+                  </span>
+                  {v.sandbox && (
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
+                      sandbox
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="relative flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-line" />
+            <span className="text-[10px] uppercase tracking-wider text-text-muted">
+              or PIN sign-in
+            </span>
+            <div className="flex-1 h-px bg-line" />
+          </div>
+
+          <label className="flex flex-col gap-1.5 text-[11px] text-text-muted font-semibold uppercase tracking-wider">
+            Name
             <select
               value={loginName}
               onChange={(e) => setLoginName(e.target.value)}
-              className="h-12 px-3 rounded-md bg-surface-low shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none transition-all"
+              className="h-11 px-3 rounded-md bg-surface-low ring-1 ring-line focus:ring-primary focus:ring-2 text-sm font-medium text-ink outline-none transition-all"
             >
               {DEMO_CLINICIANS.map((n) => (
                 <option key={n} value={n}>
@@ -225,12 +284,11 @@ export default function ClinicianDashboard() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs text-text-muted">
-            <span className="uppercase tracking-wider">PIN</span>
+          <label className="flex flex-col gap-1.5 text-[11px] text-text-muted font-semibold uppercase tracking-wider">
+            PIN
             <input
               type="password"
               value={pinInput}
-              autoFocus
               onChange={(e) => {
                 setPinInput(e.target.value);
                 if (pinError) setPinError(null);
@@ -238,14 +296,14 @@ export default function ClinicianDashboard() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") submitLogin();
               }}
-              placeholder="PIN"
-              className={`h-12 px-4 rounded-md bg-surface-low shadow-soft ring-1 focus:ring-2 text-base font-mono tracking-[0.25em] outline-none transition-all ${
+              placeholder="••••••"
+              className={`h-11 px-4 rounded-md bg-surface-low ring-1 focus:ring-2 text-base font-mono tracking-[0.2em] outline-none transition-all ${
                 pinError ? "ring-error focus:ring-error" : "ring-line focus:ring-primary"
               }`}
             />
           </label>
           {pinError && (
-            <div className="-mt-2 text-sm text-error font-medium tracking-tight">{pinError}</div>
+            <div className="-mt-2 text-sm text-error font-medium">{pinError}</div>
           )}
           <Button
             variant="primary"
@@ -253,79 +311,134 @@ export default function ClinicianDashboard() {
             disabled={pinInput.length < 4 || pinChecking}
             onClick={submitLogin}
           >
-            {pinChecking ? "Signing in…" : "Sign in"}
+            {pinChecking ? "Signing in…" : "Sign in with PIN"}
           </Button>
           <p className="text-[11px] text-text-muted text-center leading-relaxed">
-            Sessions expire after 30 min — or 15 min idle.
+            Sessions expire after 30 min absolute · 15 min idle.
           </p>
         </motion.div>
       </div>
     );
   }
 
+  // Summary stats for the dashboard header strip — calculated once per poll.
+  const statBar = useMemo(() => {
+    const waiting = patients.filter((p) => p.status === "waiting");
+    const activeAlarms = patients.filter(
+      (p) =>
+        p.pain_flagged &&
+        p.pain_flagged_at &&
+        (!p.pain_flag_acknowledged_at ||
+          (p.pain_flag_acknowledged_at as string) < (p.pain_flagged_at as string))
+    );
+    const refined = patients.filter((p) => p.refined_esi_level != null);
+    const avgWaitMinutes =
+      waiting.length === 0
+        ? 0
+        : Math.round(
+            waiting.reduce((s, p) => s + (p.waited_minutes || 0), 0) / waiting.length
+          );
+    return {
+      waiting: waiting.length,
+      alarms: activeAlarms.length,
+      refinedPct: patients.length === 0 ? 0 : Math.round((refined.length / patients.length) * 100),
+      avgWaitMinutes,
+    };
+  }, [patients]);
+
   return (
-    <div className="min-h-full grid grid-cols-[280px_1fr] gap-0">
-      <aside className="bg-surface-low p-6 flex flex-col gap-6 min-h-screen">
+    <div className="min-h-full grid grid-cols-[260px_1fr] gap-0">
+      <aside className="bg-surface-low p-5 flex flex-col gap-5 min-h-screen border-r border-line">
         <div>
           <img
             src="/solace-logo.png"
             alt="Solace"
-            className="h-20 w-auto max-w-full select-none"
+            className="h-16 w-auto max-w-full select-none"
             draggable={false}
           />
-          <p className="text-sm text-text-muted leading-tight mt-2">Clinician Terminal</p>
+          <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mt-2">
+            Clinician Terminal
+          </p>
         </div>
+
         {session && (
-          <div className="flex items-center gap-3 bg-surface-lowest rounded-lg px-3 py-2.5 shadow-soft">
-            <div
-              className="w-9 h-9 rounded-full bg-primary-gradient text-white flex items-center justify-center font-semibold text-sm tracking-[-0.02em] shadow-soft shrink-0"
-              aria-hidden
-            >
-              {session.name
-                .replace(/^Dr\.\s*/i, "")
-                .split(" ")
-                .map((s) => s[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-primary truncate tracking-[-0.01em]">
-                {session.name}
+          <div className="flex flex-col gap-2.5 bg-surface-lowest rounded-lg p-3 shadow-soft">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm shrink-0"
+                aria-hidden
+              >
+                {session.name
+                  .replace(/^Dr\.\s*/i, "")
+                  .split(" ")
+                  .map((s) => s[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
               </div>
-              <div className="text-[10px] text-text-muted uppercase tracking-[0.12em]">
-                {session.role}
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold truncate">{session.name}</div>
+                <div className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">
+                  {session.role}
+                </div>
               </div>
+              <button
+                onClick={signOut}
+                className="text-[10px] text-text-muted hover:text-error font-semibold uppercase tracking-wider transition-colors"
+                title="Sign out"
+              >
+                Sign out
+              </button>
             </div>
-            <button
-              onClick={signOut}
-              className="text-[10px] text-text-muted hover:text-error font-mono tracking-[0.1em] uppercase transition-colors"
-              title="Sign out"
-            >
-              Sign out
-            </button>
+
+            {session.ehr_vendor && (
+              <div
+                className="flex items-center gap-2 text-[11px] -mx-1 -mb-1 px-2 py-1.5 rounded-md"
+                style={{
+                  background: `${session.ehr_color || "#2A474E"}10`,
+                  color: session.ehr_color || "#2A474E",
+                }}
+                title="Connected via SMART-on-FHIR"
+              >
+                <ShieldCheck size={12} />
+                <span className="font-semibold">Connected to {session.ehr_label}</span>
+                {session.ehr_sandbox && (
+                  <span className="ml-auto text-[9px] uppercase tracking-wider opacity-70 font-bold">
+                    sandbox
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
-        <div className="flex flex-col gap-2">
+
+        <div className="flex flex-col gap-1">
+          <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-1 px-1">
+            Queue
+          </div>
           <button
-            className={`text-left px-3 py-2 rounded-md text-sm font-medium tracking-editorial ${
+            className={`text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               statusFilter === "waiting"
                 ? "bg-primary-fixed text-primary"
                 : "text-text-muted hover:bg-surface-lowest"
             }`}
             onClick={() => setStatusFilter("waiting")}
           >
-            Waiting ({patients.filter((p) => p.status === "waiting").length})
+            <span>Waiting</span>
+            <span className="ml-2 text-[11px] font-mono">
+              {patients.filter((p) => p.status === "waiting").length}
+            </span>
           </button>
           <button
-            className={`text-left px-3 py-2 rounded-md text-sm font-medium tracking-editorial ${
+            className={`text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               statusFilter === "all"
                 ? "bg-primary-fixed text-primary"
                 : "text-text-muted hover:bg-surface-lowest"
             }`}
             onClick={() => setStatusFilter("all")}
           >
-            All
+            <span>All</span>
+            <span className="ml-2 text-[11px] font-mono">{patients.length}</span>
           </button>
         </div>
         <div className="mt-auto flex flex-col items-center gap-2 bg-surface-lowest rounded-lg p-4 shadow-soft">
@@ -367,6 +480,34 @@ export default function ClinicianDashboard() {
             "#F8F9F9",
         }}
       >
+        {/* Summary stat strip — info-dense + scannable. Refresh on every poll. */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+          <StatTile
+            icon={Activity}
+            label="Patients waiting"
+            value={statBar.waiting}
+            tone="primary"
+          />
+          <StatTile
+            icon={Bell}
+            label="Active pain alarms"
+            value={statBar.alarms}
+            tone={statBar.alarms > 0 ? "error" : "muted"}
+          />
+          <StatTile
+            icon={Clock3}
+            label="Avg wait (min)"
+            value={statBar.avgWaitMinutes}
+            tone="muted"
+          />
+          <StatTile
+            icon={ShieldCheck}
+            label="ML-refined"
+            value={`${statBar.refinedPct}%`}
+            tone="muted"
+          />
+        </div>
+
         {pin && (
           <PainAlarm
             hospitalId={hospitalId}
@@ -436,10 +577,10 @@ export default function ClinicianDashboard() {
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-[10px] uppercase tracking-[0.14em] text-text-muted font-semibold">
+                <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
                   Patient detail
                 </div>
-                <h2 className="text-2xl font-extrabold tracking-editorial-tight mt-0.5">
+                <h2 className="text-2xl font-bold tracking-tight mt-0.5">
                   {detail?.name || "Loading…"}
                 </h2>
               </div>
@@ -465,7 +606,7 @@ export default function ClinicianDashboard() {
 
                 {/* ESI reconciliation banner — provisional vs refined */}
                 <div className="bg-surface-lowest rounded-lg p-4 shadow-soft">
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-text-muted font-semibold mb-2">
+                  <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-2">
                     Triage acuity
                   </div>
                   <div className="flex items-center gap-3">
@@ -504,10 +645,10 @@ export default function ClinicianDashboard() {
                 </div>
 
                 <div className="bg-primary-fixed/40 rounded-lg p-4">
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-text-muted font-semibold mb-1">
+                  <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold mb-1">
                     Pre-brief
                   </div>
-                  <div className="text-[15px] font-mono leading-relaxed">{detail.clinician_prebrief}</div>
+                  <div className="text-[15px] leading-relaxed text-ink">{detail.clinician_prebrief}</div>
                 </div>
 
                 {detail.clinical_scribe_note && (
@@ -604,7 +745,7 @@ export default function ClinicianDashboard() {
 
                 {detail.medical_info && (
                   <Section title="Reported history">
-                    <div className="text-sm font-mono leading-relaxed text-ink">
+                    <div className="text-sm leading-relaxed text-ink">
                       {formatMedicalInfo(detail.medical_info)}
                     </div>
                   </Section>
@@ -758,6 +899,41 @@ export default function ClinicianDashboard() {
           </motion.aside>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: typeof Activity;
+  label: string;
+  value: string | number;
+  tone: "primary" | "muted" | "error";
+}) {
+  const toneClasses = {
+    primary: "text-primary bg-primary-fixed",
+    muted: "text-text-muted bg-surface-low",
+    error: "text-error bg-error/15",
+  }[tone];
+  return (
+    <div className="bg-surface-lowest rounded-lg p-3 shadow-soft flex items-center gap-3">
+      <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${toneClasses}`}>
+        <Icon size={16} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold leading-none">
+          {label}
+        </div>
+        <div className="text-xl font-bold tracking-tight text-ink leading-tight mt-1">
+          {value}
+        </div>
+      </div>
     </div>
   );
 }

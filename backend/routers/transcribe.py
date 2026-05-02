@@ -74,13 +74,29 @@ async def transcribe_and_ask(
             raise HTTPException(status_code=422, detail="content rejected by abuse scanner")
         transcript = cleaned
 
-    # 2. Generate follow-up questions in the patient's language
+    # 2. Generate follow-up questions in the patient's language.
+    # Wrapped in a strict timeout so an Anthropic latency spike never pushes the
+    # whole /transcribe past API Gateway's 30s ceiling. If the followups call is
+    # slow we fall back to the static FALLBACK list — the patient still moves
+    # forward, and the questions are short enough to be useful regardless of
+    # the specific complaint.
+    import concurrent.futures  # noqa: PLC0415
     info_dict = None
     if medical_info:
         try:
             info_dict = json.loads(medical_info)
         except json.JSONDecodeError:
             log.warning("medical_info JSON parse failed; ignoring")
-    questions = followups.generate_questions(transcript, info_dict, language=language)
+    questions: list[dict] = []
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(followups.generate_questions, transcript, info_dict, language)
+            questions = future.result(timeout=8.0)
+    except concurrent.futures.TimeoutError:
+        log.warning("followups generation timed out; falling back to static set")
+        questions = followups._FALLBACK
+    except Exception as e:  # noqa: BLE001
+        log.warning("followups generation failed (%s); falling back to static set", e)
+        questions = followups._FALLBACK
 
     return {"transcript": transcript, "language": language, "followups": questions}

@@ -81,7 +81,11 @@ export default function PatientIntake() {
       .catch(() => { /* submit will surface a clean error */ });
   }, [hospitalId]);
 
-  // Step counter excludes the language gate and submitting screen — keeps the dots honest.
+  // Progress dots count the user-visible intake steps. Excludes the language gate
+  // (full-screen pre-step that owns its own UI) and submitting (a spinner — no dots).
+  // Off-by-one bug fixed here: total must equal userSteps.length so when the patient
+  // is on followups (index 4 of 5), current=5 ≤ total=5 — without this the last dot
+  // overflowed and the layout shifted on every Next press.
   const userSteps = stepOrder.filter((s) => s !== "language" && s !== "submitting");
   const currentUserStep = userSteps.indexOf(step as (typeof userSteps)[number]);
 
@@ -156,12 +160,19 @@ export default function PatientIntake() {
         const detail = e?.response?.data?.detail || "";
         const isTranscriptionDown =
           /transcription/i.test(detail) || /whisper/i.test(detail) || status === 503;
+        // 502/504 from CloudFront and "no status + network/timeout" are both the
+        // same root cause: the request finished after the gateway hung up. The
+        // audio is still buffered in `recorder.audioBlob`, so re-tapping Next
+        // resends it. Show the same friendly retry message for all of them.
+        const isGatewayTimeout =
+          status === 502 || status === 504 ||
+          (!status && /network|fetch|abort|timeout/i.test(e?.message || ""));
         if (isTranscriptionDown && inputMode === "voice") {
           setInputMode("type");
           setError(t("error_transcription_down", preferredLanguage));
         } else if (status === 429) {
           setError(t("error_rate_limited", preferredLanguage));
-        } else if (!status && /network|fetch|abort|timeout/i.test(e?.message || "")) {
+        } else if (isGatewayTimeout) {
           setError(t("error_network", preferredLanguage));
         } else {
           setError(detail || e?.message || t("error_generic", preferredLanguage));
@@ -283,7 +294,7 @@ export default function PatientIntake() {
           />
         </div>
         {step !== "submitting" && (
-          <ProgressDots total={userSteps.length - 1} current={currentUserStep + 1} />
+          <ProgressDots total={userSteps.length} current={currentUserStep + 1} />
         )}
       </header>
 
