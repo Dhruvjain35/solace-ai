@@ -204,6 +204,34 @@ export default function ClinicianDashboard() {
       .catch(() => setDetail(null));
   }, [selectedId, session, hospitalId]);
 
+  // Summary stats for the dashboard header strip — calculated once per poll.
+  // MUST live above the `if (!session)` early return so hook order stays constant
+  // across renders. Calling useMemo after a conditional return crashes the dashboard
+  // ("Rendered more hooks than during the previous render"); white-screening.
+  const statBar = useMemo(() => {
+    const waiting = patients.filter((p) => p.status === "waiting");
+    const activeAlarms = patients.filter(
+      (p) =>
+        p.pain_flagged &&
+        p.pain_flagged_at &&
+        (!p.pain_flag_acknowledged_at ||
+          (p.pain_flag_acknowledged_at as string) < (p.pain_flagged_at as string))
+    );
+    const refined = patients.filter((p) => p.refined_esi_level != null);
+    const avgWaitMinutes =
+      waiting.length === 0
+        ? 0
+        : Math.round(
+            waiting.reduce((s, p) => s + (p.waited_minutes || 0), 0) / waiting.length
+          );
+    return {
+      waiting: waiting.length,
+      alarms: activeAlarms.length,
+      refinedPct: patients.length === 0 ? 0 : Math.round((refined.length / patients.length) * 100),
+      avgWaitMinutes,
+    };
+  }, [patients]);
+
   if (!session) {
     return (
       <div
@@ -323,31 +351,6 @@ export default function ClinicianDashboard() {
       </div>
     );
   }
-
-  // Summary stats for the dashboard header strip — calculated once per poll.
-  const statBar = useMemo(() => {
-    const waiting = patients.filter((p) => p.status === "waiting");
-    const activeAlarms = patients.filter(
-      (p) =>
-        p.pain_flagged &&
-        p.pain_flagged_at &&
-        (!p.pain_flag_acknowledged_at ||
-          (p.pain_flag_acknowledged_at as string) < (p.pain_flagged_at as string))
-    );
-    const refined = patients.filter((p) => p.refined_esi_level != null);
-    const avgWaitMinutes =
-      waiting.length === 0
-        ? 0
-        : Math.round(
-            waiting.reduce((s, p) => s + (p.waited_minutes || 0), 0) / waiting.length
-          );
-    return {
-      waiting: waiting.length,
-      alarms: activeAlarms.length,
-      refinedPct: patients.length === 0 ? 0 : Math.round((refined.length / patients.length) * 100),
-      avgWaitMinutes,
-    };
-  }, [patients]);
 
   return (
     <div className="min-h-full grid grid-cols-[260px_1fr] gap-0">
