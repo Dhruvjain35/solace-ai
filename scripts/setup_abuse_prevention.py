@@ -25,13 +25,15 @@ apigw = boto3.client("apigatewayv2", region_name=REGION)
 
 NONCE_TABLE = "solace-intake-nonces"
 ROUTE_THROTTLES = {
-    # Per-identity quota + blocklist do the cost-bounding; the API-GW layer just
-    # has to stay out of the way of legitimate demos. 0.5rps was 429ing real users.
-    "POST /api/{hospital_id}/intake":            {"rps": 5.0, "burst": 15},
-    "POST /api/{hospital_id}/transcribe":        {"rps": 5.0, "burst": 15},
-    "POST /api/{hospital_id}/scan-insurance":    {"rps": 5.0, "burst": 15},
-    "POST /api/{hospital_id}/start-intake":      {"rps": 5.0, "burst": 25},
-    "GET /api/{hospital_id}/public-patients/{patient_id}": {"rps": 10.0, "burst": 40},
+    # Sized for ~50 concurrent patients per hospital. The per-identity quota +
+    # blocklist do the abuse-bounding; this layer just needs to stay out of the
+    # way during a peak (whole waiting room hitting submit at once). The earlier
+    # 5 rps was tripping during multi-patient demos.
+    "POST /api/{hospital_id}/intake":            {"rps": 100.0, "burst": 300},
+    "POST /api/{hospital_id}/transcribe":        {"rps": 100.0, "burst": 300},
+    "POST /api/{hospital_id}/scan-insurance":    {"rps": 50.0,  "burst": 150},
+    "POST /api/{hospital_id}/start-intake":      {"rps": 100.0, "burst": 300},
+    "GET /api/{hospital_id}/public-patients/{patient_id}": {"rps": 200.0, "burst": 500},
 }
 
 EXTRA_TABLES = [

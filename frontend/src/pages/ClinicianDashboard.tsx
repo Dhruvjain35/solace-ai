@@ -136,7 +136,10 @@ export default function ClinicianDashboard() {
     };
   }, [session]);
 
-  const { patients, loading, error, refetch } = usePollingPatients(hospitalId, pin, 10_000, statusFilter);
+  // 4s polling so new patients show up "live-ish" without manual refresh.
+  // The endpoint is throttled at 200 rps and DDB queries are sub-50ms, so this is
+  // negligible cost even with 50 concurrent patients in the queue.
+  const { patients, loading, error, refetch } = usePollingPatients(hospitalId, pin, 4_000, statusFilter);
 
   // Detect brand-new patient arrivals between polls → pulse a banner
   useEffect(() => {

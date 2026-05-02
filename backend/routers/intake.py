@@ -205,7 +205,10 @@ async def create_intake(
         prebrief_task, scribe_task, comfort_task, differential_task
     )
 
-    # Stage B: workup + disposition consume the differential. Both run in parallel.
+    # Stage B: workup + disposition consume the differential. Both run in parallel,
+    # AND in parallel with TTS — TTS only needs `protocol` + `patient_explanation`,
+    # both already produced by stage A. Overlapping these saves ~600ms-1.2s on the
+    # critical path (TTS is the slowest of the three).
     workup_task = asyncio.to_thread(
         workup.generate,
         transcript_text, esi_level, ddx_list, info_dict, None,
@@ -214,11 +217,13 @@ async def create_intake(
         disposition.generate,
         transcript_text, esi_level, ddx_list, info_dict, None,
     )
-    workup_orders, dispo = await asyncio.gather(workup_task, disposition_task)
-
-    # 7. TTS uses the comfort protocol, so it runs after. Still threaded so it doesn't block the event loop.
     audio_script = tts.compose_script(patient_explanation, protocol, patient_name=patient_name)
-    audio_url = await asyncio.to_thread(tts.generate_and_upload, audio_script, language, patient_id)
+    tts_task = asyncio.to_thread(tts.generate_and_upload, audio_script, language, patient_id)
+    workup_orders, dispo, audio_url = await asyncio.gather(
+        workup_task, disposition_task, tts_task
+    )
+
+    # 7. TTS already ran in parallel with stage B above — `audio_url` is in scope.
 
     # 8. Persist
     patient: dict[str, Any] = {

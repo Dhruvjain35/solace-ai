@@ -75,7 +75,7 @@ def _rules() -> list[dict]:
             "Priority": 100,
             "Action": {"Block": {}},
             "Statement": {"RateBasedStatement": {
-                "Limit": 10000, "EvaluationWindowSec": 300, "AggregateKeyType": "IP"}},
+                "Limit": 50000, "EvaluationWindowSec": 300, "AggregateKeyType": "IP"}},
             "VisibilityConfig": {"SampledRequestsEnabled": True, "CloudWatchMetricsEnabled": True,
                                   "MetricName": "solace-waf-rate-limit"},
         },

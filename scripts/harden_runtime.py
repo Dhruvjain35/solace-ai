@@ -86,16 +86,20 @@ def scope_cors(api_id: str) -> None:
 
 
 def set_throttle(api_id: str) -> None:
-    """API Gateway default-stage throttle. Kills brute-force PIN guessing."""
+    """API Gateway default-stage throttle. Sized for ~50 concurrent patients per
+    hospital — peak burst is the whole waiting room finishing intake at once.
+    Per-route throttles in setup_abuse_prevention.py are stricter for the few
+    routes that actually need bounding; the stage default is the floor below
+    which nothing should rate-limit."""
     apigw.update_stage(
         ApiId=api_id,
         StageName="$default",
         DefaultRouteSettings={
-            "ThrottlingBurstLimit": 20,
-            "ThrottlingRateLimit": 10.0,
+            "ThrottlingBurstLimit": 800,
+            "ThrottlingRateLimit": 400.0,
         },
     )
-    print(f"  [ok] throttle: 10 req/s steady, 20 burst on $default stage")
+    print(f"  [ok] throttle: 400 req/s steady, 800 burst on $default stage")
 
 
 def main() -> None:
