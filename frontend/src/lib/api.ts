@@ -26,10 +26,13 @@ export const api = axios.create({
   timeout: 120_000,
 });
 
-// Attach Bearer token from sessionStorage on every request.
+// Attach Bearer token on every request. Reads localStorage first (primary store)
+// then sessionStorage (legacy fallback for sessions issued before the storage move).
 api.interceptors.request.use((config) => {
   try {
-    const raw = sessionStorage.getItem("solace.session.v1");
+    const raw =
+      localStorage.getItem("solace.session.v1") ??
+      sessionStorage.getItem("solace.session.v1");
     if (raw) {
       const sess = JSON.parse(raw);
       if (sess?.token) {
