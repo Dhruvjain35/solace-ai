@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ShieldCheck, Activity, Clock3, Bell } from "lucide-react";
+import { X, ShieldCheck, Activity, Clock3, Bell, Printer } from "lucide-react";
 import { PatientCard } from "../components/clinician/PatientCard";
 import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
@@ -759,31 +759,39 @@ export default function ClinicianDashboard() {
 
                 {detail.insurance_info && (
                   <Section title="Insurance">
-                    <div className="grid grid-cols-2 gap-2 text-sm font-mono text-ink">
+                    <div className="bg-surface-lowest rounded-lg p-4 shadow-soft flex flex-col gap-2">
                       {detail.insurance_info.provider && (
-                        <div className="col-span-2">
-                          <span className="text-text-muted">Provider · </span>
-                          {detail.insurance_info.provider}
-                        </div>
-                      )}
-                      {detail.insurance_info.member_id && (
-                        <div>
-                          <span className="text-text-muted">Member · </span>
-                          {detail.insurance_info.member_id}
-                        </div>
-                      )}
-                      {detail.insurance_info.group_number && (
-                        <div>
-                          <span className="text-text-muted">Group · </span>
-                          {detail.insurance_info.group_number}
-                        </div>
+                        <InsRow label="Insurer" value={detail.insurance_info.provider} primary />
                       )}
                       {detail.insurance_info.plan_name && (
-                        <div className="col-span-2">
-                          <span className="text-text-muted">Plan · </span>
-                          {detail.insurance_info.plan_name}
-                        </div>
+                        <InsRow label="Plan" value={detail.insurance_info.plan_name} />
                       )}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {detail.insurance_info.member_id && (
+                          <InsRow label="Member ID" value={detail.insurance_info.member_id} mono />
+                        )}
+                        {detail.insurance_info.group_number && (
+                          <InsRow label="Group" value={detail.insurance_info.group_number} mono />
+                        )}
+                        {detail.insurance_info.name_on_card && (
+                          <InsRow label="Name on card" value={detail.insurance_info.name_on_card} />
+                        )}
+                        {detail.insurance_info.effective_date && (
+                          <InsRow label="Effective" value={detail.insurance_info.effective_date} mono />
+                        )}
+                        {detail.insurance_info.bin && (
+                          <InsRow label="BIN" value={detail.insurance_info.bin} mono />
+                        )}
+                        {detail.insurance_info.pcn && (
+                          <InsRow label="PCN" value={detail.insurance_info.pcn} mono />
+                        )}
+                        {detail.insurance_info.rx_group && (
+                          <InsRow label="Rx group" value={detail.insurance_info.rx_group} mono />
+                        )}
+                        {detail.insurance_info.phone && (
+                          <InsRow label="Phone" value={detail.insurance_info.phone} mono />
+                        )}
+                      </div>
                     </div>
                   </Section>
                 )}
@@ -887,19 +895,35 @@ export default function ClinicianDashboard() {
                   </Section>
                 )}
 
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={async () => {
-                    if (!pin || !selectedId) return;
-                    await markSeen(hospitalId, selectedId, pin, "Clinician");
-                    setSelectedId(null);
-                    setDetail(null);
-                    await refetch();
-                  }}
-                >
-                  Mark Seen
-                </Button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.open(
+                        `/${hospitalId}/clinician/print/${detail.patient_id}`,
+                        "_blank",
+                        "noopener"
+                      )
+                    }
+                    className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-md bg-surface-low text-ink hover:bg-surface-high text-sm font-semibold border border-line"
+                    title="Open a printable copy of this record in a new tab"
+                  >
+                    <Printer size={14} /> Print notes
+                  </button>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={async () => {
+                      if (!pin || !selectedId) return;
+                      await markSeen(hospitalId, selectedId, pin, "Clinician");
+                      setSelectedId(null);
+                      setDetail(null);
+                      await refetch();
+                    }}
+                  >
+                    Mark Seen
+                  </Button>
+                </div>
               </div>
             )}
           </motion.aside>
@@ -910,6 +934,31 @@ export default function ClinicianDashboard() {
 }
 
 // ---------------------------------------------------------------------------------
+
+function InsRow({
+  label,
+  value,
+  mono = false,
+  primary = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  primary?: boolean;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">{label}</div>
+      <div
+        className={`text-sm leading-tight ${mono ? "font-mono" : ""} ${
+          primary ? "font-bold text-primary" : "text-ink"
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
 
 function StatTile({
   icon: Icon,
