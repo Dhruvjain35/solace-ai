@@ -323,6 +323,74 @@ export async function resetDemo(
   return data;
 }
 
+// --- Identity / ID scan ---------------------------------------------------------------
+
+export type IdFields = {
+  first_name: string;
+  last_name: string;
+  dob: string;
+  license_number: string;
+  issuing_state: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  expiry: string;
+  sex: string;
+};
+
+export async function scanID(
+  hospitalId: string,
+  imageFile: File
+): Promise<{ success: boolean; fields?: IdFields; error?: string }> {
+  const form = new FormData();
+  form.append("image_file", imageFile);
+  const { data } = await api.post(`/api/${hospitalId}/scan-id`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export type IdentityLookupResult = {
+  matched: boolean;
+  match_method?: "name+dob" | "name_only";
+  reason?: string;
+  ehr_record?: {
+    name: string;
+    mrn: string;
+    dob: string;
+    sex: string;
+    allergies?: string[];
+    medications?: string[];
+    conditions?: string[];
+    insurance?: string;
+    primary_care_provider?: string;
+    prior_visits?: { date: string; type: string; chief_complaint: string; disposition: string }[];
+  };
+  prefill?: {
+    age: number | null;
+    sex: "male" | "female" | "other" | null;
+    allergies: string[];
+    medications: string[];
+    conditions: string[];
+    insurance_hint: string;
+    emergency_contact: string;
+    primary_care_provider: string;
+    prior_visits_count: number;
+  };
+};
+
+export async function identityLookup(
+  hospitalId: string,
+  body: Pick<IdFields, "first_name" | "last_name" | "dob" | "license_number" | "issuing_state">
+): Promise<IdentityLookupResult> {
+  const { data } = await api.post<IdentityLookupResult>(
+    `/api/${hospitalId}/identity/lookup`,
+    body
+  );
+  return data;
+}
+
 // --- Voice agent ----------------------------------------------------------------------
 
 export type VoiceTurnResponse = {

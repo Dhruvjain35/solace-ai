@@ -153,6 +153,14 @@ def resolve_patient(
     body: ResolveBody | None = None,
     caller: dict = Depends(require_clinician),
 ) -> dict:
+    """Mark a patient as seen by a clinician. Drops the local PHI TTL from the
+    24h default down to 30 minutes — by then the EHR has the encounter note (via
+    the FHIR write-back hook), so we can shed local state aggressively. This is
+    the data-minimization control that lets us run on a smaller HIPAA footprint:
+    raw transcript / photos / AI logs disappear from DDB + S3 within half an hour
+    of the encounter closing, while the long-term medical record lives in the
+    connected EHR."""
+    import time as _time  # noqa: PLC0415
     audit(caller, "patients.resolve", patient_id=patient_id)
     if body is None:
         raise HTTPException(status_code=400, detail="clinician_name required")
@@ -160,11 +168,19 @@ def resolve_patient(
     if not p or p.get("hospital_id") != hospital_id:
         raise HTTPException(status_code=404, detail="patient not found")
     now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    short_ttl = int(_time.time()) + 30 * 60  # 30 minutes
     storage.update_patient(
         patient_id,
-        {"status": STATUS_SEEN, "seen_by": body.clinician_name.strip(), "seen_at": now},
+        {
+            "status": STATUS_SEEN,
+            "seen_by": body.clinician_name.strip(),
+            "seen_at": now,
+            # DDB TTL — DynamoDB sweeps the row sometime in the next ~48 hours after
+            # this timestamp passes. EHR write-back is the long-term retention path.
+            "ttl": short_ttl,
+        },
     )
-    return {"success": True, "seen_at": now}
+    return {"success": True, "seen_at": now, "local_retention_until": short_ttl}
 
 
 # --- helpers -------------------------------------------------------------------------

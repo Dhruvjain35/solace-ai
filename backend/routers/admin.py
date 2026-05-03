@@ -1,4 +1,6 @@
-"""Demo operations — wipe test data, keep canonical seed patients pristine."""
+"""Demo operations — wipe test data, keep canonical seed patients pristine.
+Also exposes a cost dashboard for clinicians/admins to see per-encounter $ spend.
+"""
 from __future__ import annotations
 
 import logging
@@ -111,4 +113,44 @@ def reset_demo(
         "success": True,
         "deleted_test_patients": deleted,
         "cleared_canonical_patients": cleared,
+    }
+
+
+@router.get("/admin/cost-stats")
+def cost_stats(
+    hospital_id: str = Path(...),
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Per-encounter AI spend dashboard. Aggregated from `ai_cost_usd` on each
+    patient row + breakdown across the seven Claude services + Whisper + TTS."""
+    audit(caller, "admin.cost_stats")
+    rows = storage.list_patients_for_hospital(hospital_id, status="all")
+    total = 0.0
+    breakdown_total: dict[str, float] = {}
+    encounters_with_cost = 0
+    for p in rows:
+        c = p.get("ai_cost_usd")
+        if c is None:
+            continue
+        try:
+            total += float(c)
+            encounters_with_cost += 1
+        except (TypeError, ValueError):
+            continue
+        try:
+            import json as _json  # noqa: PLC0415
+            bd = p.get("ai_cost_breakdown")
+            if isinstance(bd, str):
+                bd = _json.loads(bd)
+            if isinstance(bd, dict):
+                for k, v in bd.items():
+                    breakdown_total[k] = round(breakdown_total.get(k, 0.0) + float(v), 5)
+        except Exception:  # noqa: BLE001
+            pass
+    avg = round(total / encounters_with_cost, 4) if encounters_with_cost else 0.0
+    return {
+        "encounters_with_cost_data": encounters_with_cost,
+        "total_usd": round(total, 4),
+        "avg_per_encounter_usd": avg,
+        "breakdown_usd": {k: round(v, 4) for k, v in sorted(breakdown_total.items())},
     }

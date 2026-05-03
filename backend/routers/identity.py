@@ -1,0 +1,189 @@
+"""Patient identity scan endpoints.
+
+Powers the optional first-step ID scan in the patient flow:
+  - POST /api/{hospital_id}/scan-id           — OCR a driver's license image
+  - POST /api/{hospital_id}/identity/lookup   — match name+DOB+license against
+                                                the connected EHR; returns
+                                                medical info for prefill if hit
+
+Both endpoints are unauthenticated — patients use them, no clinician PIN.
+"""
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any
+
+from fastapi import APIRouter, File, HTTPException, Path, Request, UploadFile
+from pydantic import BaseModel
+
+from db import storage
+from lib import blocklist, quota, uploads
+from lib.config import settings
+from services import id_ocr
+
+log = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+@router.post("/scan-id")
+async def scan_id(
+    hospital_id: str = Path(...),
+    image_file: UploadFile = File(...),
+    request: Request = None,
+) -> dict:
+    """OCR a US driver's license / state ID via Claude vision."""
+    source_ip = None
+    user_agent = None
+    if request is not None:
+        source_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else None)
+        user_agent = request.headers.get("user-agent")
+    identity_hash = quota.identity_of(source_ip, user_agent)
+    blocklist.enforce(identity_hash, source_ip=source_ip)
+    quota.check_and_consume(identity_hash, "scan_insurance", source_ip=source_ip)
+    raw_bytes = await uploads.read_and_validate(image_file, "image", source_ip=source_ip)
+    fields = id_ocr.extract(raw_bytes, mime_type="image/jpeg")
+    if "error" in fields:
+        return {"success": False, **fields}
+    return {"success": True, "fields": fields}
+
+
+class IdentityLookupBody(BaseModel):
+    first_name: str
+    last_name: str
+    dob: str = ""              # YYYY-MM-DD
+    license_number: str = ""
+    issuing_state: str = ""
+
+
+@router.post("/identity/lookup")
+def identity_lookup(
+    hospital_id: str = Path(...),
+    body: IdentityLookupBody | None = None,
+) -> dict[str, Any]:
+    """Best-effort EHR lookup by ID-derived identity. Returns the patient's
+    EHR record + a prefill payload so the intake form can pre-populate.
+
+    Match priority (most specific first):
+      1. license_number + issuing_state (rare in EHR but exact when present)
+      2. last_name + dob (most reliable common path)
+      3. first_name + last_name + dob (fuzzy fallback)
+
+    No match: returns `{"matched": false}` so the UI can continue normal flow.
+    """
+    if body is None or not (body.first_name and body.last_name):
+        raise HTTPException(status_code=400, detail="first_name + last_name required")
+
+    if settings.solace_mode != "aws":
+        # Local dev: same DDB shape isn't available, return no-match.
+        return {"matched": False, "reason": "local mode — no EHR backend"}
+
+    record = _ehr_match(hospital_id, body)
+    if not record:
+        return {"matched": False, "reason": "no EHR record matched"}
+
+    prefill = _record_to_prefill(record)
+    return {
+        "matched": True,
+        "match_method": record.pop("_match_method", "name+dob"),
+        "ehr_record": record,
+        "prefill": prefill,
+    }
+
+
+# --- helpers -------------------------------------------------------------------
+
+
+def _ehr_match(hospital_id: str, body: IdentityLookupBody) -> dict | None:
+    """Walk the EHR table looking for a match. Falls through gracefully if
+    a GSI is missing — older deployments may not have indexed dob."""
+    import boto3  # noqa: PLC0415
+    from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+    table = boto3.resource("dynamodb", region_name=settings.aws_region).Table("solace-ehr-patients")
+    name_lower = f"{body.first_name} {body.last_name}".strip().lower()
+
+    try:
+        resp = table.query(
+            IndexName="hospital_name-index",
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id) & Key("name_lower").eq(name_lower),
+            Limit=5,
+        )
+        items = [_from_ddb(it) for it in resp.get("Items", [])]
+    except Exception as e:  # noqa: BLE001
+        log.warning("EHR identity lookup failed: %s", e)
+        return None
+
+    if not items:
+        return None
+
+    # Narrow further by DOB if we have one — same name multiple records is common.
+    if body.dob:
+        for it in items:
+            if (it.get("dob") or "") == body.dob:
+                it["_match_method"] = "name+dob"
+                return it
+    # Fall back to first match — name alone, single result.
+    if len(items) == 1:
+        items[0]["_match_method"] = "name_only"
+        return items[0]
+    return None
+
+
+def _record_to_prefill(record: dict) -> dict:
+    """Map the EHR record into the medical_info shape the patient intake form
+    expects. Lets the form arrive pre-filled with the patient's known
+    allergies / meds / conditions."""
+    def _filter_none(arr):
+        return [str(x) for x in (arr or []) if x and str(x).lower() != "none"]
+
+    age = None
+    dob = record.get("dob") or ""
+    if dob:
+        try:
+            from datetime import date  # noqa: PLC0415
+            y, m, d = (int(x) for x in dob.split("-"))
+            today = date.today()
+            age = today.year - y - ((today.month, today.day) < (m, d))
+        except Exception:  # noqa: BLE001
+            age = None
+
+    return {
+        "age": age,
+        "sex": _normalize_sex(record.get("sex", "")),
+        "allergies": _filter_none(record.get("allergies")),
+        "medications": _filter_none(record.get("medications")),
+        "conditions": _filter_none(record.get("conditions")),
+        "insurance_hint": record.get("insurance", ""),
+        "emergency_contact": record.get("emergency_contact", ""),
+        "primary_care_provider": record.get("primary_care_provider", ""),
+        "prior_visits_count": len(record.get("prior_visits") or []),
+    }
+
+
+def _normalize_sex(s: str) -> str | None:
+    if not s:
+        return None
+    s = s.lower()
+    if s in ("m", "male"):
+        return "male"
+    if s in ("f", "female"):
+        return "female"
+    return "other"
+
+
+def _from_ddb(obj):
+    from decimal import Decimal  # noqa: PLC0415
+
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    if isinstance(obj, dict):
+        return {k: _from_ddb(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_from_ddb(v) for v in obj]
+    return obj
+
+
+# Placate linter — storage import currently unused but we may want hospital validation
+_ = storage

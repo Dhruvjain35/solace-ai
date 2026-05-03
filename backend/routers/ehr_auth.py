@@ -55,18 +55,46 @@ def list_vendors() -> dict:
 # ----------------------------------------------------------------------------------
 
 
-# Cross-request PKCE state. Same in-memory dict approach as our intake nonces —
-# fine for a single Lambda warm container; cold starts force a fresh launch which
-# is benign (the user just clicks again). For multi-region prod, back this with DDB.
-_LAUNCH_STATES: dict[str, dict[str, Any]] = {}
+# PKCE state — DDB-backed so a Lambda cold start mid-OAuth-roundtrip doesn't
+# drop the verifier. Falls back to an in-memory dict in local mode.
+_LAUNCH_STATES_LOCAL: dict[str, dict[str, Any]] = {}
 _STATE_TTL = 600  # 10 minutes
+_STATE_TABLE = "solace-oauth-states"
 
 
-def _gc_states() -> None:
-    now = int(time.time())
-    expired = [k for k, v in _LAUNCH_STATES.items() if v.get("exp", 0) < now]
-    for k in expired:
-        _LAUNCH_STATES.pop(k, None)
+def _ddb_states_table():
+    import boto3  # noqa: PLC0415
+    from lib.config import settings  # noqa: PLC0415
+    return boto3.resource("dynamodb", region_name=settings.aws_region).Table(_STATE_TABLE)
+
+
+def _put_state(state: str, data: dict[str, Any]) -> None:
+    from lib.config import settings  # noqa: PLC0415
+    if settings.solace_mode != "aws":
+        _LAUNCH_STATES_LOCAL[state] = data
+        return
+    try:
+        _ddb_states_table().put_item(Item={"state": state, **data})
+    except Exception as e:  # noqa: BLE001
+        log.warning("oauth state DDB put failed, falling back to in-memory: %s", e)
+        _LAUNCH_STATES_LOCAL[state] = data
+
+
+def _pop_state(state: str) -> dict[str, Any] | None:
+    from lib.config import settings  # noqa: PLC0415
+    if settings.solace_mode != "aws":
+        return _LAUNCH_STATES_LOCAL.pop(state, None)
+    # Try DDB first; fall back to in-memory if the table is empty (race or fallback).
+    try:
+        resp = _ddb_states_table().delete_item(
+            Key={"state": state}, ReturnValues="ALL_OLD",
+        )
+        item = resp.get("Attributes")
+        if item:
+            return {k: v for k, v in item.items() if k != "state"}
+    except Exception as e:  # noqa: BLE001
+        log.warning("oauth state DDB pop failed: %s", e)
+    return _LAUNCH_STATES_LOCAL.pop(state, None)
 
 
 def _pkce_pair() -> tuple[str, str]:
@@ -100,17 +128,16 @@ def launch(
                 "using the public sandbox)."
             ),
         )
-    _gc_states()
-
     state = secrets.token_urlsafe(24)
     code_verifier, code_challenge = _pkce_pair()
-    _LAUNCH_STATES[state] = {
+    _put_state(state, {
         "vendor": v.id,
         "hospital_id": hospital_id,
         "redirect_uri": redirect_uri,
         "code_verifier": code_verifier,
         "exp": int(time.time()) + _STATE_TTL,
-    }
+        "ttl": int(time.time()) + _STATE_TTL,  # DDB TTL field
+    })
 
     params = {
         "response_type": "code",
@@ -137,8 +164,8 @@ def callback(
     state: str = Query(...),
     request: Request = None,
 ) -> RedirectResponse:
-    rec = _LAUNCH_STATES.pop(state, None)
-    if not rec or rec.get("exp", 0) < int(time.time()):
+    rec = _pop_state(state)
+    if not rec or int(rec.get("exp", 0)) < int(time.time()):
         raise HTTPException(status_code=400, detail="invalid or expired state")
     vendor = ehr_vendors.get(rec["vendor"])
     if not vendor:

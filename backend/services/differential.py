@@ -12,6 +12,7 @@ from typing import Any
 
 from lib import claude
 from lib.config import settings
+from lib.medical_format import format_medical_info
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def generate(
 
         parts = [f'Transcript:\n"""\n{transcript.strip()}\n"""', f"ESI: {esi_level}"]
         if medical_info:
-            parts.append(f"Medical info: {_fmt(medical_info)}")
+            parts.append(f"Medical info: {format_medical_info(medical_info)}")
         if followup_qa:
             qa = format_qa_for_prompts(followup_qa)
             if qa:
@@ -113,16 +114,3 @@ def _parse(raw: str) -> list[dict]:
     return cleaned
 
 
-def _fmt(info: dict[str, Any]) -> str:
-    parts = []
-    if info.get("age"):
-        parts.append(f"{info['age']}yo")
-    if info.get("sex"):
-        parts.append(str(info["sex"]))
-    if info.get("pregnant"):
-        parts.append("pregnant")
-    for key, label in (("allergies", "allergies"), ("medications", "meds"), ("conditions", "hx")):
-        arr = info.get(key) or []
-        if arr and not (len(arr) == 1 and str(arr[0]).lower() == "none"):
-            parts.append(f"{label}: {', '.join(str(x) for x in arr)}")
-    return "; ".join(parts) or "none reported"

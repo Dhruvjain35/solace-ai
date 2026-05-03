@@ -6,6 +6,7 @@ from typing import Any
 
 from lib import claude
 from lib.config import settings
+from lib.medical_format import format_medical_info
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def generate(
     try:
         user_parts = [f'Patient transcript:\n"""\n{transcript.strip()}\n"""']
         if medical_info:
-            user_parts.append(f"Medical history: {_fmt_medical(medical_info)}")
+            user_parts.append(f"Medical history: {format_medical_info(medical_info)}")
         if followup_qa:
             from services.followups import format_qa_for_prompts
 
@@ -59,21 +60,6 @@ def generate(
     except Exception as e:
         log.exception("Pre-brief generation failed: %s", e)
         return _fallback(transcript)
-
-
-def _fmt_medical(info: dict[str, Any]) -> str:
-    parts = []
-    if info.get("age"):
-        parts.append(f"age {info['age']}")
-    if info.get("sex"):
-        parts.append(str(info["sex"]))
-    if info.get("pregnant"):
-        parts.append("pregnant")
-    for key, label in (("allergies", "allergies"), ("medications", "meds"), ("conditions", "hx")):
-        arr = info.get(key) or []
-        if arr and not (len(arr) == 1 and str(arr[0]).lower() == "none"):
-            parts.append(f"{label}: {', '.join(str(x) for x in arr)}")
-    return "; ".join(parts) if parts else "none reported"
 
 
 def _fallback(transcript: str) -> str:

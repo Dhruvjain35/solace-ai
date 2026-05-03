@@ -8,6 +8,8 @@ import { PhotoCapture } from "../components/patient/PhotoCapture";
 import { FollowupQuestions, toAnswerList } from "../components/patient/FollowupQuestions";
 import { InsuranceScanner } from "../components/patient/InsuranceScanner";
 import { LanguageGate } from "../components/patient/LanguageGate";
+import { IdScanner } from "../components/patient/IdScanner";
+import type { IdentityLookupResult } from "../lib/api";
 import { Button } from "../components/ui/Button";
 import { ProgressDots } from "../components/ui/ProgressDots";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
@@ -15,7 +17,7 @@ import { postIntake, postTranscribe, startIntake } from "../lib/api";
 import { isRTL, t, type LangCode } from "../lib/i18n";
 import type { FollowupQuestion, InsuranceFields, MedicalInfo } from "../types";
 
-type Step = "language" | "welcome" | "medical" | "insurance" | "record" | "followups" | "submitting";
+type Step = "language" | "id-scan" | "welcome" | "medical" | "insurance" | "record" | "followups" | "submitting";
 
 const emptyMedical: MedicalInfo = {
   age: null,
@@ -32,7 +34,7 @@ const emptyMedical: MedicalInfo = {
   smoker: null,
 };
 
-const stepOrder: Step[] = ["language", "welcome", "medical", "insurance", "record", "followups", "submitting"];
+const stepOrder: Step[] = ["language", "id-scan", "welcome", "medical", "insurance", "record", "followups", "submitting"];
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -82,11 +84,12 @@ export default function PatientIntake() {
   }, [hospitalId]);
 
   // Progress dots count the user-visible intake steps. Excludes the language gate
-  // (full-screen pre-step that owns its own UI) and submitting (a spinner — no dots).
-  // Off-by-one bug fixed here: total must equal userSteps.length so when the patient
-  // is on followups (index 4 of 5), current=5 ≤ total=5 — without this the last dot
-  // overflowed and the layout shifted on every Next press.
-  const userSteps = stepOrder.filter((s) => s !== "language" && s !== "submitting");
+  // and id-scan (both full-screen pre-steps that own their own UI) and submitting
+  // (a spinner — no dots). Total must equal userSteps.length so the dots don't
+  // overflow on the last screen.
+  const userSteps = stepOrder.filter(
+    (s) => s !== "language" && s !== "id-scan" && s !== "submitting"
+  );
   const currentUserStep = userSteps.indexOf(step as (typeof userSteps)[number]);
 
   function canAdvance(): boolean {
@@ -146,7 +149,8 @@ export default function PatientIntake() {
     if (!canAdvance() || busy) return;
     setError(null);
 
-    if (step === "language") return setStep("welcome");
+    if (step === "language") return setStep("id-scan");
+    if (step === "id-scan") return setStep("welcome");
     if (step === "welcome") return setStep("medical");
     if (step === "medical") return setStep("insurance");
     if (step === "insurance") return setStep("record");
@@ -264,8 +268,53 @@ export default function PatientIntake() {
         <LanguageGate
           selected={preferredLanguage}
           onSelect={setPreferredLanguage}
-          onContinue={() => setStep("welcome")}
+          onContinue={() => setStep("id-scan")}
         />
+      </div>
+    );
+  }
+
+  // ID scan — optional. If a returning patient is matched, we pre-fill the
+  // medical info from their EHR record + skip ahead to the record-symptoms step.
+  if (step === "id-scan") {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-surface-lowest px-4 py-8">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-6">
+            <img
+              src="/solace-logo.png"
+              alt="Solace"
+              className="h-12 sm:h-16 w-auto mx-auto select-none"
+              draggable={false}
+            />
+            <h1 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight">
+              {t("welcome_title", preferredLanguage)}
+            </h1>
+          </div>
+          <IdScanner
+            hospitalId={hospitalId}
+            language={preferredLanguage}
+            onSkip={() => setStep("welcome")}
+            onMatched={(result: IdentityLookupResult) => {
+              if (result.matched && result.prefill) {
+                // Pre-fill the medical info form from the EHR record. Patient still
+                // confirms each field on the medical step but starts pre-populated.
+                setMedical((cur) => ({
+                  ...cur,
+                  age: result.prefill?.age ?? cur.age,
+                  sex: result.prefill?.sex ?? cur.sex,
+                  allergies: result.prefill?.allergies ?? cur.allergies,
+                  medications: result.prefill?.medications ?? cur.medications,
+                  conditions: result.prefill?.conditions ?? cur.conditions,
+                }));
+                if (result.ehr_record?.name) {
+                  setName(result.ehr_record.name.split(" ")[0]);
+                }
+              }
+              setStep("welcome");
+            }}
+          />
+        </div>
       </div>
     );
   }

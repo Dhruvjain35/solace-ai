@@ -9,6 +9,7 @@ from typing import Any
 from lib import claude
 from lib.config import settings
 from lib.fallbacks import FALLBACK_PROTOCOLS
+from lib.medical_format import format_medical_info
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def generate(
             f"ESI level: {esi_level}",
         ]
         if medical_info:
-            user_parts.append(f"Medical history: {_fmt(medical_info)}")
+            user_parts.append(f"Medical history: {format_medical_info(medical_info)}")
         if followup_qa:
             from services.followups import format_qa_for_prompts
 
@@ -72,15 +73,6 @@ def generate(
     except Exception as e:
         log.exception("Comfort protocol generation failed: %s", e)
     return FALLBACK_PROTOCOLS.get(esi_level, FALLBACK_PROTOCOLS[3])
-
-
-def _fmt(info: dict[str, Any]) -> str:
-    parts = []
-    for key in ("allergies", "medications", "conditions"):
-        arr = info.get(key) or []
-        if arr and not (len(arr) == 1 and str(arr[0]).lower() == "none"):
-            parts.append(f"{key}: {', '.join(str(x) for x in arr)}")
-    return "; ".join(parts) or "none relevant"
 
 
 def _parse(raw: str) -> list[dict]:
