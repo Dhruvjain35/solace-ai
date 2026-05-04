@@ -17,6 +17,7 @@ from lib import ai_log, blocklist, content_guard, idempotency, quota, uploads
 CONSENT_VERSION_CURRENT = "1.0"
 from lib.fallbacks import ESI_LABELS, GENERIC_PATIENT_EXPLANATION
 from services import (
+    care_routing,
     comfort_protocol,
     differential,
     disposition,
@@ -238,6 +239,14 @@ async def create_intake(
         workup_task, disposition_task, tts_task
     )
 
+    # Patient-facing care routing recommendation. Pure deterministic — runs on the
+    # ESI we just computed. Surfaced as the primary CTA on the patient result page.
+    care_rec = care_routing.recommend(
+        esi_level=esi_level,
+        transcript=transcript_text,
+        patient_age=(info_dict or {}).get("age"),
+    )
+
     # 7. TTS already ran in parallel with stage B above — `audio_url` is in scope.
 
     # 8. Persist
@@ -270,6 +279,7 @@ async def create_intake(
         "disposition": json.dumps(dispo),
         "patient_explanation": patient_explanation,
         "comfort_protocol": json.dumps(protocol),
+        "care_recommendation": json.dumps(care_routing.serialize(care_rec)),
         "audio_url": audio_url,
         "pain_flagged": False,
         "status": STATUS_WAITING,
@@ -292,6 +302,7 @@ async def create_intake(
         "audio_url": audio_url,
         "confidence_band": triage_result.confidence_band,
         "language": language,
+        "care_recommendation": care_routing.serialize(care_rec),
     }
     # Cache the successful response so a network retry with the same key is idempotent
     if idempotency_key:

@@ -47,6 +47,13 @@ export type IntakeResponse = {
   audio_url: string | null;
   confidence_band: string | null;
   language: string;
+  care_recommendation?: {
+    destination: "ed_now" | "ed" | "urgent" | "telehealth" | "self_care" | "schedule";
+    label: string;
+    rationale: string;
+    action_cta: string;
+    severity: "critical" | "high" | "moderate" | "low";
+  };
 };
 
 export type PatientSummary = {
@@ -227,4 +234,11 @@ export type PublicPatient = {
   status: "waiting" | "seen";
   wait_estimate_minutes?: number;
   wait_estimate_range?: string;
+  care_recommendation?: {
+    destination: "ed_now" | "ed" | "urgent" | "telehealth" | "self_care" | "schedule";
+    label: string;
+    rationale: string;
+    action_cta: string;
+    severity: "critical" | "high" | "moderate" | "low";
+  };
 };

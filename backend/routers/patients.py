@@ -139,6 +139,7 @@ def get_public_patient(
         "status": p.get("status"),
         "wait_estimate_minutes": est_minutes,
         "wait_estimate_range": _wt.format_range(est_minutes),
+        "care_recommendation": _maybe_json(p.get("care_recommendation")),
     }
 
 

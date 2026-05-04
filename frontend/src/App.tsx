@@ -6,6 +6,7 @@ import QRCard from "./pages/QRCard";
 import VoiceAgent from "./pages/VoiceAgent";
 import EHRCallback from "./pages/EHRCallback";
 import PatientPrintView from "./pages/PatientPrintView";
+import PatientSchedule from "./pages/PatientSchedule";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/ehr/callback" element={<EHRCallback />} />
       <Route path="/:hospitalId" element={<PatientIntake />} />
       <Route path="/:hospitalId/qr" element={<QRCard />} />
+      <Route path="/:hospitalId/schedule" element={<PatientSchedule />} />
       <Route path="/:hospitalId/result/:patientId" element={<PatientResult />} />
       <Route path="/:hospitalId/clinician" element={<ClinicianDashboard />} />
       <Route path="/:hospitalId/clinician/print/:patientId" element={<PatientPrintView />} />

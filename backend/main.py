@@ -12,7 +12,7 @@ from mangum import Mangum
 
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
-from routers import admin, auth, ehr, ehr_auth, identity, insurance, intake, notes, pain_flag, patients, prescriptions, public, transcribe, triage, voice
+from routers import admin, appointments, auth, ehr, ehr_auth, identity, insurance, intake, notes, pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage, voice
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -80,6 +80,8 @@ if settings.solace_mode == "local":
 # would otherwise match (with hospital_id="auth", mrn="vendors") and require auth.
 app.include_router(ehr_auth.router)
 app.include_router(identity.router, prefix="/api/{hospital_id}", tags=["identity"])
+app.include_router(appointments.router, prefix="/api/{hospital_id}", tags=["appointments"])
+app.include_router(sms_router.router, prefix="/api/{hospital_id}", tags=["sms"])
 app.include_router(transcribe.router, prefix="/api/{hospital_id}", tags=["transcribe"])
 app.include_router(intake.router, prefix="/api/{hospital_id}", tags=["intake"])
 app.include_router(insurance.router, prefix="/api/{hospital_id}", tags=["insurance"])

@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel (warm, clear)
 
+    # Twilio Programmable Messaging — for outbound SMS (discharge plans + reminders).
+    # Empty values mean "SMS disabled" — endpoints return success=False with a clear
+    # `not_configured` reason so the UI can show "SMS not enabled for this hospital"
+    # without crashing.
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_sms_from_number: str = ""
+
     # AWS secret source — when set, overrides .env values on startup
     aws_secret_name: str = "solace/api-keys"
 
@@ -81,6 +89,12 @@ def hydrate_from_secrets_manager() -> None:
         "ELEVENLABS_VOICE_ID": "elevenlabs_voice_id",
         "DEMO_CLINICIAN_PIN": "demo_clinician_pin",
     }
+    # Twilio is optional — populate only when the secret has them.
+    optional = {
+        "TWILIO_ACCOUNT_SID": "twilio_account_sid",
+        "TWILIO_AUTH_TOKEN": "twilio_auth_token",
+        "TWILIO_SMS_FROM_NUMBER": "twilio_sms_from_number",
+    }
     missing = []
     for secret_key, attr in mapping.items():
         value = payload.get(secret_key)
@@ -93,4 +107,10 @@ def hydrate_from_secrets_manager() -> None:
             f"Secrets Manager payload missing required keys: {missing}. "
             f"Re-run scripts/setup_security.py after fixing .env, or rotate the secret."
         )
-    log.info("Secrets Manager: hydrated %d field(s)", len(mapping))
+    # Optional fields — set if present, ignore if not (no exception)
+    for secret_key, attr in optional.items():
+        value = payload.get(secret_key)
+        if value:
+            object.__setattr__(settings, attr, value)
+    log.info("Secrets Manager: hydrated %d required + %d optional field(s)",
+             len(mapping), sum(1 for k in optional if payload.get(k)))

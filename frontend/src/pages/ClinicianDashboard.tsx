@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ShieldCheck, Activity, Clock3, Bell, Printer } from "lucide-react";
+import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare } from "lucide-react";
 import { PatientCard } from "../components/clinician/PatientCard";
 import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
@@ -20,6 +20,7 @@ import {
   listEHRVendors,
   loginClinician,
   markSeen,
+  sendDischargeSMS,
   type EHRVendorOption,
 } from "../lib/api";
 import { getRuntimeConfig } from "../lib/runtime-config";
@@ -895,21 +896,53 @@ export default function ClinicianDashboard() {
                   </Section>
                 )}
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.open(
-                        `/${hospitalId}/clinician/print/${detail.patient_id}`,
-                        "_blank",
-                        "noopener"
-                      )
-                    }
-                    className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-md bg-surface-low text-ink hover:bg-surface-high text-sm font-semibold border border-line"
-                    title="Open a printable copy of this record in a new tab"
-                  >
-                    <Printer size={14} /> Print notes
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.open(
+                          `/${hospitalId}/clinician/print/${detail.patient_id}`,
+                          "_blank",
+                          "noopener"
+                        )
+                      }
+                      className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-md bg-surface-low text-ink hover:bg-surface-high text-sm font-semibold border border-line"
+                      title="Open a printable copy of this record in a new tab"
+                    >
+                      <Printer size={14} /> Print notes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!pin || !detail) return;
+                        const phone = window.prompt(
+                          "Send discharge SMS to (leave blank to use phone on file):",
+                          ""
+                        );
+                        if (phone === null) return;
+                        const r = await sendDischargeSMS(
+                          hospitalId,
+                          detail.patient_id,
+                          pin,
+                          phone || undefined
+                        );
+                        alert(
+                          r.success
+                            ? "Discharge SMS sent."
+                            : r.reason === "not_configured"
+                            ? "Twilio SMS not configured for this hospital."
+                            : r.reason === "invalid_number"
+                            ? "Invalid phone number — try again with a valid 10-digit US number."
+                            : `Couldn't send: ${r.message || r.reason}`
+                        );
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-md bg-surface-low text-ink hover:bg-surface-high text-sm font-semibold border border-line"
+                      title="Text the patient their discharge plan"
+                    >
+                      <MessageSquare size={14} /> Text discharge
+                    </button>
+                  </div>
                   <Button
                     variant="primary"
                     fullWidth

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Leaf, ShieldCheck } from "lucide-react";
+import {
+  Leaf, ShieldCheck, AlertTriangle, ArrowRight, Hospital,
+  Home, Video, Clock, MessageSquare, Loader2, Check,
+} from "lucide-react";
 import { AudioPlayer } from "../components/patient/AudioPlayer";
 import { ComfortProtocol } from "../components/patient/ComfortProtocol";
 import { ESIBadge } from "../components/patient/ESIBadge";
 import { PainEscalateButton } from "../components/patient/PainEscalateButton";
-import { getPublicPatient } from "../lib/api";
+import { getPublicPatient, sendCareInstructionsSelfServe } from "../lib/api";
 import type { IntakeResponse, PatientEducation } from "../types";
 
 const POLL_MS = 15_000;
@@ -17,12 +20,15 @@ export default function PatientResult() {
   const [education, setEducation] = useState<PatientEducation | null>(null);
   const [educationPublishedAt, setEducationPublishedAt] = useState<string | null>(null);
   const [waitRange, setWaitRange] = useState<string | null>(null);
+  const [careRec, setCareRec] = useState<NonNullable<IntakeResponse["care_recommendation"]> | null>(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`intake:${patientId}`);
     if (raw) {
       try {
-        setResult(JSON.parse(raw));
+        const parsed = JSON.parse(raw) as IntakeResponse;
+        setResult(parsed);
+        if (parsed.care_recommendation) setCareRec(parsed.care_recommendation);
       } catch {
         /* ignore */
       }
@@ -43,6 +49,7 @@ export default function PatientResult() {
           setEducationPublishedAt(p.patient_education_published_at);
         }
         if (p.wait_estimate_range) setWaitRange(p.wait_estimate_range);
+        if (p.care_recommendation && !careRec) setCareRec(p.care_recommendation);
       } catch {
         // swallow — we'll try again next tick
       } finally {
@@ -94,6 +101,10 @@ export default function PatientResult() {
             <p className="text-[11px] text-text-muted font-mono">{result.confidence_band}</p>
           )}
         </section>
+
+        {careRec && <CareRecommendationCard rec={careRec} hospitalId={hospitalId} />}
+
+        <SmsSelfServe hospitalId={hospitalId} patientId={patientId} />
 
         {education ? (
           <motion.section
@@ -168,6 +179,154 @@ export default function PatientResult() {
       </div>
 
       <AudioPlayer audioUrl={result.audio_url} />
+    </div>
+  );
+}
+
+
+// -----------------------------------------------------------------------------
+
+function CareRecommendationCard({
+  rec,
+  hospitalId,
+}: {
+  rec: NonNullable<IntakeResponse["care_recommendation"]>;
+  hospitalId: string;
+}) {
+  const tone = {
+    critical: { bg: "bg-error", fg: "text-white", Icon: AlertTriangle, ring: "ring-error" },
+    high:     { bg: "bg-error/15", fg: "text-error", Icon: Hospital, ring: "ring-error/40" },
+    moderate: { bg: "bg-warning/15", fg: "text-warning", Icon: Clock, ring: "ring-warning/40" },
+    low:      { bg: "bg-success/15", fg: "text-success", Icon: Home, ring: "ring-success/40" },
+  }[rec.severity];
+
+  const DestinationIcon = {
+    ed_now:     Hospital,
+    ed:         Hospital,
+    urgent:     Hospital,
+    telehealth: Video,
+    self_care:  Home,
+    schedule:   Clock,
+  }[rec.destination] || Hospital;
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex flex-col gap-3 rounded-xl p-5 shadow-soft ring-2 ${tone.ring} ${tone.bg}`}
+    >
+      <div className={`flex items-center gap-2 ${tone.fg}`}>
+        <tone.Icon size={16} strokeWidth={2.5} />
+        <div className="text-[10px] uppercase tracking-wider font-bold">
+          What you should do
+        </div>
+      </div>
+      <h2 className={`text-2xl font-bold tracking-tight ${tone.fg}`}>{rec.label}</h2>
+      <p className="text-[15px] leading-relaxed text-ink">{rec.rationale}</p>
+      <div className="flex gap-2 mt-1 flex-wrap">
+        <button
+          type="button"
+          className={`flex-1 inline-flex items-center justify-center gap-2 h-12 px-4 rounded-md font-semibold text-sm shadow-soft ${
+            rec.severity === "critical" || rec.severity === "high"
+              ? "bg-error text-white"
+              : "bg-primary text-white"
+          }`}
+        >
+          <DestinationIcon size={16} />
+          {rec.action_cta}
+          <ArrowRight size={14} />
+        </button>
+        {(rec.destination === "telehealth" || rec.destination === "self_care") && (
+          <Link
+            to={`/${hospitalId}/schedule`}
+            className="inline-flex items-center justify-center gap-1.5 h-12 px-4 rounded-md text-sm font-semibold border border-line bg-surface-lowest"
+          >
+            <Clock size={14} /> Book follow-up
+          </Link>
+        )}
+      </div>
+    </motion.section>
+  );
+}
+
+
+function SmsSelfServe({
+  hospitalId,
+  patientId,
+}: {
+  hospitalId: string;
+  patientId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center justify-center gap-1.5 h-11 rounded-md text-sm font-semibold text-primary bg-primary-fixed/40 hover:bg-primary-fixed transition-colors"
+      >
+        <MessageSquare size={14} /> Text me my care instructions
+      </button>
+    );
+  }
+  if (done) {
+    return (
+      <div className="inline-flex items-center justify-center gap-1.5 h-11 rounded-md text-sm font-semibold text-success bg-success/10">
+        <Check size={14} /> Sent — check your messages
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 bg-surface-lowest rounded-lg p-3 shadow-soft">
+      <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
+        Text my care instructions
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="(512) 555-0177"
+          className="flex-1 h-11 px-3 rounded-md bg-surface-low ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              const r = await sendCareInstructionsSelfServe(hospitalId, patientId, phone);
+              if (r.success) setDone(true);
+              else setError(r.message || (r.reason === "not_configured" ? "SMS isn't enabled for this hospital yet." : "Couldn't send. Try again."));
+            } catch (e: any) {
+              setError(e?.response?.data?.detail || "Couldn't send.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          disabled={busy || phone.length < 7}
+          className="h-11 px-4 rounded-md bg-primary text-white font-semibold text-sm disabled:opacity-50 inline-flex items-center gap-1.5"
+        >
+          {busy ? <Loader2 size={14} className="animate-spin" /> : <MessageSquare size={14} />}
+          Send
+        </button>
+      </div>
+      {error && <div className="text-xs text-error">{error}</div>}
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="text-[11px] text-text-muted underline self-start"
+      >
+        Cancel
+      </button>
     </div>
   );
 }

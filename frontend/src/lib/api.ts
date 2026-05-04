@@ -323,6 +323,103 @@ export async function resetDemo(
   return data;
 }
 
+// --- Appointments / self-scheduling ---------------------------------------------------
+
+export type AppointmentSlot = {
+  iso: string;
+  label: string;
+  duration_min: number;
+};
+
+export type Appointment = {
+  appointment_id: string;
+  hospital_id: string;
+  slot_iso: string;
+  patient_name: string;
+  patient_phone: string;
+  reason_short: string;
+  status: string;
+  confirmation_code: string;
+  created_via: string;
+};
+
+export async function getAppointmentAvailability(
+  hospitalId: string,
+  days: number = 7
+): Promise<AppointmentSlot[]> {
+  const { data } = await api.get<{ slots: AppointmentSlot[] }>(
+    `/api/${hospitalId}/appointments/availability`,
+    { params: { days } }
+  );
+  return data.slots || [];
+}
+
+export async function bookAppointment(
+  hospitalId: string,
+  body: { slot_iso: string; patient_name: string; patient_phone: string; reason: string }
+): Promise<{ success: boolean; appointment: Appointment }> {
+  const { data } = await api.post(`/api/${hospitalId}/appointments/book`, body);
+  return data;
+}
+
+export async function lookupAppointment(
+  hospitalId: string,
+  confirmationCode: string
+): Promise<Appointment> {
+  const { data } = await api.get<Appointment>(
+    `/api/${hospitalId}/appointments/${encodeURIComponent(confirmationCode)}`
+  );
+  return data;
+}
+
+export async function cancelAppointment(
+  hospitalId: string,
+  confirmationCode: string
+): Promise<{ success: boolean }> {
+  const { data } = await api.post(`/api/${hospitalId}/appointments/cancel`, {
+    confirmation_code: confirmationCode,
+  });
+  return data;
+}
+
+// --- SMS ------------------------------------------------------------------------------
+
+export async function sendDischargeSMS(
+  hospitalId: string,
+  patientId: string,
+  pin: string,
+  phoneOverride?: string
+): Promise<{ success: boolean; reason?: string; message?: string }> {
+  const { data } = await api.post(
+    `/api/${hospitalId}/sms/discharge`,
+    { patient_id: patientId, ...(phoneOverride ? { phone: phoneOverride } : {}) },
+    { headers: { "X-Clinician-PIN": pin } }
+  );
+  return data;
+}
+
+export async function sendCareInstructionsSelfServe(
+  hospitalId: string,
+  patientId: string,
+  phone: string
+): Promise<{ success: boolean; reason?: string; message?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/sms/care-instructions`, {
+    patient_id: patientId,
+    phone,
+  });
+  return data;
+}
+
+// --- Care recommendation (already inside intake response) -----------------------------
+
+export type CareRecommendation = {
+  destination: "ed_now" | "ed" | "urgent" | "telehealth" | "self_care" | "schedule";
+  label: string;
+  rationale: string;
+  action_cta: string;
+  severity: "critical" | "high" | "moderate" | "low";
+};
+
 // --- Identity / ID scan ---------------------------------------------------------------
 
 export type IdFields = {
