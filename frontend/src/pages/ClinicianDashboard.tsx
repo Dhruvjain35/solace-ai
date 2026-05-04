@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare } from "lucide-react";
+import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare, Workflow as WorkflowIcon } from "lucide-react";
 import { PatientCard } from "../components/clinician/PatientCard";
 import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
@@ -447,6 +447,18 @@ export default function ClinicianDashboard() {
             <span>All</span>
             <span className="ml-2 text-[11px] font-mono">{patients.length}</span>
           </button>
+        </div>
+
+        <div className="flex flex-col gap-1 mt-2">
+          <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-1 px-1">
+            Admin
+          </div>
+          <Link
+            to={`/${hospitalId}/clinician/workflows`}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+          >
+            <WorkflowIcon size={14} /> Workflows
+          </Link>
         </div>
         <div className="mt-auto flex flex-col items-center gap-2 bg-surface-lowest rounded-lg p-4 shadow-soft">
           <QRCodeSVG

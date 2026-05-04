@@ -79,6 +79,14 @@ def book(
         )
         sms.send(to=body.patient_phone, body=text)
 
+    # Fire the appointment.booked workflow trigger.
+    from services.workflows import engine as _wf  # noqa: PLC0415
+    _wf.fire(
+        "appointment.booked",
+        hospital_id,
+        {"appointment": appt, "hospital": {"id": hospital_id}},
+    )
+
     return {"success": True, "appointment": appt}
 
 

@@ -49,6 +49,31 @@ def flag(hospital_id: str = Path(...), body: PainFlagBody | None = None) -> dict
             "pain_flag_acknowledged_by": None,
         },
     )
+    # Fire the pain.flagged workflow trigger — admins commonly wire this to Slack
+    # so the on-floor team gets pinged before the dashboard alarm goes off.
+    from datetime import datetime as _dt, timezone as _tz  # noqa: PLC0415
+    from services.workflows import engine as _wf  # noqa: PLC0415
+    waited_minutes = 0
+    if patient.get("created_at"):
+        try:
+            ts = _dt.fromisoformat(patient["created_at"].replace("Z", "+00:00"))
+            waited_minutes = max(0, int((_dt.now(_tz.utc) - ts).total_seconds() // 60))
+        except Exception:  # noqa: BLE001
+            pass
+    _wf.fire(
+        "pain.flagged",
+        hospital_id,
+        {
+            "patient": {
+                "id": body.patient_id,
+                "patient_id": body.patient_id,
+                "name": patient.get("name", ""),
+                "esi_level": patient.get("esi_level"),
+                "waited_minutes": waited_minutes,
+            },
+            "hospital": {"id": hospital_id},
+        },
+    )
     return {"success": True, "pain_flagged_at": now}
 
 

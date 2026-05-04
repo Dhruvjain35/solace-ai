@@ -12,7 +12,7 @@ from mangum import Mangum
 
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
-from routers import admin, appointments, auth, ehr, ehr_auth, identity, insurance, intake, notes, pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage, voice
+from routers import admin, appointments, auth, ehr, ehr_auth, identity, insurance, intake, notes, pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage, voice, workflows
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -94,6 +94,7 @@ app.include_router(admin.router, prefix="/api/{hospital_id}", tags=["admin"])
 app.include_router(auth.router, prefix="/api/{hospital_id}", tags=["auth"])
 app.include_router(public.router, prefix="/api/{hospital_id}", tags=["public"])
 app.include_router(ehr.router, prefix="/api/{hospital_id}", tags=["ehr"])
+app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflows"])
 # Voice agent — uses its own /api/voice prefix (NOT per-hospital path) because Twilio
 # webhooks arrive at a fixed URL and route by the dialed number, not a URL path.
 app.include_router(voice.router)

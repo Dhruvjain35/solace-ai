@@ -7,6 +7,7 @@ import VoiceAgent from "./pages/VoiceAgent";
 import EHRCallback from "./pages/EHRCallback";
 import PatientPrintView from "./pages/PatientPrintView";
 import PatientSchedule from "./pages/PatientSchedule";
+import WorkflowsAdmin from "./pages/WorkflowsAdmin";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
       <Route path="/:hospitalId/result/:patientId" element={<PatientResult />} />
       <Route path="/:hospitalId/clinician" element={<ClinicianDashboard />} />
       <Route path="/:hospitalId/clinician/print/:patientId" element={<PatientPrintView />} />
+      <Route path="/:hospitalId/clinician/workflows" element={<WorkflowsAdmin />} />
       <Route path="*" element={<Navigate to="/demo" replace />} />
     </Routes>
   );

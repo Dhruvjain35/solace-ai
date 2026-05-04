@@ -323,6 +323,139 @@ export async function resetDemo(
   return data;
 }
 
+// --- Workflows ------------------------------------------------------------------------
+
+export type WorkflowTrigger = {
+  name: string;
+  label: string;
+  description: string;
+  sample_context: Record<string, unknown>;
+};
+
+export type WorkflowActionField = {
+  name: string;
+  label: string;
+  type: "text" | "textarea";
+  required: boolean;
+  help?: string;
+};
+
+export type WorkflowActionDef = {
+  type: string;
+  label: string;
+  description: string;
+  fields: WorkflowActionField[];
+};
+
+export type WorkflowTemplate = {
+  id: string;
+  label: string;
+  description: string;
+  trigger: string;
+};
+
+export type WorkflowStep = {
+  type: string;
+  config: Record<string, string>;
+  stop_on_error?: boolean;
+};
+
+export type Workflow = {
+  workflow_id: string;
+  hospital_id: string;
+  name: string;
+  trigger: string;
+  enabled: boolean;
+  filters?: Record<string, unknown>;
+  steps: WorkflowStep[];
+  fire_count?: number;
+  last_fired_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  from_template?: string;
+};
+
+export async function getWorkflowCatalog(
+  hospitalId: string,
+  pin: string
+): Promise<{
+  triggers: WorkflowTrigger[];
+  actions: WorkflowActionDef[];
+  templates: WorkflowTemplate[];
+}> {
+  const { data } = await api.get(`/api/${hospitalId}/workflows/catalog`, {
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data;
+}
+
+export async function listWorkflows(hospitalId: string, pin: string): Promise<Workflow[]> {
+  const { data } = await api.get<{ workflows: Workflow[] }>(`/api/${hospitalId}/workflows`, {
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data.workflows || [];
+}
+
+export async function createWorkflow(
+  hospitalId: string,
+  pin: string,
+  body: Omit<Workflow, "workflow_id" | "hospital_id" | "fire_count" | "last_fired_at" | "created_at" | "updated_at" | "from_template">
+): Promise<Workflow> {
+  const { data } = await api.post(`/api/${hospitalId}/workflows`, body, {
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data.workflow;
+}
+
+export async function updateWorkflow(
+  hospitalId: string,
+  pin: string,
+  workflowId: string,
+  body: Omit<Workflow, "workflow_id" | "hospital_id" | "fire_count" | "last_fired_at" | "created_at" | "updated_at" | "from_template">
+): Promise<Workflow> {
+  const { data } = await api.put(`/api/${hospitalId}/workflows/${workflowId}`, body, {
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data.workflow;
+}
+
+export async function deleteWorkflow(
+  hospitalId: string,
+  pin: string,
+  workflowId: string
+): Promise<void> {
+  await api.delete(`/api/${hospitalId}/workflows/${workflowId}`, {
+    headers: { "X-Clinician-PIN": pin },
+  });
+}
+
+export async function testWorkflow(
+  hospitalId: string,
+  pin: string,
+  body: { workflow_id?: string; workflow?: Partial<Workflow> }
+): Promise<{
+  context: Record<string, unknown>;
+  results: { step_type: string; result: { success: boolean; reason?: string; message?: string } }[];
+}> {
+  const { data } = await api.post(`/api/${hospitalId}/workflows/test`, body, {
+    headers: { "X-Clinician-PIN": pin },
+  });
+  return data;
+}
+
+export async function workflowFromTemplate(
+  hospitalId: string,
+  pin: string,
+  templateId: string
+): Promise<Workflow> {
+  const { data } = await api.post(
+    `/api/${hospitalId}/workflows/from-template`,
+    { template_id: templateId },
+    { headers: { "X-Clinician-PIN": pin } }
+  );
+  return data.workflow;
+}
+
 // --- Appointments / self-scheduling ---------------------------------------------------
 
 export type AppointmentSlot = {

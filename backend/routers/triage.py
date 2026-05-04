@@ -72,4 +72,23 @@ def refine_triage(
         "measured_vitals": json.dumps({k: v for k, v in vitals.items() if v is not None}),
     }
     storage.update_patient(patient_id, updates)
+
+    # Fire the esi.refined workflow trigger so admins can audit / alert on upticks.
+    from services.workflows import engine as _wf  # noqa: PLC0415
+    _wf.fire(
+        "esi.refined",
+        hospital_id,
+        {
+            "patient": {
+                "id": patient_id,
+                "patient_id": patient_id,
+                "name": patient.get("name", ""),
+                "previous_esi_level": patient.get("esi_level"),
+                "esi_level": result["esi_level"],
+                "confidence": result["confidence"],
+            },
+            "hospital": {"id": hospital_id},
+        },
+    )
+
     return {"success": True, "refinement": result, "applied_at": updates["refined_at"]}

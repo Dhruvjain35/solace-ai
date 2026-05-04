@@ -30,6 +30,7 @@ from services import (
     vision,
     workup,
 )
+from services.workflows import engine as workflow_engine
 
 
 def _source_ip(req: Request | None) -> str | None:
@@ -307,6 +308,28 @@ async def create_intake(
     # Cache the successful response so a network retry with the same key is idempotent
     if idempotency_key:
         idempotency.save(idempotency_key, scope="intake", response=response)
+
+    # Fire the workflow trigger — admins may have wired this to SMS, Slack, etc.
+    # Runs in a daemon thread inside `engine.fire`, so a slow webhook doesn't
+    # delay the response to the patient.
+    workflow_engine.fire(
+        "patient.checked_in",
+        hospital_id,
+        {
+            "patient": {
+                "id": patient_id,
+                "patient_id": patient_id,
+                "name": patient_name.strip(),
+                "phone": (insurance_dict or {}).get("phone", "") if isinstance(insurance_dict, dict) else "",
+                "language": language,
+                "esi_level": esi_level,
+                "esi_label": esi_label,
+                "transcript": transcript_text,
+            },
+            "hospital": {"id": hospital_id, "name": hospital.get("name", "")},
+        },
+    )
+
     return response
 
 
