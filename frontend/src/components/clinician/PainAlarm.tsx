@@ -6,7 +6,6 @@ import type { PatientSummary } from "../../types";
 
 type Props = {
   hospitalId: string;
-  pin: string;
   patients: PatientSummary[];
   onOpenPatient: (patientId: string) => void;
   onAfterAck?: () => void;        // refetch hook so the row updates immediately
@@ -23,16 +22,16 @@ function isActive(p: PatientSummary): boolean {
   return p.pain_flag_acknowledged_at < p.pain_flagged_at;
 }
 
-export function PainAlarm({ hospitalId, pin, patients, onOpenPatient, onAfterAck }: Props) {
+export function PainAlarm({ hospitalId, patients, onOpenPatient, onAfterAck }: Props) {
   const active = useMemo(() => patients.filter(isActive), [patients]);
   const [muted, setMuted] = useState<boolean>(() => {
-    return localStorage.getItem("solace.alarm.muted") === "1";
+    return sessionStorage.getItem("solace.alarm.muted") === "1";
   });
   const [pendingAck, setPendingAck] = useState<Record<string, boolean>>({});
 
   // Persist mute preference so refresh doesn't suddenly start beeping.
   useEffect(() => {
-    localStorage.setItem("solace.alarm.muted", muted ? "1" : "0");
+    sessionStorage.setItem("solace.alarm.muted", muted ? "1" : "0");
   }, [muted]);
 
   // ---- audio --------------------------------------------------------------
@@ -132,7 +131,7 @@ export function PainAlarm({ hospitalId, pin, patients, onOpenPatient, onAfterAck
   async function handleAcknowledge(patientId: string) {
     setPendingAck((prev) => ({ ...prev, [patientId]: true }));
     try {
-      await acknowledgePainFlag(hospitalId, patientId, pin);
+      await acknowledgePainFlag(hospitalId, patientId);
       onAfterAck?.();
     } catch (e) {
       console.error("ack failed", e);

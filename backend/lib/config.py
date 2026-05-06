@@ -19,19 +19,16 @@ class Settings(BaseSettings):
 
     solace_mode: Literal["local", "aws"] = "local"
 
-    # AI providers
-    openai_api_key: str = ""
-    anthropic_api_key: str = ""
-    elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel (warm, clear)
-
-    # Twilio Programmable Messaging — for outbound SMS (discharge plans + reminders).
-    # Empty values mean "SMS disabled" — endpoints return success=False with a clear
-    # `not_configured` reason so the UI can show "SMS not enabled for this hospital"
-    # without crashing.
-    twilio_account_sid: str = ""
-    twilio_auth_token: str = ""
-    twilio_sms_from_number: str = ""
+    # AI providers — defaults use AWS services (Bedrock, Transcribe, Polly)
+    # which are covered by the AWS BAA. Third-party keys are only needed
+    # when overriding to direct providers (local dev only).
+    #   CLAUDE_PROVIDER=bedrock (default) | direct
+    #   TRANSCRIPTION_PROVIDER=aws (default) | openai
+    #   TTS_PROVIDER=aws (default) | elevenlabs
+    openai_api_key: str = ""          # only needed if TRANSCRIPTION_PROVIDER=openai
+    anthropic_api_key: str = ""       # only needed if CLAUDE_PROVIDER=direct
+    elevenlabs_api_key: str = ""      # only needed if TTS_PROVIDER=elevenlabs
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # ElevenLabs Rachel (local dev)
 
     # AWS secret source — when set, overrides .env values on startup
     aws_secret_name: str = "solace/api-keys"
@@ -82,35 +79,33 @@ def hydrate_from_secrets_manager() -> None:
     resp = client.get_secret_value(SecretId=settings.aws_secret_name)
     payload = json.loads(resp["SecretString"])
 
-    mapping = {
+    # Required keys — always needed regardless of provider
+    required_mapping = {
+        "DEMO_CLINICIAN_PIN": "demo_clinician_pin",
+    }
+    # Optional keys — only needed when overriding to third-party providers.
+    # In default AWS mode (Bedrock + Transcribe + Polly), none of these are required.
+    optional_mapping = {
         "OPENAI_API_KEY": "openai_api_key",
         "ANTHROPIC_API_KEY": "anthropic_api_key",
         "ELEVENLABS_API_KEY": "elevenlabs_api_key",
         "ELEVENLABS_VOICE_ID": "elevenlabs_voice_id",
-        "DEMO_CLINICIAN_PIN": "demo_clinician_pin",
-    }
-    # Twilio is optional — populate only when the secret has them.
-    optional = {
-        "TWILIO_ACCOUNT_SID": "twilio_account_sid",
-        "TWILIO_AUTH_TOKEN": "twilio_auth_token",
-        "TWILIO_SMS_FROM_NUMBER": "twilio_sms_from_number",
     }
     missing = []
-    for secret_key, attr in mapping.items():
+    for secret_key, attr in required_mapping.items():
         value = payload.get(secret_key)
         if not value:
             missing.append(secret_key)
             continue
         object.__setattr__(settings, attr, value)
+    for secret_key, attr in optional_mapping.items():
+        value = payload.get(secret_key)
+        if value:
+            object.__setattr__(settings, attr, value)
     if missing:
         raise RuntimeError(
             f"Secrets Manager payload missing required keys: {missing}. "
             f"Re-run scripts/setup_security.py after fixing .env, or rotate the secret."
         )
-    # Optional fields — set if present, ignore if not (no exception)
-    for secret_key, attr in optional.items():
-        value = payload.get(secret_key)
-        if value:
-            object.__setattr__(settings, attr, value)
-    log.info("Secrets Manager: hydrated %d required + %d optional field(s)",
-             len(mapping), sum(1 for k in optional if payload.get(k)))
+    hydrated = sum(1 for k in {**required_mapping, **optional_mapping} if payload.get(k))
+    log.info("Secrets Manager: hydrated %d field(s)", hydrated)

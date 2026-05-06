@@ -17,11 +17,24 @@ from botocore.exceptions import ClientError
 
 REGION = "us-east-1"
 ACCOUNT = boto3.client("sts").get_caller_identity()["Account"]
-CMK_ARN = f"arn:aws:kms:{REGION}:{ACCOUNT}:key/66c32010-5752-4b1d-8efe-bc317a44cb23"
 API_NAME = "solace-api-gw"
 
 ddb = boto3.client("dynamodb", region_name=REGION)
 apigw = boto3.client("apigatewayv2", region_name=REGION)
+kms = boto3.client("kms", region_name=REGION)
+
+
+def _resolve_cmk_arn() -> str:
+    """Resolve the Solace CMK ARN via alias — avoids hardcoding a key UUID."""
+    try:
+        resp = kms.describe_key(KeyId="alias/solace")
+        return resp["KeyMetadata"]["Arn"]
+    except Exception as e:  # noqa: BLE001
+        print(f"  [warn]  Could not resolve alias/solace ({e}), using default encryption.")
+        return ""
+
+
+CMK_ARN: str = ""  # populated in main()
 
 NONCE_TABLE = "solace-intake-nonces"
 ROUTE_THROTTLES = {
@@ -44,29 +57,51 @@ EXTRA_TABLES = [
 ]
 
 
-def ensure_nonce_table() -> None:
-    print("DynamoDB table:")
+def _sse_spec() -> dict:
+    """SSE specification using the Solace CMK if available."""
+    if CMK_ARN:
+        return {"Enabled": True, "SSEType": "KMS", "KMSMasterKeyId": CMK_ARN}
+    return {}
+
+
+def _ensure_table(table_name: str, hash_key: str, ttl_attr: str | None) -> None:
+    """Create a single-key DDB table with CMK encryption if it doesn't exist."""
     try:
-        ddb.describe_table(TableName=NONCE_TABLE)
-        print(f"  [ok]    {NONCE_TABLE}")
+        ddb.describe_table(TableName=table_name)
+        print(f"  [ok]    {table_name}")
         return
     except ClientError as e:
         if e.response["Error"]["Code"] != "ResourceNotFoundException":
             raise
-    ddb.create_table(
-        TableName=NONCE_TABLE,
-        BillingMode="PAY_PER_REQUEST",
-        KeySchema=[{"AttributeName": "nonce", "KeyType": "HASH"}],
-        AttributeDefinitions=[{"AttributeName": "nonce", "AttributeType": "S"}],
-        SSESpecification={"Enabled": True, "SSEType": "KMS", "KMSMasterKeyId": CMK_ARN},
-    )
-    print(f"  [create] {NONCE_TABLE}")
-    ddb.get_waiter("table_exists").wait(TableName=NONCE_TABLE)
-    ddb.update_time_to_live(
-        TableName=NONCE_TABLE,
-        TimeToLiveSpecification={"Enabled": True, "AttributeName": "ttl"},
-    )
-    print("  [ok]    TTL enabled")
+    kwargs: dict = {
+        "TableName": table_name,
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [{"AttributeName": hash_key, "KeyType": "HASH"}],
+        "AttributeDefinitions": [{"AttributeName": hash_key, "AttributeType": "S"}],
+    }
+    sse = _sse_spec()
+    if sse:
+        kwargs["SSESpecification"] = sse
+    ddb.create_table(**kwargs)
+    print(f"  [create] {table_name}")
+    ddb.get_waiter("table_exists").wait(TableName=table_name)
+    if ttl_attr:
+        try:
+            ddb.update_time_to_live(
+                TableName=table_name,
+                TimeToLiveSpecification={"Enabled": True, "AttributeName": ttl_attr},
+            )
+            print(f"  [ok]    TTL on {table_name}.{ttl_attr}")
+        except ClientError as e:
+            if "TimeToLive is already enabled" not in str(e):
+                print(f"  [warn]  TTL on {table_name}: {e}")
+
+
+def ensure_abuse_tables() -> None:
+    """Create all abuse-prevention DynamoDB tables with CMK encryption."""
+    print("DynamoDB abuse-prevention tables:")
+    for table_name, hash_key, ttl_attr in EXTRA_TABLES:
+        _ensure_table(table_name, hash_key, ttl_attr)
 
 
 def _find_api() -> str:
@@ -116,8 +151,14 @@ def apply_throttles() -> None:
 
 
 def main() -> None:
+    global CMK_ARN
     print(f"Account {ACCOUNT}  Region {REGION}\n")
-    ensure_nonce_table()
+    print("Resolving Solace CMK:")
+    CMK_ARN = _resolve_cmk_arn()
+    if CMK_ARN:
+        print(f"  [cmk]   {CMK_ARN}")
+    print()
+    ensure_abuse_tables()
     apply_throttles()
     print("\nDone.")
 

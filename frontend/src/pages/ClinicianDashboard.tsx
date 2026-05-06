@@ -104,8 +104,7 @@ export default function ClinicianDashboard() {
   useEffect(() => {
     listEHRVendors().then(setEhrVendors).catch(() => setEhrVendors([]));
   }, []);
-  // `pin` remains the dep for polling hook — we pass session.token (string) to re-key polling
-  const pin = session?.token ?? null;
+  const authenticated = !!session?.token;
   // Track arrivals — whenever the set of patient_ids grows, briefly flash a banner
   const [newArrivals, setNewArrivals] = useState<string[]>([]);
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -140,7 +139,7 @@ export default function ClinicianDashboard() {
   // 4s polling so new patients show up "live-ish" without manual refresh.
   // The endpoint is throttled at 200 rps and DDB queries are sub-50ms, so this is
   // negligible cost even with 50 concurrent patients in the queue.
-  const { patients, loading, error, refetch } = usePollingPatients(hospitalId, pin, 4_000, statusFilter);
+  const { patients, loading, error, refetch } = usePollingPatients(hospitalId, authenticated, 4_000, statusFilter);
 
   // Detect brand-new patient arrivals between polls → pulse a banner
   useEffect(() => {
@@ -472,11 +471,11 @@ export default function ClinicianDashboard() {
         <button
           type="button"
           onClick={async () => {
-            if (!pin) return;
+            if (!authenticated) return;
             if (!window.confirm("Reset demo? This deletes all non-canonical patients and clears refined/notes/prescriptions on the 5 seeded ones.")) return;
             try {
               const { resetDemo } = await import("../lib/api");
-              const r = await resetDemo(hospitalId, pin);
+              const r = await resetDemo(hospitalId);
               alert(`Reset complete.\nDeleted ${r.deleted_test_patients.length} test patient(s).\nCleared ${r.cleared_canonical_patients.length} canonical patient(s).`);
               window.location.reload();
             } catch (e: any) {
@@ -527,10 +526,9 @@ export default function ClinicianDashboard() {
           />
         </div>
 
-        {pin && (
+        {authenticated && (
           <PainAlarm
             hospitalId={hospitalId}
-            pin={pin}
             patients={patients}
             onOpenPatient={(id) => setSelectedId(id)}
             onAfterAck={refetch}
@@ -814,7 +812,7 @@ export default function ClinicianDashboard() {
                 <VitalsPanel
                   hospitalId={hospitalId}
                   patientId={detail.patient_id}
-                  pin={session!.token}
+                  /* pin removed — Bearer interceptor handles auth */
                   existing={
                     detail.refined_esi_level
                       ? {
@@ -855,7 +853,7 @@ export default function ClinicianDashboard() {
                 <NotesPanel
                   hospitalId={hospitalId}
                   patientId={detail.patient_id}
-                  pin={session!.token}
+                  /* pin removed — Bearer interceptor handles auth */
                   initialNotes={detail.notes}
                   initialEducation={detail.patient_education}
                   publishedAt={detail.patient_education_published_at}
@@ -864,7 +862,7 @@ export default function ClinicianDashboard() {
                 <PrescriptionPanel
                   hospitalId={hospitalId}
                   patientId={detail.patient_id}
-                  pin={session!.token}
+                  /* pin removed — Bearer interceptor handles auth */
                   medicalInfo={detail.medical_info}
                 />
 
@@ -927,7 +925,7 @@ export default function ClinicianDashboard() {
                     <button
                       type="button"
                       onClick={async () => {
-                        if (!pin || !detail) return;
+                        if (!authenticated || !detail) return;
                         const phone = window.prompt(
                           "Send discharge SMS to (leave blank to use phone on file):",
                           ""
@@ -936,7 +934,6 @@ export default function ClinicianDashboard() {
                         const r = await sendDischargeSMS(
                           hospitalId,
                           detail.patient_id,
-                          pin,
                           phone || undefined
                         );
                         alert(
@@ -959,8 +956,8 @@ export default function ClinicianDashboard() {
                     variant="primary"
                     fullWidth
                     onClick={async () => {
-                      if (!pin || !selectedId) return;
-                      await markSeen(hospitalId, selectedId, pin, "Clinician");
+                      if (!authenticated || !selectedId) return;
+                      await markSeen(hospitalId, selectedId, "Clinician");
                       setSelectedId(null);
                       setDetail(null);
                       await refetch();

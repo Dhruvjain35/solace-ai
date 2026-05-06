@@ -165,11 +165,14 @@ def _do_book(tool_input: dict[str, Any], call_ctx: dict[str, Any]) -> dict[str, 
         return {"say": "Could you give me your full name and the reason for the visit?"}
 
     confirmation = _generate_confirmation_code()
+    # Hash phone number before storage — raw phone is PHI (HIPAA §164.514)
+    from services.voice_agent.session import hash_phone  # noqa: PLC0415
+
     appt = {
         "appointment_id": str(uuid.uuid4()),
         "hospital_id": call_ctx.get("hospital_id", "demo"),
         "patient_name": name,
-        "patient_phone": phone,
+        "patient_phone_hash": hash_phone(phone),  # hashed, not raw
         "reason_short": reason,
         "preferred_window": window,
         "status": "booked",

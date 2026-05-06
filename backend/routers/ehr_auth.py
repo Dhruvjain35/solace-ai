@@ -10,7 +10,13 @@ Flow:
   3. /callback                      → POST token endpoint with PKCE verifier
                                     → GET FHIR Practitioner/{id} for clinician identity
                                     → mint Solace JWT
-                                    → 302 to frontend with handoff payload
+                                    → 302 to frontend with one-time handoff code
+
+Security:
+  - Redirect URI validated against allowlist (prevents open-redirect attacks)
+  - OAuth state stored in DynamoDB (survives Lambda cold starts)
+  - JWT never passed in URL — one-time handoff code exchanged via POST
+  - PKCE S256 challenge/verifier for public client security
 
 The Solace JWT issued at the end embeds the vendor + FHIR base URL + access_token
 so every downstream EHR query knows where to talk and how to authenticate.
@@ -32,6 +38,7 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import BaseModel
 
 from lib import ehr_vendors, jwt_auth
 
@@ -55,8 +62,26 @@ def list_vendors() -> dict:
 # ----------------------------------------------------------------------------------
 
 
-# PKCE state — DDB-backed so a Lambda cold start mid-OAuth-roundtrip doesn't
-# drop the verifier. Falls back to an in-memory dict in local mode.
+# Allowed redirect origins — prevents open-redirect attacks.
+# Only frontend origins that are in the CORS allow-list are acceptable.
+_ALLOWED_REDIRECT_ORIGINS = [
+    "https://solaceaidemo.vercel.app",
+    "https://solace-page.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+
+def _validate_redirect_uri(uri: str) -> bool:
+    """Ensure redirect_uri starts with one of our allowed origins."""
+    return any(uri.startswith(origin) for origin in _ALLOWED_REDIRECT_ORIGINS)
+
+
+# DynamoDB-backed state store for OAuth CSRF tokens + handoff codes.
+# Survives Lambda cold starts and multi-container deployments.
+# Falls back to in-memory dict in local dev mode.
 _LAUNCH_STATES_LOCAL: dict[str, dict[str, Any]] = {}
 _STATE_TTL = 600  # 10 minutes
 _STATE_TABLE = "solace-oauth-states"
@@ -68,32 +93,36 @@ def _ddb_states_table():
     return boto3.resource("dynamodb", region_name=settings.aws_region).Table(_STATE_TABLE)
 
 
-def _put_state(state: str, data: dict[str, Any]) -> None:
+def _store_state(state: str, data: dict[str, Any]) -> None:
+    """Store OAuth state in DDB. Falls back to in-memory for local dev."""
     from lib.config import settings  # noqa: PLC0415
-    if settings.solace_mode != "aws":
-        _LAUNCH_STATES_LOCAL[state] = data
-        return
-    try:
-        _ddb_states_table().put_item(Item={"state": state, **data})
-    except Exception as e:  # noqa: BLE001
-        log.warning("oauth state DDB put failed, falling back to in-memory: %s", e)
-        _LAUNCH_STATES_LOCAL[state] = data
+
+    data["state"] = state
+    data["ttl"] = int(time.time()) + _STATE_TTL
+    if settings.solace_mode == "aws":
+        try:
+            _ddb_states_table().put_item(Item=data)
+            return
+        except Exception as e:  # noqa: BLE001
+            log.warning("DDB state store failed, using in-memory: %s", e)
+    _LAUNCH_STATES_LOCAL[state] = data
 
 
 def _pop_state(state: str) -> dict[str, Any] | None:
+    """Retrieve and delete OAuth state. Returns None if expired/missing."""
     from lib.config import settings  # noqa: PLC0415
-    if settings.solace_mode != "aws":
-        return _LAUNCH_STATES_LOCAL.pop(state, None)
-    # Try DDB first; fall back to in-memory if the table is empty (race or fallback).
-    try:
-        resp = _ddb_states_table().delete_item(
-            Key={"state": state}, ReturnValues="ALL_OLD",
-        )
-        item = resp.get("Attributes")
-        if item:
-            return {k: v for k, v in item.items() if k != "state"}
-    except Exception as e:  # noqa: BLE001
-        log.warning("oauth state DDB pop failed: %s", e)
+
+    if settings.solace_mode == "aws":
+        try:
+            resp = _ddb_states_table().delete_item(
+                Key={"state": state}, ReturnValues="ALL_OLD",
+            )
+            item = resp.get("Attributes")
+            if item and item.get("ttl", 0) >= int(time.time()):
+                return {k: v for k, v in item.items() if k != "state"}
+            return None
+        except Exception as e:  # noqa: BLE001
+            log.warning("DDB state pop failed, trying in-memory: %s", e)
     return _LAUNCH_STATES_LOCAL.pop(state, None)
 
 
@@ -119,6 +148,14 @@ def launch(
     v = ehr_vendors.get(vendor)
     if not v:
         raise HTTPException(status_code=404, detail=f"Unknown EHR vendor '{vendor}'")
+
+    # Validate redirect_uri against allowlist to prevent open redirects
+    if not _validate_redirect_uri(redirect_uri):
+        raise HTTPException(
+            status_code=400,
+            detail="redirect_uri is not an allowed origin",
+        )
+
     if not v.client_id:
         raise HTTPException(
             status_code=400,
@@ -130,13 +167,12 @@ def launch(
         )
     state = secrets.token_urlsafe(24)
     code_verifier, code_challenge = _pkce_pair()
-    _put_state(state, {
+    _store_state(state, {
         "vendor": v.id,
         "hospital_id": hospital_id,
         "redirect_uri": redirect_uri,
         "code_verifier": code_verifier,
         "exp": int(time.time()) + _STATE_TTL,
-        "ttl": int(time.time()) + _STATE_TTL,  # DDB TTL field
     })
 
     params = {
@@ -248,6 +284,9 @@ def callback(
         log.exception("issue_token failed for EHR session: %s", e)
         return _redirect_with_error(rec["redirect_uri"], "session_issue_failed")
 
+    # Instead of passing JWT in URL (visible in browser history, logs),
+    # store the handoff payload behind a short-lived one-time code. The frontend
+    # exchanges this code via POST /api/auth/ehr/exchange to get the real session.
     handoff = {
         "token": token,
         "expires_at": sess.exp,
@@ -261,8 +300,38 @@ def callback(
         "ehr_sandbox": vendor.sandbox,
         "fhir_base_url": vendor.fhir_base_url,
     }
-    qp = urlencode({"handoff": json.dumps(handoff)})
+    handoff_code = secrets.token_urlsafe(32)
+    _store_state(f"handoff-{handoff_code}", {
+        "handoff": json.dumps(handoff),
+        "exp": int(time.time()) + 120,  # 2-minute TTL
+    })
+    qp = urlencode({"handoff_code": handoff_code})
     return RedirectResponse(f"{rec['redirect_uri']}?{qp}", status_code=302)
+
+
+# ----------------------------------------------------------------------------------
+# Handoff code exchange — frontend trades the one-time code for the real session
+# ----------------------------------------------------------------------------------
+
+
+class ExchangeBody(BaseModel):
+    handoff_code: str
+
+
+@router.post("/exchange")
+def exchange_handoff(body: ExchangeBody) -> dict:
+    """Exchange a one-time handoff code for the EHR session payload.
+
+    The code is consumed atomically — replay attempts return 400.
+    2-minute TTL ensures stale codes expire even without exchange.
+    """
+    rec = _pop_state(f"handoff-{body.handoff_code}")
+    if not rec:
+        raise HTTPException(status_code=400, detail="invalid or expired handoff code")
+    try:
+        return json.loads(rec["handoff"])
+    except (KeyError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=500, detail="malformed handoff") from e
 
 
 # ----------------------------------------------------------------------------------

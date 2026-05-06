@@ -10,7 +10,6 @@ import type { MedicalInfo, Prescription, PrescriptionSuggestion } from "../../ty
 type Props = {
   hospitalId: string;
   patientId: string;
-  pin: string;
   medicalInfo?: MedicalInfo | null;
 };
 
@@ -60,7 +59,7 @@ const EMPTY_MANUAL: PrescriptionSuggestion = {
   cautions: "",
 };
 
-export function PrescriptionPanel({ hospitalId, patientId, pin, medicalInfo }: Props) {
+export function PrescriptionPanel({ hospitalId, patientId, medicalInfo }: Props) {
   const [items, setItems] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<PrescriptionSuggestion[]>([]);
@@ -71,7 +70,7 @@ export function PrescriptionPanel({ hospitalId, patientId, pin, medicalInfo }: P
 
   async function refresh() {
     try {
-      const list = await listPrescriptions(hospitalId, patientId, pin);
+      const list = await listPrescriptions(hospitalId, patientId);
       setItems(list);
     } catch {
       // swallow
@@ -89,7 +88,7 @@ export function PrescriptionPanel({ hospitalId, patientId, pin, medicalInfo }: P
   async function fetchSuggestions() {
     setSuggestBusy(true);
     try {
-      const s = await suggestPrescriptions(hospitalId, patientId, pin);
+      const s = await suggestPrescriptions(hospitalId, patientId);
       setSuggestions(s);
     } finally {
       setSuggestBusy(false);
@@ -99,7 +98,7 @@ export function PrescriptionPanel({ hospitalId, patientId, pin, medicalInfo }: P
   async function accept(s: PrescriptionSuggestion) {
     setSaving(true);
     try {
-      await createPrescription(hospitalId, patientId, pin, { ...s, source: "ai_suggested_accepted" });
+      await createPrescription(hospitalId, patientId, { ...s, source: "ai_suggested_accepted" });
       setSuggestions((prev) => prev.filter((x) => x !== s));
       await refresh();
     } finally {
@@ -111,7 +110,7 @@ export function PrescriptionPanel({ hospitalId, patientId, pin, medicalInfo }: P
     if (!manualDraft.drug.trim()) return;
     setSaving(true);
     try {
-      await createPrescription(hospitalId, patientId, pin, { ...manualDraft, source: "manual" });
+      await createPrescription(hospitalId, patientId, { ...manualDraft, source: "manual" });
       setManualDraft(EMPTY_MANUAL);
       setManualOpen(false);
       await refresh();

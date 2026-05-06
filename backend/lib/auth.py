@@ -1,75 +1,56 @@
-"""Clinician auth — accepts JWT (Bearer) or legacy X-Clinician-PIN during transition.
+"""Clinician auth — JWT Bearer tokens only.
 
-The new path (JWT) is preferred and carries a clinician identity; legacy path is a
-hospital-wide shared PIN and logs as `anonymous` in the audit trail.
+Legacy X-Clinician-PIN header support has been removed. All clinician
+endpoints require `Authorization: Bearer <jwt>`. Tokens are issued via
+POST /auth/login with clinician_name + bcrypt-hashed PIN.
 """
 from __future__ import annotations
 
-import hmac
 import logging
 
 from fastapi import Header, HTTPException, Path, Request
 
-from db import storage
 from lib import audit as _audit
 from lib import jwt_auth
 
 log = logging.getLogger(__name__)
 
 
-def _legacy_pin_check(hospital_id: str, pin: str) -> dict:
-    hospital = storage.get_hospital(hospital_id)
-    if not hospital:
-        raise HTTPException(status_code=404, detail="hospital not found")
-    stored = hospital.get("clinician_pin", "")
-    if not hmac.compare_digest(str(pin), str(stored)):
-        raise HTTPException(status_code=401, detail="incorrect PIN")
-    return hospital
-
-
 def verify_clinician(
     hospital_id: str,
-    pin: str | None = None,
     *,
     authorization: str | None = None,
     request: Request | None = None,
 ) -> dict:
-    """Authenticate the caller. Returns a dict with at least `clinician_id` + `name`.
+    """Authenticate the caller via JWT Bearer token.
 
-    Preferred: `Authorization: Bearer <jwt>` header.
-    Fallback: legacy `X-Clinician-PIN: <pin>` header for the last release.
+    Returns a dict with `clinician_id`, `name`, `role`, `hospital_id`, `auth_method`.
     """
     bearer = None
     if authorization and authorization.lower().startswith("bearer "):
         bearer = authorization.split(" ", 1)[1].strip()
 
-    if bearer:
-        try:
-            sess = jwt_auth.verify_token(bearer)
-        except jwt_auth.AuthError as e:
-            raise HTTPException(status_code=401, detail=str(e))
-        if sess.hospital_id != hospital_id:
-            raise HTTPException(status_code=403, detail="hospital mismatch")
-        return {
-            "clinician_id": sess.clinician_id,
-            "name": sess.name,
-            "role": sess.role,
-            "hospital_id": sess.hospital_id,
-            "auth_method": "jwt",
-        }
+    if not bearer:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization required (Bearer token)",
+        )
 
-    if pin:
-        hospital = _legacy_pin_check(hospital_id, pin)
-        return {
-            "clinician_id": "legacy-pin",
-            "name": "Legacy PIN user",
-            "role": "clinician",
-            "hospital_id": hospital_id,
-            "hospital": hospital,
-            "auth_method": "legacy_pin",
-        }
+    try:
+        sess = jwt_auth.verify_token(bearer)
+    except jwt_auth.AuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
-    raise HTTPException(status_code=401, detail="Authorization required (Bearer token or X-Clinician-PIN)")
+    if sess.hospital_id != hospital_id:
+        raise HTTPException(status_code=403, detail="hospital mismatch")
+
+    return {
+        "clinician_id": sess.clinician_id,
+        "name": sess.name,
+        "role": sess.role,
+        "hospital_id": sess.hospital_id,
+        "auth_method": "jwt",
+    }
 
 
 def audit(
@@ -104,10 +85,9 @@ async def require_clinician(
     request: Request,
     hospital_id: str = Path(...),
     authorization: str | None = Header(None, alias="Authorization"),
-    x_clinician_pin: str | None = Header(None, alias="X-Clinician-PIN"),
 ) -> dict:
     caller = verify_clinician(
-        hospital_id, x_clinician_pin, authorization=authorization, request=request
+        hospital_id, authorization=authorization, request=request
     )
     request.state.caller = caller
     return caller
@@ -116,5 +96,8 @@ async def require_clinician(
 # Backward-compat shim — lets existing routers that imported `verify_clinician as _auth`
 # with the old 2-arg signature keep working until we refactor them to Depends().
 def verify_clinician_legacy(hospital_id: str, pin: str | None) -> dict:
-    """Old signature: (hospital_id, pin) → hospital dict. No JWT support."""
-    return verify_clinician(hospital_id, pin)
+    """Old signature shim. Raises 401 — forces callers to upgrade to JWT."""
+    raise HTTPException(
+        status_code=401,
+        detail="Legacy PIN authentication has been removed. Use Bearer token.",
+    )

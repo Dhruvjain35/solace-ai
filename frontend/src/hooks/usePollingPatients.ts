@@ -4,7 +4,7 @@ import type { PatientSummary } from "../types";
 
 export function usePollingPatients(
   hospitalId: string,
-  pin: string | null,
+  authenticated: boolean,
   intervalMs = 10_000,
   status: "waiting" | "all" = "waiting"
 ) {
@@ -14,9 +14,9 @@ export function usePollingPatients(
   const backoffRef = useRef(1_000);
 
   const fetchOnce = useCallback(async () => {
-    if (!pin) return;
+    if (!authenticated) return;
     try {
-      const { patients } = await getPatients(hospitalId, pin, status);
+      const { patients } = await getPatients(hospitalId, status);
       setPatients(patients);
       setError(null);
       backoffRef.current = 1_000;
@@ -26,10 +26,10 @@ export function usePollingPatients(
     } finally {
       setLoading(false);
     }
-  }, [hospitalId, pin, status]);
+  }, [hospitalId, authenticated, status]);
 
   useEffect(() => {
-    if (!pin) return;
+    if (!authenticated) return;
     let cancelled = false;
     let timer: number | null = null;
 
@@ -48,7 +48,7 @@ export function usePollingPatients(
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [pin, fetchOnce, intervalMs, error]);
+  }, [authenticated, fetchOnce, intervalMs, error]);
 
   return { patients, loading, error, refetch: fetchOnce };
 }

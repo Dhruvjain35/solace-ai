@@ -51,14 +51,70 @@ _SANITIZE_PATTERNS = [
     (r"\{\{[\s\S]*?\}\}", "template-interpolation"),
 ]
 
-# PHI signatures — always redact before third-party LLM calls (§164.514)
+# PHI signatures — always redact before third-party LLM calls.
+# Covers all 18 HIPAA §164.514(b) Safe Harbor identifiers that can appear in
+# free-text transcripts. Some identifiers (biometrics, photos, device IDs) are
+# not regex-matchable in text and are handled by other layers (EXIF stripping,
+# upload sanitization).
 _PII_REDACTIONS = [
+    # 1. SSN (###-##-#### and ###.##.####)
     (r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED:SSN]"),
     (r"\b\d{3}\.\d{2}\.\d{4}\b", "[REDACTED:SSN]"),
-    (r"\b\d{16}\b", "[REDACTED:CARD]"),
+
+    # 2. Credit/debit card numbers (16-digit continuous or spaced/dashed groups)
     (r"\b\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}\b", "[REDACTED:CARD]"),
+    (r"\b\d{16}\b", "[REDACTED:CARD]"),
+
+    # 3. Phone numbers (US formats: ###-###-####, (###) ###-####, +1##########)
     (r"\b\d{3}-\d{3}-\d{4}\b", "[REDACTED:PHONE]"),
+    (r"\(\d{3}\)\s*\d{3}-\d{4}", "[REDACTED:PHONE]"),
+    (r"\+1\d{10}\b", "[REDACTED:PHONE]"),
+    (r"\b\d{10}\b", "[REDACTED:PHONE]"),
+
+    # 4. Email addresses
     (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "[REDACTED:EMAIL]"),
+
+    # 5. Date of birth patterns (MM/DD/YYYY, MM-DD-YYYY, YYYY-MM-DD, "born on", "DOB:")
+    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|birthdate|birth\s+date)\s*[:=]?\s*"
+     r"\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}", "[REDACTED:DOB]"),
+    (r"\b(?:0[1-9]|1[0-2])[/\-](?:0[1-9]|[12]\d|3[01])[/\-](?:19|20)\d{2}\b", "[REDACTED:DATE]"),
+
+    # 6. Street addresses (number + street name + suffix)
+    (r"\b\d{1,5}\s+(?:[NSEW]\.?\s+)?(?:[A-Z][a-z]+\s+){1,3}"
+     r"(?:St(?:reet)?|Ave(?:nue)?|Blvd|Boulevard|Dr(?:ive)?|Ln|Lane|Rd|Road|Way|Ct|Court|Pl|Place|Pkwy|Cir(?:cle)?)"
+     r"\.?\b", "[REDACTED:ADDRESS]"),
+
+    # 7. ZIP codes (5-digit and ZIP+4)
+    (r"\b\d{5}-\d{4}\b", "[REDACTED:ZIP]"),
+
+    # 8. Medical record numbers (MRN patterns: MRN/MR# followed by digits)
+    (r"(?i)(?:MRN|MR#|medical\s+record\s*#?)\s*[:=]?\s*[A-Z0-9\-]{4,15}", "[REDACTED:MRN]"),
+
+    # 9. Health plan beneficiary numbers
+    (r"(?i)(?:member\s*(?:id|#|number)|subscriber\s*(?:id|#|number)|policy\s*(?:id|#|number)|"
+     r"group\s*(?:id|#|number))\s*[:=]?\s*[A-Z0-9\-]{4,20}", "[REDACTED:MEMBER_ID]"),
+
+    # 10. Account numbers (generic labeled account/acct patterns)
+    (r"(?i)(?:account|acct)\s*(?:#|number|no\.?)\s*[:=]?\s*\d{6,17}", "[REDACTED:ACCOUNT]"),
+
+    # 11. Certificate/license numbers
+    (r"(?i)(?:license|licence|certificate|cert)\s*(?:#|number|no\.?)\s*[:=]?\s*[A-Z0-9\-]{4,15}",
+     "[REDACTED:LICENSE]"),
+
+    # 12. Vehicle identifiers (VIN: 17 alphanumeric, license plate patterns)
+    (r"\b[A-HJ-NPR-Z0-9]{17}\b", "[REDACTED:VIN]"),
+
+    # 13. Device serial numbers / identifiers (labeled patterns)
+    (r"(?i)(?:serial\s*(?:#|number|no\.?)|device\s*(?:id|#))\s*[:=]?\s*[A-Z0-9\-]{6,20}",
+     "[REDACTED:DEVICE_ID]"),
+
+    # 14. URLs (web/ftp) — can contain patient portal links with embedded identifiers
+    (r"https?://[^\s<>\"']{8,}", "[REDACTED:URL]"),
+    (r"ftp://[^\s<>\"']{8,}", "[REDACTED:URL]"),
+
+    # 15. IP addresses (v4)
+    (r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b",
+     "[REDACTED:IP]"),
 ]
 
 

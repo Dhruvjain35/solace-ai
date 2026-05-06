@@ -1,4 +1,9 @@
-"""Create Solace DynamoDB tables + S3 media bucket. Idempotent."""
+"""Create Solace DynamoDB tables + S3 media bucket. Idempotent.
+
+All DynamoDB tables are encrypted with the Solace CMK (KMS) per HIPAA §164.312.
+The CMK is resolved by alias (`alias/solace`) so the setup script works across
+accounts without hardcoding a key UUID.
+"""
 from __future__ import annotations
 
 import json
@@ -14,6 +19,23 @@ BUCKET = f"solace-media-{ACCOUNT_ID}"
 
 ddb = boto3.client("dynamodb", region_name=REGION)
 s3 = boto3.client("s3", region_name=REGION)
+kms = boto3.client("kms", region_name=REGION)
+
+
+def _resolve_cmk_arn() -> str:
+    """Resolve the Solace CMK ARN via alias — avoids hardcoding a key UUID."""
+    try:
+        resp = kms.describe_key(KeyId="alias/solace")
+        arn = resp["KeyMetadata"]["Arn"]
+        print(f"  [cmk]   {arn}")
+        return arn
+    except ClientError as e:
+        print(f"  [warn]  Could not resolve alias/solace: {e}")
+        print("  [warn]  Tables will use AWS-managed default encryption (SSE-S3).")
+        return ""
+
+
+CMK_ARN: str = ""  # populated in main()
 
 
 def _exists(name: str) -> bool:
@@ -31,6 +53,13 @@ def _create(name: str, **kwargs) -> None:
         print(f"  [ok]    {name} already exists")
         return
     print(f"  [create] {name}")
+    # HIPAA §164.312 — encrypt all tables with the Solace CMK when available
+    if CMK_ARN and "SSESpecification" not in kwargs:
+        kwargs["SSESpecification"] = {
+            "Enabled": True,
+            "SSEType": "KMS",
+            "KMSMasterKeyId": CMK_ARN,
+        }
     ddb.create_table(TableName=name, BillingMode="PAY_PER_REQUEST", **kwargs)
 
 
@@ -89,20 +118,60 @@ def setup_tables() -> None:
             {"AttributeName": "note_id", "KeyType": "RANGE"},
         ],
     )
-    _wait(["solace-patients", "solace-hospitals", "solace-prescriptions", "solace-notes"])
+    _create(
+        "solace-calls",
+        AttributeDefinitions=[
+            {"AttributeName": "call_id", "AttributeType": "S"},
+            {"AttributeName": "hospital_id", "AttributeType": "S"},
+            {"AttributeName": "started_at", "AttributeType": "S"},
+        ],
+        KeySchema=[{"AttributeName": "call_id", "KeyType": "HASH"}],
+        GlobalSecondaryIndexes=[
+            {
+                "IndexName": "hospital_id-started_at-index",
+                "KeySchema": [
+                    {"AttributeName": "hospital_id", "KeyType": "HASH"},
+                    {"AttributeName": "started_at", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
+        ],
+    )
+    _create(
+        "solace-appointments",
+        AttributeDefinitions=[
+            {"AttributeName": "appointment_id", "AttributeType": "S"},
+            {"AttributeName": "hospital_id", "AttributeType": "S"},
+            {"AttributeName": "created_at", "AttributeType": "S"},
+        ],
+        KeySchema=[{"AttributeName": "appointment_id", "KeyType": "HASH"}],
+        GlobalSecondaryIndexes=[
+            {
+                "IndexName": "hospital_id-created_at-index",
+                "KeySchema": [
+                    {"AttributeName": "hospital_id", "KeyType": "HASH"},
+                    {"AttributeName": "created_at", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
+        ],
+    )
+    _wait(["solace-patients", "solace-hospitals", "solace-prescriptions", "solace-notes",
+           "solace-calls", "solace-appointments"])
 
-    print("Enabling TTL on solace-patients (24h auto-expire):")
-    try:
-        ddb.update_time_to_live(
-            TableName="solace-patients",
-            TimeToLiveSpecification={"Enabled": True, "AttributeName": "ttl"},
-        )
-        print("  [ok]")
-    except ClientError as e:
-        if "TimeToLive is already enabled" in str(e):
-            print("  [ok] already enabled")
-        else:
-            print(f"  [warn] {e}")
+    print("Enabling TTL:")
+    for tbl, attr in [("solace-patients", "ttl"), ("solace-calls", "ttl")]:
+        try:
+            ddb.update_time_to_live(
+                TableName=tbl,
+                TimeToLiveSpecification={"Enabled": True, "AttributeName": attr},
+            )
+            print(f"  [ok] {tbl}.{attr}")
+        except ClientError as e:
+            if "TimeToLive is already enabled" in str(e):
+                print(f"  [ok] {tbl} already enabled")
+            else:
+                print(f"  [warn] {e}")
 
 
 def setup_bucket() -> None:
@@ -150,9 +219,31 @@ def setup_bucket() -> None:
     )
     print("  [ok] public access blocked (presigned URLs still work)")
 
+    # HIPAA §164.312 — default encryption with CMK for all objects at rest
+    if CMK_ARN:
+        s3.put_bucket_encryption(
+            Bucket=BUCKET,
+            ServerSideEncryptionConfiguration={
+                "Rules": [{
+                    "ApplyServerSideEncryptionByDefault": {
+                        "SSEAlgorithm": "aws:kms",
+                        "KMSMasterKeyID": CMK_ARN,
+                    },
+                    "BucketKeyEnabled": True,
+                }]
+            },
+        )
+        print("  [ok] SSE-KMS with solace CMK (BucketKey enabled)")
+    else:
+        print("  [warn] no CMK — bucket uses default S3 encryption")
+
 
 def main() -> None:
+    global CMK_ARN
     print(f"Account: {ACCOUNT_ID}  Region: {REGION}\n")
+    print("Resolving Solace CMK:")
+    CMK_ARN = _resolve_cmk_arn()
+    print()
     setup_tables()
     print()
     setup_bucket()

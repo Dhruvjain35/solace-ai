@@ -116,6 +116,7 @@ export default function PatientIntake() {
     }
     form.append("medical_info", JSON.stringify(medical));
     form.append("preferred_language", preferredLanguage);
+    form.append("consent_granted", consentGranted ? "true" : "false");
 
     let attempt = 0;
     while (true) {

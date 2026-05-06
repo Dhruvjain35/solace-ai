@@ -16,11 +16,25 @@ from botocore.exceptions import ClientError
 
 REGION = "us-east-1"
 ACCOUNT = boto3.client("sts").get_caller_identity()["Account"]
-CMK_ARN = f"arn:aws:kms:{REGION}:{ACCOUNT}:key/66c32010-5752-4b1d-8efe-bc317a44cb23"
 SECRET_NAME = "solace/clinician-auth"
 
 ddb = boto3.client("dynamodb", region_name=REGION)
 sm = boto3.client("secretsmanager", region_name=REGION)
+kms = boto3.client("kms", region_name=REGION)
+
+
+def _resolve_cmk_arn() -> str:
+    """Resolve the Solace CMK ARN via alias — avoids hardcoding a key UUID."""
+    try:
+        resp = kms.describe_key(KeyId="alias/solace")
+        return resp["KeyMetadata"]["Arn"]
+    except Exception as e:  # noqa: BLE001
+        # Fall back to the legacy hardcoded ARN if alias doesn't exist yet
+        print(f"  [warn]  Could not resolve alias/solace ({e}), using default encryption.")
+        return f"arn:aws:kms:{REGION}:{ACCOUNT}:alias/aws/dynamodb"
+
+
+CMK_ARN: str = ""  # populated in main()
 
 
 def _now() -> str:
@@ -75,7 +89,12 @@ def bcrypt_hash(plain: str) -> str:
 
 
 def main() -> None:
+    global CMK_ARN
     print(f"Account {ACCOUNT}  Region {REGION}\n")
+
+    print("Resolving Solace CMK:")
+    CMK_ARN = _resolve_cmk_arn()
+    print(f"  [cmk]   {CMK_ARN}\n")
 
     print("DynamoDB tables:")
     ensure_table(

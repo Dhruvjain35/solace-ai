@@ -12,11 +12,16 @@ Two surfaces, one brain:
       POST /api/voice/simulator/turn     — send a user line, get agent reply + audio
       POST /api/voice/simulator/end      — finalize the session
 
-  * Admin (clinician PIN)
+  * Admin (clinician JWT)
       GET  /api/voice/calls              — recent call list
       GET  /api/voice/calls/{call_id}    — single transcript
       GET  /api/voice/stats              — intent breakdown / volume / avg duration
       GET  /api/voice/appointments       — voice-booked appointments
+
+Security:
+  - Simulator endpoints enforce blocklist + rate limiting + content guard (PHI redaction)
+  - Twilio turn transcripts run through content guard before Claude
+  - All abuse events are audit-logged
 """
 from __future__ import annotations
 
@@ -28,6 +33,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from db import storage
+from lib import blocklist, content_guard, quota
 from lib.auth import audit, require_clinician
 from services import transcription
 from services.voice_agent import intents, prompts, session, tts_cache
@@ -137,6 +143,19 @@ async def twilio_turn(call_id: str = Path(...), request: Request = None) -> Resp
                + _record_block(call_id, base_url)
         return _twiml(body)
 
+    # Content guard — scan transcript for prompt injection + redact PHI before Claude
+    ok, cleaned_text, findings = content_guard.scan(
+        user_text, label="voice.twilio_turn", source_ip=None, user_agent=None,
+    )
+    if not ok:
+        # Prompt injection detected — hang up gracefully
+        session.end(call_id, disposition="content_rejected")
+        return _twiml(
+            _say_or_play("I'm sorry, I can't process that request. Goodbye.",
+                         rec.get("language", "en"), base_url) + "<Hangup/>"
+        )
+    user_text = cleaned_text
+
     session.append_turn(call_id, role="user", text=user_text)
     turn = intents.run_turn(history=rec.get("history", []), user_text=user_text, call_ctx=rec)
     session.update(call_id, {"history": turn["history"]})
@@ -199,8 +218,22 @@ class SimulatorTurnBody(BaseModel):
     text: str
 
 
+def _sim_identity(request: Request | None) -> tuple[str | None, str | None, str]:
+    """Extract source IP, UA, and computed identity for simulator rate limiting."""
+    source_ip = None
+    user_agent = None
+    if request:
+        source_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else None)
+        user_agent = request.headers.get("user-agent")
+    return source_ip, user_agent, quota.identity_of(source_ip, user_agent)
+
+
 @router.post("/simulator/start")
-def simulator_start(body: SimulatorStartBody) -> dict:
+def simulator_start(body: SimulatorStartBody, request: Request = None) -> dict:
+    source_ip, user_agent, identity = _sim_identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "voice_simulator", source_ip=source_ip)
+
     rec = session.start(
         hospital_id=body.hospital_id,
         caller_phone=None,
@@ -222,13 +255,27 @@ def simulator_start(body: SimulatorStartBody) -> dict:
 
 
 @router.post("/simulator/turn")
-def simulator_turn(body: SimulatorTurnBody) -> dict:
+def simulator_turn(body: SimulatorTurnBody, request: Request = None) -> dict:
+    source_ip, user_agent, identity = _sim_identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "voice_simulator", source_ip=source_ip)
+
     rec = session.get(body.call_id)
     if not rec:
         raise HTTPException(status_code=404, detail="unknown call_id")
     user_text = (body.text or "").strip()
     if not user_text:
         raise HTTPException(status_code=400, detail="text required")
+
+    # Content guard — scan for prompt injection + redact PHI before Claude
+    ok, cleaned_text, findings = content_guard.scan(
+        user_text, label="voice.simulator_turn",
+        source_ip=source_ip, user_agent=user_agent,
+    )
+    if not ok:
+        raise HTTPException(status_code=422, detail="content rejected by abuse scanner")
+    user_text = cleaned_text
+
     session.append_turn(body.call_id, role="user", text=user_text)
     turn = intents.run_turn(history=rec.get("history", []), user_text=user_text, call_ctx=rec)
     session.update(body.call_id, {"history": turn["history"]})
@@ -260,7 +307,10 @@ class SimulatorEndBody(BaseModel):
 
 
 @router.post("/simulator/end")
-def simulator_end(body: SimulatorEndBody) -> dict:
+def simulator_end(body: SimulatorEndBody, request: Request = None) -> dict:
+    source_ip, user_agent, identity = _sim_identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+
     rec = session.get(body.call_id)
     if not rec:
         return {"ok": True}
@@ -338,14 +388,24 @@ def _hospital_for_dialed_number(to: str) -> str:
 
 
 def _whisper_from_twilio_url(recording_url: str) -> str:
-    """Twilio appends recording metadata; download the .mp3 binary, pass to Whisper.
-    Twilio Recording URLs need basic-auth (account SID + auth token) for private
-    recordings — public recordings work without. v1 assumes public; production
-    flips this to authenticated GETs.
+    """Download Twilio recording with authentication, then transcribe.
+
+    Twilio Recording URLs require HTTP Basic Auth (Account SID + Auth Token)
+    for private recordings. Using authenticated GETs ensures patient audio
+    is not publicly accessible (HIPAA §164.312(e) transmission security).
     """
+    import os
+
     import httpx
+
     url = recording_url + ".mp3" if not recording_url.endswith(".mp3") else recording_url
-    with httpx.Client(timeout=15.0) as client:
+
+    # Authenticate with Twilio credentials
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
+    auth = (twilio_sid, twilio_token) if twilio_sid and twilio_token else None
+
+    with httpx.Client(timeout=15.0, auth=auth) as client:
         resp = client.get(url)
         resp.raise_for_status()
         audio_bytes = resp.content

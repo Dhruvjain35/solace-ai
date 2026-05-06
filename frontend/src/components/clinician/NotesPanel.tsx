@@ -6,7 +6,6 @@ import type { ClinicianNote, PatientEducation } from "../../types";
 type Props = {
   hospitalId: string;
   patientId: string;
-  pin: string;
   initialNotes: ClinicianNote[];
   initialEducation: PatientEducation | null;
   publishedAt: string | null;
@@ -15,7 +14,6 @@ type Props = {
 export function NotesPanel({
   hospitalId,
   patientId,
-  pin,
   initialNotes,
   initialEducation,
   publishedAt,
@@ -39,7 +37,7 @@ export function NotesPanel({
     setSaving(true);
     setError(null);
     try {
-      const note = await createNote(hospitalId, patientId, pin, draft.trim());
+      const note = await createNote(hospitalId, patientId, draft.trim());
       setNotes((prev) => [...prev, note]);
       setDraft("");
     } catch (e: any) {
@@ -53,7 +51,7 @@ export function NotesPanel({
     setPublishing(true);
     setError(null);
     try {
-      const summary = await publishPatientSummary(hospitalId, patientId, pin);
+      const summary = await publishPatientSummary(hospitalId, patientId);
       setEducation(summary);
       setPublishedTs(new Date().toISOString());
     } catch (e: any) {

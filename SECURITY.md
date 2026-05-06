@@ -11,16 +11,21 @@ Solace handles real patient health information. This document details every secu
 | Control | Implementation |
 |---|---|
 | Network perimeter | AWS WAFv2 (4 managed rule groups) + CloudFront TLS 1.2+ |
+| CORS | Explicit origin allowlist — no wildcards |
 | Abuse prevention | IP-bound one-time nonces + identity rate limiting + auto-blocklist |
-| Prompt injection | Pre-Claude content scanner (reject + sanitize + PHI redact) |
+| Prompt injection | Pre-Claude content scanner (reject + sanitize + PHI redact) on all paths |
 | Encryption at rest | One CMK (KMS) across all DynamoDB tables, S3, and Secrets Manager |
 | Encryption in transit | TLS 1.2+ enforced at CloudFront, API Gateway, and S3 bucket policy |
-| Authentication | JWT HS256 (clinicians) + bcrypt PINs stored in Secrets Manager |
-| HIPAA §164.508 | Explicit consent gate — no PHI flows to third parties without it |
-| HIPAA §164.514 | PHI redacted from all third-party AI payloads before transmission |
+| Authentication | JWT HS256 (clinicians) + brute-force lockout (5 failures → 30-min lock) |
+| EHR OAuth | SMART-on-FHIR with DDB-backed state, redirect allowlist, one-time handoff codes |
+| HIPAA §164.508 | Explicit consent gate — no PHI flows to AI providers without it |
+| HIPAA §164.514 | 15-pattern PHI redaction before all AI payloads (Safe Harbor identifiers) |
 | HIPAA §164.312 | CMK encryption, TLS, audit trail, JWT auth, AI attribution log |
-| Audit trail | Every action written to `solace-audit-log` (DynamoDB, 30-day TTL) |
+| Audit trail | DynamoDB (90-day hot) + S3 archival (6-year cold, CMK-encrypted) |
 | AI attribution | Provider + model + token counts persisted on every patient record |
+| AI provider BAA | All AI services routed through AWS BAA perimeter (Bedrock, Transcribe, Polly) |
+| Voice agent | Content guard + rate limiting + blocklist on all voice paths |
+| Phone number storage | SHA-256 hashed — never stored in plaintext |
 
 ---
 
@@ -34,6 +39,17 @@ All traffic enters through **AWS CloudFront** backed by **WAFv2** with four mana
 - **Rate-based rule** — hard per-IP throttle at the AWS edge, before Lambda warms up
 
 CloudFront enforces **TLS 1.2 minimum**. The S3 media bucket has a bucket policy that rejects any non-TLS request (`aws:SecureTransport: false → Deny`). There is no cleartext path to patient data anywhere in the stack.
+
+### CORS policy
+
+CORS is locked to an explicit origin allowlist — no wildcards:
+
+- `https://solaceaidemo.vercel.app` (production)
+- `https://solace-page.vercel.app` (production mirror)
+- `http://localhost:5173`, `http://localhost:3000` (local dev only)
+- Additional origins via `SOLACE_CORS_ORIGINS` env var for staging/preview
+
+Allowed methods and headers are explicitly enumerated (no `*` fallback).
 
 ---
 
@@ -61,6 +77,8 @@ API Gateway throttles by raw IP, which rotating proxies defeat. Solace adds a se
 | Transcribe audio | 20 requests |
 | Audio seconds consumed | 300 seconds |
 | Single audio upload | 120 seconds absolute cap |
+| Voice simulator | 200 requests |
+| Pain flag (patient button) | 30 requests |
 
 Rate-limit breaches return `429` with a `Retry-After` header showing the exact bucket reset time. Quota overages are audit-logged but do **not** count toward the abuse blocklist — a real patient reloading the page should not be auto-blocked.
 
@@ -88,7 +106,7 @@ The blocklist check uses `ConsistentRead=True` to eliminate the eventual-consist
 
 ## Layer 5 — Pre-Claude content guard (prompt injection + PHI redaction)
 
-Every transcript — whether from Whisper or typed directly — passes through `content_guard.scan()` before reaching any AI provider. Three tiers:
+Every transcript — whether from Whisper, typed directly, or via voice agent — passes through `content_guard.scan()` before reaching any AI provider. Three tiers:
 
 ### Tier 1: Hard reject (HTTP 422)
 Regex patterns matched case-insensitively. Any match aborts the request and writes an audit event:
@@ -108,8 +126,8 @@ Stripped silently; request proceeds with cleaned text:
 - Generic LLM control tokens
 - Template interpolation (`{{...}}`)
 
-### Tier 3: PHI redaction (HIPAA §164.514 minimum-necessary)
-Applied to every transcript before it is sent to OpenAI, Anthropic, or ElevenLabs:
+### Tier 3: PHI redaction (HIPAA §164.514 Safe Harbor — 15 identifiers)
+Applied to every transcript before it is sent to any AI provider:
 
 | Pattern | Replacement |
 |---|---|
@@ -117,6 +135,17 @@ Applied to every transcript before it is sent to OpenAI, Anthropic, or ElevenLab
 | Credit card (16-digit) | `[REDACTED:CARD]` |
 | Phone number | `[REDACTED:PHONE]` |
 | Email address | `[REDACTED:EMAIL]` |
+| Date of birth (MM/DD/YYYY etc.) | `[REDACTED:DOB]` |
+| Street address | `[REDACTED:ADDRESS]` |
+| ZIP code (5 or 9-digit) | `[REDACTED:ZIP]` |
+| Medical Record Number | `[REDACTED:MRN]` |
+| Insurance member ID | `[REDACTED:MEMBER_ID]` |
+| Account number | `[REDACTED:ACCOUNT]` |
+| Driver's license | `[REDACTED:LICENSE]` |
+| VIN (vehicle ID) | `[REDACTED:VIN]` |
+| Device serial/identifier | `[REDACTED:DEVICE_ID]` |
+| URL (potential PHI in path) | `[REDACTED:URL]` |
+| IP address | `[REDACTED:IP]` |
 
 ---
 
@@ -125,7 +154,7 @@ Applied to every transcript before it is sent to OpenAI, Anthropic, or ElevenLab
 Three sections of 45 CFR Part 164 implemented directly in code:
 
 ### §164.508 — Authorization for PHI disclosure to third parties
-The intake handler checks `consent_granted == "true"` before any PHI flows to OpenAI, Anthropic, or ElevenLabs. If the patient has not checked the consent box:
+The intake, transcription, and insurance scan handlers check `consent_granted == "true"` before any PHI flows to AI providers. If the patient has not checked the consent box:
 - Request is rejected with HTTP 403
 - An audit event (`abuse.intake_no_consent`) is written
 - The patient's identity is flagged
@@ -133,10 +162,10 @@ The intake handler checks `consent_granted == "true"` before any PHI flows to Op
 Consent version and grant timestamp are persisted on every patient record: `consent_granted_at` (ISO 8601 UTC), `consent_version`.
 
 ### §164.514 — Minimum-necessary standard
-The content guard's PHI redaction tier (above) strips identifiers from transcripts before third-party AI calls. Claude and Whisper receive symptom narratives, not SSNs or card numbers.
+The content guard's PHI redaction tier (above) strips all 15 Safe Harbor identifiers from transcripts before AI calls. Claude and Transcribe receive symptom narratives, not SSNs or card numbers.
 
 ### §164.312 — Technical safeguards
-- **Access control**: JWT HS256 tokens for clinicians; bcrypt PINs stored in Secrets Manager; `hmac.compare_digest` for constant-time PIN comparison
+- **Access control**: JWT HS256 tokens for clinicians; bcrypt PINs stored in Secrets Manager; brute-force lockout (5 failures in 15 min → 30-min lock)
 - **Audit controls**: every action written to `solace-audit-log` (see Layer 8)
 - **Integrity**: CMK-encrypted storage prevents silent tampering at rest
 - **Transmission security**: TLS 1.2+ enforced end-to-end (CloudFront → API Gateway → S3)
@@ -149,44 +178,68 @@ One **Customer-Managed KMS Key** (`alias/solace`) encrypts every data store:
 
 | Resource | Encryption |
 |---|---|
-| All 11 DynamoDB tables | SSE-KMS with solace CMK |
+| All DynamoDB tables (patients, hospitals, prescriptions, notes, calls, appointments, clinicians, audit-log, nonces, quotas, blocklist, idempotency) | SSE-KMS with solace CMK |
 | S3 media bucket (photos, audio) | SSE-KMS with solace CMK (BucketKey enabled) |
+| S3 audit archive bucket | SSE-KMS with solace CMK |
 | Secrets Manager (API keys, JWT key, PINs) | CMK-encrypted |
 | CloudTrail log bucket | CMK-encrypted |
 
-Annual **automatic key rotation** is enabled. The CMK key policy explicitly grants CloudTrail the ability to use the key for log encryption, with a condition restricting it to the Solace trail ARN only.
+Annual **automatic key rotation** is enabled. All setup scripts resolve the CMK by alias (`alias/solace`) — no hardcoded key UUIDs.
 
 The HMAC key used for nonce fingerprinting and identity hashing reuses the JWT signing key from Secrets Manager — no additional secret surface.
 
 ---
 
-## Layer 8 — Audit trail
+## Layer 8 — Audit trail (HIPAA §164.530(j)(2) — 6-year retention)
 
-Every action in the system writes a record to `solace-audit-log` (DynamoDB, 30-day TTL). Each record contains:
+Every action in the system writes a record to `solace-audit-log`. Each record contains:
 
 | Field | Value |
 |---|---|
 | `clinician_id` | JWT claim or `"anonymous"` for patient-side events |
 | `clinician_name` | From JWT claim |
-| `action` | Namespaced string, e.g. `patient.view`, `abuse.intake_bad_nonce` |
+| `action` | Namespaced string, e.g. `patient.view`, `abuse.intake_bad_nonce`, `pain_flag.triggered` |
 | `patient_id` | Affected patient (if applicable) |
 | `source_ip` | From `X-Forwarded-For` |
 | `request_id` | AWS X-Ray trace ID |
 | `status_code` | HTTP response code |
 | `ts` | ISO 8601 UTC timestamp |
 
-Writes are non-blocking (submitted to a thread pool executor) so audit logging never adds latency to the request path. Failures are logged as warnings and do not fail the request — the system fails open on audit writes rather than denying care.
+### Dual-write retention strategy
+
+| Tier | Store | TTL | Purpose |
+|---|---|---|---|
+| Hot | DynamoDB | 90 days | Live dashboard queries, recent audit lookups |
+| Cold | S3 (`audit-archive/YYYY/MM/DD/{id}.json`) | 6 years | HIPAA §164.530(j)(2) compliance |
+
+Every audit record is dual-written: synchronously to DynamoDB and asynchronously to S3 (CMK-encrypted). S3 archival failure is non-blocking — the DynamoDB record is never lost.
+
+Writes are non-blocking (submitted to a thread pool executor) so audit logging never adds latency to the request path.
 
 Abuse events feed back into the blocklist counter atomically — `audit.record()` calls `blocklist.record_abuse()` automatically for any action starting with `abuse.`.
 
 ---
 
-## Layer 9 — AI attribution log (per-patient inference record)
+## Layer 9 — AI provider BAA coverage
 
-Every call to Claude, Whisper, or ElevenLabs for a patient appends an entry to an in-request `AILog` object:
+All three AI services are routed through AWS-managed services covered under the **AWS Business Associate Agreement (BAA)**:
+
+| Function | AWS Service | Replaces |
+|---|---|---|
+| LLM inference | **AWS Bedrock** (Claude via Anthropic) | Direct Anthropic API |
+| Speech-to-text | **AWS Transcribe** | OpenAI Whisper API |
+| Text-to-speech | **AWS Polly** (Neural voices) | ElevenLabs API |
+
+Each service is switchable via environment variable (`CLAUDE_PROVIDER`, `TRANSCRIPTION_PROVIDER`, `TTS_PROVIDER`) — the direct API paths remain as fallback but default to the BAA-covered AWS path.
+
+---
+
+## Layer 10 — AI attribution log (per-patient inference record)
+
+Every call to an AI provider for a patient appends an entry to an in-request `AILog` object:
 
 ```
-provider: "anthropic"
+provider: "bedrock"
 model: "claude-sonnet-4-5"
 input_tokens: 847
 output_tokens: 312
@@ -197,12 +250,42 @@ call_type: "prebrief"
 At the end of intake, this log is serialized as JSON and stored on the patient record itself in DynamoDB (`ai_processing_log` field). This means:
 
 - Auditors can reconstruct exactly which AI model made which inference for which patient
-- If the provider is swapped from `anthropic` to `bedrock` (one env var flip), the log reflects it
+- If the provider is swapped from `bedrock` to `anthropic` (one env var flip), the log reflects it
 - Token counts are available for cost attribution and billing transparency
 
 ---
 
-## Layer 10 — CloudWatch alarms + SNS alerts
+## Layer 11 — Voice agent security
+
+The voice agent (Twilio + browser simulator) has its own security stack:
+
+### Content guard on all voice paths
+- **Twilio turn**: `content_guard.scan()` runs on every transcribed utterance before Claude. Prompt injection → graceful hangup.
+- **Simulator turn**: same `content_guard.scan()` on user text before Claude. Injection → HTTP 422.
+
+### Rate limiting + blocklist
+- Voice simulator: 200 requests/hour per identity
+- Pain flag button: 30 requests/hour per identity
+- Both enforce `blocklist.enforce()` as first action
+
+### Phone number handling
+- Caller phone numbers are SHA-256 hashed before storage (`last4:hash` format)
+- Appointment records store `patient_phone_hash`, never raw numbers
+- Twilio recording downloads use HTTP Basic Auth (Account SID + Auth Token)
+
+---
+
+## Layer 12 — EHR OAuth security
+
+SMART-on-FHIR clinician sign-in includes:
+
+- **Redirect URI allowlist**: `_validate_redirect_uri()` prevents open-redirect attacks
+- **DynamoDB-backed OAuth state**: CSRF tokens stored in `solace-idempotency` table (survives Lambda cold starts, multi-container deployments)
+- **One-time handoff codes**: JWT is never passed in URLs. Backend stores the session behind a short-lived code (2-min TTL); frontend exchanges via `POST /api/auth/ehr/exchange`. Replay returns 400.
+
+---
+
+## Layer 13 — CloudWatch alarms + SNS alerts
 
 13 CloudWatch alarms are configured:
 
@@ -220,9 +303,9 @@ All alarms notify via SNS → email. Security-specific events (abuse blocks, con
 | Gap | Status |
 |---|---|
 | AWS GuardDuty | Not enabled (cost; would add threat detection on DynamoDB + S3 + Lambda) |
-| AWS Bedrock BAA | Pending — Bedrock migration path is ready (env var flip), blocked on BAA execution |
 | MFA on AWS root account | Not verifiable via code — assumed enabled by account policy |
 | Formal penetration test | Not performed; controls are designed to standard but untested by a third party |
+| Audit dead-letter queue | S3 archival failures are logged but not retried — no DLQ yet |
 
 ---
 
@@ -231,13 +314,16 @@ All alarms notify via SNS → email. Security-specific events (abuse blocks, con
 All security controls are provisioned via idempotent Python scripts. Running them on a fresh AWS account produces the documented posture:
 
 ```bash
-python scripts/setup_security.py           # CMK, Secrets Manager, CloudTrail
-python scripts/setup_aws.py                # DynamoDB tables (CMK-encrypted)
-python scripts/setup_abuse_prevention.py   # Nonce table, quota table, blocklist table
+python scripts/setup_security.py           # CMK (alias/solace), Secrets Manager, CloudTrail
+python scripts/setup_aws.py                # Core DynamoDB tables (all CMK-encrypted)
+python scripts/setup_clinician_auth.py     # Clinician table, audit-log, JWT key, demo seeds
+python scripts/setup_abuse_prevention.py   # Nonce, quota, blocklist, idempotency tables (CMK)
 python scripts/setup_waf_cloudfront.py     # WAFv2 + CloudFront distribution
 python scripts/setup_security_alerts.py your@email.com  # SNS + EventBridge rules
 python scripts/setup_cloudwatch_alarms.py  # 13 CloudWatch alarms
 ```
+
+All scripts resolve the CMK by alias (`alias/solace`) — no hardcoded key UUIDs.
 
 ---
 

@@ -1,12 +1,12 @@
 """Unified Claude client — direct Anthropic API or AWS Bedrock.
 
-Switch at runtime via env var `CLAUDE_PROVIDER=direct|bedrock`. Default direct.
+Switch at runtime via env var `CLAUDE_PROVIDER=direct|bedrock`. Default **bedrock**.
 
-HIPAA story: AWS Bedrock IS covered by the AWS BAA when you have one signed
-with AWS. Direct Anthropic API requires a separate BAA with Anthropic (their
-enterprise tier), which Solace does not yet have. Toggling to bedrock means
-every patient transcript / insurance card / scribe call stays inside AWS's
-signed-BAA perimeter.
+HIPAA: AWS Bedrock is covered by the AWS BAA. All patient transcripts, insurance
+cards, and scribe calls stay inside AWS's signed-BAA perimeter by default. The
+direct Anthropic path is retained for local development only — it requires a
+separate BAA with Anthropic (enterprise tier) and MUST NOT be used in production
+without one.
 
 Both paths auto-log to `lib.ai_log` so the patient record captures which
 provider saw which bytes.
@@ -53,7 +53,7 @@ class Response:
 
 
 def provider() -> str:
-    return os.environ.get("CLAUDE_PROVIDER", "direct").lower()
+    return os.environ.get("CLAUDE_PROVIDER", "bedrock").lower()
 
 
 @lru_cache(maxsize=1)

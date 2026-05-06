@@ -39,12 +39,39 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Solace API", version="0.1.0", lifespan=lifespan)
 
+# CORS — locked to known production origins. Local dev uses permissive localhost.
+# HIPAA §164.312(e): restrict cross-origin access to authorized frontends only.
+# Add additional origins via SOLACE_CORS_ORIGINS env var (comma-separated).
+import os as _os  # noqa: E402
+
+_PRODUCTION_ORIGINS = [
+    "https://solaceaidemo.vercel.app",
+    "https://solace-page.vercel.app",
+]
+_LOCAL_ORIGINS = [
+    "http://localhost:5173",      # Vite dev server
+    "http://localhost:3000",      # fallback dev port
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+def _build_cors_origins() -> list[str]:
+    """Build CORS allow-list. Production = explicit domains only. Local = dev ports."""
+    origins = list(_PRODUCTION_ORIGINS)
+    if settings.solace_mode == "local":
+        origins.extend(_LOCAL_ORIGINS)
+    # Allow overrides via env var for staging/preview deployments
+    extra = _os.environ.get("SOLACE_CORS_ORIGINS", "")
+    if extra:
+        origins.extend(o.strip() for o in extra.split(",") if o.strip())
+    return origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten to Amplify domain before production
+    allow_origins=_build_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
 
@@ -53,12 +80,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "mode": settings.solace_mode,
-        "services": {
-            "openai": bool(settings.openai_api_key),
-            "anthropic": bool(settings.anthropic_api_key),
-            "elevenlabs": bool(settings.elevenlabs_api_key),
-            "triage": "trained_ensemble" if _triage_models_present() else "clinical_simulation",
-        },
+        "triage": "trained_ensemble" if _triage_models_present() else "clinical_simulation",
     }
 
 

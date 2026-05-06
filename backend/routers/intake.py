@@ -69,7 +69,7 @@ async def create_intake(
     blocklist.enforce(identity, source_ip=src_ip)
 
     # HIPAA consent gate — §164.508 requires explicit authorization before PHI
-    # flows to third-party processors (OpenAI/Anthropic/ElevenLabs).
+    # flows to AI processors (AWS Bedrock / Transcribe / Polly).
     if str(consent_granted or "").lower() not in {"true", "1", "yes"}:
         from lib import audit as _audit  # noqa: PLC0415
 
@@ -82,8 +82,8 @@ async def create_intake(
         raise HTTPException(
             status_code=403,
             detail=(
-                "Consent required. You must agree to AI processing of your voice / symptoms"
-                " / photos by OpenAI, Anthropic, and ElevenLabs before submitting intake."
+                "Consent required. You must agree to AI processing of your voice, symptoms,"
+                " and photos before submitting intake."
             ),
         )
 

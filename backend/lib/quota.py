@@ -41,6 +41,8 @@ LIMITS: dict[str, Limit] = {
     "transcribe":        Limit("transcribe", per_hour=2000),
     "scan_insurance":    Limit("scan_insurance", per_hour=500),
     "audio.seconds":     Limit("audio.seconds", per_hour=120000),
+    "voice_simulator":   Limit("voice_simulator", per_hour=200),
+    "pain_flag":         Limit("pain_flag", per_hour=30),
 }
 
 # Per-upload absolute caps (checked before charging the hourly quota)

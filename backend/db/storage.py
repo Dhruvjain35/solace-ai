@@ -62,11 +62,12 @@ def seed_demo_hospital() -> None:
         {
             "hospital_id": hospital_id,
             "name": settings.demo_hospital_name,
-            "clinician_pin": settings.demo_clinician_pin,
+            # Legacy plaintext clinician_pin removed — auth is JWT-only.
+            # Clinician PINs are stored as bcrypt hashes in solace-clinicians table.
             "created_at": _now_iso(),
         }
     )
-    log.info("Seeded demo hospital '%s' (PIN redacted)", hospital_id)
+    log.info("Seeded demo hospital '%s'", hospital_id)
 
 
 def get_hospital(hospital_id: str) -> dict[str, Any] | None:

@@ -27,7 +27,8 @@ export const api = axios.create({
 });
 
 // Attach Bearer token on every request. Reads localStorage first (primary store)
-// then sessionStorage (legacy fallback for sessions issued before the storage move).
+// then sessionStorage (legacy fallback). This is the ONLY auth mechanism —
+// legacy X-Clinician-PIN has been removed.
 api.interceptors.request.use((config) => {
   try {
     const raw =
@@ -67,23 +68,19 @@ export async function postPainFlag(hospitalId: string, patientId: string): Promi
 export async function acknowledgePainFlag(
   hospitalId: string,
   patientId: string,
-  pin: string,
 ): Promise<void> {
   await api.post(
     `/api/${hospitalId}/pain-flag/acknowledge`,
     { patient_id: patientId },
-    { headers: { "X-Clinician-PIN": pin } },
   );
 }
 
 export async function getPatients(
   hospitalId: string,
-  pin: string,
   status: "waiting" | "all" = "waiting"
 ): Promise<{ patients: PatientSummary[] }> {
   const { data } = await api.get(`/api/${hospitalId}/patients`, {
     params: { status },
-    headers: { "X-Clinician-PIN": pin },
   });
   return data;
 }
@@ -91,33 +88,30 @@ export async function getPatients(
 export async function getPatientDetail(
   hospitalId: string,
   patientId: string,
-  pin: string
 ): Promise<PatientDetail> {
-  const { data } = await api.get<PatientDetail>(`/api/${hospitalId}/patients/${patientId}`, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  const { data } = await api.get<PatientDetail>(`/api/${hospitalId}/patients/${patientId}`);
   return data;
 }
 
 export async function markSeen(
   hospitalId: string,
   patientId: string,
-  pin: string,
   clinicianName: string
 ): Promise<void> {
   await api.patch(
     `/api/${hospitalId}/patients/${patientId}/resolve`,
     { clinician_name: clinicianName },
-    { headers: { "X-Clinician-PIN": pin } }
   );
 }
 
 export async function scanInsurance(
   hospitalId: string,
-  imageFile: File
+  imageFile: File,
+  consentGranted = true,
 ): Promise<{ success: boolean; fields?: InsuranceFields; error?: string }> {
   const form = new FormData();
   form.append("image_file", imageFile);
+  form.append("consent_granted", consentGranted ? "true" : "false");
   const { data } = await api.post(`/api/${hospitalId}/scan-insurance`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
@@ -127,23 +121,18 @@ export async function scanInsurance(
 export async function listPrescriptions(
   hospitalId: string,
   patientId: string,
-  pin: string
 ): Promise<Prescription[]> {
-  const { data } = await api.get(`/api/${hospitalId}/patients/${patientId}/prescriptions`, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  const { data } = await api.get(`/api/${hospitalId}/patients/${patientId}/prescriptions`);
   return data.prescriptions || [];
 }
 
 export async function suggestPrescriptions(
   hospitalId: string,
   patientId: string,
-  pin: string
 ): Promise<PrescriptionSuggestion[]> {
   const { data } = await api.post(
     `/api/${hospitalId}/patients/${patientId}/prescriptions/suggest`,
     {},
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data.suggestions || [];
 }
@@ -151,13 +140,11 @@ export async function suggestPrescriptions(
 export async function createPrescription(
   hospitalId: string,
   patientId: string,
-  pin: string,
   body: Partial<Prescription> & { drug: string }
 ): Promise<Prescription> {
   const { data } = await api.post(
     `/api/${hospitalId}/patients/${patientId}/prescriptions`,
     body,
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data.prescription;
 }
@@ -165,14 +152,12 @@ export async function createPrescription(
 export async function createNote(
   hospitalId: string,
   patientId: string,
-  pin: string,
   text: string,
   author = "Clinician"
 ): Promise<ClinicianNote> {
   const { data } = await api.post(
     `/api/${hospitalId}/patients/${patientId}/notes`,
     { text, author },
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data.note;
 }
@@ -180,13 +165,11 @@ export async function createNote(
 export async function publishPatientSummary(
   hospitalId: string,
   patientId: string,
-  pin: string,
   noteId?: string
 ): Promise<PatientEducation> {
   const { data } = await api.post(
     `/api/${hospitalId}/patients/${patientId}/publish-summary`,
     noteId ? { note_id: noteId } : {},
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data.summary;
 }
@@ -313,12 +296,10 @@ export async function whoami(hospitalId: string): Promise<{
 
 export async function resetDemo(
   hospitalId: string,
-  pin: string
 ): Promise<{ deleted_test_patients: string[]; cleared_canonical_patients: string[] }> {
   const { data } = await api.post(
     `/api/${hospitalId}/admin/reset-demo`,
     {},
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data;
 }
@@ -377,81 +358,62 @@ export type Workflow = {
 
 export async function getWorkflowCatalog(
   hospitalId: string,
-  pin: string
 ): Promise<{
   triggers: WorkflowTrigger[];
   actions: WorkflowActionDef[];
   templates: WorkflowTemplate[];
 }> {
-  const { data } = await api.get(`/api/${hospitalId}/workflows/catalog`, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  const { data } = await api.get(`/api/${hospitalId}/workflows/catalog`);
   return data;
 }
 
-export async function listWorkflows(hospitalId: string, pin: string): Promise<Workflow[]> {
-  const { data } = await api.get<{ workflows: Workflow[] }>(`/api/${hospitalId}/workflows`, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+export async function listWorkflows(hospitalId: string): Promise<Workflow[]> {
+  const { data } = await api.get<{ workflows: Workflow[] }>(`/api/${hospitalId}/workflows`);
   return data.workflows || [];
 }
 
 export async function createWorkflow(
   hospitalId: string,
-  pin: string,
   body: Omit<Workflow, "workflow_id" | "hospital_id" | "fire_count" | "last_fired_at" | "created_at" | "updated_at" | "from_template">
 ): Promise<Workflow> {
-  const { data } = await api.post(`/api/${hospitalId}/workflows`, body, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  const { data } = await api.post(`/api/${hospitalId}/workflows`, body);
   return data.workflow;
 }
 
 export async function updateWorkflow(
   hospitalId: string,
-  pin: string,
   workflowId: string,
   body: Omit<Workflow, "workflow_id" | "hospital_id" | "fire_count" | "last_fired_at" | "created_at" | "updated_at" | "from_template">
 ): Promise<Workflow> {
-  const { data } = await api.put(`/api/${hospitalId}/workflows/${workflowId}`, body, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  const { data } = await api.put(`/api/${hospitalId}/workflows/${workflowId}`, body);
   return data.workflow;
 }
 
 export async function deleteWorkflow(
   hospitalId: string,
-  pin: string,
   workflowId: string
 ): Promise<void> {
-  await api.delete(`/api/${hospitalId}/workflows/${workflowId}`, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  await api.delete(`/api/${hospitalId}/workflows/${workflowId}`);
 }
 
 export async function testWorkflow(
   hospitalId: string,
-  pin: string,
   body: { workflow_id?: string; workflow?: Partial<Workflow> }
 ): Promise<{
   context: Record<string, unknown>;
   results: { step_type: string; result: { success: boolean; reason?: string; message?: string } }[];
 }> {
-  const { data } = await api.post(`/api/${hospitalId}/workflows/test`, body, {
-    headers: { "X-Clinician-PIN": pin },
-  });
+  const { data } = await api.post(`/api/${hospitalId}/workflows/test`, body);
   return data;
 }
 
 export async function workflowFromTemplate(
   hospitalId: string,
-  pin: string,
   templateId: string
 ): Promise<Workflow> {
   const { data } = await api.post(
     `/api/${hospitalId}/workflows/from-template`,
     { template_id: templateId },
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data.workflow;
 }
@@ -520,13 +482,11 @@ export async function cancelAppointment(
 export async function sendDischargeSMS(
   hospitalId: string,
   patientId: string,
-  pin: string,
   phoneOverride?: string
 ): Promise<{ success: boolean; reason?: string; message?: string }> {
   const { data } = await api.post(
     `/api/${hospitalId}/sms/discharge`,
     { patient_id: patientId, ...(phoneOverride ? { phone: phoneOverride } : {}) },
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data;
 }
@@ -673,21 +633,18 @@ export type VoiceCallSummary = {
   tools_called?: { name: string; result_summary: string; ts: string }[];
 };
 
-export async function listVoiceCalls(hospitalId: string, pin: string): Promise<VoiceCallSummary[]> {
+export async function listVoiceCalls(hospitalId: string): Promise<VoiceCallSummary[]> {
   const { data } = await api.get(`/api/voice/calls`, {
     params: { hospital_id: hospitalId },
-    headers: { "X-Clinician-PIN": pin },
   });
   return data.calls || [];
 }
 
 export async function getVoiceStats(
   hospitalId: string,
-  pin: string
 ): Promise<{ total: number; intents: Record<string, number>; escalations: number; avg_duration_seconds: number }> {
   const { data } = await api.get(`/api/voice/stats`, {
     params: { hospital_id: hospitalId },
-    headers: { "X-Clinician-PIN": pin },
   });
   return data;
 }
@@ -696,7 +653,7 @@ export type VoiceAppointment = {
   appointment_id: string;
   hospital_id: string;
   patient_name: string;
-  patient_phone?: string;
+  patient_phone_hash?: string;  // hashed, not raw — HIPAA §164.514
   reason_short: string;
   preferred_window?: string;
   status: string;
@@ -704,10 +661,9 @@ export type VoiceAppointment = {
   created_at: string;
 };
 
-export async function listVoiceAppointments(hospitalId: string, pin: string): Promise<VoiceAppointment[]> {
+export async function listVoiceAppointments(hospitalId: string): Promise<VoiceAppointment[]> {
   const { data } = await api.get(`/api/voice/appointments`, {
     params: { hospital_id: hospitalId },
-    headers: { "X-Clinician-PIN": pin },
   });
   return data.appointments || [];
 }
@@ -716,12 +672,10 @@ export async function refineTriage(
   hospitalId: string,
   patientId: string,
   vitals: Vitals,
-  pin: string
 ): Promise<RefinedTriage> {
   const { data } = await api.post<{ success: boolean; refinement: RefinedTriage; applied_at: string }>(
     `/api/${hospitalId}/patients/${patientId}/refine-triage`,
     vitals,
-    { headers: { "X-Clinician-PIN": pin } }
   );
   return data.refinement;
 }

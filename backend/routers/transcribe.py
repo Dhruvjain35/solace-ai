@@ -5,6 +5,9 @@ finalize the record. Caller flow:
   1. POST /transcribe  → { transcript, language, followups }
   2. Patient answers follow-ups in UI
   3. POST /intake      → full pipeline with transcript + answers + medical info + photo
+
+HIPAA §164.508: consent must be granted BEFORE audio is sent to any
+third-party speech-to-text processor (AWS Transcribe / OpenAI Whisper).
 """
 from __future__ import annotations
 
@@ -29,6 +32,7 @@ async def transcribe_and_ask(
     pre_transcribed_text: str | None = Form(None),
     medical_info: str | None = Form(None),
     preferred_language: str | None = Form(None),
+    consent_granted: str | None = Form(None),
     request: Request = None,
 ) -> dict:
     if not storage.get_hospital(hospital_id):
@@ -38,6 +42,23 @@ async def transcribe_and_ask(
     user_agent = request.headers.get("user-agent") if request else None
     identity = quota.identity_of(source_ip, user_agent)
     blocklist.enforce(identity, source_ip=source_ip)
+
+    # HIPAA §164.508 consent gate — patient audio contains PHI (spoken symptoms,
+    # name, conditions) that will be sent to AWS Transcribe or OpenAI Whisper.
+    if str(consent_granted or "").lower() not in {"true", "1", "yes"}:
+        from lib import audit as _audit  # noqa: PLC0415
+
+        _audit.record(
+            clinician_id=None, clinician_name=None,
+            action="abuse.transcribe_no_consent",
+            source_ip=source_ip, status_code=403,
+            extra={"identity": identity},
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Consent required before audio can be processed by AI.",
+        )
+
     quota.check_and_consume(identity, "transcribe", source_ip=source_ip)
 
     selected_lang = (preferred_language or "").strip().lower()[:2] or None

@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, ShieldCheck, AlertOctagon } from "lucide-react";
+import { api } from "../lib/api";
 import { saveSession, type Session } from "../lib/session";
 
 /**
  * SMART-on-FHIR redirect target.
  *
- * The backend exchanges the OAuth code for a FHIR access token + Practitioner
- * identity, then sends us back here with a `handoff` query param that already
- * contains everything we need to construct a Solace clinician session. We just
- * persist + bounce to the dashboard.
+ * The backend redirects here with a one-time `handoff_code` query param.
+ * We exchange that code via POST /api/auth/ehr/exchange to get the real
+ * session payload (JWT, clinician identity, EHR vendor info). The code
+ * is consumed atomically -- replay attempts fail.
  *
- * Errors come back as `?error=...` from the backend redirect helper.
+ * This replaces the old approach of passing JWT directly in the URL,
+ * which exposed tokens in browser history, CloudFront logs, and referrer
+ * headers (HIPAA violation).
  */
 export default function EHRCallback() {
   const [params] = useSearchParams();
@@ -24,32 +27,42 @@ export default function EHRCallback() {
       setError(prettyError(err));
       return;
     }
-    const raw = params.get("handoff");
-    if (!raw) {
-      setError("EHR sign-in returned without a session payload.");
+
+    const handoffCode = params.get("handoff_code");
+    if (!handoffCode) {
+      setError("EHR sign-in returned without a handoff code.");
       return;
     }
-    try {
-      const data = JSON.parse(raw);
-      const sess: Session = {
-        token: data.token,
-        clinician_id: data.clinician_id,
-        name: data.name,
-        role: data.role,
-        hospital_id: data.hospital_id,
-        expires_at: data.expires_at,
-        ehr_vendor: data.ehr_vendor,
-        ehr_label: data.ehr_label,
-        ehr_color: data.ehr_color,
-        ehr_sandbox: data.ehr_sandbox,
-        fhir_base_url: data.fhir_base_url,
-      };
-      if (!sess.token || !sess.hospital_id) throw new Error("incomplete session payload");
-      saveSession(sess);
-      navigate(`/${sess.hospital_id}/clinician`, { replace: true });
-    } catch (e: any) {
-      setError(`Could not parse EHR session: ${e?.message || "malformed payload"}`);
-    }
+
+    // Exchange the one-time code for the real session
+    api
+      .post("/api/auth/ehr/exchange", { handoff_code: handoffCode })
+      .then(({ data }) => {
+        const sess: Session = {
+          token: data.token,
+          clinician_id: data.clinician_id,
+          name: data.name,
+          role: data.role,
+          hospital_id: data.hospital_id,
+          expires_at: data.expires_at,
+          ehr_vendor: data.ehr_vendor,
+          ehr_label: data.ehr_label,
+          ehr_color: data.ehr_color,
+          ehr_sandbox: data.ehr_sandbox,
+          fhir_base_url: data.fhir_base_url,
+        };
+        if (!sess.token || !sess.hospital_id) throw new Error("incomplete session payload");
+        saveSession(sess);
+        navigate(`/${sess.hospital_id}/clinician`, { replace: true });
+      })
+      .catch((e: any) => {
+        const detail = e?.response?.data?.detail;
+        if (detail === "invalid or expired handoff code") {
+          setError("Sign-in link expired or was already used. Please sign in again.");
+        } else {
+          setError(`Could not complete EHR sign-in: ${detail || e?.message || "unknown error"}`);
+        }
+      });
   }, [params, navigate]);
 
   return (
@@ -66,7 +79,7 @@ export default function EHRCallback() {
         {!error ? (
           <>
             <ShieldCheck className="mx-auto text-primary" size={32} />
-            <div className="text-sm font-semibold tracking-tight">Finishing EHR sign-in…</div>
+            <div className="text-sm font-semibold tracking-tight">Finishing EHR sign-in...</div>
             <div className="text-xs text-text-muted">
               Verifying your Practitioner record and issuing a Solace session.
             </div>

@@ -6,7 +6,6 @@ import type { RefinedTriage, Vitals } from "../../types";
 type Props = {
   hospitalId: string;
   patientId: string;
-  pin: string;
   existing?: RefinedTriage | null;
   onRefined?: (r: RefinedTriage, v: Vitals) => void;
 };
@@ -22,7 +21,7 @@ const FIELDS: { key: keyof Vitals; label: string; placeholder: string; step?: st
   { key: "pain_score", label: "Pain (0–10)", placeholder: "3", step: "1" },
 ];
 
-export function VitalsPanel({ hospitalId, patientId, pin, existing, onRefined }: Props) {
+export function VitalsPanel({ hospitalId, patientId, existing, onRefined }: Props) {
   const [vitals, setVitals] = useState<Vitals>({});
   const [mentalStatus, setMentalStatus] = useState<string>("alert");
   const [loading, setLoading] = useState(false);
@@ -39,7 +38,7 @@ export function VitalsPanel({ hospitalId, patientId, pin, existing, onRefined }:
     setError(null);
     try {
       const payload: Vitals = { ...vitals, mental_status: mentalStatus };
-      const refined = await refineTriage(hospitalId, patientId, payload, pin);
+      const refined = await refineTriage(hospitalId, patientId, payload);
       setResult(refined);
       onRefined?.(refined, payload);
     } catch (e: any) {
