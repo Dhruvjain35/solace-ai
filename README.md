@@ -1,136 +1,222 @@
 # Solace
 
-**AI-assisted ER triage. You're not waiting alone.**
+**AI-native patient intake and clinical triage for emergency departments.**
 
-Submitted to **[HackFW](https://fwtx.devpost.com)** — Fort Worth's convergent technology hackathon. Built in ~72 hours.
-
-A patient scans the QR on the waiting-room kiosk, speaks their symptoms in any language, and optionally snaps a photo of their injury or insurance card. Within ~7 seconds they hear a warm voice explain their ESI triage level and what to do while they wait. On the other side of the ED, the clinician opens their terminal and sees a full AI-generated pre-brief for every waiting patient — provisional ESI, SHAP explanation, clinician pre-brief, AI scribe draft, EHR match — before the patient is even roomed.
-
-When vitals are taken at bedside, a LightGBM 5-fold ensemble refines the ESI with real numeric signal + conformal prediction intervals.
+Solace eliminates the dead time between a patient walking through the ED door and a clinician knowing what they need. A patient scans a QR code, speaks their symptoms in any language, and optionally photographs their injury or insurance card. Within seconds they hear a warm voice explain their triage level and what to expect while they wait. On the other side of the department, the clinician already has a full AI-generated pre-brief — provisional ESI level, SHAP attribution, clinical scribe draft, EHR pull — before the patient is roomed.
 
 ---
 
-## North Texas Impact
+## The problem
 
-Fort Worth's emergency departments face two compounding problems:
+Emergency departments lose significant time on the front end of every patient encounter:
 
-- **JPS Health Network** (the county safety-net hospital) handles one of the highest Medicaid + uninsured patient volumes in Texas — patients who often lack established care and arrive sicker
-- **~38% of Tarrant County residents** speak a language other than English at home; Spanish-speaking patients frequently can't communicate symptoms clearly during intake, leading to under-triage
-- **Baylor Scott & White** and **Texas Health Resources** serve the broader DFW metro with ED wait times consistently above the national average during peak hours
+- **Registration and intake** pull nursing time away from clinical work
+- **Language barriers** cause under-triage for non-English speakers — 1 in 5 ED visits in major metros involves a patient with limited English proficiency
+- **Clinician handoff** requires flipping through paper intake forms or navigating multiple EHR screens before seeing the patient
+- **Repeat data entry** — patients re-enter the same information that already exists in the EHR
 
-Solace directly targets all three: multilingual voice intake (Whisper + ElevenLabs in any language), AI pre-briefs that compress clinician catch-up time, and a two-stage ESI model that improves triage accuracy when handoff information is thin. The system is deployable on existing hospital Wi-Fi — patients need only a smartphone and a QR code at the door.
-
-- **Live frontend:** https://solace.d2gsbjipp9quan.amplifyapp.com
-- **Patient intake:** `/demo/patient` (QR-scan target)
-- **Clinician dashboard:** `/demo/clinician`
+Solace addresses all four simultaneously, with a system that runs on existing hospital Wi-Fi and requires nothing from the patient except a smartphone.
 
 ---
 
-## What makes it different
+## How it works
 
-1. **Two-stage inference.** Claude handles the narrative triage on intake (text, pre-brief, comfort protocol). LightGBM + SHAP refines the ESI once bedside vitals land. Provisional ESI gets the queue moving; refined ESI locks in the acuity.
-2. **Real SHAP + conformal prediction.** Not heuristic weights — `pred_contrib=True` feature attributions and split-conformal 90%-coverage prediction sets straight off a 5-fold ensemble trained on the Kaggle Triageist dataset.
-3. **HIPAA-aware by construction.** §164.508 consent gate, §164.514 minimum-necessary payloads, §164.312 technical safeguards (TLS 1.2+, CMK-encrypted storage across 11 DynamoDB tables + S3 + Secrets Manager, audit trail, per-call AI-attribution logs stored on every patient record for Bedrock migration).
-4. **FHIR-shape EHR integration.** Auto-matches a patient by name on intake and merges allergies, meds, conditions, family history, prior visits into the clinician view — before rooming.
-5. **Adaptive intake form.** Pregnancy questions only appear for female patients aged 12-55. Diabetes type follow-up. NYHA class for heart failure. Severity per allergy. Skip-logic built in.
-6. **Voice in, voice out.** OpenAI Whisper transcribes (any language), ElevenLabs multilingual TTS delivers the plan in the patient's own language.
-7. **Real adversarial abuse prevention.** IP+UA-bound intake nonces, identity-keyed rate limits, content safety guard on text uploads, multi-layer abuse-event audit + auto-blocklist, CMK-encrypted at rest on everything.
+### Patient side
+
+1. Patient scans a QR code posted at the waiting room entrance
+2. A voice-guided intake begins in their language — no app download, no account
+3. They describe symptoms in their own words; optionally photograph injury or insurance card
+4. Within ~7 seconds they receive spoken triage guidance and comfort instructions in their language
+5. They can tap a button anytime if their pain worsens — the clinician dashboard alarms immediately
+
+### Clinician side
+
+1. Dashboard auto-refreshes with every new patient arrival
+2. Each card shows provisional ESI level, chief complaint, AI-generated pre-brief, SHAP explanation, and matched EHR data
+3. Vitals entered at bedside trigger a LightGBM ensemble refinement — the ESI updates in real time with conformal prediction intervals
+4. One-click AI scribe draft, prescription suggestions, and patient education letter
+
+### Voice agent (phone)
+
+Patients who can't access the QR intake can call the hospital's Twilio number. Solace's voice agent handles triage questions, appointment booking, FAQ, and emergency escalation — automatically transferring to a human or advising 911 when needed.
+
+---
+
+## Features
+
+| Capability | Detail |
+|---|---|
+| **Multilingual voice intake** | Whisper STT + Polly TTS in 20+ languages — patient speaks, Solace responds |
+| **Two-stage triage** | Claude handles narrative ESI on intake; LightGBM 5-fold ensemble refines with bedside vitals |
+| **SHAP explanations** | Per-patient feature attributions from `pred_contrib=True` — clinicians see *why* the model scored what it did |
+| **Conformal prediction** | Split-conformal 90%-coverage prediction sets on every refined ESI — the model tells you when it's uncertain |
+| **EHR auto-match** | Matches patient by name + insurance member ID; merges allergies, meds, conditions, prior visits into clinician view before rooming |
+| **Insurance OCR** | Claude Vision extracts member ID, group, payer, and coverage type from a phone photo of the insurance card |
+| **Pain escalation** | Patient-side button re-arms clinician alarm; concurrent acknowledgements handled gracefully |
+| **Inbound voice agent** | Full phone receptionist — triage, scheduling, FAQ, 911 escalation |
+| **Self-scheduling** | Patients book appointments from the portal; confirmation by SMS |
+| **Workflow automation** | Keragon-style trigger/action engine — e.g. "when ESI ≤ 2, Slack the charge nurse" |
+| **SMART-on-FHIR sign-in** | Clinicians authenticate via Epic, Cerner, or Athena OAuth + PKCE |
+| **AI scribe** | Structured SOAP-lite note drafted from intake transcript — one click to edit and sign |
+| **Patient education** | Discharge letter generated in patient's language, readable via QR |
 
 ---
 
 ## Architecture
 
 ```
-Patient phone ─► QR /demo/patient ─► Vite+React SPA
-                                  │
-                                  │ WAFv2 → CloudFront → API GW (HTTP)
-                                  ▼
-                            FastAPI on Lambda
-                            (container, arm64, Python 3.12)
-                    ┌───────────┼────────────┬─────────────┐
-                    ▼           ▼            ▼             ▼
-              OpenAI Whisper   Claude 4.5   ElevenLabs   LightGBM
-              (transcribe)    (pre-brief,  (empathetic   5-fold
-                               scribe,     TTS)          ensemble
-                               comfort,                  + SHAP
-                               photo vision,             + conformal
-                               insurance                 prediction
-                               OCR)
-                    │           │            │             │
-                    └─────┬─────┴────────────┴─────────────┘
-                          ▼
-                    DynamoDB (11 tables, CMK)
-                    S3 media (24h lifecycle, CMK)
-                    Audit log + SNS alerts
+Patient phone ─► QR /patient ──► Vite + React SPA
+                                        │
+                               CloudFront + WAFv2
+                                        │
+                                 API Gateway (HTTP)
+                                        │
+                              FastAPI on AWS Lambda
+                              (container, arm64, Python 3.12)
+                   ┌──────────────┬──────────────┬───────────────┐
+                   ▼              ▼              ▼               ▼
+             AWS Transcribe   AWS Bedrock    AWS Polly      LightGBM
+             (STT, BAA)       (Claude 4.5,   (TTS, BAA)     5-fold ensemble
+                              BAA)                          + SHAP
+                                                            + conformal
+                   └──────────────┴──────────────┴───────────────┘
+                                        │
+                          DynamoDB (all tables CMK-encrypted)
+                          S3 (media + 6-year audit archive, CMK)
+                          Secrets Manager (CMK)
 ```
+
+All AI inference routes through AWS-managed services covered under the **AWS Business Associate Agreement** — no separate vendor BAAs required.
 
 ### Stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
 | Frontend | Vite + React 18 + TypeScript + Tailwind + Framer Motion |
-| Backend | FastAPI + Mangum (Lambda adapter), Python 3.12 |
-| Runtime | AWS Lambda container image (ECR, arm64) behind API Gateway HTTP API |
-| CDN / WAF | CloudFront + WAFv2 (IP reputation, Known Bad Inputs, OWASP common, rate-based limit) |
-| Storage | DynamoDB (11 tables, all CMK-encrypted, PAY_PER_REQUEST, TTLs set) |
-| Media | S3 (CMK, 24h lifecycle, TLS-only, public access blocked) |
-| Secrets | Secrets Manager (CMK-encrypted, JWT key + API keys + demo PINs) |
-| Observability | CloudWatch + CloudTrail + SNS alerts + EventBridge |
-| Deploy | Amplify Hosting (frontend) + deploy script (Lambda container) |
-| AI providers | OpenAI Whisper + Anthropic Claude Sonnet 4.5 + ElevenLabs `eleven_multilingual_v2` |
-| ML | LightGBM 5-fold ensemble, SHAP via `pred_contrib=True`, split-conformal 90% coverage |
-| Video demo | Remotion (`/demo`) |
+| Backend | FastAPI + Mangum, Python 3.12 |
+| Runtime | AWS Lambda container image (ECR, arm64) + API Gateway HTTP API |
+| CDN / Security | CloudFront + WAFv2 (IP reputation, OWASP common, Known Bad Inputs, rate-based) |
+| Storage | DynamoDB (PAY_PER_REQUEST, CMK-encrypted, TTL on all transient tables) |
+| Media | S3 (CMK, TLS-only, public access blocked, presigned URLs for delivery) |
+| Secrets | AWS Secrets Manager (CMK-encrypted — JWT key, API keys, bcrypt PINs) |
+| Observability | CloudWatch (13 alarms) + CloudTrail + SNS + EventBridge |
+| AI — inference | AWS Bedrock (Claude Sonnet 4.5) |
+| AI — STT | AWS Transcribe (primary) / OpenAI Whisper (fallback) |
+| AI — TTS | AWS Polly Neural (primary) / ElevenLabs (fallback) |
+| AI — vision | Claude Vision via Bedrock (injury photos, insurance OCR) |
+| ML | LightGBM 5-fold ensemble, SHAP, split-conformal calibration |
+| Auth | JWT HS256 + bcrypt + SMART-on-FHIR PKCE |
+| Phone | Twilio Voice + inbound voice agent |
 
-### Repo layout
+### Repository layout
 
 ```
 solace/
-├── backend/                 FastAPI + Mangum
-│   ├── main.py              Lambda handler (handler = Mangum(app))
-│   ├── routers/             intake, ehr, clinician, patients, refine, public, ...
-│   ├── services/            Whisper, Claude, ElevenLabs, triage, scribe, ...
-│   ├── lib/                 auth, audit, quota, blocklist, intake_nonce,
-│   │                        claude (provider adapter), ai_log, content_guard, ...
-│   ├── db/                  DynamoDB storage layer
-│   └── models/              LightGBM fold files + artifacts (gitignored)
+├── backend/
+│   ├── main.py                  Lambda handler (Mangum adapter)
+│   ├── routers/                 intake, ehr, clinician, patients, auth,
+│   │                            appointments, voice, pain_flag, workflows, ...
+│   ├── services/
+│   │   ├── triage.py            Two-stage ESI engine
+│   │   ├── transcription.py     AWS Transcribe / Whisper adapter
+│   │   ├── tts.py               AWS Polly / ElevenLabs adapter
+│   │   ├── scheduling.py        Appointment availability + booking
+│   │   ├── workflows/           Trigger/action engine
+│   │   └── voice_agent/         Inbound phone agent (intents, session, TTS cache)
+│   ├── lib/
+│   │   ├── claude.py            Bedrock / Anthropic adapter
+│   │   ├── auth.py              JWT Bearer — no legacy PIN
+│   │   ├── jwt_auth.py          Brute-force lockout (5 failures → 30-min lock)
+│   │   ├── content_guard.py     Prompt injection + 15-pattern PHI redaction
+│   │   ├── audit.py             Dual-write audit (DDB 90d + S3 6yr)
+│   │   ├── quota.py             Identity-keyed rate limiting
+│   │   └── blocklist.py         Auto-blocklist (5 abuse events → 1hr block)
+│   └── db/                      DynamoDB storage layer
 ├── frontend/
 │   └── src/
-│       ├── pages/           PatientIntake, PatientResult, ClinicianDashboard
-│       ├── components/      patient/*, clinician/* (EHRPanel, VitalsPanel, ...)
-│       ├── hooks/           usePollingPatients, useVoiceRecorder, ...
-│       └── lib/             api client, constants, runtime-config
-├── scripts/                 AWS setup + deploy (deploy_container.py,
-│                            deploy_amplify.py, setup_*.py, rotate_pins.py)
-├── demo/                    Remotion composition for the hackathon video
-│   └── src/Solace.tsx       Motion-graphics timeline (~86s @ 30fps)
-├── Dockerfile.lambda        arm64 container image
-└── requirements-lambda.txt  Lambda-slim dependency set
+│       ├── pages/               PatientIntake, PatientResult, ClinicianDashboard,
+│       │                        VoiceSimulator, EHRCallback, Appointments
+│       ├── components/
+│       │   ├── clinician/       PainAlarm, VitalsPanel, EHRPanel, NotesPanel,
+│       │   │                    PrescriptionPanel, WorkflowEditor, ...
+│       │   └── patient/         MicButton, PhotoCapture, InsuranceScanner, ...
+│       └── lib/                 api client, session management
+└── scripts/                     Idempotent AWS provisioning scripts
+    ├── setup_aws.py             DDB tables + S3 (all CMK-encrypted)
+    ├── setup_security.py        CMK alias, Secrets Manager, CloudTrail
+    ├── setup_clinician_auth.py  Clinician table + audit log + bcrypt PINs
+    ├── setup_abuse_prevention.py  Nonce/quota/blocklist/idempotency tables
+    ├── setup_waf_cloudfront.py  WAFv2 + CloudFront distribution
+    └── setup_cloudwatch_alarms.py  13 production alarms
 ```
+
+---
+
+## Security and HIPAA compliance
+
+Solace is built HIPAA-compliant by construction, not as an afterthought. Every control is implemented in code and provisioned via reproducible scripts.
+
+### Technical safeguards (45 CFR §164.312)
+
+| Control | Implementation |
+|---|---|
+| **Encryption at rest** | One CMK (`alias/solace`) across all DynamoDB tables, S3 buckets, and Secrets Manager — no AWS-managed key fallbacks |
+| **Encryption in transit** | TLS 1.2+ enforced at CloudFront, API Gateway, and S3 bucket policy |
+| **Access control** | JWT HS256 Bearer tokens; bcrypt PINs in Secrets Manager; SMART-on-FHIR PKCE for EHR sign-in |
+| **Brute-force protection** | 5 failed logins in 15 min → 30-min lockout, enforced atomically via DynamoDB |
+| **Audit controls** | Every action written to `solace-audit-log`; 90-day hot storage (DDB) + 6-year cold archive (S3, CMK) per §164.530(j)(2) |
+| **AI attribution log** | Provider + model + token counts persisted on every patient record for complete inference audit trail |
+
+### PHI handling (45 CFR §164.514)
+
+All transcripts pass through a content guard before any AI provider call. Fifteen Safe Harbor identifiers are redacted:
+
+SSN · credit card · phone · email · date of birth · street address · ZIP · MRN · insurance member ID · account number · driver's license · VIN · device ID · URL · IP address
+
+### Authorization (45 CFR §164.508)
+
+Explicit consent is required before any PHI flows to an AI provider. Consent version and granted-at timestamp are persisted on every patient record. Requests without consent return HTTP 403.
+
+### Abuse prevention
+
+- IP+UA-bound one-time intake nonces — atomic consumption prevents replay
+- Identity-keyed rate limiting (HMAC-SHA256 of IP + User-Agent) tracked with atomic DynamoDB counters
+- 5 abuse events in 10 minutes → 1-hour blocklist, enforced with `ConsistentRead=True` on every patient-facing endpoint
+- Prompt injection scanning on all text inputs before Claude
+- Voice simulator and pain flag endpoints: blocklist + rate limiting + content guard
+
+### EHR OAuth
+
+- Redirect URI validated against explicit allowlist — no open redirects
+- OAuth CSRF state stored in DynamoDB (survives Lambda cold starts, multi-container deployments)
+- PKCE S256 challenge/verifier on every authorization request
+- JWT never passed in redirect URL — one-time handoff code exchanged via POST
 
 ---
 
 ## Local development
 
-No AWS required. Backend runs against real AI APIs with in-memory storage; media served from `backend/tmp/media/`.
+No AWS account required. The backend runs with in-memory storage and falls back to the direct Anthropic and OpenAI APIs.
 
-### Prereqs
+### Prerequisites
 
-- Python 3.11 or 3.12
+- Python 3.11+
 - Node 20+
-- Docker (only needed to deploy Lambda, not for local dev)
-- OpenAI + Anthropic + ElevenLabs API keys
+- Anthropic API key (for Claude)
+- OpenAI API key (for Whisper fallback — optional if using AWS)
 
 ### Setup
 
 ```bash
-# 1. Environment
+# 1. Clone and configure
+git clone https://github.com/Dhruvjain35/solace-ai.git
+cd solace-ai
 cp .env.example .env
-# Edit .env with your API keys + SOLACE_MODE=local
+# Fill in ANTHROPIC_API_KEY and OPENAI_API_KEY; leave SOLACE_MODE=local
 
 # 2. Backend
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 
@@ -140,107 +226,77 @@ npm install
 npm run dev
 ```
 
-- Backend: http://localhost:8000
-- Frontend: http://localhost:5173
-- Patient intake: http://localhost:5173/demo/patient
-- Clinician dashboard: http://localhost:5173/demo/clinician (PIN `123456` in local mode)
+| URL | What |
+|---|---|
+| http://localhost:5173/demo/patient | Patient intake (QR target) |
+| http://localhost:5173/demo/clinician | Clinician dashboard |
+| http://localhost:8000/health | API health check |
 
-### Health check
+### Switching AI providers
 
-```bash
-curl http://localhost:8000/health
-# {"status":"ok","mode":"local","services":{"openai":true,"anthropic":true,"elevenlabs":true,"triage":true}}
-```
+| Variable | Options | Default |
+|---|---|---|
+| `CLAUDE_PROVIDER` | `bedrock` \| `anthropic` | `bedrock` |
+| `TRANSCRIPTION_PROVIDER` | `aws` \| `openai` | `aws` |
+| `TTS_PROVIDER` | `aws` \| `elevenlabs` | `aws` |
 
-`"triage":true` requires the LightGBM fold files in `backend/models/`. They're gitignored (~340 MB). Rehydrate by re-running the Triageist training notebook or copying them from S3 — paths are the standard `lgbm_fold{0..4}.txt` + `artifacts.pkl`.
+All three default to AWS BAA-covered services in production. Set to the direct API paths for local development without AWS credentials.
 
-### Provider swap
+### Triage model
 
-`CLAUDE_PROVIDER=anthropic` (default) uses the direct Anthropic API.
-`CLAUDE_PROVIDER=bedrock` routes through AWS Bedrock using the same shape-compatible adapter — flip the env var, no code changes. Used for the HIPAA BAA migration path.
+The LightGBM ensemble requires model files in `backend/models/` (`lgbm_fold{0..4}.txt` + `artifacts.pkl`, ~340 MB total). Without them the backend falls back to a clinical heuristic simulation — the health endpoint reports `"triage": "clinical_simulation"` vs `"trained_ensemble"`.
+
+The ensemble was trained on the Kaggle Triageist dataset with 5-fold stratified CV, class-balanced sample weights, and split-conformal calibration on noise-perturbed vitals for 90% coverage. Feature engineering includes shock index, keyword features (`kw_stroke`, `kw_seizure`, `kw_mi`, `kw_sepsis`), arrival-hour cyclic encoding, and vitals normalization.
 
 ---
 
-## Live deployment
+## Deployment
 
-### URLs
-
-| What | Where |
-|---|---|
-| Frontend (Amplify) | https://solace.d2gsbjipp9quan.amplifyapp.com |
-| API (CloudFront + WAF + API GW + Lambda) | https://djfjrel7b1ebi.cloudfront.net |
-| API direct (no WAF, debug only) | https://7ew5f2x01d.execute-api.us-east-1.amazonaws.com |
-
-### Redeploy
+### Infrastructure provisioning (run once, idempotent)
 
 ```bash
-# Backend
+python scripts/setup_security.py             # KMS CMK, Secrets Manager, CloudTrail
+python scripts/setup_aws.py                  # DynamoDB tables + S3 (all CMK-encrypted)
+python scripts/setup_clinician_auth.py       # Clinician auth table + bcrypt PINs
+python scripts/setup_abuse_prevention.py     # Nonce, quota, blocklist, idempotency tables
+python scripts/setup_waf_cloudfront.py       # WAFv2 + CloudFront distribution
+python scripts/setup_security_alerts.py your@email.com
+python scripts/setup_cloudwatch_alarms.py
+```
+
+### Deploy
+
+```bash
+# Backend (Lambda container)
 docker build -f Dockerfile.lambda -t solace-lambda:latest --platform linux/arm64 .
-source backend/.venv/bin/activate
-python scripts/deploy_container.py          # push to ECR, update Lambda, smoke-test
+python scripts/deploy_container.py   # ECR push → Lambda update → smoke test
 
 # Frontend
 cd frontend && npm run build
-cd .. && source backend/.venv/bin/activate
-python scripts/deploy_amplify.py            # zip → Amplify deployment job
-```
-
-`deploy_container.py` pushes the image to ECR, updates the Lambda to the new digest, re-points API Gateway + EventBridge warmer, and runs an end-to-end smoke test — it **fails the deploy** if `ml_ok=False`.
-
-### Full infra bootstrap (idempotent)
-
-```bash
-python scripts/setup_aws.py                  # DDB tables + S3 bucket
-python scripts/setup_security.py             # CMK, Secrets Manager, CloudTrail, PITR
-python scripts/setup_clinician_auth.py       # clinicians + audit log + demo PINs
-python scripts/setup_abuse_prevention.py     # intake-nonces + API GW throttle
-python scripts/setup_waf_cloudfront.py       # WAFv2 + CloudFront distribution
-python scripts/setup_security_alerts.py dhruvhydrox@gmail.com
-python scripts/setup_cloudwatch_alarms.py
-python scripts/setup_amplify_headers.py      # CSP/HSTS/etc
-python scripts/setup_ehr.py                  # seed 7 FHIR-shape EHR records
+python scripts/deploy_amplify.py     # zip → Amplify deployment job
 ```
 
 ---
 
-## Security posture
+## Integrations
 
-Every live control is documented in `scripts/setup_security.py`, but the short list:
-
-- **Encryption**: one customer-managed KMS key for all Solace data — every DynamoDB table, every S3 bucket, every Secrets Manager secret uses it
-- **TLS**: 1.2+ enforced at CloudFront, API GW, and S3 bucket policy; HSTS via Amplify custom headers
-- **Auth**: JWT HS256 (key in Secrets Manager), bcrypt PINs for clinicians, rotation script
-- **Abuse prevention**: IP+UA-bound intake nonces (4h TTL) atomically consumed per submit; identity-keyed rate limits; content-safety guard on text uploads; multi-layer abuse-event audit with auto-blocklist (30m cooldown)
-- **CloudTrail**: management events + S3 data events to a separate bucket (read-only to most principals)
-- **SNS alerts**: security events → `dhruvhydrox@gmail.com` via EventBridge
-- **CloudWatch alarms**: 13 alarms on Lambda error rate, throttle count, 5xx rate, throughput, duration p99, cold starts, DDB throttles, WAF blocks
-- **HIPAA**: §164.508 consent logged on every intake (version + granted-at), §164.514 minimum-necessary scrubbing on AI prompts, §164.312 technical safeguards via all of the above; **AI attribution log** (provider + model + input-tokens + output-tokens + duration) persisted on every patient record
-
-Known gaps: Bedrock Claude migration (env-var flip, pending AWS BAA + model access), GuardDuty not enabled, MFA permission boundary drafted not applied.
-
----
-
-## Teaching the model
-
-The LightGBM ensemble was trained on the Kaggle Triageist dataset (chief complaints + patient history + vitals → ESI 1-5), with:
-
-- 5-fold stratified CV
-- Class-balanced sample weights
-- Conformal-split calibration on noise-perturbed vitals (90% coverage)
-- Feature engineering: shock_index, keyword-text features (`kw_stroke`, `kw_seizure`, `kw_mi`, `kw_sepsis`, ...), arrival-hour cyclic encoding, vitals normalization
-
-Training data + notebook live in the sibling `triagegeist/` repo. Model files (`lgbm_fold{0..4}.txt`, `artifacts.pkl`) are dropped into `backend/models/` for inference.
+| System | How |
+|---|---|
+| **Epic / Cerner / Athena** | SMART-on-FHIR PKCE OAuth — clinicians sign in with their EHR credentials |
+| **Twilio Voice** | Inbound phone line → voice agent for triage, scheduling, FAQ |
+| **Twilio SMS** | Appointment confirmations and discharge instructions to patient phone |
+| **AWS Bedrock** | Claude Sonnet 4.5 for triage, scribe, pre-brief, comfort, vision |
+| **AWS Transcribe** | HIPAA-eligible STT — all audio stays inside the AWS BAA perimeter |
+| **AWS Polly** | Neural TTS in 20+ languages — no ElevenLabs account required |
 
 ---
 
 ## Team
 
-| Role | Owner |
+| | |
 |---|---|
-| Cloud / Infra / Backend / ML | Dhruv Jain |
-| Frontend / UX / Product | Sriyan Bodla |
-
-Built in ~72 hours. Originally prototyped at Hook'em Hacks 2026 @ UT Austin; submitted to HackFW 2026 for North Texas deployment.
+| **Dhruv Jain** | Backend · Cloud / Infra · ML · HIPAA |
+| **Sriyan Bodla** | Frontend · UX · Product |
 
 ---
 
