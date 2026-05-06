@@ -55,7 +55,7 @@ TRIGGERS: list[TriggerDef] = [
         description="Fires when a patient self-schedules a new appointment.",
         sample_context={
             "appointment": {"confirmation_code": "AB2X7K", "slot_iso": "2026-05-04T14:30:00Z",
-                            "patient_name": "Marcus Johnson", "patient_phone": "+15125550177"},
+                            "patient_name": "Marcus Johnson", "patient_phone_hash": "0177:a1b2c3d4e5f67890"},
             "hospital": {"id": "demo"},
         },
     ),

@@ -63,13 +63,16 @@ def book(*, hospital_id: str, slot_iso: str,
          patient_name: str, patient_phone: str,
          reason: str, channel: str = "web") -> dict:
     """Reserve a slot. Returns the appointment dict + confirmation code.
-    Caller checks that slot_iso is in `open_slots()` before calling."""
+    Caller checks that slot_iso is in `open_slots()` before calling.
+    Phone is hashed before storage — HIPAA §164.514 (Safe Harbor identifier)."""
+    from services.voice_agent.session import hash_phone  # noqa: PLC0415
+
     appt = {
         "appointment_id": secrets.token_urlsafe(12),
         "hospital_id": hospital_id,
         "slot_iso": slot_iso,
         "patient_name": patient_name.strip(),
-        "patient_phone": patient_phone.strip(),
+        "patient_phone_hash": hash_phone(patient_phone.strip()),  # hashed, not raw
         "reason_short": reason.strip()[:200],
         "preferred_window": "",
         "status": "booked",

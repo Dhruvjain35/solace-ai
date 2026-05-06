@@ -431,7 +431,7 @@ export type Appointment = {
   hospital_id: string;
   slot_iso: string;
   patient_name: string;
-  patient_phone: string;
+  patient_phone_hash?: string;  // hashed, not raw — HIPAA §164.514
   reason_short: string;
   status: string;
   confirmation_code: string;
