@@ -861,3 +861,63 @@ export async function getModelCard(card_id: string) {
   const { data } = await api.get(`/api/model-cards/${card_id}`);
   return data;
 }
+
+// ============================================================================
+// Wave 3 — Evidence RAG, EWS, HCC, Handoffs, Loop closure
+// ============================================================================
+
+export async function evidenceAnswer(hospitalId: string, question: string, k = 6) {
+  const { data } = await api.post(`/api/${hospitalId}/evidence/answer`, { question, k });
+  return data as {
+    question: string;
+    snippets: { index: number; title: string; body: string; source: string; year: number; url: string; score: number }[];
+    answer: string;
+    key_recommendations: string[];
+    uncertainty: string;
+  };
+}
+
+export async function sepsisEws(hospitalId: string, vitals: any) {
+  const { data } = await api.post(`/api/${hospitalId}/ews/sepsis`, vitals);
+  return data as { score: number; band: string; action: string; contributions: { feature: string; points: number; why: string }[] };
+}
+
+export async function deteriorationIndex(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/ews/deterioration`, body);
+  return data as { score: number; band: string; action: string; contributions: { feature: string; points: number; why: string }[] };
+}
+
+export async function hccEvaluate(hospitalId: string, body: { conditions: any[]; prior_notes?: string[]; current_year?: number }) {
+  const { data } = await api.post(`/api/${hospitalId}/hcc/evaluate`, body);
+  return data;
+}
+
+export async function handoffIpass(hospitalId: string, chart_context: any) {
+  const { data } = await api.post(`/api/${hospitalId}/handoff/ipass`, { chart_context });
+  return data;
+}
+
+export async function handoffSbar(hospitalId: string, chart_context: any, consult_specialty = "cardiology", reason = "") {
+  const { data } = await api.post(`/api/${hospitalId}/handoff/sbar`, { chart_context, consult_specialty, reason });
+  return data;
+}
+
+export async function scribeRedact(hospitalId: string, segments: any[]) {
+  const { data } = await api.post(`/api/${hospitalId}/scribe/redact`, { segments });
+  return data;
+}
+
+export async function resultLoopOpen(hospitalId: string, body: { patient_id: string; test_name: string; value: string; severity?: string; sla_days?: number }) {
+  const { data } = await api.post(`/api/${hospitalId}/result-loop/open`, body);
+  return data;
+}
+
+export async function resultLoopClose(hospitalId: string, tracking_id: string, action: string) {
+  const { data } = await api.post(`/api/${hospitalId}/result-loop/close`, { tracking_id, action });
+  return data;
+}
+
+export async function resultLoopOverdue(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/result-loop/overdue`);
+  return data.items as any[];
+}

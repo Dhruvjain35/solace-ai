@@ -23,6 +23,11 @@ from services import (
     ddx_v2,
     discharge_plan,
     drug_interactions,
+    early_warning,
+    evidence_rag,
+    handoff,
+    hcc_capture,
+    redaction,
     em_coding,
     inbox_drafts,
     letters,
@@ -458,3 +463,191 @@ def ai_override_metrics(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     return provenance.metrics(hospital_id)
+
+
+# ---- Evidence-grounded RAG -------------------------------------------------------
+class EvidenceBody(BaseModel):
+    question: str
+    k: int = 6
+
+
+@router.post("/evidence/answer")
+def evidence_answer(
+    hospital_id: str = Path(...),
+    body: EvidenceBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "evidence.answer")
+    return evidence_rag.answer(body.question, k=body.k)
+
+
+@router.get("/evidence/search")
+def evidence_search(
+    hospital_id: str = Path(...),
+    q: str = "",
+    k: int = 6,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "evidence.search")
+    return {"snippets": evidence_rag.search(q, k=k)}
+
+
+# ---- Sepsis EWS + Deterioration Index -------------------------------------------
+class SepsisBody(BaseModel):
+    hr: float | None = None
+    rr: float | None = None
+    temp_c: float | None = None
+    sbp: float | None = None
+    map_mm_hg: float | None = None
+    mental_status: str | None = None
+    spo2: float | None = None
+    on_oxygen: bool = False
+    wbc: float | None = None
+    lactate: float | None = None
+    suspected_infection: bool = False
+
+
+@router.post("/ews/sepsis")
+def ews_sepsis(
+    hospital_id: str = Path(...),
+    body: SepsisBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "ews.sepsis")
+    return early_warning.sepsis_ews(**body.model_dump())
+
+
+class DeteriorationBody(BaseModel):
+    vitals_now: dict[str, float]
+    vitals_4h_ago: dict[str, float] | None = None
+    new_oxygen_requirement: bool = False
+    gcs_drop_at_least_2: bool = False
+    new_arrhythmia: bool = False
+    wbc_now: float | None = None
+    wbc_baseline: float | None = None
+
+
+@router.post("/ews/deterioration")
+def ews_deterioration(
+    hospital_id: str = Path(...),
+    body: DeteriorationBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "ews.deterioration")
+    return early_warning.deterioration_index(**body.model_dump())
+
+
+# ---- HCC capture (MA recapture) -------------------------------------------------
+class HccBody(BaseModel):
+    conditions: list[dict[str, str]]
+    prior_notes: list[str] = []
+    current_year: int | None = None
+
+
+@router.post("/hcc/evaluate")
+def hcc_evaluate(
+    hospital_id: str = Path(...),
+    body: HccBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "hcc.evaluate")
+    return hcc_capture.evaluate_chart(
+        conditions=body.conditions,
+        prior_notes=body.prior_notes,
+        current_year=body.current_year,
+    )
+
+
+# ---- I-PASS / SBAR handoffs ----------------------------------------------------
+class HandoffBody(BaseModel):
+    chart_context: dict[str, Any]
+
+
+@router.post("/handoff/ipass")
+def handoff_ipass(
+    hospital_id: str = Path(...),
+    body: HandoffBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "handoff.ipass")
+    return handoff.ipass(body.chart_context)
+
+
+class SbarBody(BaseModel):
+    chart_context: dict[str, Any]
+    consult_specialty: str = "cardiology"
+    reason: str = ""
+
+
+@router.post("/handoff/sbar")
+def handoff_sbar(
+    hospital_id: str = Path(...),
+    body: SbarBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "handoff.sbar")
+    return handoff.sbar(body.chart_context, consult_specialty=body.consult_specialty, reason=body.reason)
+
+
+# ---- Auto-redaction + closed-loop result tracking ------------------------------
+class RedactBody(BaseModel):
+    segments: list[dict[str, Any]]
+
+
+@router.post("/scribe/redact")
+def scribe_redact(
+    hospital_id: str = Path(...),
+    body: RedactBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.redact")
+    return redaction.redact_segments(body.segments)
+
+
+class OpenLoopBody(BaseModel):
+    patient_id: str
+    test_name: str
+    value: str
+    severity: str = "abnormal"  # abnormal | critical
+    sla_days: int = 7
+
+
+@router.post("/result-loop/open")
+def result_loop_open(
+    hospital_id: str = Path(...),
+    body: OpenLoopBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "result_loop.open", patient_id=body.patient_id)
+    return redaction.open_loop(
+        patient_id=body.patient_id,
+        clinician_id=caller.get("clinician_id", "unknown"),
+        hospital_id=hospital_id,
+        test_name=body.test_name,
+        value=body.value,
+        severity=body.severity,
+        sla_days=body.sla_days,
+    )
+
+
+class CloseLoopBody(BaseModel):
+    tracking_id: str
+    action: str
+
+
+@router.post("/result-loop/close")
+def result_loop_close(
+    hospital_id: str = Path(...),
+    body: CloseLoopBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "result_loop.close", patient_id=body.tracking_id)
+    return redaction.close_loop(body.tracking_id, closed_by=caller.get("clinician_id", "unknown"), action=body.action)
+
+
+@router.get("/result-loop/overdue")
+def result_loop_overdue(
+    hospital_id: str = Path(...),
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    return {"items": redaction.overdue_worklist(hospital_id)}

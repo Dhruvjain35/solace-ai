@@ -11,6 +11,7 @@ import WorkflowsAdmin from "./pages/WorkflowsAdmin";
 import ClinicianScribe from "./pages/ClinicianScribe";
 import ClinicianLetters from "./pages/ClinicianLetters";
 import ClinicianInbox from "./pages/ClinicianInbox";
+import ClinicianTools from "./pages/ClinicianTools";
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/:hospitalId/clinician/scribe" element={<ClinicianScribe />} />
       <Route path="/:hospitalId/clinician/letters" element={<ClinicianLetters />} />
       <Route path="/:hospitalId/clinician/inbox" element={<ClinicianInbox />} />
+      <Route path="/:hospitalId/clinician/tools" element={<ClinicianTools />} />
       <Route path="*" element={<Navigate to="/demo" replace />} />
     </Routes>
   );

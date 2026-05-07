@@ -97,7 +97,7 @@ export default function PatientSchedule() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">You're booked.</h1>
           <p className="text-text-muted">
-            We'll text {confirmed.patient_phone} a reminder. If you need to cancel, reply CANCEL or
+            We'll text {phone} a reminder. If you need to cancel, reply CANCEL or
             call us with this code.
           </p>
           <div className="bg-surface-low rounded-lg p-4 flex flex-col gap-1">

@@ -31,7 +31,7 @@ export default function PatientPrintView() {
       setLoading(false);
       return;
     }
-    getPatientDetail(hospitalId, patientId, sess.token)
+    getPatientDetail(hospitalId, patientId)
       .then(setDetail)
       .catch((e) => setError(e?.response?.data?.detail || "Failed to load record"))
       .finally(() => setLoading(false));

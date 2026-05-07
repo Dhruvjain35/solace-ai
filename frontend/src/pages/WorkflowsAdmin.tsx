@@ -60,8 +60,8 @@ export default function WorkflowsAdmin() {
     setError(null);
     try {
       const [cat, list] = await Promise.all([
-        getWorkflowCatalog(hospitalId, pin),
-        listWorkflows(hospitalId, pin),
+        getWorkflowCatalog(hospitalId),
+        listWorkflows(hospitalId),
       ]);
       setTriggers(cat.triggers);
       setActions(cat.actions);
@@ -97,7 +97,7 @@ export default function WorkflowsAdmin() {
     if (!pin) return;
     setSaving(true);
     try {
-      const wf = await workflowFromTemplate(hospitalId, pin, t.id);
+      const wf = await workflowFromTemplate(hospitalId, t.id);
       await refresh();
       openWorkflow(wf);
     } catch (e: any) {
@@ -134,8 +134,8 @@ export default function WorkflowsAdmin() {
         steps: draft.steps,
       };
       const saved = selected?.workflow_id
-        ? await updateWorkflow(hospitalId, pin, selected.workflow_id, body)
-        : await createWorkflow(hospitalId, pin, body);
+        ? await updateWorkflow(hospitalId, selected.workflow_id, body)
+        : await createWorkflow(hospitalId, body);
       await refresh();
       openWorkflow(saved);
     } catch (e: any) {
@@ -148,7 +148,7 @@ export default function WorkflowsAdmin() {
   async function remove() {
     if (!selected || !pin) return;
     if (!window.confirm(`Delete "${selected.name}"?`)) return;
-    await deleteWorkflow(hospitalId, pin, selected.workflow_id);
+    await deleteWorkflow(hospitalId, selected.workflow_id);
     setSelected(null);
     setDraft(null);
     await refresh();
@@ -158,7 +158,7 @@ export default function WorkflowsAdmin() {
     if (!draft || !pin) return;
     setSaving(true);
     try {
-      const r = await testWorkflow(hospitalId, pin, {
+      const r = await testWorkflow(hospitalId, {
         workflow: { ...draft, hospital_id: hospitalId } as any,
       });
       setTestResult(r);
