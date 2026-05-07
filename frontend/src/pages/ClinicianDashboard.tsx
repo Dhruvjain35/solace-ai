@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare, Workflow as WorkflowIcon } from "lucide-react";
+import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare, Workflow as WorkflowIcon, Mic, FileText, Inbox } from "lucide-react";
 import { PatientCard } from "../components/clinician/PatientCard";
 import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
@@ -452,6 +452,24 @@ export default function ClinicianDashboard() {
           <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-1 px-1">
             Admin
           </div>
+          <Link
+            to={`/${hospitalId}/clinician/scribe`}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+          >
+            <Mic size={14} /> Ambient scribe
+          </Link>
+          <Link
+            to={`/${hospitalId}/clinician/inbox`}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+          >
+            <Inbox size={14} /> Inbox + admin
+          </Link>
+          <Link
+            to={`/${hospitalId}/clinician/letters`}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+          >
+            <FileText size={14} /> Letters & forms
+          </Link>
           <Link
             to={`/${hospitalId}/clinician/workflows`}
             className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"

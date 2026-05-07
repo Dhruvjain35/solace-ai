@@ -679,3 +679,185 @@ export async function refineTriage(
   );
   return data.refinement;
 }
+
+// ============================================================================
+// Wave 1+2 — Clinician AI surface
+// ============================================================================
+
+export type ScribeSegment = { id: number; speaker: string; begin_ms: number; end_ms: number; content: string };
+export type ScribeSection = { name: string; summary: { text: string; evidence_segments: number[] }[] };
+export type ScribeOutput = {
+  structured: { sections: ScribeSection[]; transcript_segments: ScribeSegment[] };
+  soap_text: string;
+};
+
+export async function scribeFromTranscript(hospitalId: string, transcript: string): Promise<ScribeOutput> {
+  const { data } = await api.post<ScribeOutput>(`/api/${hospitalId}/scribe/from-transcript`, { transcript, refine: true });
+  return data;
+}
+
+export type DdxItem = {
+  diagnosis: string;
+  icd10: string;
+  weight: number;
+  rule_in: string[];
+  rule_out: string[];
+  must_not_miss: boolean;
+  next_step: string;
+  evidence_quote: string;
+};
+export type DdxResult = {
+  differential: DdxItem[];
+  counterfactuals: { if_true: string; would_change: string }[];
+  red_flags: { diagnosis: string; icd10: string }[];
+  conformal: { set_90: string[]; set_95: string[] };
+};
+
+export async function ddxV2(
+  hospitalId: string,
+  body: { transcript: string; chief_complaint?: string; specialty?: string; medical_info?: any; vitals?: any }
+): Promise<DdxResult> {
+  const { data } = await api.post<DdxResult>(`/api/${hospitalId}/ddx/v2`, body);
+  return data;
+}
+
+export async function listCalculators(hospitalId: string): Promise<{ key: string; name: string; inputs: string[]; applies_when: string[] }[]> {
+  const { data } = await api.get(`/api/${hospitalId}/cds/calculators`);
+  return data.calculators;
+}
+
+export async function calcAutoExtract(hospitalId: string, transcript: string, chief_complaint = "") {
+  const { data } = await api.post(`/api/${hospitalId}/cds/auto-extract`, { transcript, chief_complaint });
+  return data as { calculators: { key: string; name: string; result: any; unknown: string[] }[] };
+}
+
+export async function calculate(hospitalId: string, key: string, inputs: any) {
+  const { data } = await api.post(`/api/${hospitalId}/cds/calculate`, { key, inputs });
+  return data;
+}
+
+export async function listScreeners(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/screeners`);
+  return data.screeners as { key: string; name: string; items: string[]; scale: string }[];
+}
+
+export async function scoreScreener(hospitalId: string, key: string, body: { items?: number[]; answers?: any; sex?: string }) {
+  const { data } = await api.post(`/api/${hospitalId}/screeners/score`, { key, ...body });
+  return data;
+}
+
+export async function codingSuggest(hospitalId: string, note_text: string, established_patient = true) {
+  const { data } = await api.post(`/api/${hospitalId}/coding/suggest`, { note_text, established_patient });
+  return data;
+}
+
+// Letters
+export async function listLetterTemplates(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/letters/templates`);
+  return data.templates as { key: string; name: string; audience: string; slots: string[] }[];
+}
+
+export async function autofillLetter(hospitalId: string, template_key: string, chart_context: any) {
+  const { data } = await api.post(`/api/${hospitalId}/letters/auto-fill`, { template_key, chart_context });
+  return data as { slots: Record<string, string>; rendered: string };
+}
+
+export async function renderLetter(hospitalId: string, template_key: string, slots: Record<string, string>) {
+  const { data } = await api.post(`/api/${hospitalId}/letters/render`, { template_key, slots });
+  return data.rendered as string;
+}
+
+export async function letterPdfUrl(hospitalId: string, template_key: string, slots: Record<string, string>) {
+  const resp = await api.post(`/api/${hospitalId}/letters/pdf`, { template_key, slots }, { responseType: "blob" });
+  return URL.createObjectURL(resp.data as Blob);
+}
+
+// Inbox draft + result triage
+export async function inboxDraft(hospitalId: string, inbound_message: string, patient_chart: any = {}, hospital_name = "our clinic") {
+  const { data } = await api.post(`/api/${hospitalId}/inbox/draft`, { inbound_message, patient_chart, hospital_name });
+  return data;
+}
+
+export async function abnormalResultDraft(hospitalId: string, lab_name: string, value: number, recommended_action = "") {
+  const { data } = await api.post(`/api/${hospitalId}/inbox/result-draft`, { lab_name, value, recommended_action });
+  return data;
+}
+
+// Refills
+export async function refillTriage(hospitalId: string, body: { medication_canonical: string; last_visit_iso?: string; relevant_lab_iso?: string; relevant_lab_value?: number; recent_hospitalization?: boolean }) {
+  const { data } = await api.post(`/api/${hospitalId}/refills/triage`, body);
+  return data;
+}
+
+// PA packets
+export async function paPacket(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/pa/packet`, body);
+  return data;
+}
+
+// Drug check
+export async function drugCheck(hospitalId: string, meds: string[], allergies: string[] = [], egfr?: number, complaint = "") {
+  const { data } = await api.post(`/api/${hospitalId}/drug-check`, { meds, allergies, egfr, complaint });
+  return data;
+}
+
+// Discharge plan
+export async function buildDischarge(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/discharge/build`, body);
+  return data;
+}
+
+// Specialty packs
+export async function listSpecialtyPacks(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/specialty/packs`);
+  return data.packs as { key: string; name: string }[];
+}
+
+// Care ops
+export async function eligibilityCheck(hospitalId: string, body: { payer_name: string; member_id: string; patient_first: string; patient_last: string; patient_dob: string }) {
+  const { data } = await api.post(`/api/${hospitalId}/eligibility/check`, body);
+  return data;
+}
+
+export async function noShowPredict(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/no-show/predict`, body);
+  return data;
+}
+
+export async function careGapsAdHoc(hospitalId: string, patient: any) {
+  const { data } = await api.post(`/api/${hospitalId}/care-gaps/evaluate`, { patient });
+  return data.gaps as any[];
+}
+
+export async function sdohPrapare(hospitalId: string, answers: any) {
+  const { data } = await api.post(`/api/${hospitalId}/sdoh/prapare`, { answers });
+  return data;
+}
+
+// FHIR write-back
+export async function ehrWrite(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/ehr-write`, body);
+  return data;
+}
+
+export async function ehrLocalResources(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/ehr-write/local`);
+  return data.resources as any[];
+}
+
+// AI override audit
+export async function recordAiOverride(hospitalId: string, body: { purpose: string; decision: string; patient_id?: string; diff_chars?: number; notes?: string; model_name?: string }) {
+  const { data } = await api.post(`/api/${hospitalId}/ai-override`, body);
+  return data;
+}
+
+// Public — model cards
+export async function listModelCards() {
+  const { data } = await api.get(`/api/model-cards`);
+  return data.cards as { id: string; name: string; version: string }[];
+}
+
+export async function getModelCard(card_id: string) {
+  const { data } = await api.get(`/api/model-cards/${card_id}`);
+  return data;
+}

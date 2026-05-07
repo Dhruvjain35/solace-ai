@@ -12,7 +12,11 @@ from mangum import Mangum
 
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
-from routers import admin, appointments, auth, ehr, ehr_auth, identity, insurance, intake, notes, pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage, voice, workflows
+from routers import (
+    admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
+    governance, identity, insurance, intake, notes, pain_flag, patients, prescriptions,
+    public, sms as sms_router, transcribe, triage, voice, workflows,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -117,6 +121,16 @@ app.include_router(auth.router, prefix="/api/{hospital_id}", tags=["auth"])
 app.include_router(public.router, prefix="/api/{hospital_id}", tags=["public"])
 app.include_router(ehr.router, prefix="/api/{hospital_id}", tags=["ehr"])
 app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflows"])
+# Wave 1+2 — clinician AI surface (scribe, ddx v2, calculators, screeners,
+# letters, coding, inbox drafts, refills, PA packets, drug check, discharge plan,
+# specialty packs, override audit log).
+app.include_router(clinical_ai.router, prefix="/api/{hospital_id}", tags=["clinical-ai"])
+# Care operations (eligibility, no-show, HEDIS, SDoH, FHIR write-back).
+app.include_router(care_ops.router, prefix="/api/{hospital_id}", tags=["care-ops"])
+# Public CDS Hooks service — spec-required base path /cds-services.
+app.include_router(cds_hooks_router.router)
+# Public governance / model cards (no auth — for procurement teams + auditors).
+app.include_router(governance.router)
 # Voice agent — uses its own /api/voice prefix (NOT per-hospital path) because Twilio
 # webhooks arrive at a fixed URL and route by the dialed number, not a URL path.
 app.include_router(voice.router)

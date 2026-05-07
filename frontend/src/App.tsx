@@ -8,6 +8,9 @@ import EHRCallback from "./pages/EHRCallback";
 import PatientPrintView from "./pages/PatientPrintView";
 import PatientSchedule from "./pages/PatientSchedule";
 import WorkflowsAdmin from "./pages/WorkflowsAdmin";
+import ClinicianScribe from "./pages/ClinicianScribe";
+import ClinicianLetters from "./pages/ClinicianLetters";
+import ClinicianInbox from "./pages/ClinicianInbox";
 
 export default function App() {
   return (
@@ -22,6 +25,9 @@ export default function App() {
       <Route path="/:hospitalId/clinician" element={<ClinicianDashboard />} />
       <Route path="/:hospitalId/clinician/print/:patientId" element={<PatientPrintView />} />
       <Route path="/:hospitalId/clinician/workflows" element={<WorkflowsAdmin />} />
+      <Route path="/:hospitalId/clinician/scribe" element={<ClinicianScribe />} />
+      <Route path="/:hospitalId/clinician/letters" element={<ClinicianLetters />} />
+      <Route path="/:hospitalId/clinician/inbox" element={<ClinicianInbox />} />
       <Route path="*" element={<Navigate to="/demo" replace />} />
     </Routes>
   );
