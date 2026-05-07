@@ -51,6 +51,9 @@ import os as _os  # noqa: E402
 _PRODUCTION_ORIGINS = [
     "https://solaceaidemo.vercel.app",
     "https://solace-page.vercel.app",
+    # Amplify deployments (app + landing). Keep until the Vercel cutover is done.
+    "https://solace.d2gsbjipp9quan.amplifyapp.com",
+    "https://main.d23unqhwfmphf2.amplifyapp.com",
 ]
 _LOCAL_ORIGINS = [
     "http://localhost:5173",      # Vite dev server
