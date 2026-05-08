@@ -15,7 +15,7 @@ from db import storage
 from routers import (
     admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
     governance, identity, insurance, intake, notes, pain_flag, patients, prescriptions,
-    public, sms as sms_router, transcribe, triage, voice, workflows,
+    public, sms as sms_router, transcribe, triage, voice, wave4, workflows,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -130,6 +130,10 @@ app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflo
 app.include_router(clinical_ai.router, prefix="/api/{hospital_id}", tags=["clinical-ai"])
 # Care operations (eligibility, no-show, HEDIS, SDoH, FHIR write-back).
 app.include_router(care_ops.router, prefix="/api/{hospital_id}", tags=["care-ops"])
+# Wave 4 — HL7 v2 emit, multi-encounter, fax intake, sepsis bundle, cohort export,
+# OCR-to-eligibility chain, MedicationStatement write, style learning, patient
+# portal messages, nurse triage protocols, TEFCA QHIN stub, telehealth helpers.
+app.include_router(wave4.router, prefix="/api/{hospital_id}", tags=["wave4"])
 # Public CDS Hooks service — spec-required base path /cds-services.
 app.include_router(cds_hooks_router.router)
 # Public governance / model cards (no auth — for procurement teams + auditors).

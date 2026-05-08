@@ -12,6 +12,7 @@ import ClinicianScribe from "./pages/ClinicianScribe";
 import ClinicianLetters from "./pages/ClinicianLetters";
 import ClinicianInbox from "./pages/ClinicianInbox";
 import ClinicianTools from "./pages/ClinicianTools";
+import ClinicianOps from "./pages/ClinicianOps";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/:hospitalId/clinician/letters" element={<ClinicianLetters />} />
       <Route path="/:hospitalId/clinician/inbox" element={<ClinicianInbox />} />
       <Route path="/:hospitalId/clinician/tools" element={<ClinicianTools />} />
+      <Route path="/:hospitalId/clinician/ops" element={<ClinicianOps />} />
       <Route path="*" element={<Navigate to="/demo" replace />} />
     </Routes>
   );

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare, Workflow as WorkflowIcon, Mic, FileText, Inbox, BookOpen } from "lucide-react";
+import { X, ShieldCheck, Activity, Clock3, Bell, Printer, MessageSquare, Workflow as WorkflowIcon, Mic, FileText, Inbox, BookOpen, Network } from "lucide-react";
 import { PatientCard } from "../components/clinician/PatientCard";
 import { PrescriptionPanel } from "../components/clinician/PrescriptionPanel";
 import { NotesPanel } from "../components/clinician/NotesPanel";
@@ -475,6 +475,12 @@ export default function ClinicianDashboard() {
             className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <BookOpen size={14} /> Evidence + EWS + HCC + Handoff
+          </Link>
+          <Link
+            to={`/${hospitalId}/clinician/ops`}
+            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+          >
+            <Network size={14} /> Portal + Cohort + Sepsis + Telehealth + HL7
           </Link>
           <Link
             to={`/${hospitalId}/clinician/workflows`}

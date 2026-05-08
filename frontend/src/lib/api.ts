@@ -921,3 +921,112 @@ export async function resultLoopOverdue(hospitalId: string) {
   const { data } = await api.get(`/api/${hospitalId}/result-loop/overdue`);
   return data.items as any[];
 }
+
+// ============================================================================
+// Wave 4 — HL7 v2, multi-encounter, fax, sepsis bundle, cohort, portal,
+// nurse triage, TEFCA, telehealth, style learning, MedicationStatement
+// ============================================================================
+
+export async function hl7MdmRender(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/hl7/mdm/render`, body);
+  return data;
+}
+
+export async function encounterStitch(hospitalId: string, notes: any[]) {
+  const { data } = await api.post(`/api/${hospitalId}/encounter/stitch`, { notes });
+  return data;
+}
+
+export async function encounterHuddle(hospitalId: string, transcript: string, ward_context = "") {
+  const { data } = await api.post(`/api/${hospitalId}/encounter/huddle`, { transcript, ward_context });
+  return data;
+}
+
+export async function faxIntake(hospitalId: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post(`/api/${hospitalId}/fax/intake`, form, { headers: { "Content-Type": "multipart/form-data" } });
+  return data;
+}
+
+export async function sepsisBundleEvaluate(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/sepsis/bundle/evaluate`, body);
+  return data;
+}
+
+export async function cohortKickoff(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/cohort/export/kickoff`, body);
+  return data;
+}
+
+export async function cohortPoll(hospitalId: string, content_location: string) {
+  const { data } = await api.get(`/api/${hospitalId}/cohort/export/poll`, { params: { content_location } });
+  return data;
+}
+
+export async function cohortQuery(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/cohort/query`, body);
+  return data;
+}
+
+export async function insuranceOcrChain(hospitalId: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post(`/api/${hospitalId}/insurance/ocr-to-eligibility`, form, { headers: { "Content-Type": "multipart/form-data" } });
+  return data;
+}
+
+export async function medReconciliationWrite(hospitalId: string, patient_ref: string, medications: string[]) {
+  const { data } = await api.post(`/api/${hospitalId}/ehr-write/medication-statements`, { patient_ref, medications });
+  return data;
+}
+
+export async function recordStylePair(hospitalId: string, body: { ai_draft: string; final: string; section?: string }) {
+  const { data } = await api.post(`/api/${hospitalId}/style/record-pair`, body);
+  return data;
+}
+
+export async function styleProfile(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/style/profile`);
+  return data;
+}
+
+export async function portalInbound(hospitalId: string, patient_id: string, body: string, sender_name = "Patient") {
+  const { data } = await api.post(`/api/${hospitalId}/portal/inbound`, { patient_id, body, sender_name });
+  return data;
+}
+
+export async function portalThreads(hospitalId: string, only_unread = false) {
+  const { data } = await api.get(`/api/${hospitalId}/portal/threads`, { params: { only_unread } });
+  return data.threads as any[];
+}
+
+export async function portalThread(hospitalId: string, thread_key: string) {
+  const { data } = await api.get(`/api/${hospitalId}/portal/thread/${encodeURIComponent(thread_key)}`);
+  return data.messages as any[];
+}
+
+export async function portalRespond(hospitalId: string, message_id: string, body: string, ai_draft_status = "edited") {
+  const { data } = await api.post(`/api/${hospitalId}/portal/respond`, { message_id, body, ai_draft_status });
+  return data;
+}
+
+export async function nurseTriageProtocols(hospitalId: string) {
+  const { data } = await api.get(`/api/${hospitalId}/nurse-triage/protocols`);
+  return data.protocols as string[];
+}
+
+export async function nurseTriageEvaluate(hospitalId: string, protocol_key: string, answers: any) {
+  const { data } = await api.post(`/api/${hospitalId}/nurse-triage/evaluate`, { protocol_key, answers });
+  return data;
+}
+
+export async function tefcaQuery(hospitalId: string, patient_name: string, patient_dob: string, consent_attestation = true) {
+  const { data } = await api.post(`/api/${hospitalId}/tefca/query`, { patient_name, patient_dob, consent_attestation });
+  return data;
+}
+
+export async function telehealthSession(hospitalId: string, body: any) {
+  const { data } = await api.post(`/api/${hospitalId}/telehealth/session`, body);
+  return data;
+}

@@ -85,8 +85,8 @@
     </div>
     <div class="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto text-sm text-slate-600">
       <div class="rounded-lg bg-white/60 backdrop-blur border border-slate-200 px-4 py-3">
-        <div class="text-2xl font-bold text-ink">50+</div>
-        <div>features shipped</div>
+        <div class="text-2xl font-bold text-ink">130+</div>
+        <div>API endpoints shipped</div>
       </div>
       <div class="rounded-lg bg-white/60 backdrop-blur border border-slate-200 px-4 py-3">
         <div class="text-2xl font-bold text-ink">20</div>
@@ -217,6 +217,127 @@
           <li class="check">SHAP explainability on every triage</li>
           <li class="check">Conformal prediction sets (calibrated uncertainty)</li>
           <li class="check">Human-in-loop on every clinical write</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== OPERATIONS LAYER ===================== -->
+<section class="py-24 bg-slate-50">
+  <div class="max-w-7xl mx-auto px-5">
+    <div class="max-w-3xl">
+      <div class="text-xs uppercase tracking-widest text-primary font-semibold">Operations layer</div>
+      <h2 class="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">Plumbing the rest of the field doesn't ship</h2>
+      <p class="mt-3 text-slate-600">The unsexy infrastructure clinics actually need: HL7 v2 for the long-tail EHRs, TEFCA QHIN for cross-system patient lookup, telehealth jump-links, sepsis bundle compliance, cohort export for population health, async portal messaging with AI drafts, and nurse-triage protocols for call-center deflection.</p>
+    </div>
+    <div class="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Long-tail EHR</div>
+        <h3 class="mt-1 font-bold text-lg">HL7 v2 MDM^T02</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Note write-back over MLLP for legacy EHRs</li>
+          <li class="check">Mirth / Rhapsody / Corepoint / Cloverleaf compatible</li>
+          <li class="check">Meditech, NextGen, eClinicalWorks, Allscripts</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Population health</div>
+        <h3 class="mt-1 font-bold text-lg">Bulk FHIR + cohort builder</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Patient/$export and Group/$export client</li>
+          <li class="check">Cohort query by ICD-10 / LOINC / age band</li>
+          <li class="check">HEDIS / MIPS / ACO benchmarking ready</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Cross-system lookup</div>
+        <h3 class="mt-1 font-bold text-lg">TEFCA QHIN</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Patient discovery + document query stub</li>
+          <li class="check">Individual Access Services consent flow</li>
+          <li class="check">Plug-in for Epic Nexus, eHealth Exchange, Health Gorilla, etc.</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Sepsis quality</div>
+        <h3 class="mt-1 font-bold text-lg">1-hour bundle tracker</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">SSC 2021 bundle compliance per encounter</li>
+          <li class="check">Lactate / cultures / abx / fluids / pressors timing</li>
+          <li class="check">Cohort dashboard + median time-to-abx</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Multi-encounter</div>
+        <h3 class="mt-1 font-bold text-lg">Stitching + huddle mode</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Longitudinal narrative across visits</li>
+          <li class="check">Rounds parser for 3+ speakers</li>
+          <li class="check">Per-patient I-PASS + team decision log</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Inbound fax</div>
+        <h3 class="mt-1 font-bold text-lg">Fax digitization</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Claude-vision parse of faxed PDFs / images</li>
+          <li class="check">Auto-classify: referral, record, result, payer, form</li>
+          <li class="check">Auto-route to the right worklist</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Telehealth</div>
+        <h3 class="mt-1 font-bold text-lg">One-click virtual visits</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Doxy.me / Zoom / Teams / Doximity Dialer</li>
+          <li class="check">Same scribe pipeline runs alongside</li>
+          <li class="check">Patient-facing SMS jump link</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Async messaging</div>
+        <h3 class="mt-1 font-bold text-lg">Portal threads + tag routing</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">Auto-draft replies on every inbound</li>
+          <li class="check">Tag-routing: refill / result / billing / urgent</li>
+          <li class="check">Read receipts both directions</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Call center</div>
+        <h3 class="mt-1 font-bold text-lg">Nurse triage protocols</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">10 chief-complaint protocols (Schmitt-alternative)</li>
+          <li class="check">911 / ED-now / ED / urgent / self-care routing</li>
+          <li class="check">Drop-in for portal symptom checker + IVR</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Med reconciliation</div>
+        <h3 class="mt-1 font-bold text-lg">MedicationStatement write</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">FHIR med reconciliation push</li>
+          <li class="check">Explicit framing — not a new prescription</li>
+          <li class="check">Provenance attached for HTI-1 audit</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Style learning</div>
+        <h3 class="mt-1 font-bold text-lg">Per-clinician fine-tune corpus</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">(AI draft, clinician final) pair capture</li>
+          <li class="check">Edit-pattern dashboard per clinician</li>
+          <li class="check">Auto-export training JSONL once 300+ pairs</li>
+        </ul>
+      </div>
+      <div class="feature-card rounded-xl border border-slate-200 p-5 bg-white">
+        <div class="text-xs uppercase tracking-wide text-primary font-semibold">Front office</div>
+        <h3 class="mt-1 font-bold text-lg">OCR → eligibility chain</h3>
+        <ul class="mt-3 text-sm text-slate-600 space-y-1.5">
+          <li class="check">One call: card photo to copay/deductible/PA flag</li>
+          <li class="check">Stedi-shaped 270/271 mock; real key-driven swap</li>
+          <li class="check">Member ID seed for chained workflows</li>
         </ul>
       </div>
     </div>
