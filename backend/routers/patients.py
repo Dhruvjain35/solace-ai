@@ -183,17 +183,8 @@ def resolve_patient(
     )
 
     # Fire the discharge workflow trigger.
+    # Raw phone is PHI (HIPAA §164.514) — never include in workflow context.
     from services.workflows import engine as _wf  # noqa: PLC0415
-    insurance = p.get("insurance_info")
-    phone = ""
-    try:
-        import json as _json  # noqa: PLC0415
-        if isinstance(insurance, str) and insurance:
-            phone = (_json.loads(insurance) or {}).get("phone", "") or ""
-        elif isinstance(insurance, dict):
-            phone = insurance.get("phone", "") or ""
-    except Exception:  # noqa: BLE001
-        phone = ""
     _wf.fire(
         "patient.discharged",
         hospital_id,
@@ -202,7 +193,6 @@ def resolve_patient(
                 "id": patient_id,
                 "patient_id": patient_id,
                 "name": p.get("name", ""),
-                "phone": phone,
                 "esi_level": p.get("esi_level"),
                 "seen_by": body.clinician_name.strip(),
             },

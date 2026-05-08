@@ -24,7 +24,7 @@ TRIGGERS: list[TriggerDef] = [
         label="Patient checks in",
         description="Fires after a patient submits the intake form (provisional ESI assigned).",
         sample_context={
-            "patient": {"id": "abc", "name": "Marcus Johnson", "phone": "+15125550177",
+            "patient": {"id": "abc", "name": "Marcus Johnson",
                         "esi_level": 3, "language": "en"},
             "hospital": {"id": "demo", "name": "St. David's Medical Center"},
         },
@@ -34,7 +34,7 @@ TRIGGERS: list[TriggerDef] = [
         label="Patient marked seen / discharged",
         description="Fires when a clinician taps Mark Seen on the dashboard.",
         sample_context={
-            "patient": {"id": "abc", "name": "Marcus Johnson", "phone": "+15125550177",
+            "patient": {"id": "abc", "name": "Marcus Johnson",
                         "esi_level": 3, "seen_by": "Dr. Chen"},
             "hospital": {"id": "demo", "name": "St. David's Medical Center"},
         },

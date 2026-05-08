@@ -69,18 +69,24 @@ TEMPLATES: list[dict] = [
     },
     {
         "id": "appt_reminder_24h",
-        "label": "Confirm appointment by SMS immediately",
-        "description": "Texts a confirmation the moment a patient books a slot online.",
+        "label": "Notify Slack when appointment is booked",
+        "description": (
+            "Posts a Slack message when a patient books a slot online. "
+            "Note: appointment confirmation SMS is sent directly by the booking endpoint — "
+            "the workflow context does not include the raw phone number (it is hashed per "
+            "HIPAA §164.514 before storage). Use a Slack or webhook step here instead."
+        ),
         "trigger": "appointment.booked",
         "filters": {},
         "steps": [
             {
-                "type": "send_sms",
+                "type": "slack_message",
                 "config": {
-                    "to": "{{appointment.patient_phone}}",
-                    "body": (
-                        "{{appointment.patient_name}}, your visit at {{hospital.name}} is "
-                        "{{appointment.slot_iso}}. Confirmation: {{appointment.confirmation_code}}."
+                    "channel": "#appointments",
+                    "message": (
+                        "New appointment: {{appointment.patient_name}} — "
+                        "{{appointment.slot_iso}} — {{appointment.reason_short}}. "
+                        "Confirmation: {{appointment.confirmation_code}}."
                     ),
                 },
             }

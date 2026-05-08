@@ -320,7 +320,9 @@ async def create_intake(
                 "id": patient_id,
                 "patient_id": patient_id,
                 "name": patient_name.strip(),
-                "phone": (insurance_dict or {}).get("phone", "") if isinstance(insurance_dict, dict) else "",
+                # Raw phone is PHI (HIPAA §164.514) — never expose in workflow context.
+                # Workflows that need to send SMS should use the patient's self-entered
+                # phone from the booking flow, where it is used in-flight then hashed.
                 "language": language,
                 "esi_level": esi_level,
                 "esi_label": esi_label,
