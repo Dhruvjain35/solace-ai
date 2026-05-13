@@ -63,6 +63,18 @@ export default function ClinicianScribe() {
   }, [patientId, hospitalId]);
 
   // ---- Recording ----------------------------------------------------------
+  // Hold the in-flight Web Speech recognizer. Final results are accumulated in
+  // a ref so the textarea reflects the live transcript without re-renders per
+  // interim chunk. The MediaRecorder remains as the deterministic fallback —
+  // when Web Speech captures text, we skip the server /transcribe call.
+  const speechRecRef = useRef<any>(null);
+  const speechFinalsRef = useRef<string>("");
+  const usedWebSpeechRef = useRef<boolean>(false);
+  // Snapshot of the transcript before the current recording session began.
+  // We re-render as `preRecordingText + live` on every interim chunk so the
+  // textarea grows monotonically instead of duplicating.
+  const preRecordingRef = useRef<string>("");
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -71,6 +83,12 @@ export default function ClinicianScribe() {
       chunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       rec.onstop = async () => {
+        // If Web Speech captured the encounter live, transcript was already
+        // updated on each interim chunk — skip the server round-trip.
+        if (usedWebSpeechRef.current && speechFinalsRef.current.trim().length > 0) {
+          return;
+        }
+        // Otherwise fall back to AWS Transcribe via /transcribe.
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const form = new FormData();
         // Backend expects field name "audio_file" + a consent flag (HIPAA §164.508).
@@ -93,6 +111,42 @@ export default function ClinicianScribe() {
       rec.start();
       recorderRef.current = rec;
       setRecording(true);
+
+      // Spin up Web Speech in parallel — instant transcription with no cloud
+      // round-trip. On browsers without support (older Firefox), this falls
+      // straight through to the MediaRecorder path on stop().
+      usedWebSpeechRef.current = false;
+      speechFinalsRef.current = "";
+      preRecordingRef.current = transcript;
+      const SpeechCtor: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechCtor) {
+        try {
+          const sr = new SpeechCtor();
+          sr.continuous = true;
+          sr.interimResults = true;
+          sr.lang = "en-US";
+          sr.onresult = (e: any) => {
+            usedWebSpeechRef.current = true;
+            let interim = "";
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+              const seg = e.results[i];
+              const txt = seg[0]?.transcript || "";
+              if (seg.isFinal) speechFinalsRef.current += txt;
+              else interim += txt;
+            }
+            // Live preview in the textarea so doctor sees text as they speak.
+            const live = (speechFinalsRef.current + " " + interim).trim();
+            const base = preRecordingRef.current;
+            setTranscript(base ? base + "\n" + live : live);
+          };
+          sr.onerror = () => { /* swallow — server fallback handles it */ };
+          sr.onend = () => { /* no-op */ };
+          speechRecRef.current = sr;
+          sr.start();
+        } catch {
+          speechRecRef.current = null;
+        }
+      }
     } catch (e) {
       alert("Microphone permission required");
     }
@@ -100,6 +154,7 @@ export default function ClinicianScribe() {
 
   const stopRecording = () => {
     recorderRef.current?.stop();
+    try { speechRecRef.current?.stop(); } catch { /* ignore */ }
     audioStream?.getTracks().forEach((t) => t.stop());
     setAudioStream(null);
     setRecording(false);

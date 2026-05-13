@@ -159,7 +159,14 @@ export default function PatientIntake() {
     const form = new FormData();
     const usingVoice =
       inputMode === "voice" && !recorder.permissionDenied && !!recorder.audioBlob;
-    if (usingVoice && recorder.audioBlob) {
+    // Deterministic primary path: if the browser's Web Speech API captured a
+    // live transcript during recording, send that as text — no server-side
+    // AWS Transcribe round-trip, no IAM dependency, no cloud latency. AWS
+    // Transcribe stays as the fallback for browsers without Web Speech.
+    const liveTxt = (recorder.liveTranscript || "").trim();
+    if (usingVoice && liveTxt.length >= 3) {
+      form.append("pre_transcribed_text", liveTxt);
+    } else if (usingVoice && recorder.audioBlob) {
       form.append("audio_file", recorder.audioBlob, "intake.webm");
     } else {
       form.append("pre_transcribed_text", textFallback.trim());
@@ -581,9 +588,14 @@ export default function PatientIntake() {
                     <MicButton
                       isRecording={recorder.isRecording}
                       elapsed={recorder.elapsed}
-                      onStart={recorder.start}
+                      onStart={() => recorder.start(preferredLanguage)}
                       onStop={recorder.stop}
                     />
+                    {recorder.isRecording && recorder.liveTranscript && (
+                      <div className="text-sm text-ink px-4 max-w-md text-center italic leading-snug">
+                        "{recorder.liveTranscript}"
+                      </div>
+                    )}
                     {recorder.audioBlob && !recorder.isRecording && (
                       <div className="text-sm text-primary flex items-center gap-3">
                         {t("record_captured", preferredLanguage)} ({recorder.elapsed}s)
