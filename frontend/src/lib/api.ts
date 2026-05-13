@@ -38,7 +38,7 @@ api.interceptors.request.use((config) => {
       const sess = JSON.parse(raw);
       if (sess?.token) {
         config.headers = config.headers ?? {};
-        (config.headers as any).Authorization = `Bearer ${sess.token}`;
+        (config.headers as Record<string, string>).Authorization = `Bearer ${sess.token}`;
       }
     }
   } catch {
@@ -696,6 +696,25 @@ export async function scribeFromTranscript(hospitalId: string, transcript: strin
   return data;
 }
 
+// FHIR write-back — DocumentReference + Conditions + Allergies + Observations
+export type EhrWriteResource = "DocumentReference" | "Condition" | "AllergyIntolerance" | "Observation(vital)" | "Observation(social)" | "Immunization";
+export type EhrWriteResult = {
+  writes: { resource: EhrWriteResource; result: { resourceType?: string; id?: string; url?: string; stored?: string; ok?: boolean } }[];
+};
+export type EhrWriteBody = {
+  patient_ref: string;
+  note_text?: string;
+  conditions?: { icd10: string; display?: string }[];
+  allergies?: { substance: string; reaction?: string; severity?: string }[];
+  vitals?: { loinc: string; display: string; value: number; unit: string }[];
+  social?: { loinc: string; display: string; text: string }[];
+  immunizations?: { cvx: string; display: string }[];
+};
+export async function ehrWrite(hospitalId: string, body: EhrWriteBody): Promise<EhrWriteResult> {
+  const { data } = await api.post<EhrWriteResult>(`/api/${hospitalId}/ehr-write`, body);
+  return data;
+}
+
 export type DdxItem = {
   diagnosis: string;
   icd10: string;
@@ -831,12 +850,6 @@ export async function careGapsAdHoc(hospitalId: string, patient: any) {
 
 export async function sdohPrapare(hospitalId: string, answers: any) {
   const { data } = await api.post(`/api/${hospitalId}/sdoh/prapare`, { answers });
-  return data;
-}
-
-// FHIR write-back
-export async function ehrWrite(hospitalId: string, body: any) {
-  const { data } = await api.post(`/api/${hospitalId}/ehr-write`, body);
   return data;
 }
 

@@ -13,6 +13,7 @@ import ClinicianLetters from "./pages/ClinicianLetters";
 import ClinicianInbox from "./pages/ClinicianInbox";
 import ClinicianTools from "./pages/ClinicianTools";
 import ClinicianOps from "./pages/ClinicianOps";
+import PatientDetailPage from "./pages/PatientDetailPage";
 
 export default function App() {
   return (
@@ -28,6 +29,8 @@ export default function App() {
       <Route path="/:hospitalId/clinician/print/:patientId" element={<PatientPrintView />} />
       <Route path="/:hospitalId/clinician/workflows" element={<WorkflowsAdmin />} />
       <Route path="/:hospitalId/clinician/scribe" element={<ClinicianScribe />} />
+      <Route path="/:hospitalId/clinician/patient/:patientId" element={<PatientDetailPage />} />
+      <Route path="/:hospitalId/clinician/patient/:patientId/scribe" element={<ClinicianScribe />} />
       <Route path="/:hospitalId/clinician/letters" element={<ClinicianLetters />} />
       <Route path="/:hospitalId/clinician/inbox" element={<ClinicianInbox />} />
       <Route path="/:hospitalId/clinician/tools" element={<ClinicianTools />} />

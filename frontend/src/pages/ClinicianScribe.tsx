@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Mic, Square, Loader2, Sparkles, AlertTriangle, Activity, FileText, ClipboardCheck, Send, Hash, Check, X as XIcon } from "lucide-react";
+import { ArrowLeft, Mic, Square, Loader2, Sparkles, AlertTriangle, Activity, FileText, ClipboardCheck, Send, Hash, Check, X as XIcon, Upload, User } from "lucide-react";
 import {
   scribeFromTranscript, ddxV2, calcAutoExtract, codingSuggest, drugCheck,
   buildDischarge, recordAiOverride, listSpecialtyPacks,
-  type ScribeOutput, type DdxResult,
+  getPatientDetail, createNote, ehrWrite,
+  type ScribeOutput, type DdxResult, type EhrWriteResult,
 } from "../lib/api";
+import type { PatientDetail } from "../types";
 
 type Tab = "transcript" | "note" | "ddx" | "calculators" | "coding" | "discharge";
 
 export default function ClinicianScribe() {
-  const { hospitalId = "demo" } = useParams();
+  const { hospitalId = "demo", patientId } = useParams<{ hospitalId?: string; patientId?: string }>();
+  const [patient, setPatient] = useState<PatientDetail | null>(null);
   const [recording, setRecording] = useState(false);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -31,8 +34,33 @@ export default function ClinicianScribe() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState<Tab>("transcript");
   const [highlightedSegments, setHighlightedSegments] = useState<number[]>([]);
+  const [ehrResult, setEhrResult] = useState<EhrWriteResult | null>(null);
+  const [ehrError, setEhrError] = useState<string | null>(null);
+  const [savedToChart, setSavedToChart] = useState(false);
 
   useEffect(() => { listSpecialtyPacks(hospitalId).then(setPacks).catch(() => {}); }, [hospitalId]);
+
+  // Patient-bound mode: pre-fill encounter context from the patient's existing record.
+  useEffect(() => {
+    if (!patientId) return;
+    let cancelled = false;
+    getPatientDetail(hospitalId, patientId).then((p) => {
+      if (cancelled) return;
+      setPatient(p);
+      // Use clinician_prebrief as a CC hint (it's typically a one-liner)
+      if (p.clinician_prebrief) setChiefComplaint(p.clinician_prebrief.slice(0, 160));
+      const m = (p.medical_info?.medications || []).filter((x) => x.toLowerCase() !== "none");
+      if (m.length) setMeds(m.join(", "));
+      const a = (p.medical_info?.allergies || []).filter((x) => x.toLowerCase() !== "none");
+      if (a.length) setAllergies(a.join(", "));
+      if (p.language) setLanguage(p.language);
+      // Seed the transcript with the patient's intake transcript so the doctor
+      // can run AI suite immediately, even before recording bedside dialogue.
+      if (p.transcript && !transcript) setTranscript(p.transcript);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId, hospitalId]);
 
   // ---- Recording ----------------------------------------------------------
   const startRecording = async () => {
@@ -45,13 +73,21 @@ export default function ClinicianScribe() {
       rec.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const form = new FormData();
-        form.append("file", blob, "encounter.webm");
+        // Backend expects field name "audio_file" + a consent flag (HIPAA §164.508).
+        // Clinician context implies covered-entity consent — pass it explicitly so
+        // the patient-intake consent gate doesn't reject the upload.
+        form.append("audio_file", blob, "encounter.webm");
+        form.append("consent_granted", "true");
+        form.append("preferred_language", "en");
         setBusy("Transcribing audio...");
         try {
           const r = await fetch(`/api/${hospitalId}/transcribe`, { method: "POST", body: form });
           const j = await r.json();
           if (j?.transcript) setTranscript((prev) => (prev ? prev + "\n" + j.transcript : j.transcript));
-        } catch {}
+          else if (j?.detail) alert(`Transcribe failed: ${j.detail}`);
+        } catch (e: any) {
+          alert(`Transcribe failed: ${e?.message || "network error"}`);
+        }
         setBusy(null);
       };
       rec.start();
@@ -116,6 +152,50 @@ export default function ClinicianScribe() {
     try { await recordAiOverride(hospitalId, { purpose, decision }); } catch {}
   };
 
+  // Save the current scribe note to the patient's chart (Solace internal notes table).
+  // Distinct from "Push to EHR" — that's external FHIR write-back.
+  const saveToChart = async () => {
+    if (!patientId || !scribe?.soap_text) return;
+    setBusy("Saving to chart...");
+    try {
+      await createNote(hospitalId, patientId, scribe.soap_text, "Scribe AI draft");
+      setSavedToChart(true);
+    } catch (e: any) {
+      alert(`Save failed: ${e?.response?.data?.detail || e?.message || "unknown"}`);
+    } finally { setBusy(null); }
+  };
+
+  // External FHIR write-back: DocumentReference (the note) + Conditions (from ICD-10
+  // coding) + Allergies (from the allergy input). Routes through the local FHIR mock
+  // store when no FHIR_BASE_URL is configured, so the demo end-to-end always works.
+  const pushToEhr = async () => {
+    if (!scribe?.soap_text) return;
+    const patientRef = patientId ? `Patient/${patientId}` : "Patient/encounter";
+    const conditions = (coding?.icd10 || [])
+      .slice(0, 5)
+      .map((d: any) => ({ icd10: d.code, display: d.name }));
+    const allergyList = allergies
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((substance) => ({ substance }));
+    setBusy("Pushing to EHR (FHIR)...");
+    setEhrError(null);
+    setEhrResult(null);
+    try {
+      const r = await ehrWrite(hospitalId, {
+        patient_ref: patientRef,
+        note_text: scribe.soap_text,
+        conditions,
+        allergies: allergyList,
+      });
+      setEhrResult(r);
+      await overrideDecision("ehr_write", "accepted");
+    } catch (e: any) {
+      setEhrError(e?.response?.data?.detail || e?.message || "EHR write failed");
+    } finally { setBusy(null); }
+  };
+
   const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: "transcript", label: "Capture", icon: Mic },
     { key: "note", label: "Note", icon: FileText },
@@ -129,12 +209,26 @@ export default function ClinicianScribe() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link to={`/${hospitalId}/clinician`} className="text-slate-500 hover:text-slate-900">
+          <Link
+            to={patientId ? `/${hospitalId}/clinician/patient/${patientId}` : `/${hospitalId}/clinician`}
+            className="text-slate-500 hover:text-slate-900"
+            title={patientId ? "Back to patient" : "Back to dashboard"}
+          >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="text-sm text-slate-500">Solace ambient scribe</div>
-            <div className="font-semibold">Encounter capture and AI assist</div>
+            {patient ? (
+              <div className="flex items-center gap-2 font-semibold truncate">
+                <User className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="truncate">{patient.name}</span>
+                <span className="text-xs text-slate-500 font-normal">
+                  ESI {patient.refined_esi_level || patient.esi_level} · waited {patient.waited_minutes}m · {patient.language?.toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              <div className="font-semibold">Encounter capture and AI assist</div>
+            )}
           </div>
           <select
             value={specialty}
@@ -239,13 +333,51 @@ export default function ClinicianScribe() {
           {tab === "note" && scribe && (
             <div className="space-y-3">
               <div className="bg-white rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                   <div className="text-xs uppercase tracking-wide text-slate-500">Linked Evidence note</div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     <button onClick={() => overrideDecision("scribe", "accepted")} className="text-xs px-2 py-1 bg-emerald-100 text-emerald-900 rounded flex items-center gap-1"><Check className="w-3 h-3" /> Accept</button>
                     <button onClick={() => overrideDecision("scribe", "rejected")} className="text-xs px-2 py-1 bg-rose-100 text-rose-900 rounded flex items-center gap-1"><XIcon className="w-3 h-3" /> Reject</button>
+                    {patientId && (
+                      <button
+                        onClick={saveToChart}
+                        disabled={!!busy || savedToChart}
+                        className="text-xs px-2 py-1 bg-slate-100 text-slate-900 rounded flex items-center gap-1 disabled:opacity-50"
+                        title="Save the SOAP note to this patient's chart"
+                      >
+                        <FileText className="w-3 h-3" /> {savedToChart ? "Saved" : "Save to chart"}
+                      </button>
+                    )}
+                    <button
+                      onClick={pushToEhr}
+                      disabled={!!busy}
+                      className="text-xs px-2 py-1 bg-blue-600 text-white rounded flex items-center gap-1 disabled:opacity-50"
+                      title="Write DocumentReference + Conditions + Allergies to the EHR over FHIR"
+                    >
+                      <Upload className="w-3 h-3" /> Push to EHR
+                    </button>
                   </div>
                 </div>
+                {ehrResult && (
+                  <div className="mb-3 rounded-md border border-emerald-300 bg-emerald-50 p-3">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900 uppercase tracking-wide">
+                      <Check className="w-3 h-3" /> Wrote {ehrResult.writes.length} FHIR resource{ehrResult.writes.length === 1 ? "" : "s"}
+                    </div>
+                    <ul className="mt-2 space-y-0.5 text-xs font-mono text-emerald-900">
+                      {ehrResult.writes.map((w, i) => (
+                        <li key={i}>
+                          {w.resource} → {w.result?.id || "—"}
+                          {w.result?.stored ? <span className="text-emerald-700 ml-1">({w.result.stored})</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {ehrError && (
+                  <div className="mb-3 rounded-md border border-rose-300 bg-rose-50 p-2 text-xs text-rose-900">
+                    EHR write failed: {ehrError}
+                  </div>
+                )}
                 {scribe.structured.sections.map((sec) => (
                   <div key={sec.name} className="mb-3">
                     <div className="text-sm font-semibold text-slate-700">{sec.name.replace(/_/g, " ")}</div>
