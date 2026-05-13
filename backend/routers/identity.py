@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Path, Request, UploadFile
@@ -20,7 +21,7 @@ from pydantic import BaseModel
 from db import storage
 from lib import blocklist, quota, uploads
 from lib.config import settings
-from services import id_ocr
+from services import fhir_patient_search, id_ocr
 
 log = logging.getLogger(__name__)
 
@@ -50,11 +51,13 @@ async def scan_id(
 
 
 class IdentityLookupBody(BaseModel):
-    first_name: str
-    last_name: str
+    first_name: str = ""
+    last_name: str = ""
     dob: str = ""              # YYYY-MM-DD
     license_number: str = ""
     issuing_state: str = ""
+    insurance_member_id: str = ""
+    insurance_provider: str = ""
 
 
 @router.post("/identity/lookup")
@@ -72,21 +75,61 @@ def identity_lookup(
 
     No match: returns `{"matched": false}` so the UI can continue normal flow.
     """
-    if body is None or not (body.first_name and body.last_name):
-        raise HTTPException(status_code=400, detail="first_name + last_name required")
+    if body is None:
+        raise HTTPException(status_code=400, detail="request body required")
+    has_name = bool(body.first_name and body.last_name)
+    has_member_id = bool(body.insurance_member_id)
+    if not (has_name or has_member_id):
+        raise HTTPException(
+            status_code=400,
+            detail="provide either first_name+last_name or insurance_member_id",
+        )
 
-    if settings.solace_mode != "aws":
-        # Local dev: same DDB shape isn't available, return no-match.
-        return {"matched": False, "reason": "local mode — no EHR backend"}
+    # Backend selection — controlled by EHR_BACKEND env var:
+    #   "fhir"    → hit the real FHIR sandbox / production endpoint only (default)
+    #   "mock"    → only the DDB-seeded fake EHR records (legacy demo)
+    #   "auto"    → FHIR first, mock as fallback if FHIR misses
+    backend_choice = (os.environ.get("EHR_BACKEND") or "fhir").lower()
 
-    record = _ehr_match(hospital_id, body)
+    record: dict | None = None
+    method = ""
+
+    if backend_choice in {"fhir", "auto"}:
+        # Path 1: name + DOB (most reliable when both present)
+        if has_name:
+            try:
+                record = fhir_patient_search.match_by_demographics(
+                    given=body.first_name,
+                    family=body.last_name,
+                    birth_date=body.dob,
+                )
+                if record:
+                    method = "fhir_demographics"
+            except Exception as e:  # noqa: BLE001
+                log.warning("FHIR identity lookup (demographics) failed: %s", e)
+        # Path 2: insurance member_id (when ID didn't match or wasn't scanned)
+        if (not record) and has_member_id:
+            try:
+                record = fhir_patient_search.match_by_member_id(
+                    body.insurance_member_id, provider_hint=body.insurance_provider,
+                )
+                if record:
+                    method = "fhir_member_id"
+            except Exception as e:  # noqa: BLE001
+                log.warning("FHIR identity lookup (member_id) failed: %s", e)
+
+    if (not record) and backend_choice in {"mock", "auto"} and settings.solace_mode == "aws":
+        record = _ehr_match(hospital_id, body)
+        if record:
+            method = record.pop("_match_method", "name+dob")
+
     if not record:
         return {"matched": False, "reason": "no EHR record matched"}
 
     prefill = _record_to_prefill(record)
     return {
         "matched": True,
-        "match_method": record.pop("_match_method", "name+dob"),
+        "match_method": method or "fhir_demographics",
         "ehr_record": record,
         "prefill": prefill,
     }

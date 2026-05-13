@@ -59,6 +59,11 @@ async def create_intake(
     consent_granted: str | None = Form(None),
     consent_version: str | None = Form(None),
     preferred_language: str | None = Form(None),
+    # EHR auto-pop carry-through: when the patient was matched to a FHIR Patient
+    # at intake time, pass that id forward so the clinician-side EHR lookup can
+    # fetch the same record by id rather than re-searching by name.
+    ehr_fhir_id: str | None = Form(None),
+    ehr_match_source: str | None = Form(None),
     request: Request = None,
 ) -> dict[str, Any]:
     src_ip = _source_ip(request)
@@ -292,6 +297,9 @@ async def create_intake(
         "ai_cost_usd": float((ai_log.current() or ai_log.AILog()).total_cost_usd()),
         "ai_cost_breakdown": json.dumps((ai_log.current() or ai_log.AILog()).cost_breakdown()),
     }
+    if ehr_fhir_id:
+        patient["ehr_fhir_id"] = ehr_fhir_id.strip()
+        patient["ehr_match_source"] = (ehr_match_source or "fhir").strip()
     storage.put_patient(patient)
 
     response = {

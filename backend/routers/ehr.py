@@ -8,6 +8,7 @@ return shape maps 1:1 onto the FHIR `Patient` + `Condition` + `MedicationStateme
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from db import storage
 from lib.auth import audit, require_clinician
 from lib.config import settings
+from services import fhir_patient_search
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +93,22 @@ def lookup_by_patient(
     if not p or p.get("hospital_id") != hospital_id:
         raise HTTPException(status_code=404, detail="patient not found")
 
+    # 0. Fast-path: patient was already matched to a FHIR Patient at intake.
+    # Fetch that exact resource by id — no name/DOB ambiguity.
+    backend_choice = (os.environ.get("EHR_BACKEND") or "fhir").lower()
+    if backend_choice in {"fhir", "auto"}:
+        stored_fhir_id = (p.get("ehr_fhir_id") or "").strip()
+        if stored_fhir_id:
+            try:
+                bundle = fhir_patient_search._search("Patient", {"_id": stored_fhir_id})
+                entries = (bundle or {}).get("entry", []) or []
+                if entries:
+                    fhir_record = fhir_patient_search._enrich_patient(entries[0].get("resource") or {})
+                    if fhir_record:
+                        return {"record": fhir_record, "match_method": "fhir_stored_id"}
+            except Exception as e:  # noqa: BLE001
+                log.warning("FHIR stored-id lookup failed: %s", e)
+
     insurance_blob = p.get("insurance_info")
     member_id = ""
     provider = ""
@@ -130,7 +148,24 @@ def lookup_by_patient(
             # GSI may not exist on older deployments — fall through to name match.
             log.debug("ehr insurance lookup failed (may be pre-GSI deploy): %s", e)
 
-    # 3+4. Name match.
+    # 3. Real FHIR sandbox lookup by first+last+dob (the default backend).
+    # This is the path that powers the demo against real Synthea-generated patients.
+    backend_choice = (os.environ.get("EHR_BACKEND") or "fhir").lower()
+    if backend_choice in {"fhir", "auto"} and name:
+        try:
+            parts = name.split()
+            given = parts[0] if parts else ""
+            family = parts[-1] if len(parts) > 1 else ""
+            dob = str(p.get("dob") or "")
+            fhir_record = fhir_patient_search.match_by_demographics(
+                given=given, family=family, birth_date=dob,
+            )
+            if fhir_record:
+                return {"record": fhir_record, "match_method": "fhir_demographics"}
+        except Exception as e:  # noqa: BLE001
+            log.warning("FHIR lookup_by_patient failed, falling through: %s", e)
+
+    # 4. DDB-mock name match (legacy demo path).
     if not name:
         return {"record": None, "reason": "patient has no name on file"}
     try:
@@ -142,7 +177,7 @@ def lookup_by_patient(
         )
     except Exception as e:  # noqa: BLE001
         log.warning("ehr lookup_by_patient failed: %s", e)
-        raise HTTPException(status_code=500, detail="EHR lookup unavailable")
+        return {"record": None, "reason": f"no EHR record matching '{name}'"}
 
     items = resp.get("Items", [])
     if not items:

@@ -543,18 +543,20 @@ export async function scanID(
 
 export type IdentityLookupResult = {
   matched: boolean;
-  match_method?: "name+dob" | "name_only";
+  match_method?: "name+dob" | "name_only" | "fhir_demographics" | "fhir_member_id";
   reason?: string;
   ehr_record?: {
     name: string;
     mrn: string;
     dob: string;
     sex: string;
+    fhir_id?: string;
     allergies?: string[];
     medications?: string[];
     conditions?: string[];
     insurance?: string;
     primary_care_provider?: string;
+    source?: string;
     prior_visits?: { date: string; type: string; chief_complaint: string; disposition: string }[];
   };
   prefill?: {
@@ -570,13 +572,23 @@ export type IdentityLookupResult = {
   };
 };
 
+export type IdentityLookupBody = {
+  first_name?: string;
+  last_name?: string;
+  dob?: string;
+  license_number?: string;
+  issuing_state?: string;
+  insurance_member_id?: string;
+  insurance_provider?: string;
+};
+
 export async function identityLookup(
   hospitalId: string,
-  body: Pick<IdFields, "first_name" | "last_name" | "dob" | "license_number" | "issuing_state">
+  body: IdentityLookupBody,
 ): Promise<IdentityLookupResult> {
   const { data } = await api.post<IdentityLookupResult>(
     `/api/${hospitalId}/identity/lookup`,
-    body
+    body,
   );
   return data;
 }
