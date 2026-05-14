@@ -26,9 +26,20 @@ log = logging.getLogger(__name__)
 
 # Model-name normalization. Keep our code naming consistent while AWS Bedrock
 # uses its own model IDs.
+#
+# Claude 4+ models on Bedrock require cross-region inference profiles (the
+# `us.` prefix). Direct model invocation against the bare ID returns
+# `ValidationException: The provided model identifier is invalid`. The Sonnet
+# 4.5 weights are dated 2025-09-29, not 2025-10-01 — the previous map had the
+# wrong date stamp and broke scribe, ambient scribe, differential, comfort
+# protocol, and every other Claude call in production.
 _BEDROCK_MODEL_MAP = {
-    "claude-sonnet-4-5": "anthropic.claude-sonnet-4-5-20251001-v1:0",
-    "claude-sonnet-4-5-20251001": "anthropic.claude-sonnet-4-5-20251001-v1:0",
+    "claude-sonnet-4-5": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "claude-sonnet-4-5-20250929": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "claude-sonnet-4-5-20251001": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",  # legacy alias
+    "claude-haiku-4-5": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "claude-opus-4-5": "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    "claude-sonnet-4-6": "us.anthropic.claude-sonnet-4-6",
 }
 
 

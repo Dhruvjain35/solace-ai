@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Mic, Square, Loader2, Sparkles, AlertTriangle, Activity, FileText, ClipboardCheck, Send, Hash, Check, X as XIcon, Upload, User } from "lucide-react";
 import {
@@ -37,6 +37,9 @@ export default function ClinicianScribe() {
   const [ehrResult, setEhrResult] = useState<EhrWriteResult | null>(null);
   const [ehrError, setEhrError] = useState<string | null>(null);
   const [savedToChart, setSavedToChart] = useState(false);
+  // Inline error banner state — replaces native browser alert() so errors are
+  // dismissable, themed, and don't break the doctor's flow.
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => { listSpecialtyPacks(hospitalId).then(setPacks).catch(() => {}); }, [hospitalId]);
 
@@ -102,9 +105,9 @@ export default function ClinicianScribe() {
           const r = await fetch(`/api/${hospitalId}/transcribe`, { method: "POST", body: form });
           const j = await r.json();
           if (j?.transcript) setTranscript((prev) => (prev ? prev + "\n" + j.transcript : j.transcript));
-          else if (j?.detail) alert(`Transcribe failed: ${j.detail}`);
+          else if (j?.detail) setErrorMsg(humanizeError(j.detail));
         } catch (e: any) {
-          alert(`Transcribe failed: ${e?.message || "network error"}`);
+          setErrorMsg(humanizeError(e?.message || "network error"));
         }
         setBusy(null);
       };
@@ -148,7 +151,7 @@ export default function ClinicianScribe() {
         }
       }
     } catch (e) {
-      alert("Microphone permission required");
+      setErrorMsg("Microphone access is blocked. Allow it in your browser to use voice capture.");
     }
   };
 
@@ -185,7 +188,7 @@ export default function ClinicianScribe() {
       }
       setTab("note");
     } catch (e: any) {
-      alert("Run failed: " + (e?.message || "unknown"));
+      setErrorMsg(humanizeError(e?.response?.data?.detail || e?.message || "unknown"));
     } finally { setBusy(null); }
   };
 
@@ -216,7 +219,7 @@ export default function ClinicianScribe() {
       await createNote(hospitalId, patientId, scribe.soap_text, "Scribe AI draft");
       setSavedToChart(true);
     } catch (e: any) {
-      alert(`Save failed: ${e?.response?.data?.detail || e?.message || "unknown"}`);
+      setErrorMsg(humanizeError(e?.response?.data?.detail || e?.message || "unknown"));
     } finally { setBusy(null); }
   };
 
@@ -310,6 +313,19 @@ export default function ClinicianScribe() {
       {busy && (
         <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2 text-sm text-blue-900">
           <Loader2 className="w-4 h-4 animate-spin" />{busy}
+        </div>
+      )}
+      {errorMsg && (
+        <div className="bg-rose-50 border-b border-rose-200 px-4 py-2 flex items-start gap-2 text-sm text-rose-900">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="flex-1">{errorMsg}</div>
+          <button
+            type="button"
+            onClick={() => setErrorMsg(null)}
+            className="text-rose-700/70 hover:text-rose-900 text-xs font-semibold uppercase tracking-wide"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -415,54 +431,56 @@ export default function ClinicianScribe() {
                 </div>
                 {ehrResult && (
                   <div className="mb-3 rounded-md border border-emerald-300 bg-emerald-50 p-3">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900 uppercase tracking-wide">
-                      <Check className="w-3 h-3" /> Wrote {ehrResult.writes.length} FHIR resource{ehrResult.writes.length === 1 ? "" : "s"}
+                    <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900">
+                      <Check className="w-4 h-4" /> Sent to the patient's chart
                     </div>
-                    <ul className="mt-2 space-y-0.5 text-xs font-mono text-emerald-900">
-                      {ehrResult.writes.map((w, i) => (
-                        <li key={i}>
-                          {w.resource} → {w.result?.id || "—"}
-                          {w.result?.stored ? <span className="text-emerald-700 ml-1">({w.result.stored})</span> : null}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-1 text-xs text-emerald-900/85">
+                      {summarizeEhrWrite(ehrResult.writes)}
+                    </div>
                   </div>
                 )}
                 {ehrError && (
                   <div className="mb-3 rounded-md border border-rose-300 bg-rose-50 p-2 text-xs text-rose-900">
-                    EHR write failed: {ehrError}
+                    Couldn't send to the chart: {humanizeError(ehrError)}
                   </div>
                 )}
                 {scribe.structured.sections.map((sec) => (
                   <div key={sec.name} className="mb-3">
-                    <div className="text-sm font-semibold text-slate-700">{sec.name.replace(/_/g, " ")}</div>
+                    <div className="text-sm font-semibold text-slate-700 capitalize">
+                      {sec.name.replace(/_/g, " ").toLowerCase()}
+                    </div>
                     {sec.summary.map((entry, i) => (
                       <div
                         key={i}
-                        className="text-sm text-slate-900 mt-1 cursor-pointer hover:bg-yellow-50 rounded px-1"
+                        className="text-sm text-slate-900 mt-1 cursor-pointer hover:bg-yellow-50 rounded px-1.5 py-0.5 transition-colors"
                         onMouseEnter={() => setHighlightedSegments(entry.evidence_segments)}
                         onMouseLeave={() => setHighlightedSegments([])}
+                        title={entry.evidence_segments.length > 0 ? "Hover to see source in conversation" : undefined}
                       >
-                        - {entry.text} {entry.evidence_segments.length > 0 && (
-                          <span className="text-xs text-slate-400 ml-1">[{entry.evidence_segments.join(",")}]</span>
-                        )}
+                        {entry.text}
                       </div>
                     ))}
                   </div>
                 ))}
               </div>
               <div className="bg-white rounded-lg border border-slate-200 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Conversation segments</div>
+                <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Source conversation</div>
                 <div className="text-sm space-y-1 max-h-64 overflow-auto">
-                  {scribe.structured.transcript_segments.map((s) => (
-                    <div
-                      key={s.id}
-                      className={`px-2 py-1 rounded ${highlightedSegments.includes(s.id) ? "bg-yellow-200" : ""}`}
-                    >
-                      <span className="text-xs text-slate-500 mr-2">{s.speaker}</span>
-                      <span>{s.content}</span>
-                    </div>
-                  ))}
+                  {scribe.structured.transcript_segments.map((s) => {
+                    const isHL = highlightedSegments.includes(s.id);
+                    const speakerLabel = s.speaker?.toLowerCase().includes("clinic") ? "Clinician" : "Patient";
+                    return (
+                      <div
+                        key={s.id}
+                        className={`px-2 py-1 rounded transition-colors ${isHL ? "bg-yellow-200" : ""}`}
+                      >
+                        <span className={`text-xs font-medium mr-2 ${speakerLabel === "Clinician" ? "text-blue-700" : "text-emerald-700"}`}>
+                          {speakerLabel}:
+                        </span>
+                        <span className="text-slate-900">{s.content}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -475,18 +493,29 @@ export default function ClinicianScribe() {
                 90% set: {ddx.conformal.set_90.join(" | ") || "—"}<br />
                 95% set: {ddx.conformal.set_95.join(" | ") || "—"}
               </div>
-              {ddx.differential.map((d, i) => (
-                <div key={i} className={`border rounded-md p-3 mb-2 ${d.must_not_miss ? "border-rose-300 bg-rose-50" : "border-slate-200"}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold">{i + 1}. {d.diagnosis} <span className="text-xs text-slate-500">{d.icd10}</span></div>
-                    <div className="text-xs text-slate-600">w={d.weight.toFixed(2)}</div>
+              {ddx.differential.map((d, i) => {
+                const pct = Math.round((d.weight || 0) * 100);
+                return (
+                  <div key={i} className={`border rounded-md p-3 mb-2 ${d.must_not_miss ? "border-rose-300 bg-rose-50" : "border-slate-200"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-semibold text-slate-900">
+                        {i + 1}. {d.diagnosis}
+                        {d.icd10 && <span className="ml-2 text-[11px] font-mono text-slate-400">{d.icd10}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="w-16 h-1.5 rounded bg-slate-200 overflow-hidden">
+                          <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, pct)}%` }} />
+                        </div>
+                        <div className="text-xs font-medium text-slate-600 w-9 text-right">{pct}%</div>
+                      </div>
+                    </div>
+                    {d.rule_in.length > 0 && <div className="text-xs mt-1.5 text-slate-700"><span className="font-medium">Supports:</span> {d.rule_in.join(", ")}</div>}
+                    {d.rule_out.length > 0 && <div className="text-xs text-slate-700"><span className="font-medium">Against:</span> {d.rule_out.join(", ")}</div>}
+                    {d.next_step && <div className="text-xs mt-1 text-blue-900"><span className="font-medium">Next step:</span> {d.next_step}</div>}
+                    {d.evidence_quote && <div className="text-xs italic text-slate-500 mt-1">"{d.evidence_quote}"</div>}
                   </div>
-                  <div className="text-xs mt-1"><span className="font-medium">Rule in:</span> {d.rule_in.join(", ")}</div>
-                  {d.rule_out.length > 0 && <div className="text-xs"><span className="font-medium">Rule out:</span> {d.rule_out.join(", ")}</div>}
-                  {d.next_step && <div className="text-xs mt-1 text-blue-900"><span className="font-medium">Next step:</span> {d.next_step}</div>}
-                  {d.evidence_quote && <div className="text-xs italic text-slate-600 mt-1">"{d.evidence_quote}"</div>}
-                </div>
-              ))}
+                );
+              })}
               {ddx.counterfactuals.length > 0 && (
                 <div className="mt-4">
                   <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Counterfactuals</div>
@@ -500,15 +529,19 @@ export default function ClinicianScribe() {
 
           {tab === "calculators" && calcs && (
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Auto-extracted CDS calculators</div>
-              {calcs.length === 0 && <div className="text-sm text-slate-500">No calculators relevant to this complaint.</div>}
+              <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Clinical decision support</div>
+              {calcs.length === 0 && (
+                <div className="text-sm text-slate-500">No relevant calculators for this complaint.</div>
+              )}
               {calcs.map((c, i) => (
                 <div key={i} className="border border-slate-200 rounded-md p-3 mb-2">
-                  <div className="font-semibold text-sm">{c.name}</div>
+                  <div className="font-semibold text-sm text-slate-900">{c.name}</div>
                   {c.unknown && c.unknown.length > 0 ? (
-                    <div className="text-xs text-amber-700 mt-1">Need: {c.unknown.join(", ")}</div>
+                    <div className="text-xs text-amber-700 mt-1.5">
+                      <span className="font-medium">Need to compute:</span> {c.unknown.join(", ")}
+                    </div>
                   ) : (
-                    <pre className="text-xs text-slate-700 mt-1 whitespace-pre-wrap">{JSON.stringify(c.result, null, 2)}</pre>
+                    <CalculatorResult result={c.result} />
                   )}
                 </div>
               ))}
@@ -585,4 +618,74 @@ export default function ClinicianScribe() {
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------------
+// Small UI helpers — kept inline so the scribe page stays self-contained.
+// ---------------------------------------------------------------------------------
+
+/** Turn a backend / network error string into something a clinician can read. */
+function humanizeError(raw: string): string {
+  if (!raw) return "Something went wrong. Please try again.";
+  const s = String(raw);
+  if (/network|fetch|abort|timeout/i.test(s)) return "Network connection lost. Please check your connection and retry.";
+  if (/rate.?limit|too many requests|429/i.test(s)) return "Too many requests in a row. Please wait a moment and try again.";
+  if (/Consent required/i.test(s)) return "Patient consent is required before voice or AI processing.";
+  if (/empty transcript|returned empty/i.test(s)) return "No speech detected. Try recording again in a quieter environment.";
+  if (/permission/i.test(s)) return s; // already user-friendly
+  if (s.length > 220) return "The system couldn't complete that request. Please try again.";
+  // Fall through with the backend's message — the routers raise human-readable
+  // HTTPException detail strings by convention (see CONSTITUTION QUAL-003).
+  return s;
+}
+
+/** Render a CDS calculator's result dict as labeled rows instead of raw JSON. */
+function CalculatorResult({ result }: { result: any }) {
+  if (result === null || result === undefined) {
+    return <div className="text-xs text-slate-500 mt-1">No result available.</div>;
+  }
+  if (typeof result !== "object") {
+    return <div className="text-sm text-slate-900 mt-1">{String(result)}</div>;
+  }
+  const entries = Object.entries(result).filter(([, v]) => v !== null && v !== undefined && v !== "");
+  if (entries.length === 0) {
+    return <div className="text-xs text-slate-500 mt-1">No result available.</div>;
+  }
+  return (
+    <dl className="mt-1.5 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-sm">
+      {entries.map(([k, v]) => (
+        <Fragment key={k}>
+          <dt className="text-slate-500 capitalize">{k.replace(/_/g, " ")}:</dt>
+          <dd className="text-slate-900 font-medium">{renderCalcValue(v)}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+
+/** Turn a list of FHIR write results into one clinician-friendly summary line. */
+function summarizeEhrWrite(writes: EhrWriteResult["writes"]): string {
+  const counts: Record<string, number> = {};
+  for (const w of writes) {
+    const key =
+      w.resource === "DocumentReference" ? "clinical note" :
+      w.resource === "Condition" ? "diagnosis" :
+      w.resource === "AllergyIntolerance" ? "allergy" :
+      w.resource.startsWith("Observation") ? "observation" :
+      w.resource === "Immunization" ? "immunization" :
+      w.resource.toLowerCase();
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .map(([k, n]) => (n === 1 ? `1 ${k}` : `${n} ${k}s`))
+    .join(", ");
+}
+
+function renderCalcValue(v: any): string {
+  if (Array.isArray(v)) return v.join(", ") || "—";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (typeof v === "object" && v !== null) {
+    return Object.entries(v).map(([k, val]) => `${k}: ${val}`).join(", ");
+  }
+  return String(v);
 }

@@ -170,9 +170,9 @@ export function PatientDetailBody({
 
       {detail.clinical_scribe_note && (
         <Section title="Scribe note (AI draft)">
-          <pre className="font-mono text-[13px] whitespace-pre-wrap bg-surface-low rounded-lg p-4 leading-relaxed">
+          <div className="bg-surface-low rounded-lg p-4 text-[14px] leading-relaxed whitespace-pre-wrap text-ink">
             {detail.clinical_scribe_note}
-          </pre>
+          </div>
         </Section>
       )}
 
@@ -189,20 +189,27 @@ export function PatientDetailBody({
       )}
 
       {detail.refined_esi_level && detail.measured_vitals ? (
-        <Section title="Composite scores · from measured vitals">
-          <div className="grid grid-cols-4 gap-2 font-mono text-sm">
-            {(["qsofa", "sirs", "shock_index", "cv_risk"] as const).map((k) => (
+        <Section title="Risk scores · from measured vitals">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+            {([
+              { k: "qsofa", label: "qSOFA" },
+              { k: "sirs", label: "SIRS" },
+              { k: "shock_index", label: "Shock index" },
+              { k: "cv_risk", label: "CV risk" },
+            ] as const).map(({ k, label }) => (
               <div key={k} className="bg-surface-lowest rounded-lg p-3 shadow-soft">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted">{k}</div>
-                <div className="text-lg font-bold tracking-editorial">{detail.composites[k] ?? "—"}</div>
+                <div className="text-[10px] uppercase tracking-wider text-text-muted">{label}</div>
+                <div className="text-lg font-bold tracking-editorial text-ink mt-0.5">
+                  {detail.composites[k] ?? "—"}
+                </div>
               </div>
             ))}
           </div>
         </Section>
       ) : (
-        <Section title="Composite scores">
+        <Section title="Risk scores">
           <div className="bg-surface-lowest rounded-lg p-4 text-[13px] text-text-muted shadow-soft italic">
-            Awaiting bedside vitals. qSOFA / SIRS / shock index / CV-risk composites require HR, BP, respiratory rate, and SpO₂ — use the "Bedside vitals" panel below to enter them, and the ML ensemble will refine the ESI.
+            Awaiting bedside vitals. Enter heart rate, blood pressure, respiratory rate, and SpO₂ below and the system will refine the triage score automatically.
           </div>
         </Section>
       )}
@@ -225,10 +232,10 @@ export function PatientDetailBody({
         <DispositionPanel disposition={detail.disposition} />
       )}
 
-      <Section title="Raw transcript">
-        <pre className="font-mono text-[13px] whitespace-pre-wrap bg-surface-low rounded-lg p-4 leading-relaxed">
-          {detail.transcript}
-        </pre>
+      <Section title="Patient's words">
+        <div className="bg-surface-low rounded-lg p-4 text-[14px] leading-relaxed whitespace-pre-wrap text-ink italic">
+          "{detail.transcript}"
+        </div>
       </Section>
 
       {detail.followup_qa.length > 0 && (
@@ -356,8 +363,8 @@ export function PatientDetailBody({
               ))}
           </div>
           {detail.triage_source === "heuristic_stub" && (
-            <p className="text-xs text-error mt-2">
-              Using heuristic stub — Triage.ai model not loaded.
+            <p className="text-xs text-text-muted mt-2 italic">
+              Triage drivers are estimated. Bedside vitals will sharpen these.
             </p>
           )}
         </Section>
