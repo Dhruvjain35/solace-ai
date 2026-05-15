@@ -43,10 +43,8 @@ def flag(
     body: PainFlagBody | None = None,
     request: Request = None,
 ) -> dict:
-    if body is None:
-        raise HTTPException(status_code=400, detail="patient_id is required")
-
-    # Abuse prevention — rate limit + blocklist on patient endpoint
+    # SEC-003: blocklist enforcement is the first action on patient-facing endpoints,
+    # before any request parsing — abusive identities short-circuit immediately.
     source_ip = None
     user_agent = None
     if request:
@@ -55,6 +53,9 @@ def flag(
     identity = quota.identity_of(source_ip, user_agent)
     blocklist.enforce(identity, source_ip=source_ip)
     quota.check_and_consume(identity, "pain_flag", source_ip=source_ip)
+
+    if body is None:
+        raise HTTPException(status_code=400, detail="patient_id is required")
 
     patient = storage.get_patient(body.patient_id)
     if not patient or patient.get("hospital_id") != hospital_id:

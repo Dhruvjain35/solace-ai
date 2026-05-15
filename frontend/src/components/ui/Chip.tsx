@@ -9,7 +9,7 @@ export function Chip({ label, selected, onToggle }: Props) {
     <button
       type="button"
       onClick={onToggle}
-      className={`min-h-[44px] px-4 rounded-full text-sm font-medium transition-all active:scale-[0.97] ${
+      className={`min-h-[44px] px-4 rounded-full text-sm font-medium transition-all active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
         selected
           ? "bg-primary text-white shadow-soft"
           : "bg-surface-lowest text-ink ring-1 ring-line hover:ring-primary/40"
