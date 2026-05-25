@@ -1,0 +1,19 @@
+﻿version: 0.2
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 704229156617.dkr.ecr.us-east-1.amazonaws.com
+  build:
+    commands:
+      - echo Building Docker image...
+      - docker build -f Dockerfile.lambda -t solace-api:latest .
+      - docker tag solace-api:latest 704229156617.dkr.ecr.us-east-1.amazonaws.com/solace-api:latest
+  post_build:
+    commands:
+      - echo Pushing to ECR...
+      - docker push 704229156617.dkr.ecr.us-east-1.amazonaws.com/solace-api:latest
+      - DIGEST=$(aws ecr describe-images --repository-name solace-api --image-ids imageTag=latest --query 'imageDetails[0].imageDigest' --output text)
+      - aws lambda update-function-code --function-name solace-api --image-uri 704229156617.dkr.ecr.us-east-1.amazonaws.com/solace-api@$DIGEST
+      - aws lambda wait function-updated --function-name solace-api
+      - echo "DEPLOYED!"
