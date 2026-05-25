@@ -17,9 +17,11 @@ COPY backend/db ${LAMBDA_TASK_ROOT}/db
 COPY backend/routers ${LAMBDA_TASK_ROOT}/routers
 COPY backend/services ${LAMBDA_TASK_ROOT}/services
 
-# Baked-in trained model — no S3 cold-fetch on scale-out
+# Baked-in trained models — full stacked ensemble (LGB + XGB + CatBoost + MLP in pickle)
 RUN mkdir -p ${LAMBDA_TASK_ROOT}/models
 COPY backend/models/artifacts.pkl ${LAMBDA_TASK_ROOT}/models/
 COPY backend/models/lgbm_fold*.txt ${LAMBDA_TASK_ROOT}/models/
+COPY backend/models/xgb_fold*.txt ${LAMBDA_TASK_ROOT}/models/
+COPY backend/models/cat_fold*.txt ${LAMBDA_TASK_ROOT}/models/
 
 CMD ["main.handler"]

@@ -20,30 +20,61 @@ ESI_LABELS = {
     5: "NON-URGENT",
 }
 
-ESI_1_KEYWORDS = [
-    "cardiac arrest", "unresponsive", "not breathing", "pulseless",
-    "apneic", "code blue", "gsw head", "hanging",
+import re as _re
+
+# Regex-based keyword patterns — catch natural language variations patients actually use.
+ESI_1_PATTERNS = [
+    r"cardiac arrest|unresponsive|not breathing|pulseless|apneic|code blue|gsw.?head|hanging|no pulse|cpr",
 ]
-ESI_2_KEYWORDS = [
-    "chest pain", "stroke", "seizure", "overdose", "suicidal",
-    "anaphylaxis", "severe bleeding", "stab wound", "gunshot",
-    "altered mental", "difficulty breathing", "shortness of breath",
-    "acute abdomen", "testicular torsion", "ectopic",
+ESI_2_PATTERNS = [
+    r"chest.?pain|chest.?tight|chest.?pressure|angina|heart.?attack",
+    r"stroke|facial.?droop|arm.?weakness|slurred.?speech|hemiparesis|aphasia|one.?side.*numb",
+    r"seizure|convuls|postictal|shaking.?uncontrollab",
+    r"overdose|ingestion|poison|took.?too.?many|swallowed",
+    r"suicid|kill.?my|want.?to.?die|self.?harm|cutting.?my",
+    r"anaphylax|throat.?swell|can.?t.?swallow|allergic.?react.*severe|epipen",
+    r"severe.?bleed|hemorrhag|blood.?everywhere|won.?t.?stop.?bleed|hemoptysis|hematemesis",
+    r"stab|gunshot|gsw|shot|penetrat.?wound",
+    r"altered.?mental|confused.*sudden|not.?making.?sense|disoriented",
+    r"can.?t.?breathe|shortness.?of.?breath|difficulty.?breath|dyspnea|resp.?distress|suffocating|gasping",
+    r"acute.?abdomen|testicular.?torsion|ectopic",
 ]
-ESI_3_KEYWORDS = [
-    "abdominal pain", "fever", "vomiting", "diarrhea", "headache",
-    "back pain", "fall", "laceration", "fracture", "urinary",
-    "asthma", "diabetes", "infection", "cellulitis", "pneumonia",
+ESI_3_PATTERNS = [
+    r"abdomin.?pain|stomach.?pain|belly.?hurts|cramp",
+    r"fever|temperature|feel.?hot|burning.?up|chills",
+    r"vomit|throwing.?up|nause|puking",
+    r"diarrhea|loose.?stool|watery.?stool",
+    r"headache|migraine|head.?hurts|worst.?headache",
+    r"back.?pain|lower.?back|spine",
+    r"fall|fell|tripped|slip",
+    r"lacerat|cut.?my|gash|wound|bleeding",
+    r"fracture|broke|broken.?bone|snapped",
+    r"urinary|burning.?pee|uti|blood.?in.?urine|can.?t.?pee",
+    r"asthma|wheez|inhaler.?not.?work",
+    r"diabet|blood.?sugar|glucose|insulin",
+    r"infect|cellulitis|abscess|pus|swollen.*red.*warm",
+    r"pneumonia|lung.?infect",
 ]
-ESI_4_KEYWORDS = [
-    "sprain", "strain", "rash", "ear pain", "sore throat", "cough",
-    "minor burn", "ankle", "knee pain", "shoulder pain", "wrist",
-    "prescription", "refill", "suture removal",
+ESI_4_PATTERNS = [
+    r"sprain|strain|twist|rolled.?my",
+    r"rash|hives|itch|skin.?break",
+    r"ear.?pain|ear.?ache|ear.?infect",
+    r"sore.?throat|throat.?hurts|tonsil|strep",
+    r"cough|cold|congestion|runny.?nose|stuffy",
+    r"minor.?burn|small.?burn",
+    r"ankle|knee.?pain|shoulder.?pain|wrist|elbow",
+    r"prescri|refill|suture.?remov",
 ]
-ESI_5_KEYWORDS = [
-    "medication refill", "work note", "clearance", "suture check",
-    "routine", "follow up",
+ESI_5_PATTERNS = [
+    r"medication.?refill|work.?note|clearance|suture.?check|routine|follow.?up|check.?up|normal.?visit",
 ]
+
+# Legacy keyword lists (kept for backward compat with any code referencing them)
+ESI_1_KEYWORDS = ["cardiac arrest", "unresponsive", "not breathing", "pulseless", "apneic", "code blue", "gsw head", "hanging"]
+ESI_2_KEYWORDS = ["chest pain", "stroke", "seizure", "overdose", "suicidal", "anaphylaxis", "severe bleeding", "stab wound", "gunshot", "altered mental", "difficulty breathing", "shortness of breath", "acute abdomen", "testicular torsion", "ectopic"]
+ESI_3_KEYWORDS = ["abdominal pain", "fever", "vomiting", "diarrhea", "headache", "back pain", "fall", "laceration", "fracture", "urinary", "asthma", "diabetes", "infection", "cellulitis", "pneumonia"]
+ESI_4_KEYWORDS = ["sprain", "strain", "rash", "ear pain", "sore throat", "cough", "minor burn", "ankle", "knee pain", "shoulder pain", "wrist", "prescription", "refill", "suture removal"]
+ESI_5_KEYWORDS = ["medication refill", "work note", "clearance", "suture check", "routine", "follow up"]
 
 
 def _compute_vital_flags(
@@ -103,29 +134,50 @@ def _compute_composites(
 
 
 def _parse_chief_complaint(text: str) -> tuple[int, float]:
-    """Return (best matching ESI level, match confidence)."""
+    """Return (best matching ESI level, match confidence) using regex patterns.
+
+    Scores each ESI level by counting how many patterns match. The level with
+    the most matches wins, with priority given to lower (more critical) levels
+    on tie. This catches natural language that exact substring matching would miss.
+    """
     normalized = text.lower().strip()
-    keyword_map = [
-        (ESI_1_KEYWORDS, 1, 0.95),
-        (ESI_2_KEYWORDS, 2, 0.80),
-        (ESI_3_KEYWORDS, 3, 0.65),
-        (ESI_4_KEYWORDS, 4, 0.70),
-        (ESI_5_KEYWORDS, 5, 0.85),
+
+    pattern_map = [
+        (ESI_1_PATTERNS, 1, 0.92),
+        (ESI_2_PATTERNS, 2, 0.78),
+        (ESI_3_PATTERNS, 3, 0.68),
+        (ESI_4_PATTERNS, 4, 0.72),
+        (ESI_5_PATTERNS, 5, 0.85),
     ]
-    best_level = 3
-    best_confidence = 0.45
-    best_specificity = 0
 
-    for keywords, level, base_conf in keyword_map:
-        for kw in keywords:
-            if kw in normalized:
-                specificity = len(kw)
-                if specificity > best_specificity:
-                    best_specificity = specificity
-                    best_level = level
-                    best_confidence = base_conf
+    # Count matches per ESI level
+    level_scores: list[tuple[int, int, float]] = []
+    for patterns, level, base_conf in pattern_map:
+        match_count = sum(1 for pat in patterns if _re.search(pat, normalized))
+        if match_count > 0:
+            # Boost confidence with multiple matches (capped)
+            conf = min(base_conf + 0.03 * (match_count - 1), 0.95)
+            level_scores.append((level, match_count, conf))
 
-    return best_level, best_confidence
+    if not level_scores:
+        # Fallback: try legacy exact-substring matching
+        legacy_map = [
+            (ESI_1_KEYWORDS, 1, 0.90),
+            (ESI_2_KEYWORDS, 2, 0.75),
+            (ESI_3_KEYWORDS, 3, 0.60),
+            (ESI_4_KEYWORDS, 4, 0.65),
+            (ESI_5_KEYWORDS, 5, 0.80),
+        ]
+        for keywords, level, base_conf in legacy_map:
+            for kw in keywords:
+                if kw in normalized:
+                    return level, base_conf
+        return 3, 0.40
+
+    # Priority: lower ESI level wins on equal match count (clinical safety)
+    level_scores.sort(key=lambda x: (-x[1], x[0]))
+    best = level_scores[0]
+    return best[0], best[2]
 
 
 def _softmax(scores: list[float]) -> list[float]:
