@@ -136,9 +136,9 @@ def _compute_composites(
 def _parse_chief_complaint(text: str) -> tuple[int, float]:
     """Return (best matching ESI level, match confidence) using regex patterns.
 
-    Scores each ESI level by counting how many patterns match. The level with
-    the most matches wins, with priority given to lower (more critical) levels
-    on tie. This catches natural language that exact substring matching would miss.
+    Clinical safety rule: the most critical (lowest) ESI level with ANY match
+    always wins. A single "can't breathe" (ESI 2) must never be outranked by
+    three ESI 3 symptoms. Multiple matches at the winning level boost confidence.
     """
     normalized = text.lower().strip()
 
@@ -150,34 +150,26 @@ def _parse_chief_complaint(text: str) -> tuple[int, float]:
         (ESI_5_PATTERNS, 5, 0.85),
     ]
 
-    # Count matches per ESI level
-    level_scores: list[tuple[int, int, float]] = []
+    # Scan from most critical to least — first level with a match wins
     for patterns, level, base_conf in pattern_map:
         match_count = sum(1 for pat in patterns if _re.search(pat, normalized))
         if match_count > 0:
-            # Boost confidence with multiple matches (capped)
             conf = min(base_conf + 0.03 * (match_count - 1), 0.95)
-            level_scores.append((level, match_count, conf))
+            return level, conf
 
-    if not level_scores:
-        # Fallback: try legacy exact-substring matching
-        legacy_map = [
-            (ESI_1_KEYWORDS, 1, 0.90),
-            (ESI_2_KEYWORDS, 2, 0.75),
-            (ESI_3_KEYWORDS, 3, 0.60),
-            (ESI_4_KEYWORDS, 4, 0.65),
-            (ESI_5_KEYWORDS, 5, 0.80),
-        ]
-        for keywords, level, base_conf in legacy_map:
-            for kw in keywords:
-                if kw in normalized:
-                    return level, base_conf
-        return 3, 0.40
-
-    # Priority: lower ESI level wins on equal match count (clinical safety)
-    level_scores.sort(key=lambda x: (-x[1], x[0]))
-    best = level_scores[0]
-    return best[0], best[2]
+    # Fallback: try legacy exact-substring matching (most critical first)
+    legacy_map = [
+        (ESI_1_KEYWORDS, 1, 0.90),
+        (ESI_2_KEYWORDS, 2, 0.75),
+        (ESI_3_KEYWORDS, 3, 0.60),
+        (ESI_4_KEYWORDS, 4, 0.65),
+        (ESI_5_KEYWORDS, 5, 0.80),
+    ]
+    for keywords, level, base_conf in legacy_map:
+        for kw in keywords:
+            if kw in normalized:
+                return level, base_conf
+    return 3, 0.40
 
 
 def _softmax(scores: list[float]) -> list[float]:
@@ -205,6 +197,10 @@ def _compute_esi_scores(
     if complaint_level == 1 and complaint_conf > 0.8:
         scores = [5.5, 1.0, -0.5, -3.0, -5.0]
         return 1, _softmax(scores)
+
+    if complaint_level == 2 and complaint_conf > 0.7:
+        scores = [1.0, 5.0, 0.5, -2.0, -4.0]
+        return 2, _softmax(scores)
 
     if flags["severe_hypotension"] and flags["severe_tachycardia"]:
         scores = [5.0, 2.0, 0.0, -3.0, -5.0]
