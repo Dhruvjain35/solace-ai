@@ -8,7 +8,10 @@
 """Clinical triage prediction engine for ESI level estimation."""
 from __future__ import annotations
 
+import logging
 import math
+
+_log = logging.getLogger("triage_engine")
 
 MODEL_MODE = "simulation"
 
@@ -25,19 +28,31 @@ import re as _re
 # Regex-based keyword patterns — catch natural language variations patients actually use.
 ESI_1_PATTERNS = [
     r"cardiac arrest|unresponsive|not breathing|pulseless|apneic|code blue|gsw.?head|hanging|no pulse|cpr",
+    r"dying|going to die|i.?m dead|life.?threatening|fatal|near.?death",
 ]
 ESI_2_PATTERNS = [
-    r"chest.?pain|chest.?tight|chest.?pressure|angina|heart.?attack",
-    r"stroke|facial.?droop|arm.?weakness|slurred.?speech|hemiparesis|aphasia|one.?side.*numb",
-    r"seizure|convuls|postictal|shaking.?uncontrollab",
-    r"overdose|ingestion|poison|took.?too.?many|swallowed",
-    r"suicid|kill.?my|want.?to.?die|self.?harm|cutting.?my",
-    r"anaphylax|throat.?swell|can.?t.?swallow|allergic.?react.*severe|epipen",
-    r"severe.?bleed|hemorrhag|blood.?everywhere|won.?t.?stop.?bleed|hemoptysis|hematemesis",
-    r"stab|gunshot|gsw|shot|penetrat.?wound",
-    r"altered.?mental|confused.*sudden|not.?making.?sense|disoriented",
-    r"can.?t.?breathe|shortness.?of.?breath|difficulty.?breath|dyspnea|resp.?distress|suffocating|gasping",
+    r"chest.?pain|chest.?tight|chest.?pressure|angina|heart.?attack|mi\b|myocardial",
+    r"chest.*hurt|chest.*crush|chest.*heavy|chest.*burn|heart.*rac|heart.*pound|heart.*stop|heart.*fail",
+    r"stroke|facial.?droop|arm.?weakness|slurred.?speech|hemiparesis|aphasia|one.?side.*numb|paralyz|can.?t.?move|can.?t.?feel",
+    r"seizure|convuls|postictal|shaking.?uncontrollab|epilep|fitting|fits",
+    r"overdose|ingestion|poison|took.?too.?many|swallowed|od\b|drug.*too.*much",
+    r"suicid|kill.?my|want.?to.?die|self.?harm|cutting.?my|end.?my.?life|don.?t.?want.?to.?live|hurt.?my",
+    r"anaphylax|throat.?swell|can.?t.?swallow|allergic.?react|epipen|severe.?allerg|face.*swell|tongue.*swell|lip.*swell",
+    r"severe.?bleed|hemorrhag|blood.?everywhere|won.?t.?stop.?bleed|hemoptysis|hematemesis|cough.*blood|blood.*cough|vomit.*blood|blood.*vomit",
+    r"stab|gunshot|gsw|shot|penetrat.?wound|impale",
+    r"altered.?mental|confused.*sudden|not.?making.?sense|disoriented|pass.?out|faint|unconscious|black.?out|collaps",
+    r"can.?t.?breathe|shortness.?of.?breath|difficulty.?breath|dyspnea|resp.?distress|suffocating|gasping|struggling.?to.?breath|hard.?to.?breath|trouble.?breath|breath.*difficult|breath.*problem|breath.*hard|can.?t.?get.?air|choking",
     r"acute.?abdomen|testicular.?torsion|ectopic",
+    r"blood.?pressure.*very|blood.?pressure.*dangerously|blood.?pressure.*extremely",
+    r"vision.?loss|can.?t.?see|blind|sudden.*vision|blurr.*vision.*sudden",
+    r"excruciating|unbearable|worst.?pain|agony|10.?out.?of.?10|severe.?pain|extreme.?pain|intense.?pain",
+    r"emergency|life.?threaten|critical|urgent.*severe|very.*serious|really.*bad|really.*serious|seriously.*ill|seriously.*hurt|seriously.*injur",
+    r"broken.*hip|broken.*skull|broken.*neck|broken.*spine|broken.*back|head.*injur|head.*trauma|concuss|brain.*bleed",
+    r"diabetic.*emergency|blood.?sugar.*very|blood.?sugar.*dangerously|insulin.*shock|diabetic.*coma",
+    r"asthma.*attack|asthma.*can.?t|asthma.*severe|asthma.*bad|asthma.*emergency",
+    r"sepsis|septic|blood.?infect|organ.?fail",
+    r"pregnant.*bleed|miscarriag|labor.*early|premature.*labor|water.*broke|contractions",
+    r"burn.*severe|burn.*degree|burn.*face|burn.*large|chemical.*burn|electrical.*burn",
 ]
 ESI_3_PATTERNS = [
     r"abdomin.?pain|stomach.?pain|belly.?hurts|cramp",
@@ -150,12 +165,17 @@ def _parse_chief_complaint(text: str) -> tuple[int, float]:
         (ESI_5_PATTERNS, 5, 0.85),
     ]
 
+    _log.info("TRIAGE_PARSE complaint=%r", normalized[:200])
+
     # Scan from most critical to least — first level with a match wins
     for patterns, level, base_conf in pattern_map:
-        match_count = sum(1 for pat in patterns if _re.search(pat, normalized))
-        if match_count > 0:
-            conf = min(base_conf + 0.03 * (match_count - 1), 0.95)
+        matched = [pat for pat in patterns if _re.search(pat, normalized)]
+        if matched:
+            conf = min(base_conf + 0.03 * (len(matched) - 1), 0.95)
+            _log.info("TRIAGE_MATCH level=%d conf=%.2f matches=%d first=%s", level, conf, len(matched), matched[0][:60])
             return level, conf
+
+    _log.warning("TRIAGE_NO_MATCH complaint=%r — defaulting to ESI 3", normalized[:200])
 
     # Fallback: try legacy exact-substring matching (most critical first)
     legacy_map = [
