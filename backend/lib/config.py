@@ -50,6 +50,21 @@ class Settings(BaseSettings):
     demo_hospital_name: str = "Demo Medical Center"
     demo_clinician_pin: str = "123456"
 
+    # Magic-link auth + transactional email
+    #   app_base_url — where the emailed link points (the frontend origin).
+    #     Empty falls back to the request's own origin at send time.
+    #   email_provider — "ses" (default, production) | "console" (log + echo).
+    #     Forced to "console" whenever solace_mode == "local".
+    #   email_from — verified SES sender identity. Required for ses provider.
+    #   email_dev_echo — when true, the magic link is returned in the API
+    #     response body so sandbox/local flows are testable WITHOUT a mailbox.
+    #     MUST stay false in production (it would leak login links).
+    app_base_url: str = ""
+    email_provider: Literal["ses", "console"] = "ses"
+    email_from: str = "Solace <no-reply@solace.health>"
+    email_dev_echo: bool = False
+    magic_link_ttl_seconds: int = 900  # 15-minute single-use login links
+
 
 @lru_cache(maxsize=1)
 def _load() -> Settings:
