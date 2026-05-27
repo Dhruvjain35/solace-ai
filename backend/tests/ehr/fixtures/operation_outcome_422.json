@@ -1,0 +1,13 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [
+    {
+      "severity": "error",
+      "code": "invariant",
+      "diagnostics": "Resource failed FHIR R4 validation: Condition.code is required.",
+      "details": {
+        "text": "422 Unprocessable Entity"
+      }
+    }
+  ]
+}

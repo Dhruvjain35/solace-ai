@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel
 
 from lib.auth import audit, require_clinician
-from services.workflows import actions, engine, storage, templates, triggers
+from services.workflows import actions, engine, phi, storage, templates, triggers
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +64,7 @@ def create_workflow(
     if not triggers.by_name(body.trigger):
         raise HTTPException(status_code=400, detail=f"unknown trigger '{body.trigger}'")
     _validate_steps(body.steps)
+    _validate_no_phi(body.steps, body.filters)
     audit(caller, "workflows.create")
 
     workflow_id = f"wf-{secrets.token_urlsafe(10)}"
@@ -97,6 +98,7 @@ def update_workflow(
     if not triggers.by_name(body.trigger):
         raise HTTPException(status_code=400, detail=f"unknown trigger '{body.trigger}'")
     _validate_steps(body.steps)
+    _validate_no_phi(body.steps, body.filters)
     audit(caller, "workflows.update", patient_id=workflow_id)
     existing.update({
         "name": body.name.strip(),
@@ -201,6 +203,17 @@ def _validate_steps(steps: list[dict]) -> None:
             raise HTTPException(status_code=400, detail=f"step {i} missing type")
         if not actions.by_type(s["type"]):
             raise HTTPException(status_code=400, detail=f"step {i} unknown type '{s['type']}'")
+
+
+def _validate_no_phi(steps: list[dict], filters: dict | None) -> None:
+    """PHI-safety gate — reject any workflow whose step configs or filters
+    reference a PHI context path or hard-code a literal PHI signature."""
+    safe, findings = phi.validate_no_phi({"steps": steps, "filters": filters or {}})
+    if not safe:
+        raise HTTPException(
+            status_code=422,
+            detail=f"workflow rejected — PHI-leaking step template(s): {findings}",
+        )
 
 
 # Re-export for the route hooks below

@@ -9,9 +9,11 @@ import { FollowupQuestions, toAnswerList } from "../components/patient/FollowupQ
 import { InsuranceScanner } from "../components/patient/InsuranceScanner";
 import { LanguageGate } from "../components/patient/LanguageGate";
 import { IdScanner } from "../components/patient/IdScanner";
-import type { IdentityLookupResult } from "../lib/api";
+import { identityLookup, type IdentityLookupResult } from "../lib/api";
+import { CheckCircle2, X as XIcon } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { ProgressDots } from "../components/ui/ProgressDots";
+import { TourLauncher } from "../components/tour/TourLauncher";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { postIntake, postTranscribe, startIntake } from "../lib/api";
 import { isRTL, t, type LangCode } from "../lib/i18n";
@@ -65,6 +67,55 @@ export default function PatientIntake() {
   const [consentGranted, setConsentGranted] = useState(false);
   const CONSENT_VERSION = "1.0";
 
+  // EHR auto-match state — populated either from the ID scan path (via
+  // IdScanner.onMatched) or the insurance scan path (via the useEffect below).
+  // We persist a banner across all subsequent intake steps so the patient
+  // understands their data was pre-filled from a real medical record.
+  const [ehrMatched, setEhrMatched] = useState<IdentityLookupResult | null>(null);
+  const [ehrBannerDismissed, setEhrBannerDismissed] = useState(false);
+  const ehrAttemptedInsuranceRef = useRef(false);
+
+  // Apply an EHR match: pre-fill medical history + name + stash the result for
+  // the banner. Shared by ID scan and insurance scan paths.
+  const applyEhrMatch = (result: IdentityLookupResult) => {
+    if (!result.matched || !result.prefill) return;
+    setMedical((cur) => ({
+      ...cur,
+      age: result.prefill?.age ?? cur.age,
+      sex: result.prefill?.sex ?? cur.sex,
+      allergies: result.prefill?.allergies ?? cur.allergies,
+      medications: result.prefill?.medications ?? cur.medications,
+      conditions: result.prefill?.conditions ?? cur.conditions,
+    }));
+    if (result.ehr_record?.name && !name) {
+      setName(result.ehr_record.name.split(" ")[0]);
+    }
+    setEhrMatched(result);
+  };
+
+  // When the patient finishes the insurance scan but we don't already have an
+  // EHR match (e.g. they skipped ID), try a fallback lookup by insurance
+  // member_id. This is the "Phreesia / Yosi" pattern — insurance card is
+  // surprisingly often the single most reliable identifier we get.
+  useEffect(() => {
+    if (ehrMatched || ehrAttemptedInsuranceRef.current) return;
+    const memberId = (insurance?.member_id || "").trim();
+    if (!memberId) return;
+    ehrAttemptedInsuranceRef.current = true;
+    identityLookup(hospitalId, {
+      first_name: "",
+      last_name: "",
+      dob: "",
+      insurance_member_id: memberId,
+      insurance_provider: insurance?.provider || "",
+    })
+      .then((r) => {
+        if (r.matched) applyEhrMatch(r);
+      })
+      .catch(() => { /* silent — patient flow continues either way */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insurance?.member_id, ehrMatched, hospitalId]);
+
   // Mirror the chosen language onto <html dir> so RTL scripts (Arabic/Persian/Urdu)
   // flow correctly without reshuffling the whole layout module.
   useEffect(() => {
@@ -109,7 +160,14 @@ export default function PatientIntake() {
     const form = new FormData();
     const usingVoice =
       inputMode === "voice" && !recorder.permissionDenied && !!recorder.audioBlob;
-    if (usingVoice && recorder.audioBlob) {
+    // Deterministic primary path: if the browser's Web Speech API captured a
+    // live transcript during recording, send that as text — no server-side
+    // AWS Transcribe round-trip, no IAM dependency, no cloud latency. AWS
+    // Transcribe stays as the fallback for browsers without Web Speech.
+    const liveTxt = (recorder.liveTranscript || "").trim();
+    if (usingVoice && liveTxt.length >= 3) {
+      form.append("pre_transcribed_text", liveTxt);
+    } else if (usingVoice && recorder.audioBlob) {
       form.append("audio_file", recorder.audioBlob, "intake.webm");
     } else {
       form.append("pre_transcribed_text", textFallback.trim());
@@ -210,6 +268,15 @@ export default function PatientIntake() {
     form.append("consent_granted", consentGranted ? "true" : "false");
     form.append("consent_version", CONSENT_VERSION);
     form.append("preferred_language", preferredLanguage);
+    // Carry forward the matched FHIR Patient id so the clinician-side dashboard
+    // pulls the SAME record (no second name-based fuzzy match required).
+    if (ehrMatched?.matched && ehrMatched.ehr_record) {
+      const fhirId = ehrMatched.ehr_record.fhir_id || ehrMatched.ehr_record.mrn || "";
+      if (fhirId) {
+        form.append("ehr_fhir_id", fhirId);
+        form.append("ehr_match_source", ehrMatched.ehr_record.source || "fhir");
+      }
+    }
     if (photo) {
       const { resizeImageIfNeeded } = await import("../lib/image");
       const sized = await resizeImageIfNeeded(photo);
@@ -297,21 +364,7 @@ export default function PatientIntake() {
             language={preferredLanguage}
             onSkip={() => setStep("welcome")}
             onMatched={(result: IdentityLookupResult) => {
-              if (result.matched && result.prefill) {
-                // Pre-fill the medical info form from the EHR record. Patient still
-                // confirms each field on the medical step but starts pre-populated.
-                setMedical((cur) => ({
-                  ...cur,
-                  age: result.prefill?.age ?? cur.age,
-                  sex: result.prefill?.sex ?? cur.sex,
-                  allergies: result.prefill?.allergies ?? cur.allergies,
-                  medications: result.prefill?.medications ?? cur.medications,
-                  conditions: result.prefill?.conditions ?? cur.conditions,
-                }));
-                if (result.ehr_record?.name) {
-                  setName(result.ehr_record.name.split(" ")[0]);
-                }
-              }
+              applyEhrMatch(result);
               setStep("welcome");
             }}
           />
@@ -322,6 +375,15 @@ export default function PatientIntake() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
+      {/* First-run, dismissible help. Modal-only (no anchors) so it sits cleanly
+          over the focused, full-screen intake flow. Replayable from the button,
+          lifted above the sticky footer CTA. */}
+      <TourLauncher
+        tourId="patient-intake-v1"
+        subjectId="patient"
+        buttonPosition="bottom-right"
+        buttonClassName="!bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))]"
+      />
       <header
         className="flex items-center justify-between px-4 pb-3 bg-surface-lowest/85 backdrop-blur-xl sticky top-0 z-10 shadow-soft"
         style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top, 0px))" }}
@@ -331,9 +393,9 @@ export default function PatientIntake() {
             <button
               onClick={handleBack}
               aria-label={t("back_button", preferredLanguage)}
-              className="w-10 h-10 rounded-full hover:bg-surface-low flex items-center justify-center"
+              className="w-11 h-11 rounded-full hover:bg-surface-low flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={20} aria-hidden="true" />
             </button>
           )}
           <img
@@ -347,6 +409,34 @@ export default function PatientIntake() {
           <ProgressDots total={userSteps.length} current={currentUserStep + 1} />
         )}
       </header>
+
+      {ehrMatched?.matched && !ehrBannerDismissed && step !== "submitting" && (
+        <div className="mx-auto w-full max-w-lg px-4 mt-3">
+          <div
+            role="status"
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 flex items-start gap-3 shadow-soft"
+          >
+            <CheckCircle2 className="text-emerald-700 mt-0.5 shrink-0" size={18} aria-hidden="true" />
+            <div className="flex-1 text-sm">
+              <div className="font-semibold text-emerald-900">
+                We found your medical records
+              </div>
+              <div className="text-emerald-900/85 text-[13px] mt-0.5 leading-snug">
+                {ehrMatched.ehr_record?.name ? `${ehrMatched.ehr_record.name} — ` : ""}
+                allergies, medications, and conditions have been pre-filled. Please review and confirm on the next step.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEhrBannerDismissed(true)}
+              aria-label="Dismiss"
+              className="w-8 h-8 -mr-1 -mt-1 flex items-center justify-center rounded-full text-emerald-700/70 hover:text-emerald-900 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/40 focus-visible:ring-offset-1"
+            >
+              <XIcon size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 px-4 py-6 max-w-lg w-full mx-auto flex flex-col gap-6">
         <AnimatePresence mode="wait">
@@ -387,7 +477,7 @@ export default function PatientIntake() {
                 <button
                   type="button"
                   onClick={() => setStep("language")}
-                  className="text-xs text-primary underline self-start"
+                  className="text-xs text-primary underline self-start rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                 >
                   {t("language_gate_title", preferredLanguage)} →
                 </button>
@@ -464,7 +554,7 @@ export default function PatientIntake() {
                   <button
                     type="button"
                     onClick={() => setInputMode("voice")}
-                    className={`inline-flex items-center gap-1.5 h-9 px-3 rounded text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center gap-1.5 h-9 px-3 rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
                       inputMode === "voice" && !recorder.permissionDenied
                         ? "bg-surface-lowest text-ink shadow-soft"
                         : "text-text-muted"
@@ -476,7 +566,7 @@ export default function PatientIntake() {
                   <button
                     type="button"
                     onClick={() => setInputMode("type")}
-                    className={`inline-flex items-center gap-1.5 h-9 px-3 rounded text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center gap-1.5 h-9 px-3 rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
                       inputMode === "type" || recorder.permissionDenied
                         ? "bg-surface-lowest text-ink shadow-soft"
                         : "text-text-muted"
@@ -488,7 +578,11 @@ export default function PatientIntake() {
 
                 {inputMode === "type" || recorder.permissionDenied ? (
                   <div className="flex flex-col gap-2">
+                    <label htmlFor="symptoms-text" className="sr-only">
+                      {t("record_title", preferredLanguage)}
+                    </label>
                     <textarea
+                      id="symptoms-text"
                       value={textFallback}
                       onChange={(e) => setTextFallback(e.target.value)}
                       rows={6}
@@ -507,13 +601,18 @@ export default function PatientIntake() {
                     <MicButton
                       isRecording={recorder.isRecording}
                       elapsed={recorder.elapsed}
-                      onStart={recorder.start}
+                      onStart={() => recorder.start(preferredLanguage)}
                       onStop={recorder.stop}
                     />
+                    {recorder.isRecording && recorder.liveTranscript && (
+                      <div className="text-sm text-ink px-4 max-w-md text-center italic leading-snug">
+                        "{recorder.liveTranscript}"
+                      </div>
+                    )}
                     {recorder.audioBlob && !recorder.isRecording && (
                       <div className="text-sm text-primary flex items-center gap-3">
                         {t("record_captured", preferredLanguage)} ({recorder.elapsed}s)
-                        <button type="button" className="text-text-muted underline" onClick={recorder.reset}>
+                        <button type="button" className="text-text-muted underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2" onClick={recorder.reset}>
                           {t("record_rerecord", preferredLanguage)}
                         </button>
                       </div>
@@ -545,8 +644,12 @@ export default function PatientIntake() {
             )}
 
             {step === "submitting" && (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Loader2 size={48} className="animate-spin text-primary" />
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex flex-col items-center justify-center py-24 gap-4 text-center"
+              >
+                <Loader2 size={48} className="animate-spin text-primary" aria-hidden="true" />
                 <div className="text-lg font-semibold tracking-editorial">
                   {t("submitting_title", preferredLanguage)}
                 </div>
@@ -559,7 +662,9 @@ export default function PatientIntake() {
         </AnimatePresence>
 
         {error && (
-          <div className="p-3 rounded-md bg-error-container text-error text-sm">{error}</div>
+          <div role="alert" className="p-3 rounded-md bg-error-container text-error text-sm">
+            {error}
+          </div>
         )}
       </main>
 

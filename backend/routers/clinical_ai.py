@@ -11,7 +11,7 @@ import base64
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 from pydantic import BaseModel, Field
 
 from db import storage
@@ -32,6 +32,7 @@ from services import (
     inbox_drafts,
     letters,
     pa_packets,
+    patient_education,
     refills,
     screeners,
     specialty_packs,
@@ -651,3 +652,281 @@ def result_loop_overdue(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     return {"items": redaction.overdue_worklist(hospital_id)}
+
+
+# ---- Ambient scribe — chunked pause/resume recording sessions -------------------
+class ScribeSessionStartBody(BaseModel):
+    specialty: str | None = None
+    session_id: str | None = None
+
+
+@router.post("/scribe/session/start")
+def scribe_session_start(
+    hospital_id: str = Path(...),
+    body: ScribeSessionStartBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.session.start")
+    return ambient_scribe.start_session(specialty=body.specialty, session_id=body.session_id)
+
+
+class ScribeChunkBody(BaseModel):
+    session_id: str
+    chunk: str = Field(..., min_length=1)
+
+
+@router.post("/scribe/session/append")
+def scribe_session_append(
+    request: Request,
+    hospital_id: str = Path(...),
+    body: ScribeChunkBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.session.append", patient_id=body.session_id)
+    result = ambient_scribe.append_transcript_chunk(body.session_id, body.chunk)
+    if result.get("status") == "unknown_session":
+        raise HTTPException(status_code=404, detail="unknown scribe session")
+    return result
+
+
+class ScribeSessionBody(BaseModel):
+    session_id: str
+
+
+@router.post("/scribe/session/pause")
+def scribe_session_pause(
+    hospital_id: str = Path(...),
+    body: ScribeSessionBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.session.pause", patient_id=body.session_id)
+    result = ambient_scribe.pause_session(body.session_id)
+    if result.get("status") == "unknown_session":
+        raise HTTPException(status_code=404, detail="unknown scribe session")
+    return result
+
+
+@router.post("/scribe/session/resume")
+def scribe_session_resume(
+    hospital_id: str = Path(...),
+    body: ScribeSessionBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.session.resume", patient_id=body.session_id)
+    result = ambient_scribe.resume_session(body.session_id)
+    if result.get("status") == "unknown_session":
+        raise HTTPException(status_code=404, detail="unknown scribe session")
+    return result
+
+
+class ScribeFinalizeBody(BaseModel):
+    session_id: str
+    refine_note: bool = True
+
+
+@router.post("/scribe/session/finalize")
+def scribe_session_finalize(
+    request: Request,
+    hospital_id: str = Path(...),
+    body: ScribeFinalizeBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.session.finalize", patient_id=body.session_id)
+    structured = ambient_scribe.finalize_session(
+        body.session_id,
+        source_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        refine_note=body.refine_note,
+    )
+    error = structured.get("error")
+    if error == "unknown_session":
+        raise HTTPException(status_code=404, detail="unknown scribe session")
+    if error == "empty_session":
+        raise HTTPException(status_code=400, detail="scribe session has no transcript")
+    soap = ambient_scribe.to_soap_text(structured)
+    return {"structured": structured, "soap_text": soap}
+
+
+class ScribeRegenerateBody(BaseModel):
+    structured: dict[str, Any]
+    section_name: str = Field(..., min_length=1)
+    specialty: str | None = None
+
+
+@router.post("/scribe/regenerate-section")
+def scribe_regenerate_section(
+    hospital_id: str = Path(...),
+    body: ScribeRegenerateBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "scribe.regenerate_section")
+    structured = ambient_scribe.regenerate_section(
+        body.structured, body.section_name, specialty=body.specialty
+    )
+    soap = ambient_scribe.to_soap_text(structured)
+    return {"structured": structured, "soap_text": soap}
+
+
+# ---- Prior auth — Da Vinci bundle, human packet, appeal, completeness -----------
+class PaPacketBody(BaseModel):
+    packet: dict[str, Any]
+
+
+@router.post("/pa/da-vinci-bundle")
+def pa_da_vinci_bundle(
+    hospital_id: str = Path(...),
+    body: PaPacketBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "pa.da_vinci_bundle")
+    return pa_packets.to_da_vinci_bundle(body.packet)
+
+
+@router.post("/pa/human-packet")
+def pa_human_packet(
+    hospital_id: str = Path(...),
+    body: PaPacketBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "pa.human_packet")
+    return pa_packets.to_human_packet(body.packet)
+
+
+@router.post("/pa/completeness")
+def pa_completeness(
+    hospital_id: str = Path(...),
+    body: PaPacketBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "pa.completeness")
+    return pa_packets.check_completeness(body.packet)
+
+
+class PaAppealBody(BaseModel):
+    packet: dict[str, Any]
+    denial_reason: str = Field(..., min_length=1)
+    denial_category: str | None = None
+    denial_date: str | None = None
+    appeal_level: str = "first"
+    additional_context: str = ""
+
+
+@router.post("/pa/appeal")
+def pa_appeal(
+    hospital_id: str = Path(...),
+    body: PaAppealBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "pa.appeal")
+    return pa_packets.generate_appeal(
+        body.packet,
+        denial_reason=body.denial_reason,
+        denial_category=body.denial_category,
+        denial_date=body.denial_date,
+        appeal_level=body.appeal_level,
+        additional_context=body.additional_context,
+    )
+
+
+# ---- Letters — categories, one-shot generate, batch -----------------------------
+@router.get("/letters/categories")
+def letters_categories(
+    hospital_id: str = Path(...),
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    return {"categories": letters.list_categories()}
+
+
+class LetterGenerateBody(BaseModel):
+    template_key: str
+    chart_context: dict[str, Any] = {}
+    slot_overrides: dict[str, str] | None = None
+
+
+@router.post("/letters/generate")
+def letters_generate(
+    hospital_id: str = Path(...),
+    body: LetterGenerateBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "letters.generate", patient_id=body.template_key)
+    return letters.generate_letter(
+        body.template_key, body.chart_context, body.slot_overrides
+    )
+
+
+class LetterBatchBody(BaseModel):
+    requests: list[dict[str, Any]]
+    chart_context: dict[str, Any] = {}
+
+
+@router.post("/letters/batch")
+def letters_batch(
+    hospital_id: str = Path(...),
+    body: LetterBatchBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "letters.batch")
+    return {"letters": letters.generate_batch(body.requests, body.chart_context)}
+
+
+# ---- Patient education handouts -------------------------------------------------
+class HandoutBody(BaseModel):
+    condition: str = Field(..., min_length=1)
+    patient_context: str = ""
+    reading_level: str = "standard"
+    patient_language: str = "en"
+
+
+@router.post("/education/handout")
+def education_handout(
+    hospital_id: str = Path(...),
+    body: HandoutBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "education.handout", patient_id=body.condition)
+    return patient_education.generate_handout(
+        body.condition,
+        patient_context=body.patient_context,
+        reading_level=body.reading_level,
+        patient_language=body.patient_language,
+    )
+
+
+class HandoutBatchBody(BaseModel):
+    conditions: list[Any]
+    reading_level: str = "standard"
+    patient_language: str = "en"
+
+
+@router.post("/education/handout-batch")
+def education_handout_batch(
+    hospital_id: str = Path(...),
+    body: HandoutBatchBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "education.handout_batch")
+    return {
+        "handouts": patient_education.generate_handout_batch(
+            body.conditions,
+            reading_level=body.reading_level,
+            patient_language=body.patient_language,
+        )
+    }
+
+
+# ---- Evidence-grounded recommendation verification ------------------------------
+class EvidenceGroundBody(BaseModel):
+    recommendation: str = Field(..., min_length=1)
+    context: str = ""
+    k: int = 6
+
+
+@router.post("/evidence/ground")
+def evidence_ground(
+    hospital_id: str = Path(...),
+    body: EvidenceGroundBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    audit(caller, "evidence.ground")
+    return evidence_rag.ground(body.recommendation, body.context, k=body.k)

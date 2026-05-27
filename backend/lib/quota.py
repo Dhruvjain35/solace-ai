@@ -43,6 +43,22 @@ LIMITS: dict[str, Limit] = {
     "audio.seconds":     Limit("audio.seconds", per_hour=120000),
     "voice_simulator":   Limit("voice_simulator", per_hour=200),
     "pain_flag":         Limit("pain_flag", per_hour=30),
+    # Auth + identity endpoints. Login is per-IP; hospital NAT can put a few
+    # clinicians behind one identity, but 60/hr still blunts credential
+    # stuffing. identity/lookup is a PHI enumeration surface — kept tight.
+    "auth.login":        Limit("auth.login", per_hour=60),
+    # Passwordless magic-link. Request is the email-send surface (tighter, to
+    # blunt mailbox-bombing one address); verify is the token-redeem surface.
+    "auth.magic_request": Limit("auth.magic_request", per_hour=30),
+    "auth.magic_verify":  Limit("auth.magic_verify", per_hour=60),
+    "identity.lookup":   Limit("identity.lookup", per_hour=120),
+    # Workspace provisioning — unauthenticated onboarding. Tight ceiling
+    # blunts slug-squatting / table-flooding while leaving room for a sales
+    # team spinning up a handful of demos from one office IP.
+    "hospitals.provision": Limit("hospitals.provision", per_hour=20),
+    # Request-to-join is public (unauthenticated) — tight ceiling blunts spam
+    # against a workspace's admin inbox.
+    "onboarding.access_request": Limit("onboarding.access_request", per_hour=10),
 }
 
 # Per-upload absolute caps (checked before charging the hourly quota)

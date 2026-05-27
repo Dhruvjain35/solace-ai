@@ -75,24 +75,30 @@ export default function EHRCallback() {
           "#F3F4F4",
       }}
     >
-      <div className="w-full max-w-sm bg-surface-lowest rounded-xl shadow-card p-8 flex flex-col gap-4 text-center">
+      <div
+        className="w-full max-w-sm bg-surface-lowest rounded-xl shadow-card p-8 flex flex-col gap-4 text-center"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         {!error ? (
           <>
-            <ShieldCheck className="mx-auto text-primary" size={32} />
+            <ShieldCheck className="mx-auto text-primary" size={32} aria-hidden="true" />
             <div className="text-sm font-semibold tracking-tight">Finishing EHR sign-in...</div>
             <div className="text-xs text-text-muted">
               Verifying your Practitioner record and issuing a Solace session.
             </div>
-            <Loader2 className="mx-auto animate-spin text-primary mt-2" size={20} />
+            <Loader2 className="mx-auto animate-spin text-primary mt-2" size={20} aria-hidden="true" />
           </>
         ) : (
           <>
-            <AlertOctagon className="mx-auto text-error" size={32} />
+            <AlertOctagon className="mx-auto text-error" size={32} aria-hidden="true" />
             <div className="text-sm font-semibold tracking-tight">EHR sign-in failed</div>
             <div className="text-xs text-text-muted">{error}</div>
             <button
+              type="button"
               onClick={() => navigate("/demo/clinician", { replace: true })}
-              className="mt-2 h-10 rounded-md bg-primary text-white text-sm font-semibold"
+              className="mt-2 h-10 rounded-md bg-primary text-white text-sm font-semibold hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface transition-colors"
             >
               Back to sign-in
             </button>

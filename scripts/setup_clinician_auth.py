@@ -62,6 +62,33 @@ def ensure_table(name: str, key_schema, attr_defs, gsis=None) -> None:
     print(f"  [create] {name}")
 
 
+def ensure_gsi(name: str, *, index_name: str, attr_defs, key_schema) -> None:
+    """Idempotently add a GSI to an existing table. No-op if it already exists."""
+    try:
+        desc = ddb.describe_table(TableName=name)["Table"]
+    except ClientError:
+        return  # table not created yet; create path already includes the GSI
+    existing = {g["IndexName"] for g in desc.get("GlobalSecondaryIndexes", []) or []}
+    if index_name in existing:
+        print(f"  [ok]    GSI {name}.{index_name}")
+        return
+    try:
+        ddb.update_table(
+            TableName=name,
+            AttributeDefinitions=attr_defs,
+            GlobalSecondaryIndexUpdates=[{
+                "Create": {
+                    "IndexName": index_name,
+                    "KeySchema": key_schema,
+                    "Projection": {"ProjectionType": "ALL"},
+                }
+            }],
+        )
+        print(f"  [create] GSI {name}.{index_name} (backfilling)")
+    except ClientError as e:
+        print(f"  [warn]  GSI {name}.{index_name}: {e}")
+
+
 def enable_ttl(name: str, attr: str) -> None:
     try:
         current = ddb.describe_time_to_live(TableName=name)["TimeToLiveDescription"].get("TimeToLiveStatus")
@@ -104,13 +131,58 @@ def main() -> None:
             {"AttributeName": "clinician_id", "AttributeType": "S"},
             {"AttributeName": "hospital_id", "AttributeType": "S"},
             {"AttributeName": "name_lower", "AttributeType": "S"},
+            {"AttributeName": "email_lower", "AttributeType": "S"},
+        ],
+        gsis=[
+            {
+                "IndexName": "hospital_name-index",
+                "KeySchema": [
+                    {"AttributeName": "hospital_id", "KeyType": "HASH"},
+                    {"AttributeName": "name_lower", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            },
+            {
+                # Magic-link auth looks clinicians up by (hospital, email).
+                "IndexName": "hospital_email-index",
+                "KeySchema": [
+                    {"AttributeName": "hospital_id", "KeyType": "HASH"},
+                    {"AttributeName": "email_lower", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            },
+        ],
+    )
+    # Idempotent add for accounts created before the email GSI existed.
+    ensure_gsi(
+        "solace-clinicians",
+        index_name="hospital_email-index",
+        attr_defs=[
+            {"AttributeName": "hospital_id", "AttributeType": "S"},
+            {"AttributeName": "email_lower", "AttributeType": "S"},
+        ],
+        key_schema=[
+            {"AttributeName": "hospital_id", "KeyType": "HASH"},
+            {"AttributeName": "email_lower", "KeyType": "RANGE"},
+        ],
+    )
+    # Single-use magic-link tokens (login + invites). expires_at is a DDB TTL.
+    ensure_table(
+        "solace-magic-tokens",
+        [{"AttributeName": "token_hash", "KeyType": "HASH"}],
+        [{"AttributeName": "token_hash", "AttributeType": "S"}],
+    )
+    # Request-to-join records, queried per workspace via hospital-index.
+    ensure_table(
+        "solace-access-requests",
+        [{"AttributeName": "request_id", "KeyType": "HASH"}],
+        [
+            {"AttributeName": "request_id", "AttributeType": "S"},
+            {"AttributeName": "hospital_id", "AttributeType": "S"},
         ],
         gsis=[{
-            "IndexName": "hospital_name-index",
-            "KeySchema": [
-                {"AttributeName": "hospital_id", "KeyType": "HASH"},
-                {"AttributeName": "name_lower", "KeyType": "RANGE"},
-            ],
+            "IndexName": "hospital-index",
+            "KeySchema": [{"AttributeName": "hospital_id", "KeyType": "HASH"}],
             "Projection": {"ProjectionType": "ALL"},
         }],
     )
@@ -135,16 +207,19 @@ def main() -> None:
         }],
     )
     waiter = ddb.get_waiter("table_exists")
-    for t in ["solace-clinicians", "solace-audit-log"]:
+    for t in ["solace-clinicians", "solace-audit-log", "solace-magic-tokens", "solace-access-requests"]:
         waiter.wait(TableName=t)
     enable_ttl("solace-audit-log", "ttl")
+    enable_ttl("solace-magic-tokens", "expires_at")
     print()
 
     print("JWT signing key in Secrets Manager:")
+    # Fixed, known demo PINs — the demo must work every time without a PIN
+    # handoff. Real (non-demo) clinicians still get random PINs via generate_pin().
     clinicians_plan = [
-        {"name": "Dr. Chen", "role": "chief", "pin": generate_pin()},
-        {"name": "Dr. Patel", "role": "attending", "pin": generate_pin()},
-        {"name": "Dr. Kim", "role": "resident", "pin": generate_pin()},
+        {"name": "Dr. Chen", "role": "chief", "pin": "224466"},
+        {"name": "Dr. Patel", "role": "attending", "pin": "113355"},
+        {"name": "Dr. Kim", "role": "resident", "pin": "667788"},
     ]
     jwt_key = pysecrets.token_urlsafe(48)
     payload = {

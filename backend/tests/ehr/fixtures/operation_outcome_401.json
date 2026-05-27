@@ -1,0 +1,13 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [
+    {
+      "severity": "error",
+      "code": "security",
+      "diagnostics": "Authorization required: missing or expired access token.",
+      "details": {
+        "text": "401 Unauthorized"
+      }
+    }
+  ]
+}

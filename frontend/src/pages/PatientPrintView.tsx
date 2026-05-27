@@ -72,7 +72,22 @@ export default function PatientPrintView() {
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
-          .print-page { box-shadow: none !important; padding: 0 !important; max-width: none !important; }
+          .print-page {
+            box-shadow: none !important;
+            padding: 0 !important;
+            max-width: none !important;
+            margin: 0 !important;
+          }
+          /* Force color fidelity so the "AI draft" badge and severity colors
+             survive the browser's default background-stripping on print. */
+          .print-page, .print-page * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Keep sections, tables and list rows from splitting mid-page. */
+          .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+          tr, li { break-inside: avoid; page-break-inside: avoid; }
+          h1, h2 { break-after: avoid; page-break-after: avoid; }
         }
       `}</style>
 

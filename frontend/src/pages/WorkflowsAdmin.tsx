@@ -179,11 +179,12 @@ export default function WorkflowsAdmin() {
       <header className="px-5 py-3 border-b border-line bg-surface-lowest flex items-center gap-3">
         <Link
           to={`/${hospitalId}/clinician`}
-          className="w-9 h-9 rounded-md hover:bg-surface-low flex items-center justify-center"
+          aria-label="Back to dashboard"
+          className="w-9 h-9 rounded-md hover:bg-surface-low flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={18} aria-hidden="true" />
         </Link>
-        <WorkflowIcon size={18} className="text-primary" />
+        <WorkflowIcon size={18} className="text-primary" aria-hidden="true" />
         <div className="font-semibold tracking-tight">Workflows</div>
         <div className="ml-auto text-xs text-text-muted">
           {workflows.length} workflow{workflows.length === 1 ? "" : "s"} ·{" "}
@@ -198,15 +199,15 @@ export default function WorkflowsAdmin() {
             <button
               type="button"
               onClick={newDraft}
-              className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-white text-sm font-semibold"
+              className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-white text-sm font-semibold hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
             >
-              <Plus size={14} /> New workflow
+              <Plus size={14} aria-hidden="true" /> New workflow
             </button>
           </div>
 
           {loading && (
-            <div className="p-4 text-text-muted text-sm flex items-center gap-2">
-              <Loader2 size={14} className="animate-spin" /> Loading…
+            <div role="status" aria-live="polite" className="p-4 text-text-muted text-sm flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin" aria-hidden="true" /> Loading…
             </div>
           )}
 
@@ -221,7 +222,8 @@ export default function WorkflowsAdmin() {
               key={wf.workflow_id}
               type="button"
               onClick={() => openWorkflow(wf)}
-              className={`w-full text-left px-3 py-2.5 border-b border-line ${
+              aria-pressed={selected?.workflow_id === wf.workflow_id}
+              className={`w-full text-left px-3 py-2.5 border-b border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset transition-colors ${
                 selected?.workflow_id === wf.workflow_id
                   ? "bg-primary-fixed"
                   : "hover:bg-surface-lowest"
@@ -229,6 +231,7 @@ export default function WorkflowsAdmin() {
             >
               <div className="flex items-center gap-2">
                 <span
+                  aria-hidden="true"
                   className={`inline-block w-2 h-2 rounded-full ${
                     wf.enabled ? "bg-success" : "bg-text-muted"
                   }`}
@@ -253,11 +256,11 @@ export default function WorkflowsAdmin() {
                   type="button"
                   onClick={() => fromTemplate(t)}
                   disabled={saving}
-                  className="text-left px-2 py-2 rounded-md bg-surface-lowest hover:bg-primary-fixed text-xs"
+                  className="text-left px-2 py-2 rounded-md bg-surface-lowest hover:bg-primary-fixed text-xs disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   title={t.description}
                 >
                   <div className="font-semibold flex items-center gap-1">
-                    <Sparkles size={11} className="text-primary" /> {t.label}
+                    <Sparkles size={11} className="text-primary" aria-hidden="true" /> {t.label}
                   </div>
                   <div className="text-text-muted truncate">{t.description}</div>
                 </button>
@@ -279,33 +282,35 @@ export default function WorkflowsAdmin() {
           ) : (
             <div className="max-w-3xl mx-auto flex flex-col gap-5">
               {error && (
-                <div className="p-3 rounded-md bg-error-container text-error text-sm flex items-center gap-2">
-                  <AlertCircle size={14} />
+                <div role="alert" className="p-3 rounded-md bg-error-container text-error text-sm flex items-center gap-2">
+                  <AlertCircle size={14} aria-hidden="true" />
                   {error}
                 </div>
               )}
 
               <div>
-                <label className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
+                <label htmlFor="wf-name" className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
                   Name
                 </label>
                 <input
+                  id="wf-name"
                   type="text"
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   placeholder="Text discharge plan when patient marked seen"
-                  className="w-full mt-1 h-11 px-3 rounded-md bg-surface-lowest ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none"
+                  className="w-full mt-1 h-11 px-3 rounded-md bg-surface-lowest ring-1 ring-line focus-visible:ring-primary focus-visible:ring-2 text-base outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
+                <label htmlFor="wf-trigger" className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
                   When this happens
                 </label>
                 <select
+                  id="wf-trigger"
                   value={draft.trigger}
                   onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}
-                  className="w-full mt-1 h-11 px-3 rounded-md bg-surface-lowest ring-1 ring-line focus:ring-primary focus:ring-2 text-sm outline-none"
+                  className="w-full mt-1 h-11 px-3 rounded-md bg-surface-lowest ring-1 ring-line focus-visible:ring-primary focus-visible:ring-2 text-sm outline-none"
                 >
                   {triggers.map((t) => (
                     <option key={t.name} value={t.name}>
@@ -349,14 +354,16 @@ export default function WorkflowsAdmin() {
                           <span className="font-mono text-[11px] text-text-muted">
                             {String(idx + 1).padStart(2, "0")}
                           </span>
+                          <label htmlFor={`wf-step-${idx}`} className="sr-only">Step {idx + 1} action type</label>
                           <select
+                            id={`wf-step-${idx}`}
                             value={step.type}
                             onChange={(e) => {
                               const next = [...draft.steps];
                               next[idx] = { ...step, type: e.target.value, config: {} };
                               setDraft({ ...draft, steps: next });
                             }}
-                            className="flex-1 h-9 px-2 rounded-md bg-surface-lowest ring-1 ring-line text-sm outline-none"
+                            className="flex-1 h-9 px-2 rounded-md bg-surface-lowest ring-1 ring-line text-sm outline-none focus-visible:ring-primary focus-visible:ring-2"
                           >
                             {actions.map((a) => (
                               <option key={a.type} value={a.type}>
@@ -371,10 +378,10 @@ export default function WorkflowsAdmin() {
                               next.splice(idx, 1);
                               setDraft({ ...draft, steps: next });
                             }}
-                            aria-label="Remove step"
-                            className="w-9 h-9 rounded-md text-text-muted hover:text-error hover:bg-error/10 flex items-center justify-center"
+                            aria-label={`Remove step ${idx + 1}`}
+                            className="w-9 h-9 rounded-md text-text-muted hover:text-error hover:bg-error/10 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 transition-colors"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={14} aria-hidden="true" />
                           </button>
                         </div>
                         <ActionFields
@@ -400,9 +407,9 @@ export default function WorkflowsAdmin() {
                         ],
                       })
                     }
-                    className="h-10 rounded-md border-2 border-dashed border-line text-text-muted hover:border-primary hover:text-primary text-sm font-semibold inline-flex items-center justify-center gap-1.5"
+                    className="h-10 rounded-md border-2 border-dashed border-line text-text-muted hover:border-primary hover:text-primary text-sm font-semibold inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   >
-                    <Plus size={14} /> Add step
+                    <Plus size={14} aria-hidden="true" /> Add step
                   </button>
                 </div>
               </div>
@@ -413,10 +420,10 @@ export default function WorkflowsAdmin() {
                     type="checkbox"
                     checked={draft.enabled}
                     onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
-                    className="h-4 w-4 accent-primary"
+                    className="h-4 w-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
                   <span className="text-sm font-semibold inline-flex items-center gap-1">
-                    <Power size={13} /> Enabled
+                    <Power size={13} aria-hidden="true" /> Enabled
                   </span>
                 </label>
                 <div className="ml-auto flex gap-2">
@@ -424,36 +431,36 @@ export default function WorkflowsAdmin() {
                     type="button"
                     onClick={test}
                     disabled={saving || draft.steps.length === 0}
-                    className="h-10 px-4 rounded-md bg-surface-low text-ink hover:bg-surface-high text-sm font-semibold border border-line inline-flex items-center gap-1.5"
+                    className="h-10 px-4 rounded-md bg-surface-low text-ink hover:bg-surface-high text-sm font-semibold border border-line inline-flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   >
-                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                    {saving ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
                     Test (dry run)
                   </button>
                   {selected?.workflow_id && (
                     <button
                       type="button"
                       onClick={remove}
-                      className="h-10 px-4 rounded-md bg-surface-low text-error hover:bg-error/10 text-sm font-semibold border border-line inline-flex items-center gap-1.5"
+                      className="h-10 px-4 rounded-md bg-surface-low text-error hover:bg-error/10 text-sm font-semibold border border-line inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 transition-colors"
                     >
-                      <Trash2 size={14} /> Delete
+                      <Trash2 size={14} aria-hidden="true" /> Delete
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={save}
                     disabled={saving || !draft.name.trim()}
-                    className="h-10 px-4 rounded-md bg-primary text-white text-sm font-semibold inline-flex items-center gap-1.5"
+                    className="h-10 px-4 rounded-md bg-primary text-white text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
                   >
-                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    {saving ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
                     Save
                   </button>
                 </div>
               </div>
 
               {testResult && (
-                <div className="bg-surface-lowest rounded-lg p-4 shadow-soft">
+                <div role="status" aria-live="polite" className="bg-surface-lowest rounded-lg p-4 shadow-soft">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap size={14} className="text-primary" />
+                    <Zap size={14} className="text-primary" aria-hidden="true" />
                     <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
                       Test results
                     </div>
@@ -467,9 +474,9 @@ export default function WorkflowsAdmin() {
                         }`}
                       >
                         {r.result.success ? (
-                          <Check size={14} className="text-success mt-0.5 shrink-0" />
+                          <Check size={14} className="text-success mt-0.5 shrink-0" aria-hidden="true" />
                         ) : (
-                          <XIcon size={14} className="text-error mt-0.5 shrink-0" />
+                          <XIcon size={14} className="text-error mt-0.5 shrink-0" aria-hidden="true" />
                         )}
                         <div>
                           <div className="font-semibold">{r.step_type}</div>
@@ -509,32 +516,40 @@ function ActionFields({
   return (
     <div className="flex flex-col gap-2">
       <div className="text-xs text-text-muted">{def.description}</div>
-      {def.fields.map((field) => (
+      {def.fields.map((field) => {
+        const fieldId = `wf-field-${step.type}-${field.name}`;
+        return (
         <div key={field.name}>
-          <label className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
+          <label htmlFor={fieldId} className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
             {field.label}
-            {field.required && <span className="text-error ml-1">*</span>}
+            {field.required && <span className="text-error ml-1" aria-hidden="true">*</span>}
+            {field.required && <span className="sr-only"> (required)</span>}
           </label>
           {field.type === "textarea" ? (
             <textarea
+              id={fieldId}
               value={step.config[field.name] || ""}
               onChange={(e) => onChange({ ...step.config, [field.name]: e.target.value })}
               rows={3}
-              className="w-full mt-0.5 px-2.5 py-2 rounded-md bg-surface-lowest ring-1 ring-line focus:ring-primary focus:ring-2 text-sm outline-none font-mono"
+              required={field.required}
+              className="w-full mt-0.5 px-2.5 py-2 rounded-md bg-surface-lowest ring-1 ring-line focus-visible:ring-primary focus-visible:ring-2 text-sm outline-none font-mono"
               placeholder={field.help}
             />
           ) : (
             <input
+              id={fieldId}
               type="text"
               value={step.config[field.name] || ""}
               onChange={(e) => onChange({ ...step.config, [field.name]: e.target.value })}
-              className="w-full mt-0.5 h-9 px-2.5 rounded-md bg-surface-lowest ring-1 ring-line focus:ring-primary focus:ring-2 text-sm outline-none font-mono"
+              required={field.required}
+              className="w-full mt-0.5 h-9 px-2.5 rounded-md bg-surface-lowest ring-1 ring-line focus-visible:ring-primary focus-visible:ring-2 text-sm outline-none font-mono"
               placeholder={field.help}
             />
           )}
           {field.help && <div className="text-[11px] text-text-muted mt-0.5">{field.help}</div>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

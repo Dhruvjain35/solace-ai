@@ -105,3 +105,122 @@ def _empty() -> dict:
     return {"labs": [], "imaging": [], "monitoring": [], "consults": [], "rationale": ""}
 
 
+# ===========================================================================
+# Contraindication checks (deterministic, no AI)
+# ===========================================================================
+#
+# A second deterministic pass over the AI-suggested order set. The model is
+# told to skip contraindicated orders, but a clinical product must not rely on
+# that — these rules independently flag any order that conflicts with the
+# patient's renal/hepatic/allergy/pregnancy history. Flags are advisory; the
+# order stays in the set so the clinician decides, but it carries a warning.
+
+# Each rule: substring (lower-case) matched against the order text -> a probe
+# function over the medical_info dict returning a reason string or None.
+def _renal(info: dict[str, Any]) -> bool:
+    conds = " ".join(str(c).lower() for c in (info.get("conditions") or []))
+    return any(k in conds for k in ("ckd", "renal", "kidney disease", "dialysis", "esrd"))
+
+
+def _hepatic(info: dict[str, Any]) -> bool:
+    conds = " ".join(str(c).lower() for c in (info.get("conditions") or []))
+    return any(k in conds for k in ("cirrhosis", "hepatic", "liver disease", "hepatitis"))
+
+
+def _pregnant(info: dict[str, Any]) -> bool:
+    return bool(info.get("pregnant"))
+
+
+def _allergic_to(info: dict[str, Any], *needles: str) -> bool:
+    allergies = " ".join(str(a).lower() for a in (info.get("allergies") or []))
+    return any(n in allergies for n in needles)
+
+
+# (order substring, predicate, severity, reason)
+_CONTRA_RULES: list[tuple[str, Any, str, str]] = [
+    ("iv contrast", lambda i: _renal(i),
+     "warning", "IV contrast with renal impairment — risk of contrast nephropathy; check eGFR."),
+    ("with contrast", lambda i: _renal(i),
+     "warning", "Contrast study with renal impairment — verify eGFR before ordering."),
+    ("contrast", lambda i: _allergic_to(i, "contrast", "iodine"),
+     "critical", "Documented contrast/iodine allergy — premedicate or use non-contrast alternative."),
+    ("ct ", lambda i: _pregnant(i),
+     "warning", "CT involves ionizing radiation in a pregnant patient — consider ultrasound/MRI."),
+    ("x-ray", lambda i: _pregnant(i),
+     "warning", "Radiograph in a pregnant patient — shield and confirm the study is necessary."),
+    ("cxr", lambda i: _pregnant(i),
+     "warning", "Chest radiograph in a pregnant patient — shield and confirm necessity."),
+    ("acetaminophen", lambda i: _hepatic(i),
+     "warning", "Acetaminophen with hepatic impairment — dose-limit or avoid."),
+    ("lfts", lambda i: _hepatic(i),
+     "info", "Known hepatic disease — interpret LFTs against the patient's baseline."),
+    ("nsaid", lambda i: _renal(i),
+     "warning", "NSAID with renal impairment — risk of further renal injury; prefer alternative."),
+    ("ketorolac", lambda i: _renal(i),
+     "warning", "Ketorolac with renal impairment — contraindicated; use an alternative analgesic."),
+    ("contrast", lambda i: _allergic_to(i, "shellfish"),
+     "info", "Shellfish allergy is not a true contrast contraindication — document reassurance."),
+]
+
+
+def check_contraindications(
+    order_set: dict[str, Any],
+    medical_info: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Deterministically flag orders that conflict with the patient's history.
+
+    NO AI. Scans every labs/imaging/monitoring/consults order against the
+    patient's renal/hepatic/allergy/pregnancy history.
+
+    Returns a list of flags:
+      [{"order": "...", "section": "labs|imaging|...",
+        "severity": "critical|warning|info", "reason": "..."}, ...]
+    """
+    info = medical_info or {}
+    if not info:
+        return []
+    flags: list[dict[str, Any]] = []
+    for section in ("labs", "imaging", "monitoring", "consults"):
+        for order in order_set.get(section) or []:
+            text = str(order).strip()
+            low = text.lower()
+            for substr, predicate, severity, reason in _CONTRA_RULES:
+                if substr in low:
+                    try:
+                        hit = predicate(info)
+                    except Exception:  # defensive — never let a rule crash the check
+                        hit = False
+                    if hit:
+                        flags.append({
+                            "order": text,
+                            "section": section,
+                            "severity": severity,
+                            "reason": reason,
+                        })
+    return flags
+
+
+def generate_with_safety_check(
+    transcript: str,
+    esi_level: int,
+    differential: list[dict],
+    medical_info: dict[str, Any] | None = None,
+    vitals: dict[str, Any] | None = None,
+) -> dict:
+    """generate() plus a deterministic contraindication pass.
+
+    Returns the workup order set with two extra keys:
+      "contraindications": [ {order, section, severity, reason}, ... ]
+      "has_critical_contraindication": bool
+    The AI-anchored "rationale" links orders to the differential; the
+    contraindication flags are an independent deterministic safety net.
+    """
+    order_set = generate(transcript, esi_level, differential, medical_info, vitals)
+    flags = check_contraindications(order_set, medical_info)
+    return {
+        **order_set,
+        "contraindications": flags,
+        "has_critical_contraindication": any(f["severity"] == "critical" for f in flags),
+    }
+
+

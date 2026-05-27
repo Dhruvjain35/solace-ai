@@ -127,10 +127,10 @@ export default function VoiceAgent() {
         <Link to="/demo" className="flex items-center gap-3">
           <img src="/solace-logo.png" alt="Solace" className="h-12 w-auto select-none" draggable={false} />
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
-          <Link to="/demo" className="text-text-muted hover:text-ink">Patient intake</Link>
-          <Link to="/demo/clinician" className="text-text-muted hover:text-ink">Clinician</Link>
-          <span className="text-primary font-semibold">Voice agent</span>
+        <nav className="flex items-center gap-4 text-sm" aria-label="Primary">
+          <Link to="/demo" className="rounded text-text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors">Patient intake</Link>
+          <Link to="/demo/clinician" className="rounded text-text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors">Clinician</Link>
+          <span className="text-primary font-semibold" aria-current="page">Voice agent</span>
         </nav>
       </header>
 
@@ -158,9 +158,10 @@ export default function VoiceAgent() {
                 </div>
                 <a
                   href={`tel:${HOSPITAL_PHONE.replace(/[^\d+]/g, "")}`}
-                  className="inline-flex items-center gap-2 h-11 px-4 rounded-md bg-primary text-white text-sm font-semibold shadow-soft hover:bg-primary-hover transition-colors"
+                  aria-label={`Call the demo hospital line at ${HOSPITAL_PHONE}`}
+                  className="inline-flex items-center gap-2 h-11 px-4 rounded-md bg-primary text-white text-sm font-semibold shadow-soft hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
                 >
-                  <Phone size={16} /> Call now
+                  <Phone size={16} aria-hidden="true" /> Call now
                 </a>
               </div>
               <div className="text-[12px] text-text-muted leading-snug">
@@ -277,21 +278,29 @@ function Simulator(p: SimulatorProps) {
             type="checkbox"
             checked={p.autoplay}
             onChange={(e) => p.setAutoplay(e.target.checked)}
-            className="h-3 w-3 accent-white"
+            className="h-3 w-3 accent-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           />
           autoplay voice
         </label>
       </div>
 
-      <div ref={p.scrollRef} className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
+      <div
+        ref={p.scrollRef}
+        className="flex-1 overflow-y-auto p-5 flex flex-col gap-3"
+        role="log"
+        aria-live="polite"
+        aria-label="Call transcript"
+      >
         {!p.callId && p.messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3">
             <div className="text-text-muted text-sm">No active call.</div>
             <div className="flex flex-col items-center gap-2 w-full max-w-xs">
+              <label htmlFor="voice-language" className="sr-only">Caller language</label>
               <select
+                id="voice-language"
                 value={p.language}
                 onChange={(e) => p.setLanguage(e.target.value as LangCode)}
-                className="w-full h-10 px-3 rounded-md bg-surface-low ring-1 ring-line focus:ring-primary focus:ring-2 text-sm outline-none"
+                className="w-full h-10 px-3 rounded-md bg-surface-low ring-1 ring-line focus-visible:ring-primary focus-visible:ring-2 text-sm outline-none"
               >
                 {supportedLangs.map((l) => (
                   <option key={l.code} value={l.code}>
@@ -303,9 +312,9 @@ function Simulator(p: SimulatorProps) {
                 type="button"
                 onClick={p.onStart}
                 disabled={p.busy}
-                className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white font-semibold shadow-soft hover:bg-primary-hover disabled:opacity-60"
+                className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white font-semibold shadow-soft hover:bg-primary-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
               >
-                {p.busy ? <Loader2 size={16} className="animate-spin" /> : <PhoneCall size={16} />}
+                {p.busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <PhoneCall size={16} aria-hidden="true" />}
                 Start simulator call
               </button>
             </div>
@@ -342,6 +351,7 @@ function Simulator(p: SimulatorProps) {
                   <audio
                     controls
                     src={m.audioUrl}
+                    aria-label="Agent voice reply"
                     className="mt-1.5 h-7 w-full"
                     style={{ maxWidth: 240 }}
                   />
@@ -353,12 +363,14 @@ function Simulator(p: SimulatorProps) {
       </div>
 
       {p.error && (
-        <div className="px-5 py-2 bg-error-container text-error text-xs">{p.error}</div>
+        <div role="alert" className="px-5 py-2 bg-error-container text-error text-xs">{p.error}</div>
       )}
 
       {p.callId && (
         <div className="border-t border-line p-3 flex items-center gap-2">
+          <label htmlFor="voice-turn-input" className="sr-only">What the caller says</label>
           <input
+            id="voice-turn-input"
             type="text"
             value={p.input}
             onChange={(e) => p.setInput(e.target.value)}
@@ -366,7 +378,7 @@ function Simulator(p: SimulatorProps) {
               if (e.key === "Enter") p.onSend();
             }}
             placeholder="Type what the caller would say…"
-            className="flex-1 h-10 px-3 rounded-md bg-surface-low ring-1 ring-line focus:ring-primary focus:ring-2 text-sm outline-none"
+            className="flex-1 h-10 px-3 rounded-md bg-surface-low ring-1 ring-line focus-visible:ring-primary focus-visible:ring-2 text-sm outline-none"
             disabled={p.busy}
             autoFocus
           />
@@ -374,17 +386,18 @@ function Simulator(p: SimulatorProps) {
             type="button"
             onClick={p.onSend}
             disabled={p.busy || !p.input.trim()}
-            className="h-10 w-10 inline-flex items-center justify-center rounded-md bg-primary text-white disabled:opacity-50"
-            aria-label="Send"
+            className="h-10 w-10 inline-flex items-center justify-center rounded-md bg-primary text-white disabled:opacity-50 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
+            aria-label="Send caller message"
           >
-            {p.busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {p.busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
           </button>
           <button
             type="button"
             onClick={p.onEnd}
-            className="h-10 px-3 inline-flex items-center gap-1 rounded-md bg-surface-low text-text-muted hover:text-error text-xs font-medium"
+            aria-label="End simulator call"
+            className="h-10 px-3 inline-flex items-center gap-1 rounded-md bg-surface-low text-text-muted hover:text-error text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 transition-colors"
           >
-            <PhoneOff size={14} /> End
+            <PhoneOff size={14} aria-hidden="true" /> End
           </button>
         </div>
       )}
