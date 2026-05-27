@@ -38,7 +38,7 @@ export function PainEscalateButton({ hospitalId, patientId }: Props) {
           setSending(false);
         }
       }}
-      className={`w-full h-14 rounded-md font-semibold text-white text-lg transition-all shadow-soft tracking-editorial ${
+      className={`w-full h-14 rounded-md font-semibold text-white text-lg transition-all shadow-soft tracking-editorial focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/50 focus-visible:ring-offset-2 ${
         sentAt ? "bg-secondary" : "bg-error hover:brightness-110"
       } disabled:opacity-75`}
     >

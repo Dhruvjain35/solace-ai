@@ -15,7 +15,7 @@ export function MicButton({ isRecording, elapsed, disabled, onStart, onStop }: P
         type="button"
         disabled={disabled}
         onClick={isRecording ? onStop : onStart}
-        className={`w-28 h-28 rounded-full flex items-center justify-center text-white shadow-lifted transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`w-28 h-28 rounded-full flex items-center justify-center text-white shadow-lifted transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 ${
           isRecording
             ? "bg-error animate-pulse-ring"
             : "bg-primary-gradient hover:brightness-110"
