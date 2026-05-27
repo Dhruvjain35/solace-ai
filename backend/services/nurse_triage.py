@@ -148,12 +148,189 @@ PROTOCOLS = {
 }
 
 
+# ---- Structured red-flag interview metadata --------------------------------
+# Each protocol's decision tree consumes a fixed set of boolean `answers`.
+# The metadata below names every question, gives a patient-facing prompt, and
+# tags the disposition a positive answer drives. A caller (voice agent, portal
+# triage form, call-center script) walks `interview()` to collect answers and
+# then passes them to `evaluate()`. `tier` lets a UI ask the highest-acuity
+# red flags first and stop early on a "911" hit.
+#
+# Question dict shape:
+#   {
+#     "key": str,              # matches the key chest_pain() et al. read
+#     "prompt": str,           # patient-facing yes/no question
+#     "red_flag_for": str,     # disposition a True answer pushes toward
+#     "tier": "emergent" | "urgent" | "routine",
+#   }
+
+def _q(key: str, prompt: str, red_flag_for: str, tier: str = "urgent") -> dict[str, Any]:
+    return {"key": key, "prompt": prompt, "red_flag_for": red_flag_for, "tier": tier}
+
+
+_INTERVIEWS: dict[str, dict[str, Any]] = {
+    "chest_pain": {
+        "chief_complaint": "Chest pain",
+        "questions": [
+            _q("severe_or_crushing", "Is the pain severe, crushing, or like a heavy weight?", "911", "emergent"),
+            _q("with_dyspnea", "Are you also short of breath?", "ed_now", "emergent"),
+            _q("with_diaphoresis", "Are you sweating or clammy?", "ed_now", "emergent"),
+            _q("radiating_to_arm_jaw", "Does the pain spread to your arm, neck, or jaw?", "ed_now", "emergent"),
+            _q("age_over_50", "Are you over 50 years old?", "ed_now", "urgent"),
+            _q("known_cad", "Do you have known heart disease?", "ed_now", "urgent"),
+            _q("diabetes", "Do you have diabetes?", "ed_now", "urgent"),
+            _q("pleuritic", "Is the pain worse when you breathe in?", "ed", "urgent"),
+            _q("trauma", "Did the pain follow an injury to the chest?", "ed", "urgent"),
+        ],
+    },
+    "shortness_of_breath": {
+        "chief_complaint": "Shortness of breath",
+        "questions": [
+            _q("severe_at_rest", "Are you severely short of breath even while sitting still?", "911", "emergent"),
+            _q("blue_lips", "Are your lips or fingertips turning blue or gray?", "911", "emergent"),
+            _q("known_asthma_failed_inhaler", "Do you have asthma that is not responding to your rescue inhaler?", "ed_now", "emergent"),
+            _q("with_chest_pain", "Do you also have chest pain?", "ed_now", "emergent"),
+            _q("post_long_travel_or_surgery", "Have you had recent long travel or surgery?", "ed_now", "urgent"),
+            _q("fever", "Do you have a fever?", "ed", "urgent"),
+            _q("productive_cough", "Are you coughing up mucus or phlegm?", "ed", "urgent"),
+        ],
+    },
+    "abdominal_pain": {
+        "chief_complaint": "Abdominal pain",
+        "questions": [
+            _q("severe_sudden", "Did severe pain come on very suddenly?", "911", "emergent"),
+            _q("with_syncope", "Have you fainted or felt close to fainting?", "911", "emergent"),
+            _q("rigid_abdomen", "Is your abdomen hard, rigid, or extremely tender?", "ed_now", "emergent"),
+            _q("vomiting_blood", "Are you vomiting blood?", "ed_now", "emergent"),
+            _q("black_tarry_stool", "Have you had black, tarry, or bloody stools?", "ed_now", "emergent"),
+            _q("pregnancy_possible_with_pain", "Is pregnancy possible, with this pain?", "ed_now", "emergent"),
+            _q("missed_period_with_pain", "Have you missed a period, with this pain?", "ed_now", "emergent"),
+            _q("rlq_pain_with_fever", "Is the pain in the lower right side with a fever?", "ed", "urgent"),
+        ],
+    },
+    "headache": {
+        "chief_complaint": "Headache",
+        "questions": [
+            _q("worst_ever", "Is this the worst headache of your life?", "911", "emergent"),
+            _q("thunderclap", "Did it reach maximum intensity within seconds?", "911", "emergent"),
+            _q("with_neuro_deficit", "Do you have weakness, numbness, vision changes, or trouble speaking?", "ed_now", "emergent"),
+            _q("with_fever_stiff_neck", "Do you have a fever with a stiff neck?", "ed_now", "emergent"),
+            _q("immunocompromised", "Is your immune system weakened?", "ed", "urgent"),
+            _q("on_anticoagulation", "Are you taking a blood thinner?", "ed", "urgent"),
+        ],
+    },
+    "back_pain": {
+        "chief_complaint": "Back pain",
+        "questions": [
+            _q("saddle_anesthesia", "Do you have numbness in the groin or inner thighs?", "ed_now", "emergent"),
+            _q("urinary_retention", "Are you unable to urinate?", "ed_now", "emergent"),
+            _q("bowel_incontinence", "Have you lost control of your bowels?", "ed_now", "emergent"),
+            _q("with_fever", "Do you have a fever with the back pain?", "ed", "urgent"),
+            _q("iv_drug_use", "Do you use intravenous drugs?", "ed", "urgent"),
+            _q("immunocompromised", "Is your immune system weakened?", "ed", "urgent"),
+            _q("recent_trauma", "Did the pain follow a recent injury or fall?", "ed", "urgent"),
+            _q("age_over_50_or_osteoporosis", "Are you over 50 or do you have osteoporosis?", "ed", "urgent"),
+        ],
+    },
+    "fever": {
+        "chief_complaint": "Fever",
+        "questions": [
+            _q("immunocompromised", "Is your immune system weakened?", "ed_now", "emergent"),
+            _q("recent_chemo", "Have you had chemotherapy recently?", "ed_now", "emergent"),
+            _q("temp_over_103_with_lethargy", "Is your temperature over 103F with unusual drowsiness?", "ed", "urgent"),
+            _q("rash_with_fever", "Do you have a new rash with the fever?", "ed", "urgent"),
+            _q("fever_5_days_or_more", "Has the fever lasted 5 days or longer?", "urgent", "routine"),
+        ],
+    },
+    "cough": {
+        "chief_complaint": "Cough",
+        "questions": [
+            _q("hemoptysis", "Are you coughing up blood?", "ed", "emergent"),
+            _q("with_fever_and_dyspnea", "Do you have a fever and shortness of breath with the cough?", "ed", "urgent"),
+            _q("over_3_weeks", "Has the cough lasted more than 3 weeks?", "urgent", "routine"),
+        ],
+    },
+    "peds_fever": {
+        "chief_complaint": "Pediatric fever",
+        "questions": [
+            _q("under_3_months", "Is the child under 3 months old?", "ed_now", "emergent"),
+            _q("under_3_yr_temp_over_104", "Is the child under 3 years with a temperature over 104F?", "ed", "emergent"),
+            _q("rash", "Does the child have a new rash?", "ed", "urgent"),
+            _q("lethargy", "Is the child unusually drowsy or hard to wake?", "ed", "urgent"),
+            _q("vomiting", "Is the child repeatedly vomiting?", "ed", "urgent"),
+        ],
+    },
+    "laceration": {
+        "chief_complaint": "Cut or laceration",
+        "questions": [
+            _q("uncontrolled_bleeding", "Is the bleeding not stopping with firm pressure?", "911", "emergent"),
+            _q("arterial_spurting", "Is blood spurting from the wound?", "911", "emergent"),
+            _q("over_30_min_old_with_dirt", "Is the wound over 30 minutes old and dirty?", "urgent", "urgent"),
+            _q("animal_bite", "Was the wound caused by an animal bite?", "urgent", "urgent"),
+            _q("on_face_or_hand", "Is the cut on the face or hand?", "urgent", "urgent"),
+        ],
+    },
+    "mental_health_crisis": {
+        "chief_complaint": "Mental health crisis",
+        "questions": [
+            _q("active_plan_or_means", "Do you have a specific plan or the means to harm yourself?", "911", "emergent"),
+            _q("homicidal_ideation", "Do you have thoughts of harming someone else?", "911", "emergent"),
+            _q("ideation_no_plan_unsafe_at_home", "Do you have thoughts of self-harm and feel unsafe at home?", "ed_now", "emergent"),
+            _q("ideation_no_plan_safe_at_home", "Do you have thoughts of self-harm but currently feel safe at home?", "urgent", "urgent"),
+        ],
+    },
+}
+
+# Tier ordering so a caller can ask emergent red flags first.
+_TIER_RANK = {"emergent": 0, "urgent": 1, "routine": 2}
+
+
 def list_protocols() -> list[str]:
     return sorted(PROTOCOLS.keys())
+
+
+def interview(protocol_key: str) -> dict[str, Any]:
+    """Return the structured red-flag interview metadata for a protocol.
+
+    Returns:
+      {
+        "protocol": str,
+        "chief_complaint": str,
+        "questions": [{key, prompt, red_flag_for, tier}, ...],  # tier-ordered
+        "answer_keys": [str, ...],   # every key evaluate() will read
+      }
+    Or {"error": ...} for an unknown protocol.
+    """
+    meta = _INTERVIEWS.get(protocol_key)
+    if not meta:
+        return {"error": f"unknown protocol '{protocol_key}'"}
+    questions = sorted(
+        meta["questions"],
+        key=lambda q: _TIER_RANK.get(q["tier"], 9),
+    )
+    return {
+        "protocol": protocol_key,
+        "chief_complaint": meta["chief_complaint"],
+        "questions": questions,
+        "answer_keys": [q["key"] for q in questions],
+    }
 
 
 def evaluate(protocol_key: str, answers: dict[str, Any]) -> dict[str, Any]:
     fn = PROTOCOLS.get(protocol_key)
     if not fn:
         return {"error": f"unknown protocol '{protocol_key}'"}
-    return {"protocol": protocol_key, **fn(answers)}
+    result = {"protocol": protocol_key, **fn(answers)}
+
+    # Attach the structured red-flag trail: which interview questions the
+    # patient answered positively, so the disposition is auditable.
+    meta = _INTERVIEWS.get(protocol_key)
+    if meta:
+        triggered = [
+            {"key": q["key"], "prompt": q["prompt"], "red_flag_for": q["red_flag_for"]}
+            for q in meta["questions"]
+            if answers.get(q["key"])
+        ]
+        result["red_flags_triggered"] = triggered
+        result["red_flag_count"] = len(triggered)
+    return result

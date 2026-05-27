@@ -12,7 +12,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib import audit as _audit
@@ -24,9 +24,26 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _sanitized_sms_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Strip PHI from sms.send()'s raw dict before returning it to a caller.
+
+    sms.send() echoes the full E.164 phone number (`to`) on success and the
+    caller-supplied phone inside `message` on an invalid-number failure. A
+    phone number is a HIPAA Safe Harbor identifier (§164.514) — it must never
+    be reflected back to an anonymous caller. Return only success + reason.
+    """
+    return {
+        "success": bool(result.get("success")),
+        "reason": result.get("reason", "" if result.get("success") else "send_failed"),
+    }
+
+
 class DischargeBody(BaseModel):
-    patient_id: str
-    phone: str | None = None  # override the on-file phone if needed
+    model_config = ConfigDict(extra="forbid")
+
+    patient_id: str = Field(..., max_length=64)
+    # override the on-file phone if needed
+    phone: str | None = Field(None, max_length=32)
 
 
 @router.post("/sms/discharge")
@@ -76,12 +93,15 @@ def send_discharge(
         },
         patient_id=body.patient_id,
     )
-    return result
+    return _sanitized_sms_result(result)
 
 
 class CareInstructionsBody(BaseModel):
-    patient_id: str
-    phone: str  # patient supplies their own phone
+    model_config = ConfigDict(extra="forbid")
+
+    patient_id: str = Field(..., max_length=64)
+    # patient supplies their own phone
+    phone: str = Field(..., max_length=32)
 
 
 @router.post("/sms/care-instructions")
@@ -104,7 +124,8 @@ def send_self_serve_instructions(
         care_instructions=_care_steps_from_patient(patient),
         when_to_return=_when_to_return_from_patient(patient),
     )
-    return sms.send(to=body.phone, body=text)
+    result = sms.send(to=body.phone, body=text)
+    return _sanitized_sms_result(result)
 
 
 # --- helpers ----------------------------------------------------------------

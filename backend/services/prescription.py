@@ -11,6 +11,7 @@ from typing import Any
 from lib import claude
 from lib.config import settings
 from lib.medical_format import format_medical_info
+from services import drug_interactions
 
 log = logging.getLogger(__name__)
 
@@ -73,10 +74,105 @@ def suggest(
             purpose="prescription",
         )
         raw = "".join(b.text for b in resp.content)
-        return _parse(raw)
+        suggestions = _parse(raw)
+        return _apply_interaction_checks(suggestions, medical_info, transcript)
     except Exception as e:
         log.exception("Prescription suggestion failed: %s", e)
         return []
+
+
+def _patient_meds(medical_info: dict[str, Any] | None) -> list[str]:
+    if not medical_info:
+        return []
+    meds = medical_info.get("medications") or []
+    return [str(m).strip() for m in meds if m and str(m).strip()]
+
+
+def _patient_allergies(medical_info: dict[str, Any] | None) -> list[str]:
+    if not medical_info:
+        return []
+    allergies = medical_info.get("allergies") or []
+    return [str(a).strip() for a in allergies if a and str(a).strip()]
+
+
+def _format_alert(alert: dict[str, Any]) -> str:
+    """Render one drug_interactions alert as a short physician-facing line."""
+    sev = (alert.get("severity") or "").lower()
+    prefix = sev.upper() if sev else "ALERT"
+    reason = alert.get("reason") or alert.get("guidance") or ""
+    if "a" in alert and "b" in alert:          # drug-drug
+        return f"[{prefix}] {alert['a']} + {alert['b']}: {reason}"
+    if "child_pugh" in alert:                  # hepatic
+        return f"[{prefix}] hepatic ({alert['med']}): {reason}"
+    if "threshold" in alert or "crcl" in alert:  # renal
+        return f"[{prefix}] renal ({alert['med']}): {reason}"
+    if "med" in alert:                         # drug-allergy
+        return f"[{prefix}] allergy ({alert['med']}): {reason}"
+    if "drug_class" in alert:                  # duplicate therapy
+        return f"[{prefix}] duplicate {alert['drug_class']}: {reason}"
+    return f"[{prefix}] {reason}".strip()
+
+
+def _apply_interaction_checks(
+    suggestions: list[dict],
+    medical_info: dict[str, Any] | None,
+    transcript: str,
+) -> list[dict]:
+    """Run each Claude-suggested drug through drug_interactions.check() against
+    the patient's known meds + allergies, and merge any surfaced alerts into
+    that suggestion's `cautions` field.
+
+    The drug under evaluation is added to the patient's current med list so
+    drug-drug, drug-allergy, renal, hepatic and duplicate-therapy checks all
+    fire for the proposed prescription. Gating is delegated to check() via the
+    chief complaint, so trivial-visit noise is suppressed automatically.
+    """
+    if not suggestions:
+        return suggestions
+
+    patient_meds = _patient_meds(medical_info)
+    allergies = _patient_allergies(medical_info)
+    egfr = None
+    child_pugh = None
+    if medical_info:
+        egfr = medical_info.get("egfr") or medical_info.get("crcl")
+        child_pugh = medical_info.get("child_pugh")
+
+    for s in suggestions:
+        drug = s.get("drug", "")
+        if not drug:
+            continue
+        try:
+            result = drug_interactions.check(
+                patient_meds + [drug],
+                allergies=allergies,
+                egfr=egfr,
+                child_pugh=child_pugh,
+                complaint=transcript,
+            )
+        except Exception as e:  # never let a check failure drop a suggestion
+            log.exception("Interaction check failed for %s: %s", drug, e)
+            continue
+
+        drug_canon = drug_interactions._canon(drug)
+        lines: list[str] = []
+        for alert in result.get("drug_drug", []):
+            if drug_canon in (alert.get("a"), alert.get("b")):
+                lines.append(_format_alert(alert))
+        for category in ("drug_allergy", "renal", "hepatic"):
+            for alert in result.get(category, []):
+                if alert.get("med") == drug_canon:
+                    lines.append(_format_alert(alert))
+        for alert in result.get("duplicate_therapy", []):
+            if drug_canon in (alert.get("members") or []):
+                lines.append(_format_alert(alert))
+
+        if lines:
+            existing = s.get("cautions", "").strip()
+            merged = "; ".join(lines)
+            s["cautions"] = f"{existing}; {merged}" if existing else merged
+
+    return suggestions
 
 
 

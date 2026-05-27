@@ -255,6 +255,33 @@ export async function loginClinician(
   return data;
 }
 
+// Passwordless sign-in. Step 1: email a single-use link. The response is
+// intentionally generic (no account-enumeration) and may carry `dev_link` in
+// local/sandbox mode so the flow is followable without a real mailbox.
+export async function requestMagicLink(
+  hospitalId: string,
+  email: string,
+): Promise<{ status: string; message: string; dev_link?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/auth/magic/request`, { email });
+  return data;
+}
+
+// Step 2: redeem the token from the emailed link for a session.
+export async function verifyMagicLink(
+  hospitalId: string,
+  token: string,
+): Promise<{
+  token: string;
+  clinician_id: string;
+  name: string;
+  role: string;
+  hospital_id: string;
+  expires_at: number;
+}> {
+  const { data } = await api.post(`/api/${hospitalId}/auth/magic/verify`, { token });
+  return data;
+}
+
 export type EHRVendorOption = {
   id: string;        // "epic" | "cerner" | "athena"
   label: string;
@@ -1053,5 +1080,114 @@ export async function tefcaQuery(hospitalId: string, patient_name: string, patie
 
 export async function telehealthSession(hospitalId: string, body: any) {
   const { data } = await api.post(`/api/${hospitalId}/telehealth/session`, body);
+  return data;
+}
+
+// ---- Hospital workspace provisioning ----------------------------------------
+export type ProvisionedHospital = {
+  hospital_id: string;
+  slug: string;
+  name: string;
+  onboarded?: boolean;
+  admin_invited?: boolean;
+  admin_dev_link?: string; // local/sandbox only
+  clinician_path: string;
+  patient_path: string;
+  clinician_url: string;
+  patient_url: string;
+};
+
+export async function provisionHospital(
+  name: string,
+  requestedSlug?: string,
+  adminEmail?: string,
+  adminName?: string,
+): Promise<ProvisionedHospital> {
+  const { data } = await api.post<ProvisionedHospital>("/hospitals/provision", {
+    name,
+    requested_slug: requestedSlug || undefined,
+    admin_email: adminEmail || undefined,
+    admin_name: adminName || undefined,
+  });
+  return data;
+}
+
+// ---- Onboarding wizard + team management (admin) ----------------------------
+export type OnboardingStatus = {
+  hospital_id: string;
+  name: string;
+  onboarded: boolean;
+  team_size: number;
+  pending_requests: number;
+  patient_url: string;
+};
+
+export type CareTeamMember = {
+  clinician_id: string;
+  name: string;
+  email: string;
+  role: string;
+  last_login_at: string | null;
+};
+
+export type AccessRequest = {
+  request_id: string;
+  email: string;
+  name: string;
+  note?: string;
+  created_at: string;
+};
+
+export async function getOnboarding(hospitalId: string): Promise<OnboardingStatus> {
+  const { data } = await api.get(`/api/${hospitalId}/onboarding`);
+  return data;
+}
+
+export async function completeOnboarding(hospitalId: string): Promise<{ status: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/onboarding/complete`);
+  return data;
+}
+
+export async function inviteTeammate(
+  hospitalId: string,
+  email: string,
+  name: string,
+  role: string,
+): Promise<{ status: string; email: string; role: string; dev_link?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/invites`, { email, name, role });
+  return data;
+}
+
+export async function listCareTeam(hospitalId: string): Promise<{ members: CareTeamMember[]; count: number }> {
+  const { data } = await api.get(`/api/${hospitalId}/care-team`);
+  return data;
+}
+
+export async function listAccessRequests(hospitalId: string): Promise<{ requests: AccessRequest[] }> {
+  const { data } = await api.get(`/api/${hospitalId}/access-requests`);
+  return data;
+}
+
+export async function approveAccessRequest(
+  hospitalId: string,
+  requestId: string,
+): Promise<{ status: string; email: string; dev_link?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/access-requests/${requestId}/approve`);
+  return data;
+}
+
+export async function denyAccessRequest(hospitalId: string, requestId: string): Promise<{ status: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/access-requests/${requestId}/deny`);
+  return data;
+}
+
+// Public request-to-join (used on the landing "Join" path when not yet invited).
+export async function requestAccess(
+  hospitalId: string,
+  email: string,
+  name: string,
+  note?: string,
+): Promise<{ status: string; message: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/access-requests`, { email, name, note });
   return data;
 }

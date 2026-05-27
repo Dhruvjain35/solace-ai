@@ -30,7 +30,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Path, Query, Request
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib import blocklist, content_guard, quota
@@ -209,13 +209,17 @@ async def twilio_status(request: Request) -> Response:
 
 
 class SimulatorStartBody(BaseModel):
-    hospital_id: str = "demo"
-    language: str = "en"
+    model_config = ConfigDict(extra="forbid")
+
+    hospital_id: str = Field("demo", max_length=64)
+    language: str = Field("en", max_length=8)
 
 
 class SimulatorTurnBody(BaseModel):
-    call_id: str
-    text: str
+    model_config = ConfigDict(extra="forbid")
+
+    call_id: str = Field(..., max_length=64)
+    text: str = Field(..., max_length=4_000)
 
 
 def _sim_identity(request: Request | None) -> tuple[str | None, str | None, str]:
@@ -302,8 +306,10 @@ def simulator_turn(body: SimulatorTurnBody, request: Request = None) -> dict:
 
 
 class SimulatorEndBody(BaseModel):
-    call_id: str
-    disposition: str = "ended_by_user"
+    model_config = ConfigDict(extra="forbid")
+
+    call_id: str = Field(..., max_length=64)
+    disposition: str = Field("ended_by_user", max_length=64)
 
 
 @router.post("/simulator/end")

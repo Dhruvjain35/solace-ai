@@ -105,6 +105,139 @@ TEMPLATES: list[dict] = [
             }
         ],
     },
+    {
+        "id": "abnormal_result_followup",
+        "label": "Draft a patient message + open a task on abnormal results",
+        "description": (
+            "When a lab or imaging result is flagged abnormal, Claude drafts a "
+            "plain-language patient message for clinician review and a follow-up "
+            "task is opened on the chart. Nothing is sent automatically."
+        ),
+        "trigger": "result.abnormal",
+        "filters": {},
+        "steps": [
+            {
+                "id": "draft",
+                "type": "draft_message",
+                "config": {
+                    "purpose": (
+                        "a {{result.test_name}} result came back {{result.flag}}; "
+                        "ask the patient to contact the clinic to discuss next steps"
+                    ),
+                    "tone": "warm, reassuring, plain-language",
+                    "output_key": "abnormal_result_draft",
+                },
+            },
+            {
+                "type": "create_task",
+                "config": {
+                    "title": "Review abnormal {{result.test_name}} ({{result.flag}}) and approve patient message",
+                    "priority": "high",
+                    "assignee": "Ordering clinician",
+                    "due_in_days": 1,
+                },
+            },
+        ],
+    },
+    {
+        "id": "critical_result_escalation",
+        "label": "Escalate critical results to the on-call (branching)",
+        "description": (
+            "On an abnormal result, notify staff. If the result is critical, the "
+            "chain branches to also queue an EHR flag. Demonstrates the per-step "
+            "`if` condition and `goto` branching."
+        ),
+        "trigger": "result.abnormal",
+        "filters": {},
+        "steps": [
+            {
+                "id": "notify",
+                "type": "notify",
+                "config": {
+                    "message": "Abnormal {{result.test_name}} for patient {{patient.id}} ({{result.flag}}).",
+                    "channel": "charge_nurse",
+                },
+            },
+            {
+                "id": "flag",
+                "type": "ehr_write",
+                "if": {"result.flag": "critical-high"},
+                "config": {
+                    "resource": "flag",
+                    "value": "Critical {{result.test_name}} = {{result.value_numeric}} {{result.unit}} — clinician review required.",
+                },
+            },
+        ],
+    },
+    {
+        "id": "encounter_admit_notify",
+        "label": "Notify the team on EHR admit events",
+        "description": "Posts an internal notification whenever an encounter is admitted in the connected EHR.",
+        "trigger": "encounter.event",
+        "filters": {"encounter.event": "admit"},
+        "steps": [
+            {
+                "type": "notify",
+                "config": {
+                    "message": "Encounter {{encounter.id}} admitted to {{encounter.department}} (patient {{patient.id}}).",
+                    "channel": "dashboard",
+                },
+            }
+        ],
+    },
+    {
+        "id": "care_gap_letter",
+        "label": "Draft an outreach letter when a care gap is detected",
+        "description": (
+            "When the quality scan finds an open care gap, Claude drafts an "
+            "outreach letter for clinician review and opens a task to send it."
+        ),
+        "trigger": "care_gap.detected",
+        "filters": {},
+        "steps": [
+            {
+                "type": "generate_letter",
+                "config": {
+                    "letter_type": "care_gap_outreach",
+                    "instructions": (
+                        "Invite the patient to schedule care for an open care gap: "
+                        "{{care_gap.description}} ({{care_gap.measure}})."
+                    ),
+                    "output_key": "care_gap_letter_draft",
+                },
+            },
+            {
+                "type": "create_task",
+                "config": {
+                    "title": "Review and send care-gap letter ({{care_gap.measure}})",
+                    "priority": "normal",
+                    "assignee": "Care team",
+                    "due_in_days": 7,
+                },
+            },
+        ],
+    },
+    {
+        "id": "no_show_reminder",
+        "label": "Open an outreach task for high no-show-risk appointments",
+        "description": (
+            "When the no-show model scores an upcoming appointment as high risk, "
+            "opens a reminder-outreach task for the front desk."
+        ),
+        "trigger": "no_show.risk",
+        "filters": {"no_show.risk_band": "high"},
+        "steps": [
+            {
+                "type": "create_task",
+                "config": {
+                    "title": "Call patient to confirm appointment {{no_show.appointment_id}} (no-show risk {{no_show.risk_score}})",
+                    "priority": "normal",
+                    "assignee": "Front desk",
+                    "due_in_days": 1,
+                },
+            }
+        ],
+    },
 ]
 
 

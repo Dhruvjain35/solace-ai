@@ -86,12 +86,48 @@ def _route_for_tags(tags: list[str]) -> str:
     return "clinical_inbox"
 
 
-def attach_ai_draft(message_id: str, draft: str) -> dict[str, Any] | None:
+# Urgency from a draft -> SLA in business hours the clinician should reply within.
+_URGENCY_SLA_HOURS = {
+    "crisis": 0,        # page on-call immediately
+    "emergent": 1,
+    "same_day": 8,
+    "routine": 48,
+}
+
+
+def attach_ai_draft(
+    message_id: str,
+    draft: str,
+    *,
+    envelope: dict[str, Any] | None = None,
+    urgency: str | None = None,
+    red_flags: list[str] | None = None,
+    ungrounded_claims: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    """Attach the inbox_drafts output to an inbound message.
+
+    `draft` keeps the legacy string signature. The optional keyword args carry
+    the richer envelope from inbox_drafts.draft_reply so the clinician inbox can
+    show urgency, red flags, the one-click-send envelope, and any ungrounded
+    claims that must be verified before sending. auto_send is never honored:
+    the message always waits for a clinician.
+    """
     for msgs in _THREADS.values():
         for m in msgs:
             if m["id"] == message_id:
                 m["ai_draft"] = draft
                 m["ai_draft_status"] = "pending"
+                m["ai_draft_envelope"] = envelope
+                m["ai_draft_urgency"] = urgency
+                m["ai_draft_red_flags"] = red_flags or []
+                m["ai_draft_ungrounded_claims"] = ungrounded_claims or []
+                m["reply_sla_hours"] = _URGENCY_SLA_HOURS.get(urgency or "routine", 48)
+                # A crisis-urgency inbound is force-routed to the on-call page,
+                # even if keyword tagging missed it.
+                if urgency == "crisis" and m.get("routing") != "page_on_call":
+                    m["routing"] = "page_on_call"
+                    if "urgent" not in m.get("tags", []):
+                        m.setdefault("tags", []).append("urgent")
                 return m
     return None
 
@@ -155,3 +191,42 @@ def mark_read(thread_key: str) -> int:
             m["read_by_clinician_at"] = _now()
             n += 1
     return n
+
+
+def inbox_triage_summary(hospital_id: str | None = None) -> dict[str, Any]:
+    """Non-PHI worklist summary for the clinician inbox dashboard.
+
+    Counts only — no message bodies, no patient identifiers — so it is safe to
+    log or surface in audit trails. Use this to drive the inbox badge and the
+    "needs attention" sort order.
+    """
+    buckets = {"crisis": 0, "emergent": 0, "same_day": 0, "routine": 0, "unassessed": 0}
+    routing_counts: dict[str, int] = defaultdict(int)
+    needs_review = 0
+    ungrounded_pending = 0
+    total_unread = 0
+    for key, msgs in _THREADS.items():
+        h, _pid = key.split(":", 1)
+        if hospital_id and h != hospital_id:
+            continue
+        for m in msgs:
+            if m["direction"] != "inbound":
+                continue
+            if not m.get("read_by_clinician_at"):
+                total_unread += 1
+            if m.get("ai_draft_status") == "pending":
+                needs_review += 1
+                u = m.get("ai_draft_urgency")
+                buckets[u if u in buckets else "unassessed"] += 1
+                routing_counts[m.get("routing", "clinical_inbox")] += 1
+                if m.get("ai_draft_ungrounded_claims"):
+                    ungrounded_pending += 1
+    return {
+        "hospital_id": hospital_id,
+        "unread_inbound": total_unread,
+        "drafts_pending_review": needs_review,
+        "drafts_with_ungrounded_claims": ungrounded_pending,
+        "urgency_breakdown": buckets,
+        "routing_breakdown": dict(routing_counts),
+        "generated_at": _now(),
+    }

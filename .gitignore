@@ -5,6 +5,9 @@
 *.pem
 *.key
 
+# Claude Code tooling (worktrees, agent transcripts, local settings)
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -23,6 +23,19 @@ MAX_FAILED_ATTEMPTS = 5       # lock after this many failures
 LOCKOUT_WINDOW_SECONDS = 900  # 15-minute window for counting failures
 LOCKOUT_DURATION_SECONDS = 1800  # 30-minute lockout
 
+# JWT algorithm confusion hardening: the accepted algorithm set is a fixed
+# constant and is NEVER read from the secret payload or the token header.
+# Allowing the token to dictate its own algorithm enables the classic
+# "alg":"none" bypass and HS/RS key-confusion attacks. HS256 is the only
+# algorithm Solace ever signs with, so it is the only one we will verify.
+JWT_ALGORITHMS = ["HS256"]
+
+# A throwaway bcrypt hash used to burn a constant amount of CPU when a
+# clinician record is missing, so an attacker cannot distinguish "unknown
+# clinician" from "bad PIN" via response timing (username-enumeration oracle).
+# Generated once with bcrypt.gensalt(); value is not a real credential.
+_DUMMY_PIN_HASH = "$2b$12$C6UzMDM.H6dfI/f/IKcEeO6PqkN5lF.B6Z6dQ8x9zXq0pY3uVwT1m"
+
 
 @dataclass
 class Session:
@@ -39,7 +52,18 @@ class AuthError(Exception):
 
 @lru_cache(maxsize=1)
 def _auth_secret() -> dict:
-    """Fetch `solace/clinician-auth` once per cold start. Cached."""
+    """Fetch `solace/clinician-auth` once per cold start. Cached.
+
+    Local mode uses a deterministic dev signing key so the whole auth flow
+    (PIN + magic-link) runs on a laptop without AWS. This key is dev-only and
+    never used in aws mode, where Secrets Manager is the sole source.
+    """
+    if settings.solace_mode != "aws":
+        return {
+            "JWT_SIGNING_KEY": "local-dev-only-signing-key-not-for-production",
+            "JWT_ALGORITHM": "HS256",
+            "DEMO_CLINICIANS": {},
+        }
     import boto3  # noqa: PLC0415
 
     client = boto3.client("secretsmanager", region_name=settings.aws_region)
@@ -72,6 +96,21 @@ def verify_pin(plain_pin: str, stored_hash: str) -> bool:
         return bcrypt.checkpw(plain_pin.encode(), stored_hash.encode())
     except Exception:  # noqa: BLE001
         return False
+
+
+def dummy_verify() -> None:
+    """Burn a bcrypt-equivalent amount of CPU without revealing anything.
+
+    Called on the "unknown clinician" path so login latency is statistically
+    indistinguishable from the "known clinician, bad PIN" path. Closes the
+    username-enumeration timing oracle. Result is intentionally discarded.
+    """
+    import bcrypt  # noqa: PLC0415
+
+    try:
+        bcrypt.checkpw(b"timing-equalizer", _DUMMY_PIN_HASH.encode())
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def check_lockout(clinician_id: str) -> bool:
@@ -172,7 +211,7 @@ def issue_token(clinician: dict) -> tuple[str, Session]:
         "iat": now,
         "exp": sess.exp,
     }
-    token = jwt.encode(claims, _auth_secret()["JWT_SIGNING_KEY"], algorithm="HS256")
+    token = jwt.encode(claims, _auth_secret()["JWT_SIGNING_KEY"], algorithm=JWT_ALGORITHMS[0])
     return token, sess
 
 
@@ -181,18 +220,34 @@ def verify_token(token: str) -> Session:
 
     secret = _auth_secret()
     try:
-        claims = jwt.decode(token, secret["JWT_SIGNING_KEY"], algorithms=[secret.get("JWT_ALGORITHM", "HS256")])
+        # Algorithm allowlist is the fixed JWT_ALGORITHMS constant — never the
+        # secret payload, never the token header. This blocks "alg":"none" and
+        # HS/RS key-confusion attacks. `require=["exp"]` rejects tokens that
+        # omit an expiry; `verify_exp` enforces it. Existing 30-min demo tokens
+        # already carry `exp` (see issue_token), so they keep validating until
+        # they naturally expire — no mass 401 on deploy.
+        claims = jwt.decode(
+            token,
+            secret["JWT_SIGNING_KEY"],
+            algorithms=JWT_ALGORITHMS,
+            options={"require": ["exp"], "verify_exp": True},
+        )
     except jwt.ExpiredSignatureError as e:
         raise AuthError("token expired") from e
+    except jwt.MissingRequiredClaimError as e:
+        raise AuthError("token missing required claim") from e
     except jwt.InvalidTokenError as e:
         raise AuthError(f"invalid token: {e}") from e
-    return Session(
-        clinician_id=claims["sub"],
-        name=claims.get("name", ""),
-        role=claims.get("role", "clinician"),
-        hospital_id=claims["hid"],
-        exp=claims["exp"],
-    )
+    try:
+        return Session(
+            clinician_id=claims["sub"],
+            name=claims.get("name", ""),
+            role=claims.get("role", "clinician"),
+            hospital_id=claims["hid"],
+            exp=claims["exp"],
+        )
+    except KeyError as e:
+        raise AuthError(f"token missing required claim: {e}") from e
 
 
 def update_last_login(clinician_id: str) -> None:

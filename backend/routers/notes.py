@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib.auth import audit, require_clinician
@@ -19,8 +19,10 @@ def _now_iso() -> str:
 
 
 class NoteBody(BaseModel):
-    text: str
-    author: str = "Clinician"
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(..., max_length=20_000)
+    author: str = Field("Clinician", max_length=200)
 
 
 @router.post("/patients/{patient_id}/notes")
@@ -63,8 +65,10 @@ def list_notes(
 
 
 class PublishBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # Either pass a specific note_id or let the server combine the latest note(s).
-    note_id: str | None = None
+    note_id: str | None = Field(None, max_length=64)
 
 
 @router.post("/patients/{patient_id}/publish-summary")
@@ -99,7 +103,15 @@ def publish_summary(
         patient_language=language,
     )
     if result.get("error"):
-        raise HTTPException(status_code=502, detail=f"summary generation failed: {result['error']}")
+        # The provider error string can echo transcript / note fragments —
+        # log it server-side, surface a static message to the clinician UI.
+        import logging as _logging  # noqa: PLC0415
+
+        _logging.getLogger(__name__).warning(
+            "publish-summary generation failed for patient %s: %s",
+            patient_id, result["error"],
+        )
+        raise HTTPException(status_code=502, detail="Patient summary generation is temporarily unavailable. Please try again.")
 
     import json as _json
 

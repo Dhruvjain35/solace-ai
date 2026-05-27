@@ -13,6 +13,7 @@ import { identityLookup, type IdentityLookupResult } from "../lib/api";
 import { CheckCircle2, X as XIcon } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { ProgressDots } from "../components/ui/ProgressDots";
+import { TourLauncher } from "../components/tour/TourLauncher";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { postIntake, postTranscribe, startIntake } from "../lib/api";
 import { isRTL, t, type LangCode } from "../lib/i18n";
@@ -374,6 +375,15 @@ export default function PatientIntake() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
+      {/* First-run, dismissible help. Modal-only (no anchors) so it sits cleanly
+          over the focused, full-screen intake flow. Replayable from the button,
+          lifted above the sticky footer CTA. */}
+      <TourLauncher
+        tourId="patient-intake-v1"
+        subjectId="patient"
+        buttonPosition="bottom-right"
+        buttonClassName="!bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))]"
+      />
       <header
         className="flex items-center justify-between px-4 pb-3 bg-surface-lowest/85 backdrop-blur-xl sticky top-0 z-10 shadow-soft"
         style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top, 0px))" }}
@@ -383,9 +393,9 @@ export default function PatientIntake() {
             <button
               onClick={handleBack}
               aria-label={t("back_button", preferredLanguage)}
-              className="w-10 h-10 rounded-full hover:bg-surface-low flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+              className="w-11 h-11 rounded-full hover:bg-surface-low flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={20} aria-hidden="true" />
             </button>
           )}
           <img
@@ -402,8 +412,11 @@ export default function PatientIntake() {
 
       {ehrMatched?.matched && !ehrBannerDismissed && step !== "submitting" && (
         <div className="mx-auto w-full max-w-lg px-4 mt-3">
-          <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 flex items-start gap-3 shadow-soft">
-            <CheckCircle2 className="text-emerald-700 mt-0.5 shrink-0" size={18} />
+          <div
+            role="status"
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 flex items-start gap-3 shadow-soft"
+          >
+            <CheckCircle2 className="text-emerald-700 mt-0.5 shrink-0" size={18} aria-hidden="true" />
             <div className="flex-1 text-sm">
               <div className="font-semibold text-emerald-900">
                 We found your medical records
@@ -417,9 +430,9 @@ export default function PatientIntake() {
               type="button"
               onClick={() => setEhrBannerDismissed(true)}
               aria-label="Dismiss"
-              className="text-emerald-700/70 hover:text-emerald-900 shrink-0"
+              className="w-8 h-8 -mr-1 -mt-1 flex items-center justify-center rounded-full text-emerald-700/70 hover:text-emerald-900 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/40 focus-visible:ring-offset-1"
             >
-              <XIcon size={16} />
+              <XIcon size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -631,8 +644,12 @@ export default function PatientIntake() {
             )}
 
             {step === "submitting" && (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Loader2 size={48} className="animate-spin text-primary" />
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex flex-col items-center justify-center py-24 gap-4 text-center"
+              >
+                <Loader2 size={48} className="animate-spin text-primary" aria-hidden="true" />
                 <div className="text-lg font-semibold tracking-editorial">
                   {t("submitting_title", preferredLanguage)}
                 </div>
@@ -645,7 +662,9 @@ export default function PatientIntake() {
         </AnimatePresence>
 
         {error && (
-          <div className="p-3 rounded-md bg-error-container text-error text-sm">{error}</div>
+          <div role="alert" className="p-3 rounded-md bg-error-container text-error text-sm">
+            {error}
+          </div>
         )}
       </main>
 

@@ -1,0 +1,52 @@
+# Keep the Lambda container image lean and free of secrets / build cruft.
+# Anything matched here is excluded from the Docker build context.
+
+# Secrets and credentials — must never enter an image layer
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+keys/
+credentials*
+
+# Python virtualenvs and bytecode caches
+.venv/
+venv/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Version control
+.git/
+.gitignore
+.github/
+
+# Frontend — not part of the Lambda runtime
+frontend/
+landing/
+node_modules/
+
+# Training data and raw datasets — large, not needed at runtime
+data/
+demo/
+build/
+
+# Local tooling and docs
+docs/
+*.md
+.DS_Store
+.idea/
+.vscode/
+
+# CI/test artifacts
+coverage/
+*.log

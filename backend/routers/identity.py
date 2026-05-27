@@ -64,6 +64,7 @@ class IdentityLookupBody(BaseModel):
 def identity_lookup(
     hospital_id: str = Path(...),
     body: IdentityLookupBody | None = None,
+    request: Request = None,
 ) -> dict[str, Any]:
     """Best-effort EHR lookup by ID-derived identity. Returns the patient's
     EHR record + a prefill payload so the intake form can pre-populate.
@@ -75,6 +76,21 @@ def identity_lookup(
 
     No match: returns `{"matched": false}` so the UI can continue normal flow.
     """
+    # SEC-003 pattern (same as scan_id above): this endpoint is unauthenticated
+    # and returns PHI from the EHR, so it is a prime PHI-enumeration surface.
+    # Enforce the blocklist + per-identity quota before any request parsing or
+    # EHR query, exactly as scan_id does.
+    source_ip = None
+    user_agent = None
+    if request is not None:
+        source_ip = request.headers.get(
+            "x-forwarded-for", request.client.host if request.client else None
+        )
+        user_agent = request.headers.get("user-agent")
+    identity_hash = quota.identity_of(source_ip, user_agent)
+    blocklist.enforce(identity_hash, source_ip=source_ip)
+    quota.check_and_consume(identity_hash, "identity.lookup", source_ip=source_ip)
+
     if body is None:
         raise HTTPException(status_code=400, detail="request body required")
     has_name = bool(body.first_name and body.last_name)

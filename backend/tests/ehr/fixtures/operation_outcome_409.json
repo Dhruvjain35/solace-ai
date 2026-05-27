@@ -1,0 +1,13 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [
+    {
+      "severity": "error",
+      "code": "conflict",
+      "diagnostics": "Resource version conflict: the target resource was modified by another process.",
+      "details": {
+        "text": "409 Conflict"
+      }
+    }
+  ]
+}

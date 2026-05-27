@@ -1,0 +1,34 @@
+{
+  "resourceType": "Patient",
+  "id": "test-patient-001",
+  "meta": {
+    "lastUpdated": "2026-05-16T00:00:00Z",
+    "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
+  },
+  "identifier": [
+    {
+      "system": "http://hospital.smarthealthit.org",
+      "value": "MRN-7788990"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Solace",
+      "given": ["Test", "Patient"]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1985-04-12",
+  "address": [
+    {
+      "use": "home",
+      "line": ["100 Clinic Way"],
+      "city": "Boston",
+      "state": "MA",
+      "postalCode": "02115",
+      "country": "US"
+    }
+  ]
+}

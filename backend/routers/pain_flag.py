@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib import audit as _audit
@@ -30,7 +30,9 @@ router = APIRouter()
 
 
 class PainFlagBody(BaseModel):
-    patient_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    patient_id: str = Field(..., max_length=64)
 
 
 def _now_iso() -> str:
@@ -112,7 +114,9 @@ def flag(
 
 
 class AcknowledgeBody(BaseModel):
-    patient_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    patient_id: str = Field(..., max_length=64)
 
 
 @router.post("/pain-flag/acknowledge")

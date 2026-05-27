@@ -17,7 +17,13 @@ export default function QRCard() {
   const intakeUrl = `${PATIENT_PUBLIC_ORIGIN}/${hospitalId}`;
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-surface px-8 py-12 gap-10">
+    <div
+      className="min-h-[100dvh] flex flex-col items-center justify-center bg-surface px-8 gap-10"
+      style={{
+        paddingTop: "calc(3rem + env(safe-area-inset-top, 0px))",
+        paddingBottom: "calc(3rem + env(safe-area-inset-bottom, 0px))",
+      }}
+    >
       <img
         src="/solace-logo.png"
         alt="Solace"
@@ -36,7 +42,11 @@ export default function QRCard() {
         </p>
       </div>
 
-      <div className="bg-surface-lowest rounded-[32px] p-10 shadow-card">
+      <div
+        className="bg-surface-lowest rounded-[32px] p-10 shadow-card"
+        role="img"
+        aria-label={`QR code linking to the patient check-in page at ${intakeUrl}`}
+      >
         {intakeUrl ? (
           <QRCodeSVG
             value={intakeUrl}
