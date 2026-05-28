@@ -14,8 +14,8 @@ from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
     admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
-    governance, identity, insurance, intake, notes, pain_flag, patients, prescriptions,
-    public, sms as sms_router, transcribe, triage, voice, wave4, workflows,
+    governance, hospitals, identity, insurance, intake, notes, onboarding, pain_flag, patients,
+    prescriptions, public, sms as sms_router, transcribe, triage, voice, wave4, workflows,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -121,6 +121,7 @@ app.include_router(notes.router, prefix="/api/{hospital_id}", tags=["notes"])
 app.include_router(triage.router, prefix="/api/{hospital_id}", tags=["triage"])
 app.include_router(admin.router, prefix="/api/{hospital_id}", tags=["admin"])
 app.include_router(auth.router, prefix="/api/{hospital_id}", tags=["auth"])
+app.include_router(onboarding.router, prefix="/api/{hospital_id}", tags=["onboarding"])
 app.include_router(public.router, prefix="/api/{hospital_id}", tags=["public"])
 app.include_router(ehr.router, prefix="/api/{hospital_id}", tags=["ehr"])
 app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflows"])
@@ -138,6 +139,9 @@ app.include_router(wave4.router, prefix="/api/{hospital_id}", tags=["wave4"])
 app.include_router(cds_hooks_router.router)
 # Public governance / model cards (no auth — for procurement teams + auditors).
 app.include_router(governance.router)
+# Hospital workspace provisioning — public onboarding. Mounted at the fixed
+# `/hospitals/...` base (NOT per-hospital) because it CREATES the hospital_id.
+app.include_router(hospitals.router, tags=["hospitals"])
 # Voice agent — uses its own /api/voice prefix (NOT per-hospital path) because Twilio
 # webhooks arrive at a fixed URL and route by the dialed number, not a URL path.
 app.include_router(voice.router)

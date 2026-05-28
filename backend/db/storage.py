@@ -83,6 +83,20 @@ def put_hospital(hospital: dict[str, Any]) -> None:
     _hospitals[hospital["hospital_id"]] = hospital
 
 
+def get_hospital_by_slug(slug: str) -> dict[str, Any] | None:
+    """Resolve a hospital by its URL-safe slug. The slug doubles as hospital_id
+    for provisioned workspaces, so this is a direct key lookup."""
+    hospital = get_hospital(slug)
+    if hospital and hospital.get("slug", hospital.get("hospital_id")) == slug:
+        return hospital
+    return None
+
+
+def slug_exists(slug: str) -> bool:
+    """True if a hospital already occupies this slug. Keeps provisioning slugs unique."""
+    return get_hospital(slug) is not None
+
+
 # ---- Patient helpers ----------------------------------------------------------------
 def put_patient(patient: dict[str, Any]) -> None:
     patient.setdefault("created_at", _now_iso())
