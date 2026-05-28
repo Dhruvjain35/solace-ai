@@ -165,7 +165,9 @@ def provision_hospital(body: ProvisionHospitalBody | None = None, request: Reque
             extra={"hospital_id": slug, "delivered": send_result.get("delivered")},
         )
 
-    base_url = _base_url(request) if request else ""
+    # Shareable workspace URLs point at the frontend app (app_base_url / Origin),
+    # never the API host the request happens to arrive on.
+    base_url = _frontend_base(request)
     resp = {
         "hospital_id": slug,
         "slug": slug,
