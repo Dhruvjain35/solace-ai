@@ -1,11 +1,13 @@
 """Section 2 infra: intake-nonce DDB table + per-route API Gateway throttling.
 
-Per-route throttle keys:
-  POST /api/{hospital_id}/intake             — 30 req/min (0.5 rps) burst 5
-  POST /api/{hospital_id}/transcribe         — 30 req/min (0.5 rps) burst 5
-  POST /api/{hospital_id}/scan-insurance     — 30 req/min (0.5 rps) burst 5
-  POST /api/{hospital_id}/start-intake       — 60 req/min (1 rps)   burst 10
-  GET  /api/{hospital_id}/public-patients/{patient_id} — 120 req/min (2 rps) burst 20
+Per-route throttle keys (sized for ~50 concurrent patients per hospital; the
+per-identity quota + blocklist do the abuse-bounding, this layer just stays out
+of the way during a peak — see ROUTE_THROTTLES below):
+  POST /api/{hospital_id}/intake             — 100 rps  burst 300
+  POST /api/{hospital_id}/transcribe         — 100 rps  burst 300
+  POST /api/{hospital_id}/scan-insurance     — 50 rps   burst 150
+  POST /api/{hospital_id}/start-intake       — 100 rps  burst 300
+  GET  /api/{hospital_id}/public-patients/{patient_id} — 200 rps burst 500
 """
 from __future__ import annotations
 

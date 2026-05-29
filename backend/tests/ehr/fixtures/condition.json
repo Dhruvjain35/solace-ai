@@ -1,0 +1,33 @@
+{
+  "resourceType": "Condition",
+  "id": "test-condition-001",
+  "subject": {
+    "reference": "Patient/test-patient-001"
+  },
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        "code": "provisional"
+      }
+    ]
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/sid/icd-10-cm",
+        "code": "R07.9",
+        "display": "Chest pain, unspecified"
+      }
+    ]
+  },
+  "recordedDate": "2026-05-16T00:00:00Z"
+}

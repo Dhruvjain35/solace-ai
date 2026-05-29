@@ -1,99 +1,40 @@
-"""Differential diagnosis v2 — extends services/differential.py with:
+"""Differential diagnosis v2 — clinician-facing ``/ddx/v2`` endpoint.
 
-  - Conformal prediction sets at 90% / 95% coverage based on softmax-style
-    likelihood weights returned by the LLM.
-  - Hard-coded "don't-miss" red-flag canon by chief complaint group; if the
-    transcript has any matching keyword we surface the red-flag dx with high
-    visibility regardless of LLM ranking.
-  - Counterfactual prompts ("what would change this differential?").
-  - Specialty bias: pass `specialty` to bias priors toward that specialty's
-    pretest probabilities.
+This module keeps its keyword-arg ``generate()`` signature (the only caller is
+``routers/clinical_ai.py``). It no longer owns the red-flag canon or the
+conformal math — those now live in ``services/differential.py`` as the single
+source of truth, and ddx_v2 *delegates* to them:
+
+  - ``differential.match_red_flags`` — canonical don't-miss library lookup.
+  - ``differential.conformal_sets`` — adaptive prediction sets (set_90/set_95)
+    with per-diagnosis nonconformity = ``1 - weight``.
+  - ``differential.counterfactual_prompts`` — deterministic "what discriminates
+    the top 3?" baseline merged with the LLM's own counterfactuals.
+
+What ddx_v2 adds on top is a specialty-biased LLM prompt: pass ``specialty`` to
+bias the differential toward that specialty's pretest probabilities.
 
 The output is decision support — never auto-acts, never replaces the existing
-triage_ml model output.
+``triage_ml`` model output.
 """
 from __future__ import annotations
 
 import json
 import logging
-import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from lib import claude
+from lib import claude, json_extract
 from lib.config import settings
+from services import differential
 
 log = logging.getLogger(__name__)
 
-_MODEL = "claude-sonnet-4-5"
+_MODEL = settings.model_clinical
 
-
-# Canonical red-flag library: keyed by chief-complaint-anchor regex
-RED_FLAGS: list[dict[str, Any]] = [
-    {
-        "trigger": r"chest|cp|substernal|crushing|squeez|pressure",
-        "must_not_miss": [
-            ("Acute coronary syndrome", "I20.9"),
-            ("Pulmonary embolism", "I26.99"),
-            ("Aortic dissection", "I71.00"),
-            ("Pericardial tamponade", "I31.9"),
-            ("Tension pneumothorax", "J93.0"),
-            ("Esophageal rupture", "K22.3"),
-        ],
-    },
-    {
-        "trigger": r"weakness|numbness|slurred|facial droop|fast|stroke|aphasia",
-        "must_not_miss": [("Acute ischemic stroke", "I63.9"), ("Intracranial hemorrhage", "I62.9"), ("TIA", "G45.9")],
-    },
-    {
-        "trigger": r"abdominal|abd pain|belly|stomach pain",
-        "must_not_miss": [
-            ("Appendicitis", "K35.80"),
-            ("Bowel obstruction", "K56.60"),
-            ("Mesenteric ischemia", "K55.0"),
-            ("AAA rupture", "I71.3"),
-            ("Ectopic pregnancy", "O00.9"),
-            ("Perforated viscus", "K65.9"),
-        ],
-    },
-    {
-        "trigger": r"headache|worst headache|thunderclap|ha",
-        "must_not_miss": [
-            ("Subarachnoid hemorrhage", "I60.9"),
-            ("Meningitis", "G03.9"),
-            ("Temporal arteritis", "M31.6"),
-            ("CVT", "I63.6"),
-        ],
-    },
-    {
-        "trigger": r"shortness of breath|sob|dyspnea|trouble breathing",
-        "must_not_miss": [
-            ("Pulmonary embolism", "I26.99"),
-            ("Tension pneumothorax", "J93.0"),
-            ("Acute pulmonary edema", "J81.0"),
-            ("Anaphylaxis", "T78.2XXA"),
-        ],
-    },
-    {
-        "trigger": r"fever\b.*(infant|baby|< ?3 ?mo|months)",
-        "must_not_miss": [("Neonatal sepsis", "P36.9"), ("Bacterial meningitis", "G00.9")],
-    },
-    {
-        "trigger": r"testic|scrotal|testes",
-        "must_not_miss": [("Testicular torsion", "N44.00")],
-    },
-    {
-        "trigger": r"vagin.*bleed|pregnan.*bleed|missed period.*bleed",
-        "must_not_miss": [("Ectopic pregnancy", "O00.9")],
-    },
-    {
-        "trigger": r"back pain.*(numb|weak|saddle|incontinen)",
-        "must_not_miss": [("Cauda equina syndrome", "G83.4"), ("Spinal cord compression", "G95.20")],
-    },
-    {
-        "trigger": r"sore throat.*drool|stridor|trismus",
-        "must_not_miss": [("Epiglottitis", "J05.10"), ("Retropharyngeal abscess", "J39.0")],
-    },
-]
+# Re-exported so existing references to ddx_v2.RED_FLAGS keep resolving; the
+# authoritative library now lives in services/differential.py.
+RED_FLAGS = differential.RED_FLAG_LIBRARY
 
 
 _SYSTEM = """You are an experienced ED attending generating a differential diagnosis (Ddx) draft.
@@ -104,68 +45,137 @@ Return JSON ONLY (no markdown):
     {
       "diagnosis": "short Dx name",
       "icd10": "best-guess ICD-10",
-      "weight": 0.0-1.0,             // your normalized likelihood across the list
-      "rule_in": ["clinical feature 1", "..."],
-      "rule_out": ["what argues against / what is missing"],
+      "weight": 0.0-1.0,
+      "supporting": ["clinical feature arguing FOR this Dx", "..."],
+      "refuting": ["what argues against / what is missing", "..."],
+      "discriminator": "single best discriminating test or maneuver",
+      "reasoning": "1-2 sentence clinical rationale tying the case to this Dx",
       "must_not_miss": false,
-      "next_step": "single best discriminating test or maneuver",
       "evidence_quote": "verbatim short snippet from the transcript that anchored this Dx"
     }
   ],
   "counterfactuals": [
-    {"if_true": "additional history/finding", "would_change": "which Dx rises/falls"}
+    {
+      "question": "what additional history/finding would change the ranking?",
+      "discriminates": ["Dx A", "Dx B"],
+      "why": "which Dx rises/falls and why"
+    }
   ]
 }
 
 Rules:
-- Return 3-6 entries; weights must sum to ~1.0 (we'll normalize).
-- Anchor every entry to at least one transcript-derived fact in rule_in.
+- Return 3-6 entries; weight = your normalized pretest probability across the list,
+  weights should sum to ~1.0.
+- Bias your pretest probabilities toward the SPECIALTY context provided.
+- Anchor every entry to at least one transcript-derived fact in "supporting".
+- "discriminator": one concrete next step — not a list.
 - counterfactuals: 2-4 entries on what would meaningfully change rankings.
 - Set must_not_miss true ONLY for life/limb threats with at least one supporting feature.
 """
 
 
-def _redflag_anchor(transcript: str) -> list[dict[str, Any]]:
-    text = (transcript or "").lower()
+def _build_prompt(
+    transcript: str,
+    chief_complaint: str,
+    medical_info: dict[str, Any] | None,
+    specialty: str,
+    vitals: dict[str, Any] | None,
+) -> str:
+    parts = [
+        f"Specialty context: {specialty.upper()}",
+        f"Chief complaint: {chief_complaint or '(infer from transcript)'}",
+        f'Transcript:\n"""\n{transcript[:8000]}\n"""',
+    ]
+    if medical_info:
+        parts.append(f"Medical history: {json.dumps(medical_info)[:1200]}")
+    if vitals:
+        v = ", ".join(f"{k}={val}" for k, val in vitals.items() if val is not None)
+        if v:
+            parts.append(f"Bedside vitals: {v}")
+    parts.append("Return JSON now.")
+    return "\n\n".join(parts)
+
+
+def _call_llm(prompt: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Run the specialty-biased Claude call. Returns ``(differential, cf)``."""
+    try:
+        resp = claude.messages_create(
+            model=_MODEL,
+            max_tokens=2800,
+            system=_SYSTEM,
+            messages=[{"role": "user", "content": prompt}],
+            purpose="ddx_v2",
+        )
+        text = "".join(getattr(b, "text", "") for b in resp.content)
+        # Tolerant parse: handles markdown fences and output truncated at the
+        # token ceiling (which silently broke this on the chattier model).
+        parsed = json_extract.extract_obj(text)
+        if not parsed:
+            return [], []
+        return _clean_differential(parsed.get("differential")), _clean_counterfactuals(
+            parsed.get("counterfactuals")
+        )
+    except Exception as e:  # noqa: BLE001 - decision support degrades gracefully
+        log.warning("ddx_v2 LLM call failed: %s", e)
+        return [], []
+
+
+def _clean_differential(value: Any) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for canon in RED_FLAGS:
-        if re.search(canon["trigger"], text):
-            for dx, icd in canon["must_not_miss"]:
-                out.append({"diagnosis": dx, "icd10": icd, "must_not_miss": True})
-    # de-dupe
-    seen: set[str] = set()
-    uniq: list[dict[str, Any]] = []
-    for item in out:
-        key = item["diagnosis"]
-        if key not in seen:
-            seen.add(key)
-            uniq.append(item)
-    return uniq
+    for item in value or []:
+        if not isinstance(item, dict):
+            continue
+        dx = str(item.get("diagnosis", "")).strip()
+        if not dx:
+            continue
+        try:
+            weight = float(item.get("weight", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            weight = 0.0
+        out.append(
+            {
+                "diagnosis": dx,
+                "icd10": str(item.get("icd10", "")).strip(),
+                "weight": max(0.0, min(1.0, weight)),
+                "supporting": _str_list(item.get("supporting") or item.get("rule_in")),
+                "refuting": _str_list(item.get("refuting") or item.get("rule_out")),
+                "discriminator": str(
+                    item.get("discriminator") or item.get("next_step") or ""
+                ).strip(),
+                "reasoning": str(item.get("reasoning", "")).strip(),
+                "must_not_miss": bool(item.get("must_not_miss")),
+                "evidence_quote": str(item.get("evidence_quote", "")).strip(),
+            }
+        )
+        if len(out) >= 6:
+            break
+    return out
 
 
-def _conformal(diff: list[dict[str, Any]]) -> dict[str, Any]:
-    if not diff:
-        return {"set_90": [], "set_95": []}
-    weights = [max(0.0, float(d.get("weight", 0))) for d in diff]
-    s = sum(weights) or 1.0
-    norm = [w / s for w in weights]
-    # Sort by weight desc
-    paired = sorted(zip(diff, norm), key=lambda x: x[1], reverse=True)
-    set_90: list[str] = []
-    set_95: list[str] = []
-    cum = 0.0
-    for d, w in paired:
-        cum += w
-        if cum <= 0.90 + 1e-9:
-            set_90.append(d["diagnosis"])
-        if cum <= 0.95 + 1e-9:
-            set_95.append(d["diagnosis"])
-    # ensure non-empty
-    if not set_90 and paired:
-        set_90 = [paired[0][0]["diagnosis"]]
-    if not set_95 and paired:
-        set_95 = [paired[0][0]["diagnosis"]]
-    return {"set_90": set_90, "set_95": set_95}
+def _clean_counterfactuals(value: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in value or []:
+        if not isinstance(item, dict):
+            continue
+        # Accept both the new {question,...} schema and the legacy
+        # {if_true, would_change} schema.
+        question = str(item.get("question") or item.get("if_true") or "").strip()
+        if not question:
+            continue
+        out.append(
+            {
+                "question": question,
+                "discriminates": _str_list(item.get("discriminates")),
+                "why": str(item.get("why") or item.get("would_change") or "").strip(),
+            }
+        )
+    return out
+
+
+def _str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(x).strip() for x in value if str(x).strip()][:4]
 
 
 def generate(
@@ -176,59 +186,96 @@ def generate(
     specialty: str = "ed",
     vitals: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if not settings.anthropic_api_key:
-        return {"differential": [], "counterfactuals": [], "red_flags": [], "conformal": {"set_90": [], "set_95": []}}
-    parts = [
-        f"Specialty context: {specialty.upper()}",
-        f"Chief complaint: {chief_complaint or '(infer from transcript)'}",
-        f'Transcript:\n"""\n{transcript[:8000]}\n"""',
-    ]
-    if medical_info:
-        parts.append(f"Medical history: {json.dumps(medical_info)[:1200]}")
-    if vitals:
-        v = ", ".join(f"{k}={v}" for k, v in vitals.items() if v is not None)
-        if v:
-            parts.append(f"Bedside vitals: {v}")
-    parts.append("Return JSON now.")
+    """Specialty-biased differential with conformal sets and red-flag canon.
 
-    diff: list[dict[str, Any]] = []
-    cf: list[dict[str, Any]] = []
-    try:
-        resp = claude.messages_create(
-            model=_MODEL,
-            max_tokens=1400,
-            system=_SYSTEM,
-            messages=[{"role": "user", "content": "\n\n".join(parts)}],
-            purpose="ddx_v2",
-        )
-        text = "".join(getattr(b, "text", "") for b in resp.content).strip()
-        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        parsed = json.loads(text)
-        diff = parsed.get("differential", [])
-        cf = parsed.get("counterfactuals", [])
-    except Exception as e:
-        log.warning("ddx_v2 failed: %s", e)
+    Output shape (unchanged keys, richer per-diagnosis depth):
+        {
+          "differential":    [ {diagnosis, icd10, weight, supporting, refuting,
+                                 discriminator, reasoning, must_not_miss,
+                                 evidence_quote}, ... ],
+          "counterfactuals": [ {question, discriminates, why}, ... ],
+          "red_flags":       [ {diagnosis, icd10, group, must_not_miss}, ... ],
+          "conformal":       {set_90, set_95, nonconformity,
+                              threshold_90, threshold_95},
+        }
 
-    red_flags = _redflag_anchor(transcript + " " + chief_complaint)
-    # Merge red flags into the differential if missing
+    Red-flag matching and conformal calibration are delegated to the shared
+    helpers in ``services/differential.py``.
+    """
+    empty: dict[str, Any] = {
+        "differential": [],
+        "counterfactuals": [],
+        "red_flags": [],
+        "conformal": differential.conformal_sets([]),
+    }
+    if not claude.available():
+        return empty
+
+    prompt = _build_prompt(transcript, chief_complaint, medical_info, specialty, vitals)
+
+    # The LLM call and the (cheap, deterministic) red-flag scan are independent;
+    # run them concurrently so the red-flag library lookup never sits behind the
+    # network round-trip. ThreadPoolExecutor keeps this safe for the blocking
+    # claude SDK call.
+    red_flag_text = f"{transcript} {chief_complaint}"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        llm_future = pool.submit(_call_llm, prompt)
+        rf_future = pool.submit(differential.match_red_flags, red_flag_text)
+        diff, llm_counterfactuals = llm_future.result()
+        red_flags = rf_future.result()
+
+    # Fold any missing don't-miss diagnoses into the differential.
     diff_names = {d["diagnosis"].lower() for d in diff}
     for rf in red_flags:
-        if rf["diagnosis"].lower() not in diff_names:
-            diff.append({
+        if rf["diagnosis"].lower() in diff_names:
+            for d in diff:
+                if d["diagnosis"].lower() == rf["diagnosis"].lower():
+                    d["must_not_miss"] = True
+            continue
+        diff.append(
+            {
                 "diagnosis": rf["diagnosis"],
                 "icd10": rf["icd10"],
                 "weight": 0.05,
-                "rule_in": ["red-flag canon match — verify by exam/test"],
-                "rule_out": [],
+                "supporting": ["red-flag canon match — verify by exam/test"],
+                "refuting": [],
+                "discriminator": "rule out per institutional pathway",
+                "reasoning": (
+                    f"Don't-miss diagnosis for the {rf['group']} complaint group; "
+                    "surfaced from the shared red-flag library."
+                ),
                 "must_not_miss": True,
-                "next_step": "rule out per institutional pathway",
                 "evidence_quote": "",
-            })
+            }
+        )
 
-    conf = _conformal(diff)
+    diff.sort(key=lambda d: d.get("weight", 0.0), reverse=True)
+
+    conformal = differential.conformal_sets(diff)
+    counterfactuals = _merge_counterfactuals(
+        llm_counterfactuals, differential.counterfactual_prompts(diff)
+    )
+
     return {
         "differential": diff,
-        "counterfactuals": cf,
+        "counterfactuals": counterfactuals,
         "red_flags": red_flags,
-        "conformal": conf,
+        "conformal": conformal,
     }
+
+
+def _merge_counterfactuals(
+    llm: list[dict[str, Any]], baseline: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in list(llm) + list(baseline):
+        q = str(item.get("question", "")).strip()
+        if not q:
+            continue
+        norm = q.lower()
+        if norm in seen:
+            continue
+        seen.add(norm)
+        out.append(item)
+    return out[:6]

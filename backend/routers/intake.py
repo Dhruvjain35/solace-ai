@@ -48,17 +48,22 @@ async def create_intake(
     hospital_id: str = Path(...),
     audio_file: UploadFile | None = File(None),
     image_file: UploadFile | None = File(None),
-    patient_name: str = Form(...),
-    pre_transcribed_text: str | None = Form(None),
+    patient_name: str = Form(..., max_length=200),
+    pre_transcribed_text: str | None = Form(None, max_length=20_000),
     # New: structured fields (JSON-encoded arrays/objects)
-    medical_info: str | None = Form(None),
-    followup_qa: str | None = Form(None),
-    insurance_info: str | None = Form(None),
-    intake_token: str | None = Form(None),
-    idempotency_key: str | None = Form(None),
-    consent_granted: str | None = Form(None),
-    consent_version: str | None = Form(None),
-    preferred_language: str | None = Form(None),
+    medical_info: str | None = Form(None, max_length=50_000),
+    followup_qa: str | None = Form(None, max_length=50_000),
+    insurance_info: str | None = Form(None, max_length=10_000),
+    intake_token: str | None = Form(None, max_length=256),
+    idempotency_key: str | None = Form(None, max_length=128),
+    consent_granted: str | None = Form(None, max_length=16),
+    consent_version: str | None = Form(None, max_length=16),
+    preferred_language: str | None = Form(None, max_length=16),
+    # EHR auto-pop carry-through: when the patient was matched to a FHIR Patient
+    # at intake time, pass that id forward so the clinician-side EHR lookup can
+    # fetch the same record by id rather than re-searching by name.
+    ehr_fhir_id: str | None = Form(None, max_length=128),
+    ehr_match_source: str | None = Form(None, max_length=64),
     request: Request = None,
 ) -> dict[str, Any]:
     src_ip = _source_ip(request)
@@ -143,7 +148,10 @@ async def create_intake(
             # Prefer the patient's selected language; fall back to Whisper detection
             language = selected_lang or t.language
         except transcription.TranscriptionError as e:
-            raise HTTPException(status_code=503, detail=f"Voice transcription unavailable: {e}")
+            # The exception text can carry transcript fragments / provider
+            # diagnostics — log server-side, return a static client message.
+            log.warning("intake: transcription failed: %s", e)
+            raise HTTPException(status_code=503, detail="Voice transcription is temporarily unavailable. Please try again.")
         # Post-transcription abuse scan — catches prompt injection spoken into the mic
         ok, cleaned, findings = content_guard.scan(
             transcript_text, label="intake.whisper", source_ip=src_ip, user_agent=ua
@@ -292,6 +300,9 @@ async def create_intake(
         "ai_cost_usd": float((ai_log.current() or ai_log.AILog()).total_cost_usd()),
         "ai_cost_breakdown": json.dumps((ai_log.current() or ai_log.AILog()).cost_breakdown()),
     }
+    if ehr_fhir_id:
+        patient["ehr_fhir_id"] = ehr_fhir_id.strip()
+        patient["ehr_match_source"] = (ehr_match_source or "fhir").strip()
     storage.put_patient(patient)
 
     response = {

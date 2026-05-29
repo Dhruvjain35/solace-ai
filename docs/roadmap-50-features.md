@@ -2,7 +2,7 @@
 
 A synthesis of five parallel competitive research passes (ambient scribes, EHR auto-population, clinical NLP, intake competitors, physician burnout). Goal: become the only product that ships Abridge-grade ambient + Glass-grade differential + Notable-breadth automation + OpenEvidence-grade recall, on top of Solace's existing moats (calibrated ML triage, SHAP, no-code workflow builder, 20-language intake).
 
-The 2026 timing is not accidental. CMS-0057-F's FHIR Prior Auth APIs went live January 1; HealthScribe's BAA-covered ambient pipeline is mature; Epic's Auto-Generated Reply has trained the market on AI-drafted clinician messages. The window is open.
+The 2026 timing is not accidental. CMS-0057-F's *operational* prior-auth requirements (7-day decisions, denial-reason specificity, metric reporting) took effect January 1, 2026 — the FHIR Prior Auth APIs themselves are not required of payers until January 1, 2027 (see `research/regulatory-2026-05.md`); HealthScribe's BAA-covered ambient pipeline is mature; Epic's Auto-Generated Reply has trained the market on AI-drafted clinician messages. The window is open.
 
 ## Competitive thesis
 
@@ -64,7 +64,7 @@ Grouped by ten themes, ten features per group of five themes mostly. Each featur
 26. **Immunization write** — Epic / Oracle / Athena. Effort: S.
 27. **MedicationStatement write for med reconciliation** — explicit "this is reconciliation, not a new prescription" framing. Effort: M.
 28. **CDS Hooks service** — `patient-view`, `order-select`, `order-sign`, `encounter-discharge` — return Cards with diagnosis suggestions, drug-interaction warnings, care-gap closures, and `link.type: smart` jump to Solace. Beats: this is the only portable injection point for AI suggestions inside live EHR workflow; few startups ship it. Effort: M.
-29. **Provenance resource on every write** — every Solace-authored resource gets a `Provenance` linking to "Solace AI vX, model Y, clinician Z signed at T." Beats: legal/compliance differentiator; required for HTI-1 DSI transparency. Effort: S.
+29. **Provenance resource on every write** — every Solace-authored resource gets a `Provenance` linking to "Solace AI vX, model Y, clinician Z signed at T." Beats: legal/compliance differentiator and voluntary best practice. Note: HTI-1 § 170.315(b)(11) DSI transparency applies only to ONC-certified Health IT Modules (Solace is not one) and HTI-5 proposes to repeal the predictive-DSI source-attribute requirement — treat this as a voluntary trust feature, not a mandate. Effort: S.
 30. **HL7 v2 MDM^T02 emitter** — for MEDITECH legacy, NextGen, eClinicalWorks, Allscripts, OSCAR, and the long-tail community hospitals on Mirth/Rhapsody/Corepoint engines. Beats: only Suki and DAX ship this at scale; required to win community hospitals. Effort: M.
 
 ### Theme D — Document & letter automation (the unsexy goldmine)
@@ -74,7 +74,7 @@ Grouped by ten themes, ten features per group of five themes mostly. Each featur
 33. **Refill triage agent** — auto-classifies each refill request as protocol-eligible (auto-approve with audit log), needs-labs/visit (auto-draft response), or physician-decision-required. Beats: AMA cites refill protocols as highest-ROI / lowest-adopted office reform. Effort: M.
 34. **Abnormal result patient communication** — auto-detect abnormal labs/imaging, draft plain-language patient message at appropriate reading level, flag clinician for one-click send. Closes the malpractice-relevant "loop closure" gap (7-15% of abnormal results never communicated). Beats: nobody owns this end-to-end. Effort: M.
 35. **Discharge instructions in patient's language** — Solace already does multi-language intake; extend to multi-language post-encounter summary + care plan SMS. Beats: Phreesia patient-instruction handouts are English-first. Effort: S.
-36. **Prior authorization packet generator** — given the encounter note + the order, auto-assemble the PA submission (LMN, supporting evidence, ICD-10, CPT, prior treatment history). Output goes to: (a) Da Vinci PAS FHIR API (CMS-0057-F payers, live Jan 2026), (b) Surescripts CompletEPA for meds, (c) payer portal RPA fallback for legacy. Beats: Cohere/Rhyme are payer-side; Solace is provider-side and integrated with the scribe. Effort: XL.
+36. **Prior authorization packet generator** — given the encounter note + the order, auto-assemble the PA submission (LMN, supporting evidence, ICD-10, CPT, prior treatment history). Output goes to: (a) Da Vinci PAS FHIR API (CMS-0057-F requires payers to implement by Jan 1, 2027 — wire it as a per-payer capability that lights up as payers go live, not a 2026 switch-on), (b) Surescripts CompletEPA for meds, (c) payer portal RPA fallback for legacy. Beats: Cohere/Rhyme are payer-side; Solace is provider-side and integrated with the scribe. Effort: XL.
 37. **Denial appeal letter draft** — given a denial reason, auto-draft the appeal grounded in clinical evidence + guidelines. Effort: M.
 38. **Referral letters with relevant Hx + data** — given a destination specialist + reason for referral, auto-draft the letter pulling relevant labs/imaging/notes. Beats: Phreesia's Referral Hub is faxed-referral ingestion; Solace adds outbound generation. Effort: M.
 39. **Inbound fax → digitization** — fax-as-a-service (Concord/Documo/eFax) + Claude/HealthScribe parsing → structured referral / record / form. Beats: Notable and Phreesia ship this at enterprise; Solace adds it for SMB. Effort: M.
@@ -100,7 +100,7 @@ Grouped by ten themes, ten features per group of five themes mostly. Each featur
 
 ### Theme H — AI governance & safety (free competitive moat)
 
-50. **Model card + bias audit + override log + MRM artifacts** — every Solace AI model ships with a published model card (training data, limitations, demographics), a bias audit (FNR/FPR by race/sex/age/insurance), an override log (clinician decisions vs AI suggestions, by user), and Model Risk Management documentation per CMS guidance and HTI-1 DSI transparency. Beats: nobody publishes these openly; Notable / Hyro do not. The Epic Sepsis Model controversy made this a procurement requirement post-2024. Effort: M (mostly process and writing; templates exist).
+50. **Model card + bias audit + override log + MRM artifacts** — every Solace AI model ships with a published model card (training data, limitations, demographics), a bias audit (FNR/FPR by race/sex/age/insurance), an override log (clinician decisions vs AI suggestions, by user), and Model Risk Management documentation. Note: the federal predictive-DSI "model card" mandate (HTI-1 § 170.315(b)(11)) is being repealed under the HTI-5 proposed rule — but hospital procurement and risk committees still demand these artifacts post-Epic-Sepsis-Model. This is now a *voluntary differentiator* ("we publish what the rule no longer makes anyone publish"), not a compliance checkbox. Beats: nobody publishes these openly; Notable / Hyro do not. Effort: M (mostly process and writing; templates exist).
 
 ---
 
@@ -141,7 +141,7 @@ The right move is not "implement all 50 in a sprint." That produces broken work.
 
 24. Epic Showroom / Oracle partner / Athena Marketplace listings (#30 includes HL7 v2 MDM emitter).
 25. Surescripts EPCS for prescription writes.
-26. Da Vinci PAS for live FHIR PA against CMS-0057-F payers (#36).
+26. Da Vinci PAS for FHIR PA against CMS-0057-F payers (#36) — payers must implement the PA API by Jan 1, 2027; build the integration to light up per-payer as they go live.
 27. FDB or Medi-Span drug-interaction license (#19 production-grade).
 28. HITRUST r2 + SOC 2 Type II audit.
 29. Sepsis / deterioration model external validation (#17, #18) — partner with one academic medical center.
@@ -151,7 +151,7 @@ The right move is not "implement all 50 in a sprint." That produces broken work.
 
 ## What this gets us
 
-If we ship Wave 1 cleanly we have a defensible pitch *today*: "Solace is the only product that records the visit, ranks the differential with calibrated uncertainty, fills out the FMLA form, drafts the discharge instructions in the patient's language, and suggests E&M + ICD-10 — for $99/clinician/month with a free solo-practitioner tier." That story does not exist in a single product on the market in May 2026. The window is open because (a) CMS-0057-F just turned PA into a tractable problem, (b) HealthScribe is BAA-clean and cheap, (c) Epic's Auto-Generated Reply trained the market on AI-drafted clinician communication.
+If we ship Wave 1 cleanly we have a defensible pitch *today*: "Solace is the only product that records the visit, ranks the differential with calibrated uncertainty, fills out the FMLA form, drafts the discharge instructions in the patient's language, and suggests E&M + ICD-10 — for $99/clinician/month with a free solo-practitioner tier." That story does not exist in a single product on the market in May 2026. The window is open because (a) CMS-0057-F's operational PA requirements now put payers under decision-speed pressure (the FHIR PA API rails arrive Jan 2027, so plan PA as a multi-year payer-coverage ramp), (b) HealthScribe is BAA-clean and cheap, (c) Epic's Auto-Generated Reply trained the market on AI-drafted clinician communication.
 
 Wave 2 turns Solace into a procurement contender against Notable for mid-market practices. Wave 3 lets us compete with Abridge / DAX for enterprise health systems.
 

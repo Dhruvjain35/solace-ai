@@ -60,13 +60,11 @@ def get_or_generate(text: str, language: str = "en") -> str | None:
         if local_path.exists():
             return media.presigned_get(KIND, filename)
 
-    # Cache miss — generate via configured provider
+    # Cache miss in S3/local — generate. tts.synthesize_cached adds an
+    # in-process LRU + retry/backoff in front of the provider call, so a warm
+    # Lambda container that already spoke this phrase pays zero synthesis cost.
     try:
-        if prov == "aws":
-            mp3_bytes = _polly_generate(text, language)
-        else:
-            mp3_bytes = _elevenlabs_generate(text, language)
-
+        mp3_bytes = _tts.synthesize_cached(text, language)
         if mp3_bytes is None:
             return None
 

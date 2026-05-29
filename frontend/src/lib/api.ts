@@ -38,7 +38,7 @@ api.interceptors.request.use((config) => {
       const sess = JSON.parse(raw);
       if (sess?.token) {
         config.headers = config.headers ?? {};
-        (config.headers as any).Authorization = `Bearer ${sess.token}`;
+        (config.headers as Record<string, string>).Authorization = `Bearer ${sess.token}`;
       }
     }
   } catch {
@@ -252,6 +252,33 @@ export async function loginClinician(
     clinician_name: clinicianName,
     pin,
   });
+  return data;
+}
+
+// Passwordless sign-in. Step 1: email a single-use link. The response is
+// intentionally generic (no account-enumeration) and may carry `dev_link` in
+// local/sandbox mode so the flow is followable without a real mailbox.
+export async function requestMagicLink(
+  hospitalId: string,
+  email: string,
+): Promise<{ status: string; message: string; dev_link?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/auth/magic/request`, { email });
+  return data;
+}
+
+// Step 2: redeem the token from the emailed link for a session.
+export async function verifyMagicLink(
+  hospitalId: string,
+  token: string,
+): Promise<{
+  token: string;
+  clinician_id: string;
+  name: string;
+  role: string;
+  hospital_id: string;
+  expires_at: number;
+}> {
+  const { data } = await api.post(`/api/${hospitalId}/auth/magic/verify`, { token });
   return data;
 }
 
@@ -543,18 +570,20 @@ export async function scanID(
 
 export type IdentityLookupResult = {
   matched: boolean;
-  match_method?: "name+dob" | "name_only";
+  match_method?: "name+dob" | "name_only" | "fhir_demographics" | "fhir_member_id";
   reason?: string;
   ehr_record?: {
     name: string;
     mrn: string;
     dob: string;
     sex: string;
+    fhir_id?: string;
     allergies?: string[];
     medications?: string[];
     conditions?: string[];
     insurance?: string;
     primary_care_provider?: string;
+    source?: string;
     prior_visits?: { date: string; type: string; chief_complaint: string; disposition: string }[];
   };
   prefill?: {
@@ -570,13 +599,23 @@ export type IdentityLookupResult = {
   };
 };
 
+export type IdentityLookupBody = {
+  first_name?: string;
+  last_name?: string;
+  dob?: string;
+  license_number?: string;
+  issuing_state?: string;
+  insurance_member_id?: string;
+  insurance_provider?: string;
+};
+
 export async function identityLookup(
   hospitalId: string,
-  body: Pick<IdFields, "first_name" | "last_name" | "dob" | "license_number" | "issuing_state">
+  body: IdentityLookupBody,
 ): Promise<IdentityLookupResult> {
   const { data } = await api.post<IdentityLookupResult>(
     `/api/${hospitalId}/identity/lookup`,
-    body
+    body,
   );
   return data;
 }
@@ -693,6 +732,25 @@ export type ScribeOutput = {
 
 export async function scribeFromTranscript(hospitalId: string, transcript: string): Promise<ScribeOutput> {
   const { data } = await api.post<ScribeOutput>(`/api/${hospitalId}/scribe/from-transcript`, { transcript, refine: true });
+  return data;
+}
+
+// FHIR write-back — DocumentReference + Conditions + Allergies + Observations
+export type EhrWriteResource = "DocumentReference" | "Condition" | "AllergyIntolerance" | "Observation(vital)" | "Observation(social)" | "Immunization";
+export type EhrWriteResult = {
+  writes: { resource: EhrWriteResource; result: { resourceType?: string; id?: string; url?: string; stored?: string; ok?: boolean } }[];
+};
+export type EhrWriteBody = {
+  patient_ref: string;
+  note_text?: string;
+  conditions?: { icd10: string; display?: string }[];
+  allergies?: { substance: string; reaction?: string; severity?: string }[];
+  vitals?: { loinc: string; display: string; value: number; unit: string }[];
+  social?: { loinc: string; display: string; text: string }[];
+  immunizations?: { cvx: string; display: string }[];
+};
+export async function ehrWrite(hospitalId: string, body: EhrWriteBody): Promise<EhrWriteResult> {
+  const { data } = await api.post<EhrWriteResult>(`/api/${hospitalId}/ehr-write`, body);
   return data;
 }
 
@@ -831,12 +889,6 @@ export async function careGapsAdHoc(hospitalId: string, patient: any) {
 
 export async function sdohPrapare(hospitalId: string, answers: any) {
   const { data } = await api.post(`/api/${hospitalId}/sdoh/prapare`, { answers });
-  return data;
-}
-
-// FHIR write-back
-export async function ehrWrite(hospitalId: string, body: any) {
-  const { data } = await api.post(`/api/${hospitalId}/ehr-write`, body);
   return data;
 }
 
@@ -1028,5 +1080,114 @@ export async function tefcaQuery(hospitalId: string, patient_name: string, patie
 
 export async function telehealthSession(hospitalId: string, body: any) {
   const { data } = await api.post(`/api/${hospitalId}/telehealth/session`, body);
+  return data;
+}
+
+// ---- Hospital workspace provisioning ----------------------------------------
+export type ProvisionedHospital = {
+  hospital_id: string;
+  slug: string;
+  name: string;
+  onboarded?: boolean;
+  admin_invited?: boolean;
+  admin_dev_link?: string; // local/sandbox only
+  clinician_path: string;
+  patient_path: string;
+  clinician_url: string;
+  patient_url: string;
+};
+
+export async function provisionHospital(
+  name: string,
+  requestedSlug?: string,
+  adminEmail?: string,
+  adminName?: string,
+): Promise<ProvisionedHospital> {
+  const { data } = await api.post<ProvisionedHospital>("/hospitals/provision", {
+    name,
+    requested_slug: requestedSlug || undefined,
+    admin_email: adminEmail || undefined,
+    admin_name: adminName || undefined,
+  });
+  return data;
+}
+
+// ---- Onboarding wizard + team management (admin) ----------------------------
+export type OnboardingStatus = {
+  hospital_id: string;
+  name: string;
+  onboarded: boolean;
+  team_size: number;
+  pending_requests: number;
+  patient_url: string;
+};
+
+export type CareTeamMember = {
+  clinician_id: string;
+  name: string;
+  email: string;
+  role: string;
+  last_login_at: string | null;
+};
+
+export type AccessRequest = {
+  request_id: string;
+  email: string;
+  name: string;
+  note?: string;
+  created_at: string;
+};
+
+export async function getOnboarding(hospitalId: string): Promise<OnboardingStatus> {
+  const { data } = await api.get(`/api/${hospitalId}/onboarding`);
+  return data;
+}
+
+export async function completeOnboarding(hospitalId: string): Promise<{ status: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/onboarding/complete`);
+  return data;
+}
+
+export async function inviteTeammate(
+  hospitalId: string,
+  email: string,
+  name: string,
+  role: string,
+): Promise<{ status: string; email: string; role: string; dev_link?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/invites`, { email, name, role });
+  return data;
+}
+
+export async function listCareTeam(hospitalId: string): Promise<{ members: CareTeamMember[]; count: number }> {
+  const { data } = await api.get(`/api/${hospitalId}/care-team`);
+  return data;
+}
+
+export async function listAccessRequests(hospitalId: string): Promise<{ requests: AccessRequest[] }> {
+  const { data } = await api.get(`/api/${hospitalId}/access-requests`);
+  return data;
+}
+
+export async function approveAccessRequest(
+  hospitalId: string,
+  requestId: string,
+): Promise<{ status: string; email: string; dev_link?: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/access-requests/${requestId}/approve`);
+  return data;
+}
+
+export async function denyAccessRequest(hospitalId: string, requestId: string): Promise<{ status: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/access-requests/${requestId}/deny`);
+  return data;
+}
+
+// Public request-to-join (used on the landing "Join" path when not yet invited).
+export async function requestAccess(
+  hospitalId: string,
+  email: string,
+  name: string,
+  note?: string,
+): Promise<{ status: string; message: string }> {
+  const { data } = await api.post(`/api/${hospitalId}/access-requests`, { email, name, note });
   return data;
 }

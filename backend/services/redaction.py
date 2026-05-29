@@ -25,69 +25,169 @@ from lib.config import settings
 
 log = logging.getLogger(__name__)
 
-_MODEL = "claude-sonnet-4-5"
+_MODEL = settings.model_utility
 
 
-# Conservative regex-only fast-path. LLM pass refines.
-_CHITCHAT = [
-    r"^how (?:are|was) (?:you|your weekend|the kids|the family|the dog|the drive|your day)",
-    r"^(?:so |well |um |uh |yeah |right )?(?:nice|good|great|terrible|awful) weather",
-    r"^did you (?:see|catch|watch) (?:the game|the (?:show|movie))",
-    r"^(?:so |well )?how 'bout them",
-    r"^(?:can|could) (?:i|you) get (?:you )?some (?:water|coffee)",
+# --- Segment labels ---------------------------------------------------------
+# A segment is one of:
+#   clinical              -> always kept (relevant to medical care)
+#   small_talk            -> greetings, weather, weekend chatter — redact
+#   side_conversation     -> talk with a third party / on the phone — redact
+#   sensitive_nonclinical -> non-clinical but private (finances, immigration,
+#                            relationship details unrelated to care) — redact
+#                            so it never lands in the durable note
+# Anything we cannot confidently bucket defaults to `clinical` (keep).
+_OFF_RECORD_LABELS = {"small_talk", "side_conversation", "sensitive_nonclinical"}
+_VALID_LABELS = {"clinical"} | _OFF_RECORD_LABELS
+
+
+# Conservative regex fast-path. Each entry maps a pattern to an off-record
+# label so the deterministic pass produces the same shape as the LLM pass.
+# The LLM pass only refines segments the regex did not already decide.
+_FASTPATH: list[tuple[str, str]] = [
+    # --- small_talk ---------------------------------------------------------
+    (r"^how (?:are|was|is) (?:you|your weekend|your day|your week|the kids|"
+     r"the family|the dog|the drive|the holidays|everything)", "small_talk"),
+    (r"^(?:so |well |um |uh |yeah |right |ok |okay )*(?:nice|good|great|lovely|"
+     r"terrible|awful|cold|hot|rainy|beautiful) (?:weather|day|morning|out there)", "small_talk"),
+    (r"^did you (?:see|catch|watch) (?:the game|the (?:show|movie|news|episode))", "small_talk"),
+    (r"^(?:so |well )?how 'bout (?:them|those|that)", "small_talk"),
+    (r"^(?:can|could) (?:i|you) get (?:you )?(?:some )?(?:water|coffee|tea|juice)", "small_talk"),
+    (r"^(?:good|great) to (?:see|meet) you", "small_talk"),
+    (r"^(?:happy|merry) (?:birthday|holidays|new year|thanksgiving)", "small_talk"),
+    (r"^(?:thanks|thank you)(?: so much)?(?: for (?:coming|waiting|your patience))?\.?$", "small_talk"),
+    (r"^(?:have a |you too|take care)\b.*\b(?:weekend|day|night|one)\b", "small_talk"),
+    (r"^(?:sorry|apologies) (?:for|about) the wait", "small_talk"),
+    (r"^did you (?:find|have) (?:any |much )?(?:trouble |problem )?(?:parking|finding (?:the|us))", "small_talk"),
+    # --- side_conversation --------------------------------------------------
+    (r"^(?:hey |hi )?(?:nurse|doctor|can someone|could someone)\b.*\b(?:next room|"
+     r"down the hall|room \d|the front|reception)", "side_conversation"),
+    (r"^(?:excuse me|hold on|one (?:sec|second|moment)|just a (?:sec|second|moment))\b.*"
+     r"(?:phone|call|page|text|message)", "side_conversation"),
+    (r"^(?:let me|i('ll| will)) (?:just )?(?:take|grab|answer) this (?:call|page)", "side_conversation"),
+    (r"\b(?:talking|speaking) to (?:my|the) (?:colleague|assistant|the front desk)\b", "side_conversation"),
+]
+_FASTPATH_RX: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(p, re.IGNORECASE), label) for p, label in _FASTPATH
 ]
 
 
+def _fastpath_label(text: str) -> str | None:
+    """Return an off-record label if the regex fast-path is confident, else None."""
+    t = (text or "").strip()
+    if not t:
+        return None
+    for rx, label in _FASTPATH_RX:
+        if rx.search(t):
+            return label
+    return None
+
+
+# Backward-compatible helper retained for callers that only need a boolean.
 def _is_obvious_chitchat(text: str) -> bool:
-    t = (text or "").strip().lower()
-    return any(re.match(p, t) for p in _CHITCHAT)
+    return _fastpath_label(text) is not None
 
 
-_LLM_SYSTEM = """You classify conversation segments from a doctor-patient encounter as either \
-'clinical' (relevant to medical care) or 'off_record' (small talk, side conversation, non-clinical). \
-Be conservative — when uncertain, classify as 'clinical'.
+_LLM_SYSTEM = """You label conversation segments from a doctor-patient encounter.
 
-Return JSON ONLY: {"redacted_segment_ids": [int...]}
+For each segment assign exactly one label:
+  - "clinical": relevant to medical care — symptoms, history, exam, plan,
+    medications, results, scheduling of care, anything a clinician would
+    want in the chart.
+  - "small_talk": greetings, weather, weekend/holiday chatter, pleasantries.
+  - "side_conversation": the speaker is talking to a third party, on a phone
+    call, or to staff about something unrelated to this patient's care.
+  - "sensitive_nonclinical": private but NOT medically relevant — finances,
+    immigration status, legal matters, relationship gossip unrelated to care.
+
+Be conservative: if a segment is ambiguous, or if redacting it could remove
+clinical context, label it "clinical". Keeping a borderline segment is always
+safer than dropping clinical information.
+
+Return JSON ONLY: {"labels": [{"id": int, "label": "clinical|small_talk|side_conversation|sensitive_nonclinical"}, ...]}
 """
 
 
 def redact_segments(segments: list[dict[str, Any]]) -> dict[str, Any]:
-    """Returns {kept, redacted, kept_segments, redacted_segments}."""
-    redacted_ids: set[int] = set()
+    """Classify scribe segments and split kept (clinical) from redacted (off-record).
 
-    # Fast-path regex
+    Returns:
+      {
+        "kept_segments": [...],          # label == "clinical"
+        "redacted_segments": [...],      # each has an added "redaction_label"
+        "kept_count": int,
+        "redacted_count": int,
+        "labels": {seg_id: label},       # full label map for every segment
+        "label_source": {seg_id: "regex"|"llm"|"default"},
+      }
+    """
+    labels: dict[int, str] = {}
+    source: dict[int, str] = {}
+
+    # 1. Deterministic regex fast-path.
     for s in segments:
-        if _is_obvious_chitchat(s.get("content", "")):
-            redacted_ids.add(int(s["id"]))
+        sid = int(s["id"])
+        hit = _fastpath_label(s.get("content", ""))
+        if hit:
+            labels[sid] = hit
+            source[sid] = "regex"
 
-    # LLM pass on remaining ambiguous-looking segments
-    if settings.anthropic_api_key:
-        candidates = [s for s in segments if int(s["id"]) not in redacted_ids and len(s.get("content", "")) < 200]
+    # 2. LLM classifier on segments the regex did not decide.
+    if claude.available():
+        candidates = [
+            s for s in segments
+            if int(s["id"]) not in labels and len(s.get("content", "")) < 400
+        ]
         if candidates:
-            user = json.dumps([{"id": s["id"], "speaker": s.get("speaker"), "content": s["content"]} for s in candidates])
+            user = json.dumps([
+                {"id": s["id"], "speaker": s.get("speaker"), "content": s["content"]}
+                for s in candidates
+            ])
             try:
                 resp = claude.messages_create(
                     model=_MODEL,
-                    max_tokens=600,
+                    max_tokens=900,
                     system=_LLM_SYSTEM,
-                    messages=[{"role": "user", "content": user[:8000]}],
+                    messages=[{"role": "user", "content": user[:9000]}],
                     purpose="redaction",
                 )
                 text = "".join(getattr(b, "text", "") for b in resp.content).strip()
                 text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
                 out = json.loads(text)
-                for i in out.get("redacted_segment_ids", []) or []:
-                    redacted_ids.add(int(i))
+                for item in out.get("labels", []) or []:
+                    try:
+                        sid = int(item["id"])
+                        lbl = str(item["label"]).strip().lower()
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    # Keep-when-in-doubt: an unrecognized label becomes clinical.
+                    if lbl not in _VALID_LABELS:
+                        lbl = "clinical"
+                    labels[sid] = lbl
+                    source[sid] = "llm"
             except Exception as e:
                 log.warning("redaction LLM pass failed: %s", e)
 
-    kept = [s for s in segments if int(s["id"]) not in redacted_ids]
-    redacted = [s for s in segments if int(s["id"]) in redacted_ids]
+    # 3. Conservative default — anything still unlabeled is kept as clinical.
+    for s in segments:
+        sid = int(s["id"])
+        if sid not in labels:
+            labels[sid] = "clinical"
+            source[sid] = "default"
+
+    kept = [s for s in segments if labels[int(s["id"])] == "clinical"]
+    redacted = [
+        {**s, "redaction_label": labels[int(s["id"])]}
+        for s in segments
+        if labels[int(s["id"])] in _OFF_RECORD_LABELS
+    ]
     return {
         "kept_segments": kept,
         "redacted_segments": redacted,
         "kept_count": len(kept),
         "redacted_count": len(redacted),
+        "labels": {sid: lbl for sid, lbl in labels.items()},
+        "label_source": {sid: src for sid, src in source.items()},
     }
 
 

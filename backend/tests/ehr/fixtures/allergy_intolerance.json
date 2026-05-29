@@ -1,0 +1,37 @@
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "test-allergy-001",
+  "patient": {
+    "reference": "Patient/test-patient-001"
+  },
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "code": {
+    "text": "Penicillin"
+  },
+  "recordedDate": "2026-05-16T00:00:00Z",
+  "reaction": [
+    {
+      "manifestation": [
+        {
+          "text": "Hives"
+        }
+      ],
+      "severity": "moderate"
+    }
+  ]
+}

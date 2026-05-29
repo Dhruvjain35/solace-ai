@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 
 from db import storage
 from lib.auth import audit, require_clinician
@@ -48,7 +48,10 @@ def _delete_ddb_patient(patient_id: str) -> None:
             ExpressionAttributeValues={":p": patient_id},
         )
         for item in resp.get("Items", []):
-            t.delete_item(Key={"patient_id": patient_id, sk_name: item[sk_name]})
+            sk_value = item.get(sk_name)
+            if sk_value is None:
+                continue
+            t.delete_item(Key={"patient_id": patient_id, sk_name: sk_value})
 
 
 def _clear_canonical_fields(patient_id: str) -> None:
@@ -87,7 +90,10 @@ def _clear_canonical_fields(patient_id: str) -> None:
             ExpressionAttributeValues={":p": patient_id},
         )
         for row in resp.get("Items", []):
-            nt.delete_item(Key={"patient_id": patient_id, sk_name: row[sk_name]})
+            sk_value = row.get(sk_name)
+            if sk_value is None:
+                continue
+            nt.delete_item(Key={"patient_id": patient_id, sk_name: sk_value})
 
 
 @router.post("/admin/reset-demo")
@@ -95,24 +101,42 @@ def reset_demo(
     hospital_id: str = Path(...),
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    # Demo-only: this wipes/reseeds the canonical demo patients. A real
+    # provisioned workspace must never be reset to demo seed data.
+    from lib.config import settings  # noqa: PLC0415
+    if hospital_id != settings.demo_hospital_id:
+        raise HTTPException(status_code=403, detail="Reset is only available in the demo workspace.")
     audit(caller, "admin.reset_demo")
-    rows = storage.list_patients_for_hospital(hospital_id, status="all")
+    try:
+        rows = storage.list_patients_for_hospital(hospital_id, status="all")
+    except Exception as e:  # noqa: BLE001
+        log.exception("reset-demo: failed to list patients: %s", e)
+        raise HTTPException(status_code=502, detail="could not list patients for reset")
     deleted: list[str] = []
     cleared: list[str] = []
+    failed: list[str] = []
     for p in rows:
         name = (p.get("name") or "").strip()
-        pid = p["patient_id"]
-        if name in CANONICAL_NAMES:
-            _clear_canonical_fields(pid)
-            cleared.append(name)
-        else:
-            _delete_ddb_patient(pid)
-            deleted.append(name or pid[:8])
-    log.info("reset-demo: deleted=%d cleared=%d", len(deleted), len(cleared))
+        pid = p.get("patient_id")
+        if not pid:
+            log.warning("reset-demo: skipping row with no patient_id")
+            continue
+        try:
+            if name in CANONICAL_NAMES:
+                _clear_canonical_fields(pid)
+                cleared.append(name)
+            else:
+                _delete_ddb_patient(pid)
+                deleted.append(name or pid[:8])
+        except Exception as e:  # noqa: BLE001
+            log.exception("reset-demo: failed for patient %s: %s", pid[:8], e)
+            failed.append(name or pid[:8])
+    log.info("reset-demo: deleted=%d cleared=%d failed=%d", len(deleted), len(cleared), len(failed))
     return {
         "success": True,
         "deleted_test_patients": deleted,
         "cleared_canonical_patients": cleared,
+        "failed_patients": failed,
     }
 
 
@@ -124,7 +148,11 @@ def cost_stats(
     """Per-encounter AI spend dashboard. Aggregated from `ai_cost_usd` on each
     patient row + breakdown across the seven Claude services + Whisper + TTS."""
     audit(caller, "admin.cost_stats")
-    rows = storage.list_patients_for_hospital(hospital_id, status="all")
+    try:
+        rows = storage.list_patients_for_hospital(hospital_id, status="all")
+    except Exception as e:  # noqa: BLE001
+        log.exception("cost-stats: failed to list patients: %s", e)
+        raise HTTPException(status_code=502, detail="could not load cost data")
     total = 0.0
     breakdown_total: dict[str, float] = {}
     encounters_with_cost = 0

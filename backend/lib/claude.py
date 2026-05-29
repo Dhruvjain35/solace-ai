@@ -26,9 +26,20 @@ log = logging.getLogger(__name__)
 
 # Model-name normalization. Keep our code naming consistent while AWS Bedrock
 # uses its own model IDs.
+#
+# Claude 4+ models on Bedrock require cross-region inference profiles (the
+# `us.` prefix). Direct model invocation against the bare ID returns
+# `ValidationException: The provided model identifier is invalid`. The Sonnet
+# 4.5 weights are dated 2025-09-29, not 2025-10-01 — the previous map had the
+# wrong date stamp and broke scribe, ambient scribe, differential, comfort
+# protocol, and every other Claude call in production.
 _BEDROCK_MODEL_MAP = {
-    "claude-sonnet-4-5": "anthropic.claude-sonnet-4-5-20251001-v1:0",
-    "claude-sonnet-4-5-20251001": "anthropic.claude-sonnet-4-5-20251001-v1:0",
+    "claude-sonnet-4-5": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "claude-sonnet-4-5-20250929": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "claude-sonnet-4-5-20251001": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",  # legacy alias
+    "claude-haiku-4-5": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "claude-opus-4-5": "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    "claude-sonnet-4-6": "us.anthropic.claude-sonnet-4-6",
 }
 
 
@@ -54,6 +65,24 @@ class Response:
 
 def provider() -> str:
     return os.environ.get("CLAUDE_PROVIDER", "bedrock").lower()
+
+
+def available() -> bool:
+    """True when a Claude backend is actually callable.
+
+    Bedrock (the default, BAA-covered path) authenticates with the Lambda IAM
+    role and needs NO API key — so it is always considered available. Only the
+    direct Anthropic path requires ``anthropic_api_key``.
+
+    Services use this instead of checking ``settings.anthropic_api_key`` so AI
+    features do not silently disable themselves in production, where we run on
+    Bedrock and that key is intentionally unset.
+    """
+    if provider() == "bedrock":
+        return True
+    from lib.config import settings  # noqa: PLC0415
+
+    return bool(settings.anthropic_api_key)
 
 
 @lru_cache(maxsize=1)
@@ -107,10 +136,20 @@ def messages_create(
     return resp
 
 
+def _system_blocks(system: str) -> list[dict]:
+    """Wrap the (static, per-service) system prompt as a cache-controlled block.
+
+    Prompt caching lets repeated calls that share a system prompt re-read it from
+    cache instead of re-billing every input token (~90% cheaper on the cached
+    span, 5-min TTL). Below the model's minimum cacheable size the marker is
+    simply ignored — so it is always safe to attach."""
+    return [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+
+
 def _direct_invoke(model, max_tokens, system, messages, temperature, **kwargs) -> Response:
     kw = {"model": model, "max_tokens": max_tokens, "messages": messages}
     if system:
-        kw["system"] = system
+        kw["system"] = _system_blocks(system)
     if temperature is not None:
         kw["temperature"] = temperature
     kw.update(kwargs)
@@ -132,9 +171,13 @@ def _bedrock_invoke(model, max_tokens, system, messages, temperature, **kwargs) 
         "messages": messages,
     }
     if system:
-        body["system"] = system
+        body["system"] = _system_blocks(system)
     if temperature is not None:
         body["temperature"] = temperature
+    # Pass through extras like tools / tool_choice so tool-use works on the
+    # Bedrock (BAA) path too, not just the direct API.
+    for k, v in kwargs.items():
+        body[k] = v
     bedrock_model = _BEDROCK_MODEL_MAP.get(model, model)
     r = _bedrock_client().invoke_model(
         modelId=bedrock_model,

@@ -3,7 +3,10 @@
 Headers (applied to every response from Amplify Hosting):
   - Strict-Transport-Security — force HTTPS for 2 years + preload list
   - Content-Security-Policy    — restrict to our own origins + S3 presigned + data: imgs
-  - X-Frame-Options            — clickjacking defense
+  - X-Frame-Options            — clickjacking defense (SAMEORIGIN, not DENY, so
+                                 the /showcase split-screen can iframe the demo
+                                 patient + clinician routes; third-party framing
+                                 stays blocked, matching CSP frame-ancestors 'self')
   - X-Content-Type-Options     — MIME sniff defense
   - Referrer-Policy            — no cross-origin referrers (PHI leak prevention)
   - Permissions-Policy         — limit to what the patient intake flow actually needs
@@ -26,7 +29,7 @@ HEADERS_YAML = f"""customHeaders:
       - key: 'Strict-Transport-Security'
         value: 'max-age=63072000; includeSubDomains; preload'
       - key: 'X-Frame-Options'
-        value: 'DENY'
+        value: 'SAMEORIGIN'
       - key: 'X-Content-Type-Options'
         value: 'nosniff'
       - key: 'Referrer-Policy'
@@ -34,7 +37,7 @@ HEADERS_YAML = f"""customHeaders:
       - key: 'Permissions-Policy'
         value: 'camera=(self), microphone=(self), geolocation=(), accelerometer=(), gyroscope=()'
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: {MEDIA_S3}; media-src 'self' {MEDIA_S3}; connect-src 'self' {CLOUDFRONT_API} {APIGW_DIRECT}; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: {MEDIA_S3}; media-src 'self' {MEDIA_S3}; connect-src 'self' {CLOUDFRONT_API} {APIGW_DIRECT}; font-src 'self' data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
       - key: 'Cross-Origin-Opener-Policy'
         value: 'same-origin'
       - key: 'Cross-Origin-Resource-Policy'

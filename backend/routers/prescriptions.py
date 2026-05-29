@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib.auth import audit, require_clinician
@@ -26,15 +26,17 @@ def _now_iso() -> str:
 
 
 class PrescriptionBody(BaseModel):
-    drug: str
-    dose: str = ""
-    route: str = ""
-    frequency: str = ""
-    duration: str = ""
-    indication: str = ""
-    cautions: str = ""
-    prescribed_by: str = "Clinician"
-    source: str = "manual"  # "manual" | "ai_suggested_accepted"
+    model_config = ConfigDict(extra="forbid")
+
+    drug: str = Field(..., max_length=200)
+    dose: str = Field("", max_length=100)
+    route: str = Field("", max_length=100)
+    frequency: str = Field("", max_length=100)
+    duration: str = Field("", max_length=100)
+    indication: str = Field("", max_length=500)
+    cautions: str = Field("", max_length=1_000)
+    prescribed_by: str = Field("Clinician", max_length=200)
+    source: str = Field("manual", max_length=40)  # "manual" | "ai_suggested_accepted"
 
 
 @router.post("/patients/{patient_id}/prescriptions")

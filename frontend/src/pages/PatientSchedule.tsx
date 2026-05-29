@@ -85,15 +85,33 @@ export default function PatientSchedule() {
   }
 
   if (confirmed) {
+    const when = (() => {
+      const d = new Date(confirmed.slot_iso);
+      return isNaN(d.getTime())
+        ? confirmed.slot_iso
+        : d.toLocaleString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          });
+    })();
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-surface-low">
+      <div
+        className="min-h-[100dvh] flex items-center justify-center p-6 bg-surface-low"
+        style={{
+          paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
+          paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="max-w-md w-full bg-surface-lowest rounded-xl shadow-card p-7 flex flex-col gap-4 text-center"
         >
           <div className="h-14 w-14 rounded-full bg-success/15 text-success mx-auto flex items-center justify-center">
-            <Check size={28} />
+            <Check size={28} aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">You're booked.</h1>
           <p className="text-text-muted">
@@ -102,18 +120,17 @@ export default function PatientSchedule() {
           </p>
           <div className="bg-surface-low rounded-lg p-4 flex flex-col gap-1">
             <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
-              Confirmation
+              Confirmation code
             </div>
             <div className="text-3xl font-mono font-bold tracking-[0.2em] text-primary">
               {confirmed.confirmation_code}
             </div>
-            <div className="text-sm text-ink mt-2">
-              {confirmed.patient_name} · {confirmed.slot_iso}
-            </div>
+            <div className="text-sm text-ink mt-2">{confirmed.patient_name}</div>
+            <div className="text-sm font-semibold text-ink">{when}</div>
           </div>
           <Link
             to={`/${hospitalId}`}
-            className="inline-flex items-center justify-center h-11 rounded-md bg-primary text-white font-semibold text-sm shadow-soft"
+            className="inline-flex items-center justify-center h-12 rounded-md bg-primary text-white font-semibold text-sm shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
           >
             Done
           </Link>
@@ -124,11 +141,14 @@ export default function PatientSchedule() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-surface">
-      <header className="px-4 py-4 sticky top-0 bg-surface-lowest/90 backdrop-blur-xl shadow-soft flex items-center gap-3 z-10">
+      <header
+        className="px-4 sticky top-0 bg-surface-lowest/90 backdrop-blur-xl shadow-soft flex items-center gap-3 z-10"
+        style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))", paddingBottom: "1rem" }}
+      >
         <Link
           to={`/${hospitalId}`}
           aria-label="Back to intake"
-          className="w-10 h-10 rounded-full hover:bg-surface-low flex items-center justify-center"
+          className="w-11 h-11 rounded-full hover:bg-surface-low flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
         >
           <ArrowLeft size={20} />
         </Link>
@@ -138,7 +158,10 @@ export default function PatientSchedule() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-6 max-w-lg w-full mx-auto flex flex-col gap-6 pb-32">
+      <main
+        className="flex-1 px-4 pt-6 max-w-lg w-full mx-auto flex flex-col gap-6"
+        style={{ paddingBottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Book your visit</h1>
           <p className="text-text-muted text-sm mt-1">
@@ -164,16 +187,28 @@ export default function PatientSchedule() {
         {!loading && dayGroups.length > 0 && (
           <>
             {/* Day strip */}
-            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
+            <div
+              role="tablist"
+              aria-label="Choose a day"
+              className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1"
+            >
               {dayGroups.map(([day, daySlots]) => {
                 const d = new Date(day + "T12:00:00Z");
                 const isActive = day === activeDay;
+                const fullLabel = d.toLocaleDateString(undefined, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                });
                 return (
                   <button
                     key={day}
                     type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-label={`${fullLabel}, ${daySlots.length} slot${daySlots.length === 1 ? "" : "s"} available`}
                     onClick={() => setActiveDay(day)}
-                    className={`flex flex-col items-center px-3 py-2 rounded-lg shrink-0 min-w-[68px] ${
+                    className={`flex flex-col items-center min-w-[68px] px-3 py-2 rounded-lg shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
                       isActive ? "bg-primary text-white shadow-soft" : "bg-surface-lowest"
                     }`}
                   >
@@ -192,22 +227,29 @@ export default function PatientSchedule() {
             </div>
 
             {/* Slot grid */}
-            <div className="grid grid-cols-3 gap-2">
+            <div role="group" aria-label="Available times" className="grid grid-cols-3 gap-2">
               {(dayGroups.find((g) => g[0] === activeDay)?.[1] || []).map((s) => {
                 const t = new Date(s.iso);
                 const isChosen = chosen?.iso === s.iso;
+                const timeLabel = t.toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                });
                 return (
                   <button
                     key={s.iso}
                     type="button"
+                    aria-pressed={isChosen}
+                    aria-label={`Book ${timeLabel}`}
                     onClick={() => setChosen(s)}
-                    className={`h-12 rounded-md font-mono text-sm font-semibold ${
+                    className={`h-12 rounded-md font-mono text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
                       isChosen
                         ? "bg-primary text-white shadow-soft"
                         : "bg-surface-lowest hover:bg-primary-fixed"
                     }`}
                   >
-                    {t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
+                    {timeLabel}
                   </button>
                 );
               })}
@@ -253,7 +295,7 @@ export default function PatientSchedule() {
                   type="button"
                   onClick={submit}
                   disabled={!name.trim() || !phone.trim() || busy}
-                  className="mt-1 h-12 rounded-md bg-primary text-white font-semibold text-base shadow-soft disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                  className="mt-1 h-12 rounded-md bg-primary text-white font-semibold text-base shadow-soft disabled:opacity-60 inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                 >
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   Confirm booking

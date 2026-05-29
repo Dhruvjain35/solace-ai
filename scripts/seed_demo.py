@@ -106,10 +106,18 @@ def main() -> None:
         for name, payload in DEMO_TRANSCRIPTS:
             transcript = payload["transcript"]
             print(f"[seed] {name}: {transcript[:60]}...")
+            # SEC-007: mint a one-use intake nonce via /start-intake first.
+            nresp = client.post(f"{args.url}/api/{args.hospital_id}/start-intake")
+            if nresp.status_code != 200:
+                print(f"  FAIL start-intake {nresp.status_code}: {nresp.text[:160]}")
+                continue
+            intake_token = nresp.json().get("token", "")
             form = {
                 "patient_name": name,
                 "pre_transcribed_text": transcript,
                 "medical_info": _json.dumps(payload["medical_info"]),
+                "consent_granted": "true",  # HIPAA §164.508 consent gate (SEC-004)
+                "intake_token": intake_token,  # one-use nonce from /start-intake
             }
             resp = client.post(f"{args.url}/api/{args.hospital_id}/intake", data=form)
             if resp.status_code != 200:

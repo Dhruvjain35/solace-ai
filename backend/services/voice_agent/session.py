@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from lib.config import settings
+from services.voice_agent import dialogue
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +55,9 @@ def start(*, hospital_id: str, caller_phone: str | None, language: str, channel:
         "history": [],                     # Claude messages array — internal only
         "intent": None,
         "escalation": None,                # "human" | "911" | None
+        # Serialized deterministic intake state machine (dialogue.IntakeState).
+        # Round-trips through DDB so a Lambda cold start can resume mid-intake.
+        "intake": dialogue.IntakeState(language=(language or "en")[:2]).to_dict(),
         "ttl": int(time.time()) + TTL_DAYS * 86400,
     }
     _calls[call_id] = record
@@ -106,6 +110,40 @@ def append_tool(call_id: str, *, name: str, tool_input: dict[str, Any], result_s
         "result_summary": result_summary[:300],
         "ts": _now_iso(),
     })
+    if settings.solace_mode == "aws":
+        _ddb_put(rec)
+
+
+def get_intake(call_id: str) -> dict[str, Any] | None:
+    """Return the serialized intake-state dict for this call, or None.
+
+    Always returns a dict the caller can hand straight to
+    `intents.run_turn(intake=...)`; rehydrates a default state for legacy rows
+    that pre-date the intake feature.
+    """
+    rec = get(call_id)
+    if not rec:
+        return None
+    raw = rec.get("intake")
+    if not raw:
+        raw = dialogue.IntakeState(language=rec.get("language", "en")).to_dict()
+    return raw
+
+
+def save_intake(call_id: str, intake: dict[str, Any]) -> None:
+    """Persist the updated intake-state dict back onto the call record.
+
+    `intents.run_turn` returns the new `intake` dict each turn; the voice router
+    passes it here so the next webhook resumes the dialogue exactly where it
+    left off (DynamoDB-backed in AWS mode, in-memory in local mode).
+    """
+    rec = get(call_id)
+    if not rec:
+        return
+    # Normalize through IntakeState so a malformed dict can never corrupt a row.
+    rec["intake"] = dialogue.IntakeState.from_dict(intake).to_dict()
+    rec["updated_at"] = _now_iso()
+    _calls[call_id] = rec
     if settings.solace_mode == "aws":
         _ddb_put(rec)
 

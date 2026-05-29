@@ -39,6 +39,10 @@ _PRICING_USD: dict[tuple[str, str], tuple[float, float]] = {
     ("anthropic", "claude-sonnet-4-5"): (0.003, 0.015),
     ("anthropic", "claude-sonnet-4-5-20251001"): (0.003, 0.015),
     ("bedrock",   "claude-sonnet-4-5"): (0.003, 0.015),
+    # Haiku 4.5 — the default tier now (~73% cheaper than Sonnet in & out).
+    ("anthropic", "claude-haiku-4-5"): (0.0008, 0.004),
+    ("anthropic", "claude-haiku-4-5-20251001"): (0.0008, 0.004),
+    ("bedrock",   "claude-haiku-4-5"): (0.0008, 0.004),
     ("openai",    "whisper-1"):         (0.006 / 60, 0.0),  # whisper bills per minute, treat input_bytes as ms-ish
     ("elevenlabs","eleven_multilingual_v2"): (0.000033, 0.0),  # $0.33 per 10k chars input ≈ $0.000033/char
 }

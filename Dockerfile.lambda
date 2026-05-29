@@ -2,13 +2,19 @@
 # models baked in (no S3 cold-fetch), libgomp from AL2023 dnf (no Debian mirror).
 FROM public.ecr.aws/lambda/python:3.12
 
-# OpenMP runtime for LightGBM (native AL2023 package — stable, no external mirror)
-RUN dnf install -y libgomp && dnf clean all
+# OpenMP runtime for LightGBM (native AL2023 package — stable, no external mirror).
+# Clear the dnf metadata cache afterwards so it is not baked into the image layer.
+RUN dnf install -y libgomp \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
 # Python deps — full versions, no manylinux cross-compile or stripping needed
-# because we're building IN the Lambda runtime environment
+# because we're building IN the Lambda runtime environment. The requirements file
+# is removed after install so the (potentially sensitive) build manifest is not
+# shipped inside the runtime image.
 COPY requirements-lambda.txt /tmp/requirements-lambda.txt
-RUN pip install --no-cache-dir -r /tmp/requirements-lambda.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-lambda.txt \
+    && rm -f /tmp/requirements-lambda.txt
 
 # App code
 COPY backend/main.py ${LAMBDA_TASK_ROOT}/
@@ -19,5 +25,10 @@ COPY backend/services ${LAMBDA_TASK_ROOT}/services
 
 # Model artifacts — copy whatever exists (empty dir is fine, simulation engine handles it)
 COPY backend/models ${LAMBDA_TASK_ROOT}/models
+
+# Drop privileges — the AL2023 Lambda base ships a non-root "sbx_user1051" (UID
+# 993). Running as a non-root principal limits blast radius if app code is
+# compromised; the runtime task files remain world-readable so the handler loads.
+USER 993
 
 CMD ["main.handler"]

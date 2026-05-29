@@ -14,7 +14,9 @@ WAF rules (CLOUDFRONT scope, global):
   1. Amazon IP Reputation List   — drops known botnets/scanners
   2. Known Bad Inputs Rule Set   — exploit patterns in headers/body
   3. Common (OWASP Top-10)       — SQLi, XSS, LFI, etc
-  4. SolaceRateLimit 10000/5min/IP — aggregate request rate cap (hospital NAT-friendly)
+  4. SolaceRateLimit 50000/5min/IP — aggregate request rate cap (hospital NAT-friendly).
+     Generous because a whole hospital waiting room shares one NAT egress IP;
+     per-identity quota + blocklist do the real abuse-bounding.
 """
 from __future__ import annotations
 
@@ -32,6 +34,59 @@ API_DOMAIN = "7ew5f2x01d.execute-api.us-east-1.amazonaws.com"
 # WAFv2 CLOUDFRONT-scope APIs are global but the client must target us-east-1
 waf = boto3.client("wafv2", region_name="us-east-1")
 cf = boto3.client("cloudfront")
+# ACM certs consumed by CloudFront MUST live in us-east-1, regardless of the
+# distribution's edge footprint.
+acm = boto3.client("acm", region_name="us-east-1")
+
+# Optional custom domain served by CloudFront. When set (and an ISSUED ACM cert
+# exists for it in us-east-1), the distribution is pinned to that cert + the
+# TLSv1.2_2021 security policy. Leave as None to keep the *.cloudfront.net
+# default certificate (which only supports the weaker TLSv1 floor).
+CUSTOM_DOMAIN: str | None = None
+
+
+def _find_acm_cert(domain: str) -> str | None:
+    """Return the ARN of an ISSUED ACM cert covering ``domain`` (us-east-1)."""
+    paginator = acm.get_paginator("list_certificates")
+    for page in paginator.paginate(CertificateStatuses=["ISSUED"]):
+        for cert in page.get("CertificateSummaryList", []):
+            names = {cert.get("DomainName")}
+            detail = acm.describe_certificate(CertificateArn=cert["CertificateArn"])
+            names.update(detail["Certificate"].get("SubjectAlternativeNames", []))
+            if domain in {n for n in names if n}:
+                return cert["CertificateArn"]
+    return None
+
+
+def _viewer_certificate() -> tuple[dict, dict]:
+    """Build the ViewerCertificate + Aliases blocks for the distribution.
+
+    With a custom domain + ISSUED ACM cert we can enforce the modern
+    TLSv1.2_2021 security policy (COMP-004). Without one, CloudFront only
+    permits MinimumProtocolVersion=TLSv1 on its shared default certificate.
+    """
+    if CUSTOM_DOMAIN:
+        cert_arn = _find_acm_cert(CUSTOM_DOMAIN)
+        if cert_arn:
+            print(f"  [acm]   using ACM cert for {CUSTOM_DOMAIN} -> TLSv1.2_2021")
+            viewer_cert = {
+                "ACMCertificateArn": cert_arn,
+                "SSLSupportMethod": "sni-only",
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "CertificateSource": "acm",
+            }
+            aliases = {"Quantity": 1, "Items": [CUSTOM_DOMAIN]}
+            return viewer_cert, aliases
+        print(f"  [warn]  no ISSUED ACM cert for {CUSTOM_DOMAIN} in us-east-1 — "
+              "falling back to the CloudFront default certificate")
+    # Default *.cloudfront.net certificate: TLSv1 is the only value AWS accepts
+    # here; a custom ACM cert is required to raise the floor to TLS 1.2.
+    viewer_cert = {
+        "CloudFrontDefaultCertificate": True,
+        "MinimumProtocolVersion": "TLSv1",
+        "CertificateSource": "cloudfront",
+    }
+    return viewer_cert, {"Quantity": 0}
 
 
 def _rules() -> list[dict]:
@@ -113,6 +168,8 @@ def ensure_distribution(web_acl_arn: str) -> tuple[str, str]:
         None,
     )
 
+    viewer_cert, aliases = _viewer_certificate()
+
     distribution_config = {
         "CallerReference": DIST_CALLER_REF,
         "Comment": "Solace API edge - WAF + AWS Shield",
@@ -161,16 +218,12 @@ def ensure_distribution(web_acl_arn: str) -> tuple[str, str]:
             "LambdaFunctionAssociations": {"Quantity": 0},
             "FieldLevelEncryptionId": "",
         },
-        "ViewerCertificate": {
-            "CloudFrontDefaultCertificate": True,
-            "MinimumProtocolVersion": "TLSv1",
-            "CertificateSource": "cloudfront",
-        },
+        "ViewerCertificate": viewer_cert,
         "DefaultRootObject": "",
         "IsIPV6Enabled": True,
         "HttpVersion": "http2",
         "Logging": {"Enabled": False, "IncludeCookies": False, "Bucket": "", "Prefix": ""},
-        "Aliases": {"Quantity": 0},
+        "Aliases": aliases,
         "CacheBehaviors": {"Quantity": 0},
         "CustomErrorResponses": {"Quantity": 0},
         "Restrictions": {"GeoRestriction": {"RestrictionType": "none", "Quantity": 0}},
