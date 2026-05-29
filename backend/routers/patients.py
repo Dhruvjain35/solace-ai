@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from db.constants import STATUS_SEEN, STATUS_WAITING
@@ -144,7 +144,9 @@ def get_public_patient(
 
 
 class ResolveBody(BaseModel):
-    clinician_name: str
+    model_config = ConfigDict(extra="forbid")
+
+    clinician_name: str = Field(..., max_length=200)
 
 
 @router.patch("/patients/{patient_id}/resolve")

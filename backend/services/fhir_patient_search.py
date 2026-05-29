@@ -26,8 +26,10 @@ from __future__ import annotations
 import logging
 import os
 import re
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
+from difflib import SequenceMatcher
 from typing import Any
 
 import httpx
@@ -37,6 +39,32 @@ log = logging.getLogger(__name__)
 DEFAULT_FHIR_BASE = "https://launch.smarthealthit.org/v/r4/fhir"
 SEARCH_TIMEOUT_S = 6.0
 RESOURCE_TIMEOUT_S = 4.0
+
+# --- Identity matching configuration ----------------------------------------------
+# Patient-safety critical: a wrong-chart match can pre-fill an intake with the
+# wrong allergies / meds / problem list. The decision engine below is biased
+# toward NOT matching when there is any doubt. A miss is a recoverable demo
+# annoyance; a false match is a clinical incident.
+#
+# Weighted scoring: each signal contributes points toward a 0.0-1.0 confidence.
+# A candidate must clear MATCH_THRESHOLD *and* survive the hard-reject gates
+# (DOB conflict, ambiguous top-two) to be returned. Otherwise the caller gets
+# None and falls through to the next lookup path.
+NAME_WEIGHT = 0.40
+DOB_WEIGHT = 0.35
+SEX_WEIGHT = 0.10
+PHONE_WEIGHT = 0.10
+MRN_WEIGHT = 0.05
+
+# Minimum confidence to auto-accept a single candidate.
+MATCH_THRESHOLD = 0.72
+# Below this a candidate is rejected outright (no_match).
+NO_MATCH_CEILING = 0.50
+# Fuzzy name-similarity floor — below this names are treated as different people.
+NAME_SIMILARITY_FLOOR = 0.80
+# If the best and second-best candidates are within this confidence gap, the
+# result is ambiguous and we refuse to guess.
+AMBIGUITY_MARGIN = 0.12
 
 
 def _base_url() -> str:
@@ -66,20 +94,26 @@ def match_by_demographics(
     family: str,
     birth_date: str = "",
     gender: str = "",
+    phone: str = "",
 ) -> dict[str, Any] | None:
-    """Search FHIR Patient by name + birthDate. Returns the normalized record
-    on hit (with allergies, meds, conditions, prior visits already fetched) or
-    None on miss/error.
+    """Search FHIR Patient by name + birthDate and run the identity decision
+    engine over the candidates.
 
-    `birth_date` should be YYYY-MM-DD when known. The sandbox supports partial
-    dates but we prefer exact matches.
+    Returns the normalized record (allergies, meds, conditions, prior visits
+    already fetched) ONLY when the decision engine returns status == "matched".
+    On "needs_review" or "no_match" — including the dangerous case where the
+    only candidate's DOB conflicts with the supplied DOB — this returns None so
+    the caller falls through to the next lookup path rather than writing to a
+    wrong chart.
+
+    `birth_date` should be YYYY-MM-DD when known.
     """
     given = (given or "").strip()
     family = (family or "").strip()
     if not given and not family:
         return None
 
-    params: dict[str, str] = {"_count": "5"}
+    params: dict[str, str] = {"_count": "10"}
     if family:
         params["family"] = family
     if given:
@@ -93,36 +127,324 @@ def match_by_demographics(
     if not bundle:
         return None
 
-    candidates = bundle.get("entry", []) or []
+    candidates = [
+        (e.get("resource") or {})
+        for e in (bundle.get("entry", []) or [])
+        if (e.get("resource") or {}).get("resourceType") == "Patient"
+    ]
+    candidates = [c for c in candidates if c]
     if not candidates:
         return None
 
-    # If we got back multiple, prefer the one whose birthdate matches exactly.
-    chosen = _pick_best_candidate(candidates, birth_date)
-    patient_resource = (chosen or {}).get("resource") or {}
-    if not patient_resource:
+    query = {
+        "given": given,
+        "family": family,
+        "birth_date": birth_date,
+        "gender": gender,
+        "phone": phone,
+        "mrn": "",
+    }
+    decision = match_status(query, candidates)
+    log.info(
+        "FHIR demographic match: status=%s confidence=%.2f reason=%s",
+        decision["status"], decision["confidence"], decision["reason"],
+    )
+    if decision["status"] != "matched" or decision["patient"] is None:
         return None
 
-    return _enrich_patient(patient_resource)
+    return _enrich_patient(decision["patient"])
 
 
 def match_by_member_id(member_id: str, provider_hint: str = "") -> dict[str, Any] | None:
-    """Search FHIR Patient by insurance identifier. Less reliable than name+DOB
-    because not every EHR indexes insurance member_id as a Patient.identifier,
-    but a free win when it's there."""
+    """Search FHIR Patient by insurance identifier.
+
+    Insurance member_id is shared across a family plan: a spouse and children
+    can all carry the same subscriber id. If the search returns more than one
+    distinct Patient we CANNOT tell which family member is at the desk from the
+    member_id alone — returning entries[0] would be a coin-flip wrong-chart
+    risk. In that case this hardens to None and the caller falls through to a
+    name+DOB lookup, which can actually disambiguate.
+
+    A single unambiguous hit is still a free win.
+    """
     member_id = (member_id or "").strip()
     if not member_id:
         return None
-    bundle = _search("Patient", {"identifier": member_id, "_count": "3"})
+    bundle = _search("Patient", {"identifier": member_id, "_count": "5"})
     if not bundle:
         return None
-    entries = bundle.get("entry", []) or []
-    if not entries:
+
+    resources = [
+        (e.get("resource") or {})
+        for e in (bundle.get("entry", []) or [])
+        if (e.get("resource") or {}).get("resourceType") == "Patient"
+    ]
+    resources = [r for r in resources if r]
+    if not resources:
         return None
-    patient_resource = (entries[0] or {}).get("resource") or {}
-    if not patient_resource:
+
+    # Collapse duplicates of the same logical Patient (same id).
+    distinct: dict[str, dict[str, Any]] = {}
+    for r in resources:
+        rid = str(r.get("id") or id(r))
+        distinct.setdefault(rid, r)
+
+    if len(distinct) > 1:
+        log.info(
+            "FHIR member_id %s resolved to %d distinct patients (family plan) "
+            "- refusing to guess, returning None",
+            _redact_id(member_id), len(distinct),
+        )
         return None
-    return _enrich_patient(patient_resource)
+
+    return _enrich_patient(next(iter(distinct.values())))
+
+
+# ----------------------------------------------------------------------------------
+# Identity decision engine
+# ----------------------------------------------------------------------------------
+
+
+def match_status(query: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    """Decide whether any FHIR Patient candidate is the person described by
+    `query`. Patient-safety critical — biased toward refusing to match.
+
+    `query` keys (all optional, strings): given, family, birth_date, gender,
+    phone, mrn. `candidates` is a list of raw FHIR Patient resources.
+
+    Returns a dict:
+      {
+        "status":     "matched" | "needs_review" | "no_match",
+        "confidence": float 0.0-1.0,        # confidence of the top candidate
+        "reason":     str,                   # human-readable explanation
+        "patient":    dict | None,           # the chosen FHIR Patient, or None
+      }
+
+    Hard-reject gates (any one forces a non-"matched" status):
+      - top score below MATCH_THRESHOLD
+      - DOB conflict: query DOB present and differs from candidate DOB
+      - ambiguous top-two: best and runner-up within AMBIGUITY_MARGIN
+    """
+    if not candidates:
+        return _decision("no_match", 0.0, "no candidates returned by FHIR", None)
+
+    scored = [(_score_candidate(query, c), c) for c in candidates]
+    # Sort by confidence descending; on ties keep input order (stable sort).
+    scored.sort(key=lambda sc: sc[0]["confidence"], reverse=True)
+
+    best_score, best_patient = scored[0]
+    confidence = best_score["confidence"]
+
+    # Gate 1 — DOB conflict on the top candidate. A wrong DOB means a wrong
+    # person, full stop. Never match across a DOB mismatch.
+    if best_score["dob_conflict"]:
+        return _decision(
+            "no_match", confidence,
+            "top candidate's date of birth conflicts with the supplied DOB",
+            None,
+        )
+
+    # Gate 2 — name too dissimilar. Even a strong DOB hit is not enough if the
+    # name is a different person (DOB collisions happen).
+    if best_score["name_similarity"] < NAME_SIMILARITY_FLOOR:
+        return _decision(
+            "no_match", confidence,
+            f"best candidate name similarity {best_score['name_similarity']:.2f} "
+            f"below floor {NAME_SIMILARITY_FLOOR}",
+            None,
+        )
+
+    # Gate 3 — sub-threshold score.
+    if confidence < NO_MATCH_CEILING:
+        return _decision(
+            "no_match", confidence,
+            f"top confidence {confidence:.2f} below no-match ceiling {NO_MATCH_CEILING}",
+            None,
+        )
+    if confidence < MATCH_THRESHOLD:
+        return _decision(
+            "needs_review", confidence,
+            f"top confidence {confidence:.2f} below match threshold {MATCH_THRESHOLD} "
+            "- weak evidence, clinician must confirm",
+            None,
+        )
+
+    # Gate 4 — ambiguous top-two. If a runner-up is nearly as good, we cannot
+    # safely pick one. Demand a clear winner.
+    if len(scored) > 1:
+        runner_up = scored[1][0]["confidence"]
+        if not scored[1][0]["dob_conflict"] and (confidence - runner_up) < AMBIGUITY_MARGIN:
+            return _decision(
+                "needs_review", confidence,
+                f"top two candidates are too close (gap "
+                f"{confidence - runner_up:.2f} < {AMBIGUITY_MARGIN}) "
+                "- ambiguous, clinician must confirm",
+                None,
+            )
+
+    return _decision(
+        "matched", confidence,
+        f"unique high-confidence match ({best_score['reason']})",
+        best_patient,
+    )
+
+
+def _decision(status: str, confidence: float, reason: str, patient: dict | None) -> dict[str, Any]:
+    return {
+        "status": status,
+        "confidence": round(float(confidence), 3),
+        "reason": reason,
+        "patient": patient,
+    }
+
+
+def _score_candidate(query: dict[str, Any], patient: dict[str, Any]) -> dict[str, Any]:
+    """Weighted similarity score for one FHIR Patient against the query.
+
+    Returns a dict with the overall `confidence` (sum of weighted signals,
+    renormalized over the signals that were actually evaluable), the raw
+    `name_similarity`, a `dob_conflict` boolean, and a `reason` summary.
+    """
+    signals: list[str] = []
+    earned = 0.0
+    possible = 0.0
+
+    # --- Name (fuzzy, accent-folded) ---
+    q_name = _norm_name(f"{query.get('given', '')} {query.get('family', '')}")
+    c_name = _norm_name(_candidate_name(patient))
+    name_sim = _name_similarity(q_name, c_name) if (q_name and c_name) else 0.0
+    if q_name and c_name:
+        possible += NAME_WEIGHT
+        earned += NAME_WEIGHT * name_sim
+        signals.append(f"name~{name_sim:.2f}")
+
+    # --- DOB (exact match only; partial/mismatch flagged) ---
+    q_dob = (query.get("birth_date") or "").strip()
+    c_dob = (patient.get("birthDate") or "").strip()
+    dob_conflict = False
+    if q_dob and c_dob:
+        possible += DOB_WEIGHT
+        if q_dob == c_dob:
+            earned += DOB_WEIGHT
+            signals.append("dob=exact")
+        elif len(q_dob) >= 4 and len(c_dob) >= 4 and q_dob[:4] == c_dob[:4]:
+            # Same birth year, different month/day — still a conflict for a
+            # full date, but note the partial agreement.
+            dob_conflict = True
+            signals.append("dob!=conflict(year-only)")
+        else:
+            dob_conflict = True
+            signals.append("dob!=conflict")
+
+    # --- Sex / gender ---
+    q_sex = _normalize_sex(query.get("gender", ""))
+    c_sex = _normalize_sex(patient.get("gender", ""))
+    if q_sex and c_sex and q_sex not in {"other"} and c_sex not in {"other"}:
+        possible += SEX_WEIGHT
+        if q_sex == c_sex:
+            earned += SEX_WEIGHT
+            signals.append("sex=match")
+        else:
+            signals.append("sex!=mismatch")
+
+    # --- Phone (digits-only comparison, tolerant of formatting/country code) ---
+    q_phone = _digits(query.get("phone", ""))
+    c_phone = _digits(_best_phone(patient))
+    if q_phone and c_phone:
+        possible += PHONE_WEIGHT
+        if _phone_match(q_phone, c_phone):
+            earned += PHONE_WEIGHT
+            signals.append("phone=match")
+        else:
+            signals.append("phone!=mismatch")
+
+    # --- MRN (exact identifier value) ---
+    q_mrn = (query.get("mrn") or "").strip().lower()
+    c_mrn = _find_mrn(patient.get("identifier") or []).strip().lower()
+    if q_mrn and c_mrn:
+        possible += MRN_WEIGHT
+        if q_mrn == c_mrn:
+            earned += MRN_WEIGHT
+            signals.append("mrn=match")
+        else:
+            signals.append("mrn!=mismatch")
+
+    # Renormalize over the signals we could actually evaluate, so a missing
+    # phone number does not silently cap the confidence at 0.90.
+    confidence = (earned / possible) if possible > 0 else 0.0
+
+    return {
+        "confidence": confidence,
+        "name_similarity": name_sim,
+        "dob_conflict": dob_conflict,
+        "reason": ", ".join(signals) or "no comparable signals",
+    }
+
+
+# ----------------------------------------------------------------------------------
+# Matching primitives
+# ----------------------------------------------------------------------------------
+
+
+def _fold_accents(s: str) -> str:
+    """Strip diacritics so 'José' matches 'Jose'."""
+    nfkd = unicodedata.normalize("NFKD", s)
+    return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
+
+
+def _norm_name(s: str) -> str:
+    """Lowercase, accent-fold, drop punctuation, collapse whitespace."""
+    s = _fold_accents(s or "").lower()
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _name_similarity(a: str, b: str) -> float:
+    """Fuzzy name similarity in [0, 1] via difflib.
+
+    Compares the full normalized strings and also a token-set comparison so
+    that word-order swaps ('Smith John' vs 'John Smith') and middle-name
+    presence/absence do not tank the score. Returns the better of the two.
+    """
+    if not a or not b:
+        return 0.0
+    whole = SequenceMatcher(None, a, b).ratio()
+    tok_a = " ".join(sorted(a.split()))
+    tok_b = " ".join(sorted(b.split()))
+    token = SequenceMatcher(None, tok_a, tok_b).ratio()
+    return max(whole, token)
+
+
+def _candidate_name(patient: dict[str, Any]) -> str:
+    return _hn_to_string(_first_name(patient.get("name") or []))
+
+
+def _digits(s: str) -> str:
+    return re.sub(r"\D", "", s or "")
+
+
+def _phone_match(a: str, b: str) -> bool:
+    """Phone equality tolerant of country codes — compare the last 10 digits."""
+    if not a or not b:
+        return False
+    return a[-10:] == b[-10:] if (len(a) >= 10 and len(b) >= 10) else a == b
+
+
+def _best_phone(patient: dict[str, Any]) -> str:
+    """Prefer a mobile number, else any phone telecom."""
+    telecoms = patient.get("telecom") or []
+    for t in telecoms:
+        if (t.get("system") or "").lower() == "phone" and (t.get("use") or "").lower() == "mobile":
+            return str(t.get("value", ""))
+    return _first_telecom(telecoms, "phone")
+
+
+def _redact_id(value: str) -> str:
+    """Mask an identifier for logs — never log a full member_id."""
+    v = (value or "").strip()
+    if len(v) <= 4:
+        return "*" * len(v)
+    return f"{'*' * (len(v) - 4)}{v[-4:]}"
 
 
 # ----------------------------------------------------------------------------------
@@ -181,22 +503,8 @@ def _search(resource_type: str, params: dict[str, str]) -> dict[str, Any] | None
 
 
 # ----------------------------------------------------------------------------------
-# Candidate scoring + normalization
+# Normalization
 # ----------------------------------------------------------------------------------
-
-
-def _pick_best_candidate(entries: list[dict], birth_date: str) -> dict | None:
-    """When the search returns multiple matches, prefer the one whose birthdate
-    matches exactly. If no birthdate was supplied or none matches, return the
-    first entry."""
-    if not entries:
-        return None
-    if birth_date:
-        for e in entries:
-            r = e.get("resource") or {}
-            if (r.get("birthDate") or "") == birth_date:
-                return e
-    return entries[0]
 
 
 def _normalize_patient(

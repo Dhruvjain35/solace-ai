@@ -1,0 +1,32 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "test-docref-001",
+  "status": "current",
+  "type": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "11506-3",
+        "display": "Progress note"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/test-patient-001"
+  },
+  "date": "2026-05-16T00:00:00Z",
+  "author": [
+    {
+      "display": "Solace AI scribe"
+    }
+  ],
+  "content": [
+    {
+      "attachment": {
+        "contentType": "text/plain",
+        "data": "VHJpYWdlIG5vdGU6IHBhdGllbnQgcmVwb3J0cyBjaGVzdCBwYWluLg==",
+        "creation": "2026-05-16T00:00:00Z"
+      }
+    }
+  ]
+}

@@ -12,8 +12,12 @@ the voice just reassures and orients.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
+import time
+from collections import OrderedDict
+from threading import Lock
 
 from db import media
 from lib.config import settings
@@ -21,6 +25,62 @@ from lib.config import settings
 log = logging.getLogger(__name__)
 
 _MAX_SCRIPT_CHARS = 350
+
+# --- In-process LRU audio cache ------------------------------------------------------
+#
+# Voice flows replay the same short phrases constantly (greetings, "I didn't
+# catch that", canned FAQ answers). tts_cache.py already caches MP3s in S3, but
+# every call still pays an S3 round-trip. This in-process LRU sits in front of
+# that: on a warm Lambda container, a repeated phrase synthesizes zero times and
+# hits zero network. Bounded so a long-lived container can't leak memory.
+
+_LRU_MAX_ENTRIES = 64          # ~64 short MP3s — a few MB at most
+_LRU_TTL_SECONDS = 3600        # entries older than 1h are re-synthesized
+_lru: "OrderedDict[str, tuple[float, bytes]]" = OrderedDict()
+_lru_lock = Lock()
+
+# Retry/backoff for transient Polly failures (throttling, brief 5xx).
+_TTS_MAX_ATTEMPTS = 3
+_TTS_BACKOFF_BASE = 0.25       # seconds: 0.25, 0.5, 1.0
+
+
+def _cache_key(text: str, language: str, provider: str) -> str:
+    return hashlib.sha256(f"{provider}|{language}|{text}".encode()).hexdigest()
+
+
+def _lru_get(key: str) -> bytes | None:
+    with _lru_lock:
+        entry = _lru.get(key)
+        if entry is None:
+            return None
+        ts, data = entry
+        if time.time() - ts > _LRU_TTL_SECONDS:
+            del _lru[key]
+            return None
+        _lru.move_to_end(key)  # mark most-recently-used
+        return data
+
+
+def _lru_put(key: str, data: bytes) -> None:
+    if not data:
+        return
+    with _lru_lock:
+        _lru[key] = (time.time(), data)
+        _lru.move_to_end(key)
+        while len(_lru) > _LRU_MAX_ENTRIES:
+            _lru.popitem(last=False)  # evict least-recently-used
+
+
+def cache_clear() -> None:
+    """Drop the in-process audio cache. Useful for tests and warm-container resets."""
+    with _lru_lock:
+        _lru.clear()
+
+
+def cache_stats() -> dict:
+    """Lightweight visibility into the in-process cache."""
+    with _lru_lock:
+        return {"entries": len(_lru), "max_entries": _LRU_MAX_ENTRIES}
 
 
 def compose_script(patient_explanation: str, comfort_protocol: list[dict], patient_name: str = "") -> str:
@@ -115,7 +175,12 @@ _POLLY_VOICE_MAP: dict[str, tuple[str, str]] = {
 
 
 def _aws_polly_synthesize(script: str, language: str) -> bytes | None:
-    """Synthesize speech via AWS Polly. Returns MP3 bytes."""
+    """Synthesize speech via AWS Polly with retry/backoff. Returns MP3 bytes.
+
+    Each engine (neural -> standard fallback) is retried up to _TTS_MAX_ATTEMPTS
+    with exponential backoff so a transient throttle or 5xx doesn't drop audio
+    on a live call.
+    """
     import boto3  # noqa: PLC0415
 
     polly = boto3.client("polly", region_name=settings.aws_region)
@@ -123,32 +188,102 @@ def _aws_polly_synthesize(script: str, language: str) -> bytes | None:
     lang_key = (language or "en").strip().lower()[:2]
     voice_id, engine = _POLLY_VOICE_MAP.get(lang_key, ("Joanna", "neural"))
 
-    try:
+    def _attempt(use_engine: str) -> bytes:
         resp = polly.synthesize_speech(
             Text=script,
             OutputFormat="mp3",
             VoiceId=voice_id,
-            Engine=engine,
+            Engine=use_engine,
             TextType="text",
         )
         return resp["AudioStream"].read()
 
-    except Exception as e:
-        # If neural voice fails, fall back to standard engine
-        if engine == "neural":
-            log.warning("Polly neural voice %s failed, falling back to standard: %s", voice_id, e)
+    # Engines to try in order: requested engine, then standard as a degrade path.
+    engines = [engine] if engine == "standard" else [engine, "standard"]
+    last_exc: Exception | None = None
+    for use_engine in engines:
+        for attempt in range(_TTS_MAX_ATTEMPTS):
             try:
-                resp = polly.synthesize_speech(
-                    Text=script,
-                    OutputFormat="mp3",
-                    VoiceId=voice_id,
-                    Engine="standard",
-                    TextType="text",
-                )
-                return resp["AudioStream"].read()
-            except Exception:
-                pass
-        raise
+                return _attempt(use_engine)
+            except Exception as e:  # noqa: BLE001
+                last_exc = e
+                if attempt < _TTS_MAX_ATTEMPTS - 1:
+                    delay = _TTS_BACKOFF_BASE * (2 ** attempt)
+                    log.warning(
+                        "Polly %s/%s attempt %d failed, retrying in %.2fs: %s",
+                        voice_id, use_engine, attempt + 1, delay, e,
+                    )
+                    time.sleep(delay)
+                else:
+                    log.warning(
+                        "Polly %s/%s exhausted %d attempts: %s",
+                        voice_id, use_engine, _TTS_MAX_ATTEMPTS, e,
+                    )
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def synthesize_cached(script: str, language: str = "en") -> bytes | None:
+    """Synthesize `script` to MP3 bytes, served from the in-process LRU cache
+    when warm. Returns None if every provider/retry path fails — callers in the
+    voice flow should then fall back to Twilio's free <Say> verb (see
+    `say_fallback_ssml`).
+    """
+    text = (script or "").strip()
+    if not text:
+        return None
+    prov = _provider()
+    key = _cache_key(text, (language or "en")[:2], prov)
+
+    cached = _lru_get(key)
+    if cached is not None:
+        return cached
+
+    try:
+        if prov == "aws":
+            mp3_bytes = _aws_polly_synthesize(text, language)
+        else:
+            mp3_bytes = _elevenlabs_synthesize(text, language)
+    except Exception as e:  # noqa: BLE001
+        log.warning("synthesize_cached failed (%s): %s", prov, e)
+        return None
+
+    if mp3_bytes:
+        _lru_put(key, mp3_bytes)
+    return mp3_bytes
+
+
+# Twilio <Say> voices by language — the zero-cost, always-available fallback
+# when Polly/ElevenLabs synthesis fails mid-call.
+_SAY_VOICE_MAP: dict[str, tuple[str, str]] = {
+    "en": ("Polly.Joanna", "en-US"),
+    "es": ("Polly.Lupe", "es-US"),
+    "fr": ("Polly.Lea", "fr-FR"),
+    "de": ("Polly.Vicki", "de-DE"),
+    "pt": ("Polly.Camila", "pt-BR"),
+    "it": ("Polly.Bianca", "it-IT"),
+    "zh": ("Polly.Zhiyu", "cmn-CN"),
+    "ja": ("Polly.Kazuha", "ja-JP"),
+    "ko": ("Polly.Seoyeon", "ko-KR"),
+    "hi": ("Polly.Kajal", "hi-IN"),
+    "ar": ("Polly.Hala", "arb"),
+}
+
+
+def _xml_escape(s: str) -> str:
+    return (
+        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+         .replace('"', "&quot;").replace("'", "&apos;")
+    )
+
+
+def say_fallback_ssml(text: str, language: str = "en") -> str:
+    """Build a Twilio <Say> verb for `text` — the graceful fallback when audio
+    synthesis is unavailable. The voice router uses this so a Polly outage never
+    leaves a caller in silence."""
+    voice, lang_attr = _SAY_VOICE_MAP.get((language or "en")[:2], ("Polly.Joanna", "en-US"))
+    return f'<Say voice="{voice}" language="{lang_attr}">{_xml_escape(text)}</Say>'
 
 
 # ---------------------------------------------------------------------------

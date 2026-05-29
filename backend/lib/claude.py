@@ -67,6 +67,24 @@ def provider() -> str:
     return os.environ.get("CLAUDE_PROVIDER", "bedrock").lower()
 
 
+def available() -> bool:
+    """True when a Claude backend is actually callable.
+
+    Bedrock (the default, BAA-covered path) authenticates with the Lambda IAM
+    role and needs NO API key — so it is always considered available. Only the
+    direct Anthropic path requires ``anthropic_api_key``.
+
+    Services use this instead of checking ``settings.anthropic_api_key`` so AI
+    features do not silently disable themselves in production, where we run on
+    Bedrock and that key is intentionally unset.
+    """
+    if provider() == "bedrock":
+        return True
+    from lib.config import settings  # noqa: PLC0415
+
+    return bool(settings.anthropic_api_key)
+
+
 @lru_cache(maxsize=1)
 def _anthropic_client():
     from anthropic import Anthropic  # noqa: PLC0415
@@ -118,10 +136,20 @@ def messages_create(
     return resp
 
 
+def _system_blocks(system: str) -> list[dict]:
+    """Wrap the (static, per-service) system prompt as a cache-controlled block.
+
+    Prompt caching lets repeated calls that share a system prompt re-read it from
+    cache instead of re-billing every input token (~90% cheaper on the cached
+    span, 5-min TTL). Below the model's minimum cacheable size the marker is
+    simply ignored — so it is always safe to attach."""
+    return [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+
+
 def _direct_invoke(model, max_tokens, system, messages, temperature, **kwargs) -> Response:
     kw = {"model": model, "max_tokens": max_tokens, "messages": messages}
     if system:
-        kw["system"] = system
+        kw["system"] = _system_blocks(system)
     if temperature is not None:
         kw["temperature"] = temperature
     kw.update(kwargs)
@@ -143,7 +171,7 @@ def _bedrock_invoke(model, max_tokens, system, messages, temperature, **kwargs) 
         "messages": messages,
     }
     if system:
-        body["system"] = system
+        body["system"] = _system_blocks(system)
     if temperature is not None:
         body["temperature"] = temperature
     bedrock_model = _BEDROCK_MODEL_MAP.get(model, model)

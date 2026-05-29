@@ -22,6 +22,12 @@ from lib.config import settings
 log = logging.getLogger(__name__)
 
 
+# Hard cap on the AWS Transcribe batch poll. Kept well under API Gateway's 30s
+# ceiling so the follow-up generation that runs after still has budget and the
+# request never trips an opaque gateway 504.
+_MAX_POLL_SECONDS = 22
+
+
 class TranscriptionError(RuntimeError):
     pass
 
@@ -180,8 +186,13 @@ def _aws_transcribe(
 
         transcribe_client.start_transcription_job(**job_config)
 
-        # Poll for completion (typical: 5-15s for <5 min audio)
-        for _ in range(60):  # max 60s
+        # Poll for completion. The whole /transcribe request must finish inside
+        # API Gateway's 30s ceiling, so we cap the wait well under that and
+        # raise a clean TranscriptionError on timeout — the router turns that
+        # into a 503 and the UI falls back to typed input, instead of the user
+        # hitting an opaque gateway 504. The browser Web Speech API is the
+        # primary path; this batch job only runs when that is unavailable.
+        for _ in range(_MAX_POLL_SECONDS):
             time.sleep(1)
             status = transcribe_client.get_transcription_job(
                 TranscriptionJobName=job_name
@@ -193,7 +204,9 @@ def _aws_transcribe(
                 reason = status["TranscriptionJob"].get("FailureReason", "unknown")
                 raise TranscriptionError(f"AWS Transcribe job failed: {reason}")
         else:
-            raise TranscriptionError("AWS Transcribe job timed out after 60s")
+            raise TranscriptionError(
+                f"AWS Transcribe did not finish within {_MAX_POLL_SECONDS}s"
+            )
 
         # Read result from S3
         output_key = f"transcribe-tmp/{job_name}-output.json"

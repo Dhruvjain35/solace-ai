@@ -15,6 +15,9 @@ class Settings(BaseSettings):
         env_file=str(ROOT / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        # model_clinical / model_utility intentionally start with "model_";
+        # opt out of pydantic's protected-namespace warning for them.
+        protected_namespaces=(),
     )
 
     solace_mode: Literal["local", "aws"] = "local"
@@ -29,6 +32,17 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""       # only needed if CLAUDE_PROVIDER=direct
     elevenlabs_api_key: str = ""      # only needed if TTS_PROVIDER=elevenlabs
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # ElevenLabs Rachel (local dev)
+
+    # Model tiers — one place to choose which Claude model each kind of task uses.
+    #   model_clinical — clinical reasoning (differential, disposition, workup,
+    #     scribe, coding). Should be the strongest model once it is available.
+    #   model_utility — structured/boilerplate tasks (follow-up questions, OCR,
+    #     redaction labels, letters, discharge text). Cheaper model is fine.
+    # Both default to Haiku today because Bedrock Sonnet access is pending the
+    # account use-case form. When Sonnet is unlocked, flip clinical with one env
+    # var: MODEL_CLINICAL=claude-sonnet-4-5 (no code change, no redeploy of logic).
+    model_clinical: str = "claude-haiku-4-5"
+    model_utility: str = "claude-haiku-4-5"
 
     # AWS secret source — when set, overrides .env values on startup
     aws_secret_name: str = "solace/api-keys"
@@ -49,6 +63,21 @@ class Settings(BaseSettings):
     demo_hospital_id: str = "demo"
     demo_hospital_name: str = "Demo Medical Center"
     demo_clinician_pin: str = "123456"
+
+    # Magic-link auth + transactional email
+    #   app_base_url — where the emailed link points (the frontend origin).
+    #     Empty falls back to the request's own origin at send time.
+    #   email_provider — "ses" (default, production) | "console" (log + echo).
+    #     Forced to "console" whenever solace_mode == "local".
+    #   email_from — verified SES sender identity. Required for ses provider.
+    #   email_dev_echo — when true, the magic link is returned in the API
+    #     response body so sandbox/local flows are testable WITHOUT a mailbox.
+    #     MUST stay false in production (it would leak login links).
+    app_base_url: str = ""
+    email_provider: Literal["ses", "console"] = "ses"
+    email_from: str = "Solace <no-reply@solace.health>"
+    email_dev_echo: bool = False
+    magic_link_ttl_seconds: int = 900  # 15-minute single-use login links
 
 
 @lru_cache(maxsize=1)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 from fastapi import APIRouter, File, Form, HTTPException, Path, Request, UploadFile
 
@@ -61,6 +62,10 @@ async def transcribe_and_ask(
 
     quota.check_and_consume(identity, "transcribe", source_ip=source_ip)
 
+    # Whole request must land inside API Gateway's 30s ceiling. Track elapsed
+    # time so a slow server-side transcription leaves the follow-up step only
+    # the budget that remains (rather than a fixed 8s that could push us over).
+    started = time.monotonic()
     selected_lang = (preferred_language or "").strip().lower()[:2] or None
 
     # 1. Transcribe (or accept prepared text)
@@ -109,10 +114,13 @@ async def transcribe_and_ask(
         except json.JSONDecodeError:
             log.warning("medical_info JSON parse failed; ignoring")
     questions: list[dict] = []
+    # Spend at most the time left in our ~28s working budget on follow-ups,
+    # clamped to a sane [3s, 8s] window. Static fallbacks cover a short budget.
+    followups_budget = max(3.0, min(8.0, 28.0 - (time.monotonic() - started)))
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
             future = ex.submit(followups.generate_questions, transcript, info_dict, language)
-            questions = future.result(timeout=8.0)
+            questions = future.result(timeout=followups_budget)
     except concurrent.futures.TimeoutError:
         log.warning("followups generation timed out; falling back to static set")
         questions = followups._FALLBACK

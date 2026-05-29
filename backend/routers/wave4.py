@@ -14,8 +14,11 @@ from pydantic import BaseModel, ConfigDict
 from lib.auth import audit, require_clinician
 from services import (
     cohort_export,
+    discharge_plan,
+    early_warning,
     fax_intake,
     fhir_writer,
+    followups,
     hl7_v2,
     insurance_to_eligibility,
     inbox_drafts,
@@ -26,6 +29,7 @@ from services import (
     style_learning,
     tefca_qhin,
     telehealth,
+    workup,
 )
 
 log = logging.getLogger(__name__)
@@ -98,7 +102,11 @@ def hl7_mdm_send(
         provider=hl7_v2.Provider(npi=body.npi, family_name=body.provider_family, given_name=body.provider_given),
     )
     s = hl7_v2.render(msg)
-    result = hl7_v2.send_mllp(body.host, body.port, s)
+    try:
+        result = hl7_v2.send_mllp(body.host, body.port, s)
+    except Exception as e:  # noqa: BLE001
+        log.exception("HL7 MLLP send failed: %s", e)
+        raise HTTPException(status_code=502, detail="HL7 MLLP delivery failed")
     return {"hl7_message": s, "result": result}
 
 
@@ -114,7 +122,10 @@ def encounter_stitch(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "encounter.stitch")
-    return multi_encounter.stitch(body.notes)
+    try:
+        return multi_encounter.stitch(body.notes)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not stitch encounters: {e}")
 
 
 class HuddleBody(BaseModel):
@@ -129,7 +140,10 @@ def encounter_huddle(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "encounter.huddle")
-    return multi_encounter.parse_huddle(body.transcript, ward_context=body.ward_context)
+    try:
+        return multi_encounter.parse_huddle(body.transcript, ward_context=body.ward_context)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not parse huddle: {e}")
 
 
 # ---- Fax intake -----------------------------------------------------------------
@@ -141,17 +155,20 @@ async def fax_intake_endpoint(
 ) -> dict[str, Any]:
     audit(caller, "fax.intake")
     blob = await file.read()
+    if not blob:
+        raise HTTPException(status_code=400, detail="empty file upload")
     ct = file.content_type or "application/octet-stream"
-    if "pdf" in ct.lower():
-        return fax_intake.parse_pdf_bytes(blob)
-    if ct.lower().startswith("image/"):
-        return fax_intake.parse_image_b64(base64.b64encode(blob).decode("ascii"), content_type=ct)
-    # text fallback
     try:
+        if "pdf" in ct.lower():
+            return fax_intake.parse_pdf_bytes(blob)
+        if ct.lower().startswith("image/"):
+            return fax_intake.parse_image_b64(base64.b64encode(blob).decode("ascii"), content_type=ct)
+        # text fallback
         text = blob.decode("utf-8", errors="ignore")
         return fax_intake.parse_text(text)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"unrecognized content type: {e}")
+    except Exception as e:  # noqa: BLE001
+        log.exception("Fax intake parse failed (content_type=%s): %s", ct, e)
+        raise HTTPException(status_code=400, detail="could not parse fax content")
 
 
 # ---- Sepsis bundle --------------------------------------------------------------
@@ -175,7 +192,10 @@ def sepsis_bundle_evaluate(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "sepsis.bundle.evaluate")
-    return sepsis_bundle.evaluate_encounter(**body.model_dump())
+    try:
+        return sepsis_bundle.evaluate_encounter(**body.model_dump())
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid sepsis bundle input: {e}")
 
 
 class SepsisCohortBody(BaseModel):
@@ -188,7 +208,11 @@ def sepsis_bundle_cohort(
     body: SepsisCohortBody = ...,
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
-    return sepsis_bundle.cohort_summary(body.evaluations)
+    audit(caller, "sepsis.bundle.cohort")
+    try:
+        return sepsis_bundle.cohort_summary(body.evaluations)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid sepsis cohort input: {e}")
 
 
 # ---- Cohort export --------------------------------------------------------------
@@ -220,7 +244,13 @@ def cohort_poll(
     content_location: str = "",
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
-    return cohort_export.poll(content_location)
+    audit(caller, "cohort.export.poll")
+    if not content_location:
+        raise HTTPException(status_code=400, detail="content_location is required")
+    try:
+        return cohort_export.poll(content_location)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not poll cohort export: {e}")
 
 
 class CohortQueryBody(BaseModel):
@@ -235,11 +265,15 @@ def cohort_query(
     body: CohortQueryBody = ...,
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
-    return cohort_export.cohort_query(
-        condition_icd10=body.condition_icd10,
-        lab_loinc_above=body.lab_loinc_above,
-        age_band=body.age_band,
-    )
+    audit(caller, "cohort.query")
+    try:
+        return cohort_export.cohort_query(
+            condition_icd10=body.condition_icd10,
+            lab_loinc_above=body.lab_loinc_above,
+            age_band=body.age_band,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid cohort query: {e}")
 
 
 # ---- Insurance OCR -> eligibility chain -----------------------------------------
@@ -251,7 +285,13 @@ async def insurance_chain(
 ) -> dict[str, Any]:
     audit(caller, "insurance.ocr_to_eligibility")
     blob = await file.read()
-    return insurance_to_eligibility.chain(image_bytes=blob)
+    if not blob:
+        raise HTTPException(status_code=400, detail="empty file upload")
+    try:
+        return insurance_to_eligibility.chain(image_bytes=blob)
+    except Exception as e:  # noqa: BLE001
+        log.exception("Insurance OCR-to-eligibility chain failed: %s", e)
+        raise HTTPException(status_code=400, detail="could not process insurance card")
 
 
 # ---- MedicationStatement write --------------------------------------------------
@@ -268,6 +308,8 @@ def med_reconciliation_write(
 ) -> dict[str, Any]:
     """Write MedicationStatement resources (med reconciliation, NOT new prescriptions)."""
     audit(caller, "ehr.write.medication_statements", patient_id=body.patient_ref)
+    if not body.medications:
+        raise HTTPException(status_code=400, detail="at least one medication is required")
     results = []
     for med in body.medications:
         resource = {
@@ -278,7 +320,11 @@ def med_reconciliation_write(
             "dateAsserted": fhir_writer._now_iso(),
             "note": [{"text": "Reconciled via Solace — confirm before any new prescription."}],
         }
-        r = fhir_writer.write(resource)
+        try:
+            r = fhir_writer.write(resource)
+        except Exception as e:  # noqa: BLE001
+            log.exception("MedicationStatement write failed: %s", e)
+            raise HTTPException(status_code=502, detail="EHR write failed for a medication statement")
         results.append({"resource": "MedicationStatement", "input": med, "result": r})
     return {"writes": results}
 
@@ -296,6 +342,7 @@ def style_record_pair(
     body: StylePairBody = ...,
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    audit(caller, "style.record_pair")
     return style_learning.record_pair(
         clinician_id=caller.get("clinician_id", "unknown"),
         hospital_id=hospital_id,
@@ -310,6 +357,7 @@ def style_profile(
     hospital_id: str = Path(...),
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    audit(caller, "style.profile")
     return style_learning.style_profile(caller.get("clinician_id", "unknown"))
 
 
@@ -318,6 +366,7 @@ def style_export_jsonl(
     hospital_id: str = Path(...),
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    audit(caller, "style.export_training_jsonl")
     text = style_learning.export_training_jsonl(caller.get("clinician_id", "unknown"))
     return {"format": "jsonl", "lines": text.count("\n") + (1 if text else 0), "preview": text[:1000]}
 
@@ -351,6 +400,7 @@ def portal_thread_list(
     only_unread: bool = False,
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    audit(caller, "portal.thread_list")
     return {"threads": portal_messages.list_threads(hospital_id, only_unread=only_unread)}
 
 
@@ -360,6 +410,7 @@ def portal_thread(
     thread_key: str = Path(...),
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    audit(caller, "portal.thread_view", patient_id=thread_key)
     return {"messages": portal_messages.get_thread(thread_key)}
 
 
@@ -375,13 +426,16 @@ def portal_respond(
     body: PortalRespondBody = ...,
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
-    audit(caller, "portal.respond")
-    return portal_messages.respond(
+    audit(caller, "portal.respond", patient_id=body.message_id)
+    result = portal_messages.respond(
         body.message_id,
         clinician_id=caller.get("clinician_id", "unknown"),
         body=body.body,
         ai_draft_status=body.ai_draft_status,
-    ) or {"error": "message not found"}
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="message not found")
+    return result
 
 
 # ---- Nurse triage --------------------------------------------------------------
@@ -397,7 +451,10 @@ def nurse_triage_evaluate(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "nurse_triage.evaluate", patient_id=body.protocol_key)
-    return nurse_triage.evaluate(body.protocol_key, body.answers)
+    try:
+        return nurse_triage.evaluate(body.protocol_key, body.answers)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not evaluate triage protocol: {e}")
 
 
 @router.get("/nurse-triage/protocols")
@@ -405,6 +462,7 @@ def nurse_triage_list(
     hospital_id: str = Path(...),
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    audit(caller, "nurse_triage.list_protocols")
     return {"protocols": nurse_triage.list_protocols()}
 
 
@@ -422,11 +480,14 @@ def tefca_query(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "tefca.query")
-    return tefca_qhin.query(
-        patient_name=body.patient_name,
-        patient_dob=body.patient_dob,
-        consent_attestation=body.consent_attestation,
-    )
+    try:
+        return tefca_qhin.query(
+            patient_name=body.patient_name,
+            patient_dob=body.patient_dob,
+            consent_attestation=body.consent_attestation,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not run TEFCA query: {e}")
 
 
 # ---- Telehealth ----------------------------------------------------------------
@@ -443,5 +504,245 @@ def telehealth_session(
 ) -> dict[str, Any]:
     audit(caller, "telehealth.session")
     payload = body.model_dump()
-    provider = payload.pop("provider")
-    return telehealth.make_session(provider=provider, **payload)
+    provider = payload.pop("provider", None)
+    if not provider:
+        raise HTTPException(status_code=400, detail="provider is required")
+    try:
+        return telehealth.make_session(provider=provider, **payload)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not create telehealth session: {e}")
+
+
+# ---- Abnormal-result loop closure ----------------------------------------------
+class AbnormalResultsBody(BaseModel):
+    results: list[dict[str, Any]]
+
+
+@router.post("/results/detect-abnormal")
+def results_detect_abnormal(
+    hospital_id: str = Path(...),
+    body: AbnormalResultsBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Deterministically pick the abnormal results out of a lab/imaging panel."""
+    audit(caller, "results.detect_abnormal")
+    try:
+        abnormal = followups.detect_abnormal_results(body.results)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not detect abnormal results: {e}")
+    return {"count": len(abnormal), "abnormal_results": abnormal}
+
+
+class ResultsReviewBody(BaseModel):
+    abnormal_results: list[dict[str, Any]]
+    reading_level: str = "standard"
+    language: str = "en"
+
+
+@router.post("/results/review")
+def results_review(
+    hospital_id: str = Path(...),
+    body: ResultsReviewBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Draft plain-language patient messages for a batch of abnormal results."""
+    audit(caller, "results.review")
+    try:
+        return followups.review_results(
+            body.abnormal_results,
+            reading_level=body.reading_level,
+            language=body.language,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not review results: {e}")
+
+
+class ClosureNewBody(BaseModel):
+    patient_id: str
+    result: dict[str, Any]
+    detected_by: str = "system"
+
+
+@router.post("/results/closures")
+def results_closure_new(
+    hospital_id: str = Path(...),
+    body: ClosureNewBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Open a fresh loop closure (state 'outstanding') for one abnormal result."""
+    audit(caller, "results.closure_new", patient_id=body.patient_id)
+    try:
+        return followups.new_closure(
+            patient_id=body.patient_id,
+            result=body.result,
+            detected_by=body.detected_by,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not create closure: {e}")
+
+
+class ClosureAdvanceBody(BaseModel):
+    closure: dict[str, Any]
+    to_state: str
+    actor: str = "clinician"
+    note: str = ""
+    patient_message: str | None = None
+
+
+@router.post("/results/closures/advance")
+def results_closure_advance(
+    hospital_id: str = Path(...),
+    body: ClosureAdvanceBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Advance a loop closure to a new (forward-only) state. Returns the new
+    closure snapshot the caller persists."""
+    audit(caller, "results.closure_advance", patient_id=str(body.closure.get("closure_id", "")))
+    try:
+        return followups.advance_closure(
+            body.closure,
+            to_state=body.to_state,
+            actor=body.actor,
+            note=body.note,
+            patient_message=body.patient_message,
+        )
+    except followups.ClosureTransitionError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not advance closure: {e}")
+
+
+class ClosureSummaryBody(BaseModel):
+    closures: list[dict[str, Any]]
+
+
+@router.post("/results/closures/summary")
+def results_closure_summary(
+    hospital_id: str = Path(...),
+    body: ClosureSummaryBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Roll a list of closures into dashboard counts plus the open work queue."""
+    audit(caller, "results.closure_summary")
+    try:
+        return followups.closure_summary(body.closures)
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not summarize closures: {e}")
+
+
+# ---- Bias audits ---------------------------------------------------------------
+class EwsBiasAuditBody(BaseModel):
+    cohort: list[dict[str, Any]]
+    strata: list[str] = ["sex", "age_group", "race", "language"]
+    score_fn: str = "sepsis_ews"
+    disparity_threshold: float = 0.15
+
+
+@router.post("/early-warning/bias-audit")
+def early_warning_bias_audit(
+    hospital_id: str = Path(...),
+    body: EwsBiasAuditBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Recompute early-warning scores across demographic strata and flag
+    subgroup disparities for human review."""
+    audit(caller, "early_warning.bias_audit")
+    try:
+        return early_warning.bias_audit(
+            body.cohort,
+            strata=tuple(body.strata),
+            score_fn=body.score_fn,
+            disparity_threshold=body.disparity_threshold,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid early-warning bias audit input: {e}")
+
+
+class SepsisBiasAuditBody(BaseModel):
+    encounters: list[dict[str, Any]]
+    strata: list[str] = ["sex", "age_group", "race", "language"]
+    disparity_threshold: float = 0.15
+
+
+@router.post("/sepsis/bundle/bias-audit")
+def sepsis_bundle_bias_audit(
+    hospital_id: str = Path(...),
+    body: SepsisBiasAuditBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Audit 1-hour sepsis-bundle compliance for disparities across demographic
+    strata and flag flagged subgroups for investigation."""
+    audit(caller, "sepsis.bundle.bias_audit")
+    try:
+        return sepsis_bundle.bias_audit(
+            body.encounters,
+            strata=tuple(body.strata),
+            disparity_threshold=body.disparity_threshold,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid sepsis bias audit input: {e}")
+
+
+# ---- Detailed discharge plan ---------------------------------------------------
+class DetailedDischargeBody(BaseModel):
+    condition: str = ""
+    clinician_note: str = ""
+    scribe_note: str = ""
+    transcript: str = ""
+    assessment: str = ""
+    patient_language: str = "en"
+    hospital_name: str = "your clinic"
+    follow_up: str = ""
+
+
+@router.post("/discharge/detailed-plan")
+def discharge_detailed_plan(
+    hospital_id: str = Path(...),
+    body: DetailedDischargeBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Deep, condition-specific discharge plan with sectioned instructions and
+    tiered (911 / ED / call-office) return precautions."""
+    audit(caller, "discharge.detailed_plan")
+    try:
+        return discharge_plan.build_detailed_discharge_plan(
+            condition=body.condition,
+            clinician_note=body.clinician_note,
+            scribe_note=body.scribe_note,
+            transcript=body.transcript,
+            assessment=body.assessment,
+            patient_language=body.patient_language,
+            hospital_name=body.hospital_name,
+            follow_up=body.follow_up,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not build discharge plan: {e}")
+
+
+# ---- Workup with safety check --------------------------------------------------
+class WorkupSafetyBody(BaseModel):
+    transcript: str
+    esi_level: int
+    differential: list[dict[str, Any]] = []
+    medical_info: dict[str, Any] | None = None
+    vitals: dict[str, Any] | None = None
+
+
+@router.post("/workup/safety-check")
+def workup_safety_check(
+    hospital_id: str = Path(...),
+    body: WorkupSafetyBody = ...,
+    caller: dict = Depends(require_clinician),
+) -> dict[str, Any]:
+    """Generate a workup order set plus a deterministic contraindication pass."""
+    audit(caller, "workup.safety_check")
+    try:
+        return workup.generate_with_safety_check(
+            body.transcript,
+            body.esi_level,
+            body.differential,
+            body.medical_info,
+            body.vitals,
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"could not generate workup: {e}")

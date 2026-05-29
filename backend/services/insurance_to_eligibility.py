@@ -38,7 +38,47 @@ def _ocr_image(image_bytes: bytes) -> dict[str, Any]:
     }
 
 
-def chain(*, image_bytes: bytes | None = None, image_b64: str | None = None) -> dict[str, Any]:
+def _estimate_visit_cost(summary: dict[str, Any], visit_type: str) -> dict[str, Any]:
+    """Rough patient out-of-pocket estimate for the upcoming visit.
+
+    If the deductible is not yet met the patient is likely responsible for the
+    full visit charge up to the copay floor; once met, the copay applies. This
+    is a guidance estimate, not an adjudicated claim.
+    """
+    copay_key = {
+        "office": "pcp_copay", "pcp": "pcp_copay",
+        "urgent": "specialist_copay", "specialist": "specialist_copay",
+        "ed": "ed_copay", "emergency": "ed_copay",
+    }.get((visit_type or "").lower(), "pcp_copay")
+    copay = summary.get(copay_key)
+    try:
+        copay_val = float(copay) if copay not in (None, "") else None
+    except (TypeError, ValueError):
+        copay_val = None
+    try:
+        deductible_remaining = float(summary.get("deductible_remaining") or 0)
+    except (TypeError, ValueError):
+        deductible_remaining = 0.0
+    return {
+        "visit_type": visit_type,
+        "expected_copay": copay_val,
+        "deductible_remaining": deductible_remaining,
+        "deductible_met": deductible_remaining <= 0,
+        "note": (
+            "Copay applies — deductible met"
+            if deductible_remaining <= 0
+            else "Patient may owe visit charge toward deductible before copay applies"
+        ),
+    }
+
+
+def chain(
+    *,
+    image_bytes: bytes | None = None,
+    image_b64: str | None = None,
+    service_type: str = "30",
+    visit_type: str = "office",
+) -> dict[str, Any]:
     if image_bytes is None and image_b64 is not None:
         image_bytes = base64.b64decode(image_b64)
     if not image_bytes:
@@ -51,6 +91,12 @@ def chain(*, image_bytes: bytes | None = None, image_b64: str | None = None) -> 
     dob = fields.get("patient_dob") or fields.get("dob") or ""
     if not (member_id and payer):
         return {"ocr": fields, "eligibility": None, "summary": None, "error": "incomplete OCR — try a clearer photo"}
-    full = eligibility.check(payer, member_id, first, last, dob)
+    full = eligibility.check(payer, member_id, first, last, dob, service_type=service_type)
     summary = eligibility.summarize_for_clinician(full)
-    return {"ocr": fields, "eligibility": full, "summary": summary}
+    return {
+        "ocr": fields,
+        "eligibility": full,
+        "summary": summary,
+        "cost_estimate": _estimate_visit_cost(summary, visit_type),
+        "clearinghouse": summary.get("clearinghouse", "unknown"),
+    }

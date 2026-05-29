@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib.auth import audit, require_clinician
@@ -25,6 +25,8 @@ def _now_iso() -> str:
 
 
 class VitalsBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     systolic_bp: float | None = Field(None, ge=40, le=260)
     diastolic_bp: float | None = Field(None, ge=20, le=160)
     heart_rate: float | None = Field(None, ge=20, le=250)
@@ -35,8 +37,8 @@ class VitalsBody(BaseModel):
     pain_score: int | None = Field(None, ge=0, le=10)
     weight_kg: float | None = Field(None, ge=1, le=500)
     height_cm: float | None = Field(None, ge=30, le=250)
-    mental_status: str | None = None  # alert/confused/drowsy/agitated/unresponsive
-    news2_score: int | None = None
+    mental_status: str | None = Field(None, max_length=40)  # alert/confused/drowsy/agitated/unresponsive
+    news2_score: int | None = Field(None, ge=0, le=20)
 
 
 @router.post("/patients/{patient_id}/refine-triage")

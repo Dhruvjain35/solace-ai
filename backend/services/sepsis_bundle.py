@@ -25,6 +25,20 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
+# Honest synthetic-data provenance stamp attached to every result. The bundle
+# evaluator is deterministic timestamp arithmetic, but the demonstration
+# encounters Solace ships are synthetic; subgroup compliance gaps surfaced by
+# bias_audit reflect synthetic case mix, not a real labeled cohort.
+_PROVENANCE = {
+    "data_source": "synthetic",
+    "logic": "deterministic SSC-2021 1-hour bundle timestamp checks",
+    "validated_on_real_cohort": False,
+    "intended_use": "quality-improvement decision support — not a billing or "
+                    "regulatory attestation of compliance",
+    "note": "Re-run the cohort audit on real, labeled encounter data before "
+            "drawing conclusions about subgroup compliance disparities.",
+}
+
 
 def _parse(iso: str | None) -> datetime | None:
     if not iso:
@@ -120,13 +134,15 @@ def evaluate_encounter(
         "elements": elements,
         "compliance_rate": rate,
         "all_complete": rate == 1.0,
+        "provenance": _PROVENANCE,
     }
 
 
 def cohort_summary(evaluations: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate compliance across many encounter evaluations."""
     if not evaluations:
-        return {"count": 0, "compliance_rate": 0, "median_min_to_abx": None, "median_min_to_lactate": None}
+        return {"count": 0, "compliance_rate": 0, "median_min_to_abx": None,
+                "median_min_to_lactate": None, "provenance": _PROVENANCE}
     rates = [e.get("compliance_rate", 0) for e in evaluations]
     abx_times = []
     lact_times = []
@@ -148,4 +164,137 @@ def cohort_summary(evaluations: list[dict[str, Any]]) -> dict[str, Any]:
         "all_complete_count": sum(1 for r in rates if r == 1.0),
         "median_min_to_abx": median(abx_times),
         "median_min_to_lactate": median(lact_times),
+        "provenance": _PROVENANCE,
+    }
+
+
+def bias_audit(
+    encounters: list[dict[str, Any]],
+    *,
+    strata: tuple[str, ...] = ("sex", "age_group", "race", "language"),
+    disparity_threshold: float = 0.15,
+) -> dict[str, Any]:
+    """Audit sepsis-bundle compliance for disparities across demographic strata.
+
+    Parallel to `early_warning.bias_audit`: this evaluates the 1-hour bundle for
+    every encounter, groups by each demographic stratum, and flags any subgroup
+    whose mean bundle-compliance rate or time-to-antibiotics deviates from the
+    cohort baseline by more than `disparity_threshold` (relative).
+
+    Each encounter is a dict of `evaluate_encounter` kwargs plus demographic keys
+    (`sex`, `age_group`, `race`, `language`, ...). Missing demographics bucket as
+    "unknown". Differential time-to-treatment by race/language is a documented
+    equity concern in sepsis care; this surface makes it visible at the CMO
+    dashboard level.
+
+    Descriptive, not causal — and computed on synthetic data (see `provenance`).
+    A flagged subgroup is a prompt to investigate staffing, triage, and access,
+    not proof of bias.
+    """
+    demo_keys = set(strata)
+
+    scored: list[dict[str, Any]] = []
+    errors = 0
+    for enc in encounters:
+        demo = {k: (enc.get(k) or "unknown") for k in demo_keys}
+        kwargs = {k: v for k, v in enc.items() if k not in demo_keys}
+        try:
+            result = evaluate_encounter(**kwargs)
+        except Exception as exc:
+            errors += 1
+            log.warning("sepsis_bundle.bias_audit: skipped malformed encounter: %s", exc)
+            continue
+        if "error" in result:
+            errors += 1
+            continue
+        abx_min = None
+        for el in result.get("elements", []):
+            if el["id"] == "antibiotics":
+                abx_min = el.get("minutes")
+        scored.append({
+            "demo": demo,
+            "compliance_rate": result.get("compliance_rate", 0.0),
+            "all_complete": result.get("all_complete", False),
+            "abx_min": abx_min,
+        })
+
+    n = len(scored)
+    if n == 0:
+        return {"count": 0, "errors": errors, "strata": {}, "flags": [],
+                "provenance": _PROVENANCE}
+
+    def mean(xs: list[float]) -> float:
+        return sum(xs) / len(xs) if xs else 0.0
+
+    baseline_compliance = mean([s["compliance_rate"] for s in scored])
+    baseline_abx = mean([s["abx_min"] for s in scored if s["abx_min"] is not None])
+
+    strata_report: dict[str, Any] = {}
+    flags: list[dict[str, Any]] = []
+
+    for key in strata:
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for s in scored:
+            groups.setdefault(str(s["demo"][key]), []).append(s)
+
+        group_rows = []
+        for gname, members in sorted(groups.items()):
+            gn = len(members)
+            gcompliance = mean([m["compliance_rate"] for m in members])
+            g_abx_vals = [m["abx_min"] for m in members if m["abx_min"] is not None]
+            gabx = mean(g_abx_vals) if g_abx_vals else None
+
+            comp_disp = (
+                abs(gcompliance - baseline_compliance) / baseline_compliance
+                if baseline_compliance else 0.0
+            )
+            abx_disp = (
+                abs(gabx - baseline_abx) / baseline_abx
+                if (gabx is not None and baseline_abx) else 0.0
+            )
+            flagged = (
+                gn >= 5
+                and (comp_disp > disparity_threshold or abx_disp > disparity_threshold)
+            )
+            row = {
+                "group": gname,
+                "n": gn,
+                "mean_compliance_rate": round(gcompliance, 3),
+                "mean_min_to_abx": round(gabx, 1) if gabx is not None else None,
+                "compliance_disparity": round(comp_disp, 3),
+                "abx_time_disparity": round(abx_disp, 3),
+                "flagged": flagged,
+                "underpowered": gn < 5,
+            }
+            group_rows.append(row)
+            if flagged:
+                flags.append({
+                    "stratum": key,
+                    "group": gname,
+                    "reason": (
+                        f"compliance deviates {comp_disp:.0%} / time-to-abx "
+                        f"deviates {abx_disp:.0%} from cohort baseline "
+                        f"(threshold {disparity_threshold:.0%})"
+                    ),
+                })
+        strata_report[key] = {
+            "baseline_mean_compliance_rate": round(baseline_compliance, 3),
+            "baseline_mean_min_to_abx": round(baseline_abx, 1) if baseline_abx else None,
+            "groups": group_rows,
+        }
+
+    return {
+        "count": n,
+        "errors": errors,
+        "disparity_threshold": disparity_threshold,
+        "strata": strata_report,
+        "flags": flags,
+        "equitable": len(flags) == 0,
+        "interpretation": (
+            "No subgroup exceeds the bundle-compliance disparity threshold."
+            if not flags else
+            f"{len(flags)} subgroup(s) flagged — investigate triage, staffing, "
+            "and access pathways for these populations."
+        ),
+        "provenance": _PROVENANCE,
     }

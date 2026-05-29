@@ -13,7 +13,9 @@ from typing import Any
 
 from db import storage
 from lib import claude
+from lib.config import settings
 from services import triage as _triage_service
+from services.voice_agent import dialogue
 from services.voice_agent.prompts import (
     EMERGENCY_KEYWORDS,
     EMERGENCY_RESPONSE,
@@ -250,6 +252,7 @@ def run_turn(
     history: list[dict[str, Any]],
     user_text: str,
     call_ctx: dict[str, Any],
+    intake: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run one agent turn. Returns:
     - say: text the agent should speak
@@ -257,12 +260,21 @@ def run_turn(
     - tool_result: result dict from dispatch, if any
     - escalate: "human" | "911" | None
     - history: updated message history for next turn
+    - intake: the updated, serialized IntakeState dict (round-trips to session)
+
+    Turn routing:
+      1. Hard-coded emergency keywords (fastest path, bypasses everything).
+      2. Deterministic intake state machine (dialogue.py) — owns slot
+         bookkeeping. While intake is in progress it drives the next question;
+         its continuous red-flag scan can also trip an emergency.
+      3. Claude tool-use loop — used once intake completes (or when no intake
+         state was supplied, preserving the pre-existing behavior).
     """
     # Hard-coded emergency trip — bypass Claude on red-flag phrases for speed + reliability.
     lowered = user_text.lower()
     if any(kw in lowered for kw in EMERGENCY_KEYWORDS):
         result = dispatch("escalate_911", {"symptom": user_text}, call_ctx)
-        return {
+        out = {
             "say": result["say"],
             "tool": "escalate_911",
             "tool_result": result,
@@ -272,14 +284,78 @@ def run_turn(
                 {"role": "assistant", "content": result["say"]},
             ],
         }
+        if intake is not None:
+            st = dialogue.IntakeState.from_dict(intake)
+            dialogue.ingest(st, user_text)  # records the red flag in intake state
+            out["intake"] = st.to_dict()
+        return out
 
+    # --- Deterministic intake state machine -----------------------------------------
+    # While the structured intake is still collecting slots, the state machine —
+    # not Claude — decides the next question. This guarantees we never skip the
+    # red-flag screen or re-ask a filled slot.
+    if intake is not None:
+        state = dialogue.IntakeState.from_dict(intake)
+        if not state.is_complete():
+            directive = dialogue.ingest(state, user_text)
+            if directive.get("emergency"):
+                # Continuous red-flag scan tripped — route to 911 immediately.
+                result = dispatch("escalate_911", {"symptom": user_text}, call_ctx)
+                return {
+                    "say": result["say"],
+                    "tool": "escalate_911",
+                    "tool_result": {**result, "red_flags": directive.get("red_flags", [])},
+                    "escalate": "911",
+                    "intake": state.to_dict(),
+                    "history": history + [
+                        {"role": "user", "content": user_text},
+                        {"role": "assistant", "content": result["say"]},
+                    ],
+                }
+            if not directive.get("complete"):
+                # Still collecting — speak the machine's next question. No Claude
+                # call needed, which also trims latency on routine intake turns.
+                say = directive.get("say") or "Could you tell me more?"
+                return {
+                    "say": say,
+                    "tool": None,
+                    "tool_result": None,
+                    "escalate": None,
+                    "intake": state.to_dict(),
+                    "history": history + [
+                        {"role": "user", "content": user_text},
+                        {"role": "assistant", "content": say},
+                    ],
+                }
+            # Intake just completed this turn — fall through to Claude so it can
+            # triage/route using the collected summary, and remember to return
+            # the finished intake dict alongside Claude's result.
+            intake = state.to_dict()
+
+    result = _run_claude_turn(history=history, user_text=user_text, call_ctx=call_ctx)
+    # If a structured intake ran (and has now completed), carry its serialized
+    # state back so the session round-trips it. Done as a final merge so every
+    # Claude-path return shares one place to attach intake.
+    if intake is not None:
+        result["intake"] = intake
+    return result
+
+
+def _run_claude_turn(
+    *,
+    history: list[dict[str, Any]],
+    user_text: str,
+    call_ctx: dict[str, Any],
+) -> dict[str, Any]:
+    """The Claude tool-use leg of a turn. Split out of run_turn so the intake
+    state machine can short-circuit ahead of it without duplicating this code."""
     hospital = storage.get_hospital(call_ctx.get("hospital_id", "demo")) or {}
     system = SYSTEM_PROMPT.format(hospital_name=hospital.get("name", "the hospital"))
 
     new_history = history + [{"role": "user", "content": user_text}]
     try:
         resp = claude.messages_create(
-            model="claude-sonnet-4-5",
+            model=settings.model_utility,
             max_tokens=400,
             system=system,
             messages=new_history,
