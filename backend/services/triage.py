@@ -46,7 +46,13 @@ def predict(
     photo_analysis: dict[str, Any] | None = None,
     medical_info: dict[str, Any] | None = None,
 ) -> TriagePrediction:
-    """Run the Triage.ai engine on the patient's transcript + known medical info."""
+    """Triage the patient. Uses the trained 4-model ensemble when its artifacts
+    are present (symptoms alone → provisional ESI; sharpens once vitals arrive);
+    falls back to the rule-based simulation engine otherwise."""
+    trained = _predict_trained(transcript, photo_analysis, medical_info)
+    if trained is not None:
+        return trained
+
     patient_payload = _build_payload(transcript, photo_analysis, medical_info)
     result = predict_triage(patient_payload)
 
@@ -73,6 +79,52 @@ def predict(
         composites=dict(result.get("composites", {})),
         recommendation=str(result.get("recommendation", "")),
         probabilities=list(result.get("probabilities", [])),
+    )
+
+
+def _predict_trained(
+    transcript: str,
+    photo_analysis: dict[str, Any] | None,
+    medical_info: dict[str, Any] | None,
+    vitals: dict[str, Any] | None = None,
+) -> TriagePrediction | None:
+    """Run the trained 4-model stacked ensemble. Returns None if its artifacts
+    aren't present/loadable, so the caller falls back to the simulation engine.
+
+    The ensemble works from the intake form alone (chief complaint + age/sex +
+    stated history); any vitals the patient provides are passed through and make
+    the prediction sharper — the two-stage flow in a single model.
+    """
+    try:
+        from services import triage_ml  # noqa: PLC0415 — heavy import, on demand
+    except Exception:  # noqa: BLE001
+        return None
+
+    info = dict(medical_info or {})
+    cc = (transcript or "").strip()
+    if photo_analysis and photo_analysis.get("description"):
+        cc = f"{cc}. {photo_analysis['description']}"
+    patient = {
+        "patient_id": info.get("patient_id", "intake"),
+        "transcript": cc or "unspecified",
+        "language": info.get("language") or "en",
+        "medical_info": info,
+    }
+    res = triage_ml.predict(patient, vitals or {})
+    if res is None:
+        return None
+
+    conformal = res.get("conformal_set") or [res["esi_level"]]
+    return TriagePrediction(
+        esi_level=int(res["esi_level"]),
+        confidence=float(res["confidence"]),
+        confidence_band=_format_confidence_band(conformal, res["esi_level"], float(res["confidence"])),
+        shap_values={f["feature"]: float(f.get("shap", 0.0)) for f in res.get("top_features", []) if f.get("feature")},
+        source=res.get("source", "stacked_ensemble_v1"),
+        clinical_flags=[],
+        composites={},
+        recommendation="",
+        probabilities=[res["probabilities"].get(str(i), 0.0) for i in range(1, 6)],
     )
 
 
