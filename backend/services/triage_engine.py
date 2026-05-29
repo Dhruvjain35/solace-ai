@@ -8,7 +8,10 @@
 """Clinical triage prediction engine for ESI level estimation."""
 from __future__ import annotations
 
+import logging
 import math
+
+_log = logging.getLogger("triage_engine")
 
 MODEL_MODE = "simulation"
 
@@ -20,30 +23,73 @@ ESI_LABELS = {
     5: "NON-URGENT",
 }
 
-ESI_1_KEYWORDS = [
-    "cardiac arrest", "unresponsive", "not breathing", "pulseless",
-    "apneic", "code blue", "gsw head", "hanging",
+import re as _re
+
+# Regex-based keyword patterns — catch natural language variations patients actually use.
+ESI_1_PATTERNS = [
+    r"cardiac arrest|unresponsive|not breathing|pulseless|apneic|code blue|gsw.?head|hanging|no pulse|cpr",
+    r"dying|going to die|i.?m dead|life.?threatening|fatal|near.?death",
 ]
-ESI_2_KEYWORDS = [
-    "chest pain", "stroke", "seizure", "overdose", "suicidal",
-    "anaphylaxis", "severe bleeding", "stab wound", "gunshot",
-    "altered mental", "difficulty breathing", "shortness of breath",
-    "acute abdomen", "testicular torsion", "ectopic",
+ESI_2_PATTERNS = [
+    r"chest.?pain|chest.?tight|chest.?pressure|angina|heart.?attack|mi\b|myocardial",
+    r"chest.*hurt|chest.*crush|chest.*heavy|chest.*burn|heart.*rac|heart.*pound|heart.*stop|heart.*fail",
+    r"stroke|facial.?droop|arm.?weakness|slurred.?speech|hemiparesis|aphasia|one.?side.*numb|paralyz|can.?t.?move|can.?t.?feel",
+    r"seizure|convuls|postictal|shaking.?uncontrollab|epilep|fitting|fits",
+    r"overdose|ingestion|poison|took.?too.?many|swallowed|od\b|drug.*too.*much",
+    r"suicid|kill.?my|want.?to.?die|self.?harm|cutting.?my|end.?my.?life|don.?t.?want.?to.?live|hurt.?my",
+    r"anaphylax|throat.?swell|can.?t.?swallow|allergic.?react|epipen|severe.?allerg|face.*swell|tongue.*swell|lip.*swell",
+    r"severe.?bleed|hemorrhag|blood.?everywhere|won.?t.?stop.?bleed|hemoptysis|hematemesis|cough.*blood|blood.*cough|vomit.*blood|blood.*vomit",
+    r"stab|gunshot|gsw|shot|penetrat.?wound|impale",
+    r"altered.?mental|confused.*sudden|not.?making.?sense|disoriented|pass.?out|faint|unconscious|black.?out|collaps",
+    r"can.?t.?breathe|shortness.?of.?breath|difficulty.?breath|dyspnea|resp.?distress|suffocating|gasping|struggling.?to.?breath|hard.?to.?breath|trouble.?breath|breath.*difficult|breath.*problem|breath.*hard|can.?t.?get.?air|choking",
+    r"acute.?abdomen|testicular.?torsion|ectopic",
+    r"blood.?pressure.*very|blood.?pressure.*dangerously|blood.?pressure.*extremely",
+    r"vision.?loss|can.?t.?see|blind|sudden.*vision|blurr.*vision.*sudden",
+    r"excruciating|unbearable|worst.?pain|agony|10.?out.?of.?10|severe.?pain|extreme.?pain|intense.?pain",
+    r"emergency|life.?threaten|critical|urgent.*severe|very.*serious|really.*bad|really.*serious|seriously.*ill|seriously.*hurt|seriously.*injur",
+    r"broken.*hip|broken.*skull|broken.*neck|broken.*spine|broken.*back|head.*injur|head.*trauma|concuss|brain.*bleed",
+    r"diabetic.*emergency|blood.?sugar.*very|blood.?sugar.*dangerously|insulin.*shock|diabetic.*coma",
+    r"asthma.*attack|asthma.*can.?t|asthma.*severe|asthma.*bad|asthma.*emergency",
+    r"sepsis|septic|blood.?infect|organ.?fail",
+    r"pregnant.*bleed|miscarriag|labor.*early|premature.*labor|water.*broke|contractions",
+    r"burn.*severe|burn.*degree|burn.*face|burn.*large|chemical.*burn|electrical.*burn",
 ]
-ESI_3_KEYWORDS = [
-    "abdominal pain", "fever", "vomiting", "diarrhea", "headache",
-    "back pain", "fall", "laceration", "fracture", "urinary",
-    "asthma", "diabetes", "infection", "cellulitis", "pneumonia",
+ESI_3_PATTERNS = [
+    r"abdomin.?pain|stomach.?pain|belly.?hurts|cramp",
+    r"fever|temperature|feel.?hot|burning.?up|chills",
+    r"vomit|throwing.?up|nause|puking",
+    r"diarrhea|loose.?stool|watery.?stool",
+    r"headache|migraine|head.?hurts|worst.?headache",
+    r"back.?pain|lower.?back|spine",
+    r"fall|fell|tripped|slip",
+    r"lacerat|cut.?my|gash|wound|bleeding",
+    r"fracture|broke|broken.?bone|snapped",
+    r"urinary|burning.?pee|uti|blood.?in.?urine|can.?t.?pee",
+    r"asthma|wheez|inhaler.?not.?work",
+    r"diabet|blood.?sugar|glucose|insulin",
+    r"infect|cellulitis|abscess|pus|swollen.*red.*warm",
+    r"pneumonia|lung.?infect",
 ]
-ESI_4_KEYWORDS = [
-    "sprain", "strain", "rash", "ear pain", "sore throat", "cough",
-    "minor burn", "ankle", "knee pain", "shoulder pain", "wrist",
-    "prescription", "refill", "suture removal",
+ESI_4_PATTERNS = [
+    r"sprain|strain|twist|rolled.?my",
+    r"rash|hives|itch|skin.?break",
+    r"ear.?pain|ear.?ache|ear.?infect",
+    r"sore.?throat|throat.?hurts|tonsil|strep",
+    r"cough|cold|congestion|runny.?nose|stuffy",
+    r"minor.?burn|small.?burn",
+    r"ankle|knee.?pain|shoulder.?pain|wrist|elbow",
+    r"prescri|refill|suture.?remov",
 ]
-ESI_5_KEYWORDS = [
-    "medication refill", "work note", "clearance", "suture check",
-    "routine", "follow up",
+ESI_5_PATTERNS = [
+    r"medication.?refill|work.?note|clearance|suture.?check|routine|follow.?up|check.?up|normal.?visit",
 ]
+
+# Legacy keyword lists (kept for backward compat with any code referencing them)
+ESI_1_KEYWORDS = ["cardiac arrest", "unresponsive", "not breathing", "pulseless", "apneic", "code blue", "gsw head", "hanging"]
+ESI_2_KEYWORDS = ["chest pain", "stroke", "seizure", "overdose", "suicidal", "anaphylaxis", "severe bleeding", "stab wound", "gunshot", "altered mental", "difficulty breathing", "shortness of breath", "acute abdomen", "testicular torsion", "ectopic"]
+ESI_3_KEYWORDS = ["abdominal pain", "fever", "vomiting", "diarrhea", "headache", "back pain", "fall", "laceration", "fracture", "urinary", "asthma", "diabetes", "infection", "cellulitis", "pneumonia"]
+ESI_4_KEYWORDS = ["sprain", "strain", "rash", "ear pain", "sore throat", "cough", "minor burn", "ankle", "knee pain", "shoulder pain", "wrist", "prescription", "refill", "suture removal"]
+ESI_5_KEYWORDS = ["medication refill", "work note", "clearance", "suture check", "routine", "follow up"]
 
 
 def _compute_vital_flags(
@@ -103,29 +149,47 @@ def _compute_composites(
 
 
 def _parse_chief_complaint(text: str) -> tuple[int, float]:
-    """Return (best matching ESI level, match confidence)."""
-    normalized = text.lower().strip()
-    keyword_map = [
-        (ESI_1_KEYWORDS, 1, 0.95),
-        (ESI_2_KEYWORDS, 2, 0.80),
-        (ESI_3_KEYWORDS, 3, 0.65),
-        (ESI_4_KEYWORDS, 4, 0.70),
-        (ESI_5_KEYWORDS, 5, 0.85),
-    ]
-    best_level = 3
-    best_confidence = 0.45
-    best_specificity = 0
+    """Return (best matching ESI level, match confidence) using regex patterns.
 
-    for keywords, level, base_conf in keyword_map:
+    Clinical safety rule: the most critical (lowest) ESI level with ANY match
+    always wins. A single "can't breathe" (ESI 2) must never be outranked by
+    three ESI 3 symptoms. Multiple matches at the winning level boost confidence.
+    """
+    normalized = text.lower().strip()
+
+    pattern_map = [
+        (ESI_1_PATTERNS, 1, 0.92),
+        (ESI_2_PATTERNS, 2, 0.78),
+        (ESI_3_PATTERNS, 3, 0.68),
+        (ESI_4_PATTERNS, 4, 0.72),
+        (ESI_5_PATTERNS, 5, 0.85),
+    ]
+
+    _log.info("TRIAGE_PARSE complaint=%r", normalized[:200])
+
+    # Scan from most critical to least — first level with a match wins
+    for patterns, level, base_conf in pattern_map:
+        matched = [pat for pat in patterns if _re.search(pat, normalized)]
+        if matched:
+            conf = min(base_conf + 0.03 * (len(matched) - 1), 0.95)
+            _log.info("TRIAGE_MATCH level=%d conf=%.2f matches=%d first=%s", level, conf, len(matched), matched[0][:60])
+            return level, conf
+
+    _log.warning("TRIAGE_NO_MATCH complaint=%r — defaulting to ESI 3", normalized[:200])
+
+    # Fallback: try legacy exact-substring matching (most critical first)
+    legacy_map = [
+        (ESI_1_KEYWORDS, 1, 0.90),
+        (ESI_2_KEYWORDS, 2, 0.75),
+        (ESI_3_KEYWORDS, 3, 0.60),
+        (ESI_4_KEYWORDS, 4, 0.65),
+        (ESI_5_KEYWORDS, 5, 0.80),
+    ]
+    for keywords, level, base_conf in legacy_map:
         for kw in keywords:
             if kw in normalized:
-                specificity = len(kw)
-                if specificity > best_specificity:
-                    best_specificity = specificity
-                    best_level = level
-                    best_confidence = base_conf
-
-    return best_level, best_confidence
+                return level, base_conf
+    return 3, 0.40
 
 
 def _softmax(scores: list[float]) -> list[float]:
@@ -153,6 +217,10 @@ def _compute_esi_scores(
     if complaint_level == 1 and complaint_conf > 0.8:
         scores = [5.5, 1.0, -0.5, -3.0, -5.0]
         return 1, _softmax(scores)
+
+    if complaint_level == 2 and complaint_conf > 0.7:
+        scores = [1.0, 5.0, 0.5, -2.0, -4.0]
+        return 2, _softmax(scores)
 
     if flags["severe_hypotension"] and flags["severe_tachycardia"]:
         scores = [5.0, 2.0, 0.0, -3.0, -5.0]

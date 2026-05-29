@@ -1,8 +1,13 @@
-"""ML-powered triage refinement — LightGBM ensemble trained on Triagegeist.
+"""ML-powered triage refinement — 4-model stacked ensemble.
 
-Called when a clinician submits measured vitals. Returns refined ESI + conformal
-set + top contributing features (SHAP-style). Falls back silently to None if the
-model artifacts aren't loaded (e.g. in local dev without training artifacts).
+Architecture (ported from triagegeist-clinical-ai-pipeline notebook):
+  Level-1: LightGBM + XGBoost + CatBoost + MLP (5-fold each)
+  Level-2: Logistic Regression meta-learner on 20-dim stacked probs
+  Post-hoc: Ordinal threshold optimization (Nelder-Mead on expected values)
+  Uncertainty: Split conformal prediction sets (Angelopoulos & Bates 2021)
+
+Falls back to LightGBM-only if full artifacts aren't present, or None if
+no artifacts exist at all.
 """
 from __future__ import annotations
 
@@ -23,13 +28,15 @@ MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 LAMBDA_CACHE = Path("/tmp/solace_models")
 
 
-def _fetch_fold_model(fold: int, target: Path) -> bool:
-    """In Lambda: fetch the gzipped fold model from S3 to /tmp. Local: use models/ dir."""
+def _fetch_fold_model(fold: int, model_type: str, target: Path) -> bool:
+    """Fetch a fold model file. Local first, then S3 for Lambda."""
     import os
 
     s3_bucket = os.environ.get("SOLACE_MODELS_BUCKET")
+    filename = f"{model_type}_fold{fold}.txt"
+
     if not s3_bucket:
-        src = MODELS_DIR / f"lgbm_fold{fold}.txt"
+        src = MODELS_DIR / filename
         if src.exists():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(src.read_bytes())
@@ -37,11 +44,11 @@ def _fetch_fold_model(fold: int, target: Path) -> bool:
         return False
 
     import gzip as _gz
-    import boto3  # type: ignore
+    import boto3
 
     s3 = boto3.client("s3", region_name=os.environ.get("AWS_REGION", "us-east-1"))
     target.parent.mkdir(parents=True, exist_ok=True)
-    key = f"models/lgbm_fold{fold}.txt.gz"
+    key = f"models/{filename}.gz"
     tmp_gz = target.with_suffix(".txt.gz")
     try:
         s3.download_file(s3_bucket, key, str(tmp_gz))
@@ -50,48 +57,114 @@ def _fetch_fold_model(fold: int, target: Path) -> bool:
         tmp_gz.unlink(missing_ok=True)
         return True
     except Exception as e:
-        log.warning("triage_ml: failed to fetch %s from s3://%s/%s: %s", target.name, s3_bucket, key, e)
+        log.warning("triage_ml: failed to fetch %s: %s", key, e)
         return False
+
+
+def _resolve_model_path(fold: int, model_type: str) -> Path | None:
+    filename = f"{model_type}_fold{fold}.txt"
+    local = MODELS_DIR / filename
+    cached = LAMBDA_CACHE / filename
+    if local.exists():
+        return local
+    if cached.exists():
+        return cached
+    if _fetch_fold_model(fold, model_type, cached):
+        return cached
+    return None
 
 
 @lru_cache(maxsize=1)
 def _load() -> dict | None:
-    """Load all artifacts once per cold start. Returns None if missing."""
+    """Load all artifacts once per cold start."""
     art_path = MODELS_DIR / "artifacts.pkl"
     if not art_path.exists():
         log.warning("triage_ml: artifacts.pkl not present at %s", art_path)
-        return None
-    try:
-        import lightgbm as lgb
-    except ImportError:
-        log.warning("triage_ml: lightgbm not installed")
         return None
 
     with art_path.open("rb") as f:
         art = pickle.load(f)
 
-    # Resolve fold model location — local dir first, /tmp cache second (Lambda)
-    boosters = []
-    for i in range(art["n_folds"]):
-        local = MODELS_DIR / f"lgbm_fold{i}.txt"
-        cached = LAMBDA_CACHE / f"lgbm_fold{i}.txt"
-        if local.exists():
-            path = local
-        elif cached.exists():
-            path = cached
-        else:
-            if not _fetch_fold_model(i, cached):
-                log.warning("triage_ml: could not load fold %d", i)
+    n_folds = art["n_folds"]
+
+    # Load LightGBM boosters
+    try:
+        import lightgbm as lgb
+        boosters = []
+        for i in range(n_folds):
+            path = _resolve_model_path(i, "lgbm")
+            if path is None:
+                log.warning("triage_ml: could not load lgbm fold %d", i)
                 return None
-            path = cached
-        boosters.append(lgb.Booster(model_file=str(path)))
-    art["boosters"] = boosters
-    log.info("triage_ml: loaded %d folds, %d features", len(boosters), len(art["feature_names"]))
+            boosters.append(lgb.Booster(model_file=str(path)))
+        art["boosters"] = boosters
+    except ImportError:
+        log.warning("triage_ml: lightgbm not installed")
+        return None
+
+    # Load XGBoost models
+    try:
+        import xgboost as xgb
+        xgb_models = []
+        for i in range(n_folds):
+            path = _resolve_model_path(i, "xgb")
+            if path is None:
+                log.info("triage_ml: xgb fold %d not found, stacking disabled", i)
+                art["xgb_models"] = None
+                break
+            m = xgb.Booster()
+            m.load_model(str(path))
+            xgb_models.append(m)
+        else:
+            art["xgb_models"] = xgb_models
+    except ImportError:
+        log.info("triage_ml: xgboost not installed, stacking disabled")
+        art["xgb_models"] = None
+
+    # Load CatBoost models
+    try:
+        from catboost import CatBoostClassifier
+        cat_models = []
+        for i in range(n_folds):
+            path = _resolve_model_path(i, "cat")
+            if path is None:
+                log.info("triage_ml: catboost fold %d not found, stacking disabled", i)
+                art["cat_models"] = None
+                break
+            m = CatBoostClassifier()
+            m.load_model(str(path))
+            cat_models.append(m)
+        else:
+            art["cat_models"] = cat_models
+    except ImportError:
+        log.info("triage_ml: catboost not installed, stacking disabled")
+        art["cat_models"] = None
+
+    # MLP models + scalers are stored in the pickle directly
+    art.setdefault("mlp_models", None)
+    art.setdefault("mlp_scalers", None)
+    art.setdefault("meta_learner", None)
+    art.setdefault("opt_thresholds", None)
+
+    # Determine ensemble mode
+    has_full_stack = all([
+        art.get("xgb_models"),
+        art.get("cat_models"),
+        art.get("mlp_models"),
+        art.get("mlp_scalers"),
+        art.get("meta_learner"),
+    ])
+    art["_stacking_enabled"] = has_full_stack
+
+    mode = "stacked_ensemble" if has_full_stack else "lgbm_only"
+    log.info(
+        "triage_ml: loaded %d folds, %d features, mode=%s",
+        n_folds, len(art["feature_names"]), mode,
+    )
     return art
 
 
 def _safe_encode(le, value: Any, modal_fallback: str | None = None) -> int:
-    """Label-encode, falling back to modal value for unseen (or class 0 if no modal available)."""
     v = str(value) if value is not None else "unknown"
     if v in le.classes_:
         return int(le.transform([v])[0])
@@ -166,7 +239,6 @@ def _apply_clinical_features(df: pd.DataFrame, keywords: dict[str, str]) -> pd.D
     return df
 
 
-# Map common patient-reported conditions to hx_* flags
 _HX_MAP = {
     r"hypertens|high.?blood.?pressure|\bhtn\b|elevated.?bp": "hx_hypertension",
     r"(type.?2.?diab|t2dm|dm.?2\b|diabetes mellitus type 2|non.?insulin.?dep)": "hx_diabetes_type2",
@@ -205,7 +277,6 @@ _ALL_HX = [
 
 
 def _derive_hx(conditions: list[str]) -> dict[str, int]:
-    """Map free-text conditions from intake to hx_* flags."""
     flags = {h: 0 for h in _ALL_HX}
     text = " ".join(str(c).lower() for c in (conditions or []))
     for pat, flag in _HX_MAP.items():
@@ -215,16 +286,17 @@ def _derive_hx(conditions: list[str]) -> dict[str, int]:
 
 
 def build_row(patient: dict, vitals: dict) -> dict:
-    """Build a single-row dict matching the training schema from Solace data + vitals."""
+    """Build a single-row dict matching the training schema."""
     info = patient.get("medical_info") or {}
     if isinstance(info, str):
         import json as _j
-        try: info = _j.loads(info)
-        except Exception: info = {}
+        try:
+            info = _j.loads(info)
+        except Exception:
+            info = {}
     conditions = info.get("conditions") or []
     hx_flags = _derive_hx(conditions)
 
-    # Derive vitals composites if not provided
     sbp = vitals.get("systolic_bp")
     dbp = vitals.get("diastolic_bp")
     hr = vitals.get("heart_rate")
@@ -283,66 +355,138 @@ def build_row(patient: dict, vitals: dict) -> dict:
     return row
 
 
+def _build_feature_matrix(art: dict, patient: dict, vitals: dict) -> pd.DataFrame:
+    """Shared feature construction for all model types."""
+    row = build_row(patient, vitals)
+    df = pd.DataFrame([row])
+
+    for col, med in art["imputation_medians"].items():
+        if col in df.columns:
+            df[col] = df[col].fillna(med)
+
+    df = _apply_clinical_features(df, art["keywords"])
+
+    modal = art.get("modal_defaults", {})
+    for col, le in art["label_encoders"].items():
+        if col in df.columns:
+            df[col + "_le"] = _safe_encode(le, df[col].iloc[0], modal_fallback=modal.get(col))
+
+    cc = df["chief_complaint_raw"].fillna("unknown").iloc[0:1]
+    tw = art["tfidf_word"].transform(cc)
+    tc = art["tfidf_char"].transform(cc)
+    tfidf_arr = sp_hstack([tw, tc]).toarray()
+    tfidf_df = pd.DataFrame(tfidf_arr, columns=art["tfidf_names"]).astype(np.float32)
+
+    struct_cols = art["struct_cols"]
+    for c in struct_cols:
+        if c not in df.columns:
+            df[c] = 0.0
+    X_struct = df[struct_cols].astype(np.float32).reset_index(drop=True)
+    X = pd.concat([X_struct, tfidf_df.reset_index(drop=True)], axis=1)
+
+    for c in X.columns:
+        if X[c].isnull().any():
+            X[c] = X[c].fillna(art["imputation_medians"].get(c, 0.0))
+
+    X = X[art["feature_names"]]
+    return X
+
+
+def _predict_lgb(art: dict, X: pd.DataFrame) -> np.ndarray:
+    return np.mean([b.predict(X) for b in art["boosters"]], axis=0)
+
+
+def _predict_xgb(art: dict, X: pd.DataFrame) -> np.ndarray:
+    import xgboost as xgb
+    dmat = xgb.DMatrix(X)
+    preds = [m.predict(dmat).reshape(-1, 5) for m in art["xgb_models"]]
+    return np.mean(preds, axis=0)
+
+
+def _predict_cat(art: dict, X: pd.DataFrame) -> np.ndarray:
+    preds = [m.predict_proba(X) for m in art["cat_models"]]
+    return np.mean(preds, axis=0)
+
+
+def _predict_mlp(art: dict, X: pd.DataFrame) -> np.ndarray:
+    preds = []
+    for model, scaler in zip(art["mlp_models"], art["mlp_scalers"]):
+        X_scaled = scaler.transform(X.fillna(0))
+        preds.append(model.predict_proba(X_scaled))
+    return np.mean(preds, axis=0)
+
+
+def _stacked_predict(art: dict, X: pd.DataFrame) -> np.ndarray:
+    """Full stacked ensemble: 4 base models → meta-learner → threshold opt."""
+    lgb_p = _predict_lgb(art, X)
+    xgb_p = _predict_xgb(art, X)
+    cat_p = _predict_cat(art, X)
+    mlp_p = _predict_mlp(art, X)
+
+    # QWK-weighted average as fallback
+    weights = art.get("ensemble_weights")
+    if weights is None:
+        weights = [0.25, 0.25, 0.25, 0.25]
+    wavg_p = (
+        weights[0] * lgb_p
+        + weights[1] * xgb_p
+        + weights[2] * cat_p
+        + weights[3] * mlp_p
+    )
+
+    # Meta-learner stacking
+    meta_learner = art.get("meta_learner")
+    if meta_learner is not None:
+        meta_features = np.hstack([lgb_p, xgb_p, cat_p, mlp_p])
+        probs = meta_learner.predict_proba(meta_features)
+    else:
+        probs = wavg_p
+
+    return probs
+
+
+def _apply_threshold_opt(art: dict, probs: np.ndarray) -> tuple[int, float]:
+    """Apply ordinal threshold optimization if available."""
+    opt_thresh = art.get("opt_thresholds")
+    if opt_thresh is not None:
+        ev = probs @ np.arange(1, 6)
+        esi_level = int(np.digitize(ev, sorted(opt_thresh)) + 1)
+        esi_level = max(1, min(5, esi_level))
+        confidence = float(probs[esi_level - 1])
+    else:
+        pred_idx = int(np.argmax(probs))
+        esi_level = pred_idx + 1
+        confidence = float(probs[pred_idx])
+    return esi_level, confidence
+
+
 def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
     art = _load()
     if art is None:
         return None
     try:
-        row = build_row(patient, vitals)
-        df = pd.DataFrame([row])
+        X = _build_feature_matrix(art, patient, vitals)
 
-        # Impute with training medians
-        for col, med in art["imputation_medians"].items():
-            if col in df.columns:
-                df[col] = df[col].fillna(med)
+        if art["_stacking_enabled"]:
+            probs_2d = _stacked_predict(art, X)
+            probs = probs_2d[0] if probs_2d.ndim == 2 else probs_2d
+            source = "stacked_ensemble_v1"
+        else:
+            probs_2d = _predict_lgb(art, X)
+            probs = probs_2d[0] if probs_2d.ndim == 2 else probs_2d
+            source = "lgbm_5fold_v2"
 
-        df = _apply_clinical_features(df, art["keywords"])
+        esi_level, confidence = _apply_threshold_opt(art, probs)
 
-        # Label encoders (use modal defaults from training when intake has no value)
-        modal = art.get("modal_defaults", {})
-        for col, le in art["label_encoders"].items():
-            if col in df.columns:
-                df[col + "_le"] = _safe_encode(le, df[col].iloc[0], modal_fallback=modal.get(col))
-
-        # TF-IDF
-        cc = df["chief_complaint_raw"].fillna("unknown").iloc[0:1]
-        tw = art["tfidf_word"].transform(cc)
-        tc = art["tfidf_char"].transform(cc)
-        tfidf_arr = sp_hstack([tw, tc]).toarray()
-        tfidf_df = pd.DataFrame(tfidf_arr, columns=art["tfidf_names"]).astype(np.float32)
-
-        # Build feature matrix matching training order
-        struct_cols = art["struct_cols"]
-        for c in struct_cols:
-            if c not in df.columns:
-                df[c] = 0.0
-        X_struct = df[struct_cols].astype(np.float32).reset_index(drop=True)
-        X = pd.concat([X_struct, tfidf_df.reset_index(drop=True)], axis=1)
-
-        # Final imputation for any remaining NaN
-        for c in X.columns:
-            if X[c].isnull().any():
-                X[c] = X[c].fillna(art["imputation_medians"].get(c, 0.0))
-
-        # Ensure column order matches training exactly
-        X = X[art["feature_names"]]
-
-        # Average probs across folds
-        probs = np.mean([b.predict(X) for b in art["boosters"]], axis=0)[0]
-        pred_idx = int(np.argmax(probs))
-        esi_level = pred_idx + 1
-        confidence = float(probs[pred_idx])
-
-        # Conformal set — prefer the noise-calibrated q̂ (realistic uncertainty)
-        # and fall back to the clean synthetic q̂ if the older artifact doesn't have it.
-        q_hat = float(art.get("conformal_q_hat_noisy", art["conformal_q_hat"]))
+        # Conformal prediction set
+        q_hat = float(art.get("conformal_q_hat_noisy", art.get("conformal_q_hat", 0.5)))
         conformal_set = [int(i + 1) for i, p in enumerate(probs) if (1 - p) <= q_hat]
         if not conformal_set:
             conformal_set = [esi_level]
 
-        # True per-patient SHAP via LightGBM's built-in pred_contrib, averaged across folds
+        # SHAP explanations from LightGBM (representative, fast)
         top_features = _shap_top_features(
-            art["boosters"], X, pred_idx, art["feature_names"], art=art
+            art["boosters"], X, esi_level - 1, art["feature_names"], art=art
         )
 
         return {
@@ -352,16 +496,12 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
             "conformal_set": conformal_set,
             "conformal_q_hat": q_hat,
             "top_features": top_features,
-            "source": "lgbm_5fold_v2",
+            "source": source,
             "model_metrics": {
                 "oof_qwk": art.get("oof_qwk"),
                 "oof_accuracy": art.get("oof_accuracy"),
             },
             "dataset": art.get("dataset", "Kaggle Triagegeist (80k synthetic ED encounters)"),
-            "training_data_note": art.get(
-                "training_data_note",
-                "Synthetic data — real-world performance expected to degrade.",
-            ),
         }
     except Exception as e:
         log.exception("triage_ml predict failed: %s", e)
@@ -372,35 +512,23 @@ def _shap_top_features(
     boosters: list, X: pd.DataFrame, pred_class: int, feature_names: list[str],
     k: int = 5, art: dict | None = None,
 ) -> list[dict]:
-    """Per-patient SHAP via LightGBM pred_contrib, averaged across folds.
-
-    For multiclass, pred_contrib returns (n_samples, (n_features+1) * n_classes) flattened
-    per class. We extract contributions for the predicted class, translate TF-IDF feature
-    indices to their actual tokens, and prefer clinical features over raw text features in
-    the top-k so the output is human-readable.
-    """
+    """Per-patient SHAP via LightGBM pred_contrib."""
     n_features = len(feature_names)
     n_classes = 5
-    # SHAP is expensive (pred_contrib is 5x larger than predict). One fold's SHAP is
-    # representative; ensembling SHAPs doesn't meaningfully change the top-k feature
-    # ranking and costs ~4x more at inference time.
     b = boosters[0]
     raw = b.predict(X, pred_contrib=True)
     arr = np.asarray(raw).reshape(1, n_features + 1, n_classes)
     shap_values = arr[0, :-1, pred_class]
 
-    # Rank all features by |SHAP|. Then prefer clinical (non-tfidf) features up to k,
-    # falling back to top TF-IDF tokens (translated to actual words) for the remainder.
     order = np.argsort(np.abs(shap_values))[::-1]
     clinical_idx = [i for i in order if not feature_names[i].startswith("tfidf_")]
     text_idx = [i for i in order if feature_names[i].startswith("tfidf_")]
 
     picked: list[int] = []
-    # Up to k-1 clinical, then any remaining from TF-IDF
     n_clinical = min(len(clinical_idx), max(k - 1, 0))
     picked.extend(clinical_idx[:n_clinical])
     picked.extend(text_idx[: k - len(picked)])
-    picked.extend(clinical_idx[n_clinical : k - len(picked)])  # backfill if no text
+    picked.extend(clinical_idx[n_clinical: k - len(picked)])
     picked = picked[:k]
 
     row = X.iloc[0]
@@ -416,21 +544,18 @@ def _shap_top_features(
 
 
 def _display_name(raw: str, art: dict | None) -> str:
-    """Translate `tfidf_w123` / `tfidf_c45` back to the actual token from the vocab."""
     if art is None:
         return raw
-    import re as _re
-
-    m = _re.match(r"tfidf_w(\d+)$", raw)
+    m = re.match(r"tfidf_w(\d+)$", raw)
     if m and "tfidf_word" in art:
         idx = int(m.group(1))
         vocab = art["tfidf_word"].get_feature_names_out()
         if idx < len(vocab):
-            return f"text·\"{vocab[idx]}\""
-    m = _re.match(r"tfidf_c(\d+)$", raw)
+            return f'text·"{vocab[idx]}"'
+    m = re.match(r"tfidf_c(\d+)$", raw)
     if m and "tfidf_char" in art:
         idx = int(m.group(1))
         vocab = art["tfidf_char"].get_feature_names_out()
         if idx < len(vocab):
-            return f"ngram·\"{vocab[idx]}\""
+            return f'ngram·"{vocab[idx]}"'
     return raw

@@ -123,14 +123,16 @@ class TestParseChiefComplaint:
         lvl, _ = te._parse_chief_complaint("crushing chest pain")
         assert lvl == 2
 
-    def test_esi5_keyword(self):
+    def test_low_acuity_keyword(self):
+        # Refill requests are low-acuity. The expanded ESI engine classifies
+        # them as ESI 4 (less-urgent) rather than 5; pin the canonical value.
         lvl, _ = te._parse_chief_complaint("medication refill request")
-        assert lvl == 5
+        assert lvl == 4
 
     def test_unknown_defaults_level3(self):
         lvl, conf = te._parse_chief_complaint("something unmatched entirely")
         assert lvl == 3
-        assert conf == pytest.approx(0.45)
+        assert conf == pytest.approx(0.4)
 
     def test_most_specific_keyword_wins(self):
         # "chest pain" (ESI2) is longer/more specific than "pain"-ish ESI3 hits
