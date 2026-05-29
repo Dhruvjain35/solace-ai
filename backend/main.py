@@ -93,9 +93,19 @@ def health() -> dict:
 
 
 def _triage_models_present() -> bool:
-    model_dir = Path(__file__).parent / "models"
-    needed = ["lgbm_model.pkl", "xgb_model.pkl", "catboost_model.cbm"]
-    return all((model_dir / f).exists() for f in needed)
+    """True only if the trained ensemble actually loads via the real loader.
+
+    Previously checked legacy filenames (lgbm_model.pkl/xgb_model.pkl/
+    catboost_model.cbm) that the pipeline never produced, so /health reported
+    clinical_simulation even when the trained artifacts were present. Now we ask
+    the loader itself, so the status reflects reality (and the same lru_cache'd
+    load the predictor uses — no extra cold-start cost).
+    """
+    try:
+        from services import triage_ml  # noqa: PLC0415 — heavy import, only on demand
+        return triage_ml._load() is not None
+    except Exception:  # noqa: BLE001 — health must never raise
+        return False
 
 
 # Serve local media (audio + photos) in local mode. On AWS, S3 serves via pre-signed URLs.
