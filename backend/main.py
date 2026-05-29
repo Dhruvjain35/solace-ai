@@ -14,8 +14,9 @@ from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
     admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
-    governance, hospitals, identity, insurance, intake, notes, onboarding, pain_flag, patients,
-    prescriptions, public, sms as sms_router, transcribe, triage, voice, wave4, workflows,
+    ehr_copilot, governance, hospitals, identity, insurance, intake, notes, onboarding,
+    pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage,
+    voice, wave4, workflows,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -129,6 +130,7 @@ app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflo
 # letters, coding, inbox drafts, refills, PA packets, drug check, discharge plan,
 # specialty packs, override audit log).
 app.include_router(clinical_ai.router, prefix="/api/{hospital_id}", tags=["clinical-ai"])
+app.include_router(ehr_copilot.router, prefix="/api/{hospital_id}", tags=["ehr-copilot"])
 # Care operations (eligibility, no-show, HEDIS, SDoH, FHIR write-back).
 app.include_router(care_ops.router, prefix="/api/{hospital_id}", tags=["care-ops"])
 # Wave 4 — HL7 v2 emit, multi-encounter, fax intake, sepsis bundle, cohort export,

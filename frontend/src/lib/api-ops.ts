@@ -271,3 +271,79 @@ export async function resultClosureSummary(
   );
   return data;
 }
+
+// --- EHR Copilot (agentic chart Q&A / summary / scan / autopopulate) ----------
+
+export type CopilotSource = { tool: string; resource?: string; linked?: boolean };
+export type CopilotAnswer = { answer: string; sources: CopilotSource[]; error?: string };
+
+export async function copilotAsk(
+  hospitalId: string,
+  patientId: string,
+  question: string,
+): Promise<CopilotAnswer> {
+  const { data } = await api.post<CopilotAnswer>(
+    `/api/${hospitalId}/copilot/ask`,
+    { patient_id: patientId, question },
+  );
+  return data;
+}
+
+export async function copilotSummary(
+  hospitalId: string,
+  patientId: string,
+): Promise<CopilotAnswer> {
+  const { data } = await api.post<CopilotAnswer>(
+    `/api/${hospitalId}/copilot/summary`,
+    { patient_id: patientId },
+  );
+  return data;
+}
+
+export type CopilotScanItem = {
+  type: string;
+  severity: string;
+  title: string;
+  detail?: string;
+  action?: string;
+  icd10?: string;
+};
+export type CopilotScanResult = { count: number; items: CopilotScanItem[]; sources: CopilotSource[] };
+
+export async function copilotScan(
+  hospitalId: string,
+  patientId: string,
+): Promise<CopilotScanResult> {
+  const { data } = await api.post<CopilotScanResult>(
+    `/api/${hospitalId}/copilot/scan`,
+    { patient_id: patientId },
+  );
+  return data;
+}
+
+export type CopilotField = {
+  field: string;
+  current: string[];
+  ehr: string[];
+  additions: string[];
+  has_changes: boolean;
+};
+export type CopilotAutopopulate = {
+  linked: boolean;
+  source?: string;
+  note?: string;
+  demographics?: Record<string, unknown>;
+  prior_visits?: unknown[];
+  fields: CopilotField[];
+};
+
+export async function copilotAutopopulate(
+  hospitalId: string,
+  patientId: string,
+): Promise<CopilotAutopopulate> {
+  const { data } = await api.post<CopilotAutopopulate>(
+    `/api/${hospitalId}/copilot/autopopulate`,
+    { patient_id: patientId },
+  );
+  return data;
+}

@@ -11,6 +11,7 @@ import {
 const OverviewTab = lazy(() => import("../components/workspace/tabs/OverviewTab"));
 const ScribeTab = lazy(() => import("../components/workspace/tabs/ScribeTab"));
 const ReasoningTab = lazy(() => import("../components/workspace/tabs/ReasoningTab"));
+const CopilotTab = lazy(() => import("../components/workspace/tabs/CopilotTab"));
 const CodingTab = lazy(() => import("../components/workspace/tabs/CodingTab"));
 const LettersTab = lazy(() => import("../components/workspace/tabs/LettersTab"));
 const PriorAuthTab = lazy(() => import("../components/workspace/tabs/PriorAuthTab"));
@@ -26,6 +27,7 @@ type TabDef = {
 
 const TABS: TabDef[] = [
   { id: "overview", label: "Overview", Component: OverviewTab },
+  { id: "copilot", label: "Copilot", Component: CopilotTab },
   { id: "scribe", label: "Scribe", Component: ScribeTab },
   { id: "reasoning", label: "Reasoning", Component: ReasoningTab },
   { id: "coding", label: "Coding", Component: CodingTab },

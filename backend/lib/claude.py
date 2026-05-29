@@ -174,6 +174,10 @@ def _bedrock_invoke(model, max_tokens, system, messages, temperature, **kwargs) 
         body["system"] = _system_blocks(system)
     if temperature is not None:
         body["temperature"] = temperature
+    # Pass through extras like tools / tool_choice so tool-use works on the
+    # Bedrock (BAA) path too, not just the direct API.
+    for k, v in kwargs.items():
+        body[k] = v
     bedrock_model = _BEDROCK_MODEL_MAP.get(model, model)
     r = _bedrock_client().invoke_model(
         modelId=bedrock_model,
