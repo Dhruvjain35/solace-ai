@@ -1,4 +1,4 @@
-"""Twilio Programmable Messaging — outbound SMS.
+"""Outbound SMS — AWS SNS by default, Twilio when its creds are configured.
 
 Used by:
   - Clinician dashboard: "Text discharge plan to patient" button
@@ -64,8 +64,39 @@ def _twilio_from_number() -> str:
     return os.environ.get("TWILIO_SMS_FROM_NUMBER") or os.environ.get("TWILIO_FROM_NUMBER", "")
 
 
-def is_configured() -> bool:
+def _twilio_configured() -> bool:
     return bool(_twilio_account_sid() and _twilio_auth_token() and _twilio_from_number())
+
+
+def _sns_enabled() -> bool:
+    """AWS SNS is the no-external-account SMS path (used when Twilio creds are
+    absent). Enabled by default whenever we're running inside AWS, or forced via
+    ``SMS_PROVIDER=sns``. Set ``SMS_PROVIDER=twilio`` to disable the SNS path.
+
+    SNS needs no "from number": messages send from AWS's shared pool (or the
+    ``SNS_SMS_SENDER_ID`` if set). Note: while the account is in the SNS SMS
+    sandbox, delivery only succeeds to verified destination numbers.
+    """
+    provider = os.environ.get("SMS_PROVIDER", "").strip().lower()
+    if provider == "sns":
+        return True
+    if provider == "twilio":
+        return False
+    # Auto: on inside AWS Lambda / when a region is configured.
+    return bool(os.environ.get("AWS_REGION") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+
+
+def _provider() -> str:
+    """Resolve the active SMS backend: 'twilio' | 'sns' | 'none'."""
+    if _twilio_configured():
+        return "twilio"
+    if _sns_enabled():
+        return "sns"
+    return "none"
+
+
+def is_configured() -> bool:
+    return _provider() != "none"
 
 
 # --- PHI-safe logging --------------------------------------------------------
@@ -224,10 +255,11 @@ def send(
     language: str | None = "en",
     opted_out: bool = False,
 ) -> dict:
-    """Send one SMS. Returns:
+    """Send one SMS via the active provider (Twilio if creds are set, else AWS
+    SNS). Returns:
       {success: bool, sid?: str, status?: str, reason?: str, message?: str}
     Reasons: "not_configured" | "invalid_number" | "twilio_error"
-             | "empty_body" | "opted_out"
+             | "sns_error" | "empty_body" | "opted_out"
 
     ``language`` selects the footer language. ``opted_out`` lets a caller that
     consulted the opt-out store short-circuit before hitting Twilio (TCPA).
@@ -255,6 +287,46 @@ def send(
     if append_hipaa_footer:
         final_body = final_body + hipaa_footer(language)
 
+    if _provider() == "sns":
+        return _send_via_sns(e164, final_body)
+    return _send_via_twilio(e164, final_body)
+
+
+def _send_via_sns(e164: str, final_body: str) -> dict:
+    """Send via AWS SNS — no external account or "from" number required.
+
+    Sends as a Transactional message (carrier-prioritized, no promotional
+    throttling) which suits clinical/appointment messaging. The destination
+    number is never logged in plaintext — only its HMAC hash.
+    """
+    try:
+        import boto3  # noqa: PLC0415 — optional dep, only needed on the SNS path
+
+        region = os.environ.get("AWS_REGION", "us-east-1")
+        sns = boto3.client("sns", region_name=region)
+        attrs = {
+            "AWS.SNS.SMS.SMSType": {"DataType": "String", "StringValue": "Transactional"},
+        }
+        sender_id = os.environ.get("SNS_SMS_SENDER_ID")
+        if sender_id:
+            attrs["AWS.SNS.SMS.SenderID"] = {"DataType": "String", "StringValue": sender_id}
+        resp = sns.publish(PhoneNumber=e164, Message=final_body, MessageAttributes=attrs)
+        message_id = resp.get("MessageId", "")
+        log.info("sns sms accepted for %s id=%s", hash_phone(e164), message_id or "unknown")
+        return {
+            "success": True,
+            "sid": message_id,
+            "status": "queued",
+            "to_hash": hash_phone(e164),
+        }
+    except Exception as e:  # noqa: BLE001 — never raise; SMS is a nice-to-have
+        # Exception text can include the number — log only the type.
+        log.warning("sns sms exception for %s: %s", hash_phone(e164), type(e).__name__)
+        return {"success": False, "reason": "sns_error",
+                "message": "The text message could not be sent."}
+
+
+def _send_via_twilio(e164: str, final_body: str) -> dict:
     account_sid = _twilio_account_sid()
     auth_token = _twilio_auth_token()
     from_number = _twilio_from_number()
