@@ -1,9 +1,33 @@
 ﻿version: 0.2
+env:
+  variables:
+    MODELS_BUCKET: "solace-lambda-deploy-704229156617"
+    MODELS_PREFIX: "models"
 phases:
   pre_build:
     commands:
       - echo Logging in to ECR...
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 704229156617.dkr.ecr.us-east-1.amazonaws.com
+      # --- Bake trained ML artifacts into the image so triage_ml._load() finds them locally ---
+      # Best-effort: a missing file logs a warning but never fails the build. The loader
+      # gates the whole ensemble on artifacts.pkl + lgbm folds; xgb/cat are optional.
+      - echo "Fetching ML artifacts from s3://$MODELS_BUCKET/$MODELS_PREFIX ..."
+      - mkdir -p backend/models
+      # artifacts.pkl is stored uncompressed and MUST be present for any trained mode
+      - aws s3 cp "s3://$MODELS_BUCKET/$MODELS_PREFIX/artifacts.pkl" backend/models/artifacts.pkl || echo "WARN artifacts.pkl missing -> ensemble stays disabled (clinical_simulation)"
+      # Per-fold model files are gzipped in S3 (.txt.gz); the loader reads ungzipped .txt
+      - |
+        for type in lgbm xgb cat; do
+          for i in 0 1 2 3 4; do
+            f="${type}_fold${i}.txt"
+            if aws s3 cp "s3://$MODELS_BUCKET/$MODELS_PREFIX/${f}.gz" "backend/models/${f}.gz" 2>/dev/null; then
+              gunzip -f "backend/models/${f}.gz" && echo "  baked $f"
+            else
+              echo "  skip $f (not in S3)"
+            fi
+          done
+        done
+      - echo "Artifacts staged:" && ls -lh backend/models/ || true
   build:
     commands:
       - echo Building Docker image...
