@@ -76,7 +76,7 @@ RULES: list[tuple[re.Pattern[str], ShortcutResult]] = [
     ),
     # Suicidal ideation / overdose — ESI 2 by default, but flag for crisis intervention
     (
-        re.compile(r"\b(suicid|kill myself|overdosed|took (too many|all my))\b"),
+        re.compile(r"\b(suicid\w*|kill myself|kill my self|homicidal|self.?harm|overdos\w*|took (too many|all my))\b"),
         ShortcutResult(
             esi_level=2,
             reason="rule.esi2.crisis",
