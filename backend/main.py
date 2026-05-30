@@ -82,6 +82,13 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
+# Per-request observability — emits one PHI-free CloudWatch EMF metric line per
+# request (latency, error, dimensioned by hospital_id + route template). No
+# boto3, no OTel SDK; ships via stdout. See lib/observability.py (SEC-002).
+from lib.observability import ObservabilityMiddleware  # noqa: E402
+
+app.add_middleware(ObservabilityMiddleware)
+
 
 @app.get("/health")
 def health() -> dict:

@@ -32,7 +32,10 @@ disparate-impact ratios, and four-fifths-rule flags.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------
@@ -785,3 +788,273 @@ def transparency_summary() -> dict[str, Any]:
             "override_log": "/api/governance/override-log",
         },
     }
+
+
+# ==========================================================================
+# Solace Trust Report — the PUBLIC, aggregate-only transparency surface.
+#
+# This is the productized governance layer: calibration + conformal coverage,
+# bias/fairness summary, and live aggregate override-acceptance, assembled into
+# a single object safe to render on a public website with NO auth.
+#
+# HARD CONSTRAINTS (enforced here, re-checked in tests):
+#   1. AGGREGATE ONLY. Never per-record override entries. We compute rates and
+#      counts from provenance.metrics() (which already strips PHI); we NEVER
+#      touch provenance.overrides() raw rows, so patient_id / clinician_id /
+#      free-text notes can never reach this payload.
+#   2. HONEST LABELING. Calibration today comes from a SYNTHETIC validation
+#      cohort with no real clinical outcome labels. Every calibration metric is
+#      tagged provenance="synthetic validation cohort"; the report carries a
+#      top-level disclaimer. We MUST NOT claim real-world clinical calibration.
+# ==========================================================================
+
+SYNTHETIC_COHORT_PROVENANCE = "synthetic validation cohort"
+
+TRUST_REPORT_DISCLAIMER = (
+    "Preliminary — calibration and conformal-coverage figures on this page are "
+    "measured on a SYNTHETIC validation cohort with no real-world clinical "
+    "outcome labels. They demonstrate that the uncertainty machinery is wired "
+    "and measurable; they are NOT a claim of real-world clinical calibration. "
+    "When clinician-confirmed outcome labels accrue in the label store, the same "
+    "surface upgrades in place and this banner is removed."
+)
+
+# Keys that would indicate a PHI / per-record leak. Used by the self-check
+# below and mirrored by the endpoint test. If any of these ever appears in the
+# assembled payload, we have a bug and must fail loudly rather than ship PHI.
+_PHI_LEAK_KEYS = frozenset({"patient_id", "clinician_id", "notes", "entries", "diff_chars"})
+
+
+def _conformal_calibration_block() -> dict[str, Any]:
+    """Per-ESI conformal q̂ + empirical coverage on the synthetic calibration set.
+
+    Best-effort and import-safe: if the ML artifact or its optional ML deps are
+    not present (e.g. minimal CI image), this returns a documented placeholder
+    rather than raising. Reads the triage ML artifact and the conformal library
+    by IMPORT ONLY — it never mutates them and never calls predict() with PHI.
+
+    Everything here is tagged with provenance="synthetic validation cohort".
+    """
+    block: dict[str, Any] = {
+        "model_id": "triage_lightgbm",
+        "method": "mondrian_class_conditional_split_conformal",
+        "target_coverage": None,
+        "provenance": SYNTHETIC_COHORT_PROVENANCE,
+        "labels_are_real_clinical_outcomes": False,
+        "status": "unavailable",
+        "note": (
+            "Conformal calibration metrics could not be loaded in this "
+            "environment (ML artifact or optional ML dependencies absent). "
+            "The methodology is fixed; figures populate where the model loads."
+        ),
+        "q_hat_by_esi": None,
+        "empirical_coverage": None,
+    }
+
+    try:
+        from lib import conformal  # noqa: PLC0415
+        from services import triage_ml  # noqa: PLC0415
+    except Exception as e:  # noqa: BLE001
+        log.info("trust-report: conformal/triage_ml import unavailable (%s)", e)
+        return block
+
+    try:
+        art = triage_ml._load()  # read-only; lru-cached per process
+    except Exception as e:  # noqa: BLE001
+        log.info("trust-report: triage_ml artifact load failed (%s)", e)
+        return block
+
+    if not art:
+        return block
+
+    cal = art.get("conformal")
+    if cal is None:
+        block["note"] = (
+            "Model loaded but Mondrian conformal calibration was not fitted "
+            "(fell back to the legacy global scalar). Per-class q̂ unavailable."
+        )
+        return block
+
+    alpha = float(getattr(cal, "alpha", conformal.DEFAULT_ALPHA))
+    block["target_coverage"] = round(1.0 - alpha, 4)
+    block["calibration_source"] = getattr(cal, "source", "synthetic_calibration")
+    block["calibration_n_per_class"] = {
+        str(c + 1): int(n) for c, n in getattr(cal, "n_per_class", {}).items()
+    }
+    try:
+        block["q_hat_by_esi"] = cal.q_hat_by_esi()
+        block["representative_q_hat"] = round(cal.representative_q_hat(), 6)
+    except Exception as e:  # noqa: BLE001
+        log.info("trust-report: q_hat read failed (%s)", e)
+
+    # Empirical coverage on the SAME synthetic calibration profiles the
+    # calibrator was fit on. This is in-sample on a synthetic distribution — we
+    # say so explicitly. No PHI: the profiles are templated synthetic patients.
+    try:
+        import numpy as np  # noqa: PLC0415
+
+        profiles = triage_ml._synthetic_calibration_profiles()
+        probs_rows: list[Any] = []
+        labels: list[int] = []
+        for patient, vitals, esi0 in profiles:
+            try:
+                X = triage_ml._build_feature_matrix(art, patient, vitals)
+                probs_rows.append(triage_ml._model_probs(art, X)[0])
+                labels.append(esi0)
+            except Exception:  # noqa: BLE001
+                continue
+        if probs_rows:
+            cov = conformal.empirical_coverage(
+                cal, np.vstack(probs_rows), np.asarray(labels, dtype=np.int64)
+            )
+            block["empirical_coverage"] = {
+                "overall": round(cov["overall"], 4),
+                "by_esi": {k: round(v, 4) for k, v in cov["by_class"].items()},
+                "avg_set_size": round(cov["avg_set_size"], 4),
+                "n": len(labels),
+                "evaluation": "in_sample_synthetic",
+            }
+    except Exception as e:  # noqa: BLE001
+        log.info("trust-report: empirical coverage computation failed (%s)", e)
+
+    block["status"] = "available"
+    block["note"] = (
+        "Per-ESI q̂ and coverage are measured on a class-balanced SYNTHETIC "
+        "calibration cohort. A single global q̂ collapses to a misleading "
+        "singleton on this clean synthetic distribution, so calibration is "
+        "class-conditional (Mondrian). These figures are NOT real-world "
+        "clinical calibration and must be recalibrated on clinician-confirmed "
+        "outcomes before any coverage guarantee is relied upon."
+    )
+    return block
+
+
+def _override_acceptance_block(hospital_id: str | None) -> dict[str, Any]:
+    """Aggregate override-acceptance — counts + accept/edit/reject rates only.
+
+    Sourced from lib.provenance.metrics(), which returns per-purpose totals and
+    rates with NO per-record fields. We deliberately do NOT call
+    provenance.overrides(): raw entries carry an opaque patient_id, a
+    clinician_id, and free-text notes, none of which belong on a public page.
+    """
+    try:
+        from lib import provenance  # noqa: PLC0415
+
+        by_purpose = provenance.metrics(hospital_id)
+    except Exception as e:  # noqa: BLE001
+        log.info("trust-report: override metrics unavailable (%s)", e)
+        by_purpose = {}
+
+    total_decisions = sum(int(v.get("total", 0)) for v in by_purpose.values())
+    return {
+        "scope": "global" if hospital_id is None else hospital_id,
+        "source": "lib.provenance.metrics (aggregate; no per-record data)",
+        "total_decisions": total_decisions,
+        "by_purpose": by_purpose,
+        "definition": {
+            "accept_rate": "Share of AI suggestions a clinician accepted unedited.",
+            "edit_rate": "Share accepted after clinician edits.",
+            "reject_rate": "Share the clinician rejected outright.",
+        },
+        "phi_note": (
+            "Aggregate rates and counts only. Per-record override entries "
+            "(which reference an opaque patient_id, a clinician_id, and "
+            "free-text notes) are NEVER exposed on this public surface."
+        ),
+    }
+
+
+def _fairness_summary_block() -> dict[str, Any]:
+    """Bias/fairness summary distilled from the per-model bias-audit blocks.
+
+    Reuses the existing bias_audit() machinery (the hard half of HTI-1 DSI).
+    Today the demographic-performance cells are empty-but-structured pending a
+    real prospective cohort; we surface that status honestly rather than
+    inventing subgroup rates.
+    """
+    audit = bias_audit()
+    models = audit.get("models", {})
+    summary_models = []
+    for mid, block in models.items():
+        summary_models.append({
+            "model_id": mid,
+            "name": block.get("name"),
+            "risk_tier": block.get("risk_tier"),
+            "subgroup_audit_applicable": block.get("subgroup_audit_applicable"),
+            "groups_audited": block.get("groups_audited", []),
+            "demographic_performance_status": block.get(
+                "demographic_performance", {}
+            ).get("status"),
+            "equity_note": block.get("equity_note"),
+        })
+    return {
+        "framework": audit.get("framework"),
+        "methodology": audit.get("methodology"),
+        "models": summary_models,
+        "data_status": "pending_prospective_data",
+        "provenance": SYNTHETIC_COHORT_PROVENANCE,
+        "disclosure": (
+            "Subgroup FNR/FPR tables are published empty-but-structured until a "
+            "prospective deployment cohort reaches the per-cell sample-size "
+            "floor. No subgroup performance numbers are claimed today."
+        ),
+    }
+
+
+def _assert_no_phi(payload: Any) -> None:
+    """Recursively assert the assembled report carries no per-record PHI keys.
+
+    Defensive: even though every assembly path is aggregate-only, this walks the
+    final object and raises if any leak-indicator key appears, so a future
+    regression fails loudly instead of silently shipping PHI on a public page.
+    """
+    if isinstance(payload, dict):
+        leaked = _PHI_LEAK_KEYS & set(payload.keys())
+        if leaked:
+            raise AssertionError(f"trust-report PHI guard tripped on keys: {sorted(leaked)}")
+        for v in payload.values():
+            _assert_no_phi(v)
+    elif isinstance(payload, list):
+        for item in payload:
+            _assert_no_phi(item)
+
+
+def trust_report(hospital_id: str | None = None) -> dict[str, Any]:
+    """Assemble the public Solace Trust Report — aggregate, no PHI, honest.
+
+    Sections:
+      - model_inventory     : every AI surface, version, risk tier (from cards)
+      - calibration         : per-ESI conformal q̂ + empirical coverage
+                              (SYNTHETIC validation cohort, labeled as such)
+      - fairness            : bias/fairness summary from the HTI-1 bias audit
+      - override_acceptance : aggregate accept/edit/reject rates + counts
+
+    No auth required: the payload is aggregate-only by construction and passes
+    the recursive PHI guard before it is returned.
+    """
+    cards = list_cards()
+    report: dict[str, Any] = {
+        "report": "Solace Trust Report",
+        "framework": "HTI-1 DSI transparency (45 CFR 170.315(b)(11))",
+        "as_of": "2026-05",
+        "preliminary": True,
+        "data_provenance": SYNTHETIC_COHORT_PROVENANCE,
+        "disclaimer": TRUST_REPORT_DISCLAIMER,
+        "scope": "global" if hospital_id is None else hospital_id,
+        "model_inventory": {
+            "count": len(cards),
+            "models": cards,
+        },
+        "calibration": _conformal_calibration_block(),
+        "fairness": _fairness_summary_block(),
+        "override_acceptance": _override_acceptance_block(hospital_id),
+        "endpoints": {
+            "trust_report": "/api/governance/trust-report",
+            "model_cards": "/api/model-cards",
+            "bias_audit": "/api/governance/bias-audit",
+            "transparency_summary": "/api/governance/transparency-summary",
+            "override_metrics": "/api/governance/override-metrics",
+        },
+    }
+    _assert_no_phi(report)
+    return report

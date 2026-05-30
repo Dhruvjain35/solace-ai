@@ -4,8 +4,10 @@ Swap is a Settings flag. Callers never touch the underlying store directly.
 """
 from __future__ import annotations
 
+import json
 import logging
 import time
+import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
@@ -293,6 +295,187 @@ def list_appointments(*, hospital_id: str) -> list[dict[str, Any]]:
     rows = [r for r in _appointments.values() if r.get("hospital_id") == hospital_id]
     rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
     return rows
+
+
+# ---- AI override / provenance log (HTI-1 transparency metrics) -----------------------
+# Durable backing store for backend/lib/provenance.py. Mirrors the audit-log dual-write:
+# DynamoDB (90-day hot TTL) + S3 CMK-encrypted JSONL (6-year cold retention). Partition
+# by hospital_id, sort by ts_id so list-by-hospital is a .query() not a .scan() (PERF-004).
+OVERRIDES_TABLE = "solace-ai-overrides"
+OVERRIDES_TTL_SECONDS = 90 * 24 * 3600  # 90 days hot in DDB (also archived to S3 for 6yr)
+_OVERRIDES_S3_PREFIX = "ai-overrides-archive"
+
+
+def _overrides_archive_to_s3(item: dict[str, Any]) -> None:
+    """Append an override record as a JSONL line to a daily S3 object.
+
+    CMK-encrypted at rest via the bucket's default encryption. Mirrors
+    lib.audit._archive_to_s3 for the 6-year HTI-1/HIPAA retention path.
+    """
+    if settings.solace_mode != "aws" or not settings.s3_bucket_media:
+        return  # Skip in local mode
+
+    try:
+        import boto3  # noqa: PLC0415
+
+        s3 = boto3.client("s3", region_name=settings.aws_region)
+        today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+        record_id = item.get("ts_id", "").replace("#", "_") or _now_iso()
+        key = f"{_OVERRIDES_S3_PREFIX}/{today}/{record_id}.json"
+
+        clean = {k: v for k, v in item.items() if v is not None and k != "ttl"}
+        s3.put_object(
+            Bucket=settings.s3_bucket_media,
+            Key=key,
+            Body=json.dumps(clean, default=str).encode(),
+            ContentType="application/json",
+            ServerSideEncryption="aws:kms",
+        )
+    except Exception as e:  # noqa: BLE001
+        # S3 archive failure must not block the request or lose the DDB record.
+        log.warning("ai_override S3 archive failed: %s", e)
+
+
+def put_override(entry: dict[str, Any]) -> None:
+    """Persist one AI override-decision record.
+
+    AWS mode: dual-write to DynamoDB (CMK, 90-day TTL) + S3 CMK JSONL (6-year).
+    Local mode: no-op — lib.provenance keeps the in-memory list authoritative.
+    """
+    if settings.solace_mode != "aws":
+        return
+
+    now = datetime.now(timezone.utc)
+    ts_unix = int(now.timestamp() * 1000)
+    override_uuid = uuid.uuid4().hex[:12]
+    item = dict(entry)
+    item.setdefault("ts", _now_iso())
+    item["hospital_id"] = entry.get("hospital_id") or "_"
+    item["ts_id"] = f"{ts_unix}#{override_uuid}"
+    item["ttl"] = int(time.time()) + OVERRIDES_TTL_SECONDS
+
+    try:
+        _boto_table(OVERRIDES_TABLE).put_item(Item=_to_ddb(item))
+    except Exception as e:  # noqa: BLE001
+        log.warning("ai_override write to DDB failed: %s", e)
+
+    _overrides_archive_to_s3(item)
+
+
+def list_overrides(hospital_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
+    """Return override records for one hospital, newest first.
+
+    Uses .query() on the (hospital_id, ts_id) key — never .scan() (PERF-004).
+    AWS mode only; local mode returns [] (lib.provenance falls back to memory).
+    """
+    if settings.solace_mode != "aws":
+        return []
+    try:
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(OVERRIDES_TABLE).query(
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+            ScanIndexForward=False,  # newest ts_id first
+            Limit=limit,
+        )
+        return [_from_ddb(i) for i in resp.get("Items", [])]
+    except Exception as e:  # noqa: BLE001
+        log.warning("ai_override list failed: %s", e)
+        return []
+
+
+# ---- ML label store (active-learning training data) ---------------------------------
+# Durable backing store for backend/lib/label_store.py. When a clinician corrects or
+# rejects the model's ESI, we capture a labeled training example (the model's stored
+# probabilities / feature vector + the clinician-confirmed ESI) so synthetic-only
+# training can be augmented with real labels and fed into triage_ml.recalibrate_from_outcomes.
+#
+# Mirrors the override/audit dual-write: DynamoDB (90-day hot TTL) + S3 CMK-encrypted
+# JSONL (6-year cold retention). Partition by hospital_id, sort by ts_id so list-by-
+# hospital is a .query() not a .scan() (PERF-004). CMK-encrypted at rest (COMP-003).
+# COMP-001: labels are training data — they stay tenant-scoped (hospital_id partition)
+# and never leave the CMK-encrypted store; nothing here flows to an AI/external provider.
+LABELS_TABLE = "solace-ml-labels"
+LABELS_TTL_SECONDS = 90 * 24 * 3600  # 90 days hot in DDB (also archived to S3 for 6yr)
+_LABELS_S3_PREFIX = "ml-labels-archive"
+
+
+def _labels_archive_to_s3(item: dict[str, Any]) -> None:
+    """Append a label record as a JSONL-style line to a daily S3 object.
+
+    CMK-encrypted at rest via the bucket's default encryption (aws:kms). Mirrors
+    lib.audit._archive_to_s3 / _overrides_archive_to_s3 for the 6-year HIPAA
+    retention path. Failure here must never block the request or lose the DDB record.
+    """
+    if settings.solace_mode != "aws" or not settings.s3_bucket_media:
+        return  # Skip in local mode
+
+    try:
+        import boto3  # noqa: PLC0415
+
+        s3 = boto3.client("s3", region_name=settings.aws_region)
+        today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+        record_id = item.get("ts_id", "").replace("#", "_") or _now_iso()
+        key = f"{_LABELS_S3_PREFIX}/{today}/{record_id}.json"
+
+        clean = {k: v for k, v in item.items() if v is not None and k != "ttl"}
+        s3.put_object(
+            Bucket=settings.s3_bucket_media,
+            Key=key,
+            Body=json.dumps(clean, default=str).encode(),
+            ContentType="application/json",
+            ServerSideEncryption="aws:kms",
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warning("ml_label S3 archive failed: %s", e)
+
+
+def put_label(entry: dict[str, Any]) -> None:
+    """Persist one clinician-confirmed ML training label.
+
+    AWS mode: dual-write to DynamoDB (CMK, 90-day TTL) + S3 CMK JSONL (6-year).
+    Local mode: no-op — lib.label_store keeps its in-memory list authoritative.
+    """
+    if settings.solace_mode != "aws":
+        return
+
+    now = datetime.now(timezone.utc)
+    ts_unix = int(now.timestamp() * 1000)
+    label_uuid = uuid.uuid4().hex[:12]
+    item = dict(entry)
+    item.setdefault("ts", _now_iso())
+    item["hospital_id"] = entry.get("hospital_id") or "_"
+    item["ts_id"] = f"{ts_unix}#{label_uuid}"
+    item["ttl"] = int(time.time()) + LABELS_TTL_SECONDS
+
+    try:
+        _boto_table(LABELS_TABLE).put_item(Item=_to_ddb(item))
+    except Exception as e:  # noqa: BLE001
+        log.warning("ml_label write to DDB failed: %s", e)
+
+    _labels_archive_to_s3(item)
+
+
+def list_labels(hospital_id: str, *, limit: int = 1000) -> list[dict[str, Any]]:
+    """Return clinician-confirmed labels for one hospital, newest first.
+
+    Uses .query() on the (hospital_id, ts_id) key — never .scan() (PERF-004).
+    AWS mode only; local mode returns [] (lib.label_store falls back to memory).
+    """
+    if settings.solace_mode != "aws":
+        return []
+    try:
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(LABELS_TABLE).query(
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+            ScanIndexForward=False,  # newest ts_id first
+            Limit=limit,
+        )
+        return [_from_ddb(i) for i in resp.get("Items", [])]
+    except Exception as e:  # noqa: BLE001
+        log.warning("ml_label list failed: %s", e)
+        return []
 
 
 # ---- Test helpers -------------------------------------------------------------------

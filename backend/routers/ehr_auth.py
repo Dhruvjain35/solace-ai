@@ -322,7 +322,13 @@ def callback(
 
     access_token: str = payload.get("access_token", "")
     if not access_token:
-        log.warning("EHR token response missing access_token: %s", payload)
+        # SEC-002: never log the raw token payload — it can carry refresh_token /
+        # id_token values the CloudWatch redaction filter does not catch. Log only
+        # the non-sensitive key names so we can still diagnose a malformed response.
+        log.warning(
+            "EHR token response missing access_token (%s): keys=%s",
+            vendor.id, sorted(payload.keys()) if isinstance(payload, dict) else type(payload).__name__,
+        )
         return _redirect_with_error(rec["redirect_uri"], "token_exchange_failed")
 
     # OIDC nonce check: the id_token's `nonce` claim MUST equal the nonce we sent

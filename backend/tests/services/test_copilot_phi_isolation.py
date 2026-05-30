@@ -36,6 +36,7 @@ PHI_TOKENS = ["marcus", "welby", "warfarin", "metoprolol", "penicillin",
 
 _PATIENT = {
     "patient_id": "p1",
+    "hospital_id": "h1",
     "name": PHI_NAME,
     "chief_complaint": "chest pain radiating to the left arm",
     "transcript": f"{PHI_NAME} reports crushing chest pain for two hours.",
@@ -228,7 +229,8 @@ class TestArtifactHydration:
 
 class TestRiskOpPrimitives:
     VITALS_PATIENT = {
-        "patient_id": "p2", "name": "Jane Roe", "chief_complaint": "fever and confusion",
+        "patient_id": "p2", "hospital_id": "h1",
+        "name": "Jane Roe", "chief_complaint": "fever and confusion",
         "transcript": "febrile, hypotensive.", "esi_level": 2,
         "vitals": {"systolic_bp": 85, "heart_rate": 122, "respiratory_rate": 24,
                    "spo2": 89, "temperature": 38.7},

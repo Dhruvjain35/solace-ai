@@ -9,7 +9,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from fastapi import HTTPException
+
 from db import storage
+from lib import tenant
 
 
 def parse_medical_info(raw: Any) -> dict[str, Any]:
@@ -37,7 +40,17 @@ def build_chart(hospital_id: str, patient_id: str) -> dict[str, Any]:
     The linked FHIR record is fetched lazily by EHR primitives, so a question
     that needs no history costs zero external EHR calls.
     """
-    patient = storage.get_patient(patient_id) or {}
+    # Defense in depth (SEC-008 / COMP-011): the router already guards the HTTP
+    # surface, but this PHI-boundary loader must not trust the caller. Confirm
+    # the patient belongs to hospital_id before building a chart from it. A
+    # missing or cross-hospital patient surfaces as a uniform 404 (no existence
+    # leak across hospitals).
+    try:
+        patient = tenant.assert_patient_in_hospital(
+            storage.get_patient(patient_id), hospital_id
+        )
+    except tenant.CrossTenantAccess:
+        raise HTTPException(status_code=404, detail="Patient not found") from None
     info = parse_medical_info(patient.get("medical_info"))
     chart = {
         "name": patient.get("name") or info.get("name") or "",

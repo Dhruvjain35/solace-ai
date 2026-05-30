@@ -4,10 +4,21 @@ Architecture (ported from triagegeist-clinical-ai-pipeline notebook):
   Level-1: LightGBM + XGBoost + CatBoost + MLP (5-fold each)
   Level-2: Logistic Regression meta-learner on 20-dim stacked probs
   Post-hoc: Ordinal threshold optimization (Nelder-Mead on expected values)
-  Uncertainty: Split conformal prediction sets (Angelopoulos & Bates 2021)
+  Uncertainty: Mondrian (class-conditional) split-conformal prediction sets
+               (Vovk 2003; Angelopoulos & Bates 2021). See ``lib/conformal.py``.
 
 Falls back to LightGBM-only if full artifacts aren't present, or None if
 no artifacts exist at all.
+
+Conformal calibration
+---------------------
+The artifacts ship only a *global* scalar q̂ that collapses to ~1e-4 on the
+clean synthetic training distribution (the model is text-dominant and almost
+never wrong there), which would make every 90% prediction set a misleadingly
+confident singleton. At load time we instead build a labeled synthetic
+calibration set and fit a per-ESI-class (Mondrian) calibrator, so each class
+keeps a defensible set width. ``recalibrate_from_outcomes()`` is the one-call
+swap for when clinician-confirmed labels land.
 """
 from __future__ import annotations
 
@@ -21,6 +32,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from scipy.sparse import hstack as sp_hstack
+
+from lib import conformal
 
 log = logging.getLogger(__name__)
 
@@ -157,11 +170,236 @@ def _load() -> dict | None:
     art["_stacking_enabled"] = has_full_stack
 
     mode = "stacked_ensemble" if has_full_stack else "lgbm_only"
+
+    # Mondrian (class-conditional) conformal calibration. Replaces the collapsed
+    # global scalar q̂ shipped in the pickle. Best-effort: a failure here must not
+    # break inference, so we fall back to the legacy scalar.
+    try:
+        _calibrate(art)
+    except Exception as e:  # noqa: BLE001
+        log.warning("triage_ml: conformal calibration failed (%s), using global q̂", e)
+        art["conformal"] = None
+
     log.info(
         "triage_ml: loaded %d folds, %d features, mode=%s",
         n_folds, len(art["feature_names"]), mode,
     )
     return art
+
+
+# ---------------------------------------------------------------------------
+# Conformal calibration
+# ---------------------------------------------------------------------------
+def _model_probs(art: dict, X: pd.DataFrame) -> np.ndarray:
+    """Softmax rows for a feature matrix using the active ensemble mode."""
+    if art.get("_stacking_enabled"):
+        probs = _stacked_predict(art, X)
+    else:
+        probs = _predict_lgb(art, X)
+    return np.atleast_2d(np.asarray(probs, dtype=np.float64))
+
+
+def _synthetic_calibration_profiles(n_per_class: int = 30) -> list[tuple[dict, dict, int]]:
+    """Build a labeled (patient, vitals, esi_0based) synthetic calibration set.
+
+    Each profile pairs a chief complaint + vitals with a *deterministic* ESI
+    label grounded in standard triage logic (life-threat -> ESI 1, high-risk /
+    severe vitals -> ESI 2, ... ambulatory/minor -> ESI 5). This is the same
+    synthetic-data posture the model card already discloses; making it labeled +
+    class-balanced is what lets us fit a per-class q̂ and measure coverage. When
+    real clinician-confirmed outcomes arrive, ``recalibrate_from_outcomes()``
+    swaps this out for the genuine deployment distribution.
+    """
+    rng = np.random.default_rng(7)
+    # (chief_complaint, base_vitals, esi_level 1..5)
+    archetypes: list[tuple[str, dict, int]] = [
+        ("cardiac arrest, not breathing, CPR in progress",
+         {"systolic_bp": 60, "heart_rate": 140, "respiratory_rate": 4, "spo2": 78,
+          "gcs_total": 3, "pain_score": -1, "mental_status": "unresponsive"}, 1),
+        ("unresponsive after major trauma, massive hemorrhage",
+         {"systolic_bp": 70, "heart_rate": 135, "respiratory_rate": 30, "spo2": 84,
+          "gcs_total": 6, "pain_score": -1, "mental_status": "unresponsive"}, 1),
+        ("severe chest pain radiating to left arm, diaphoretic",
+         {"systolic_bp": 150, "heart_rate": 112, "respiratory_rate": 22, "spo2": 94,
+          "gcs_total": 15, "pain_score": 9, "mental_status": "alert"}, 2),
+        ("acute stroke symptoms, slurred speech, facial droop",
+         {"systolic_bp": 178, "heart_rate": 96, "respiratory_rate": 18, "spo2": 95,
+          "gcs_total": 13, "pain_score": 2, "mental_status": "confused"}, 2),
+        ("moderate abdominal pain, vomiting, stable vitals",
+         {"systolic_bp": 124, "heart_rate": 92, "respiratory_rate": 18, "spo2": 97,
+          "gcs_total": 15, "pain_score": 6, "mental_status": "alert"}, 3),
+        ("fever and cough for three days, feeling weak",
+         {"systolic_bp": 118, "heart_rate": 98, "respiratory_rate": 20, "spo2": 96,
+          "gcs_total": 15, "pain_score": 4, "mental_status": "alert"}, 3),
+        ("minor laceration on forearm, controlled bleeding",
+         {"systolic_bp": 122, "heart_rate": 78, "respiratory_rate": 16, "spo2": 99,
+          "gcs_total": 15, "pain_score": 3, "mental_status": "alert"}, 4),
+        ("sprained ankle, able to bear weight, mild swelling",
+         {"systolic_bp": 120, "heart_rate": 76, "respiratory_rate": 15, "spo2": 99,
+          "gcs_total": 15, "pain_score": 4, "mental_status": "alert"}, 4),
+        ("medication refill request, no acute complaint",
+         {"systolic_bp": 118, "heart_rate": 72, "respiratory_rate": 14, "spo2": 99,
+          "gcs_total": 15, "pain_score": 0, "mental_status": "alert"}, 5),
+        ("mild sore throat, wants to be checked, otherwise well",
+         {"systolic_bp": 116, "heart_rate": 70, "respiratory_rate": 14, "spo2": 99,
+          "gcs_total": 15, "pain_score": 1, "mental_status": "alert"}, 5),
+    ]
+
+    profiles: list[tuple[dict, dict, int]] = []
+    for cc, base, esi in archetypes:
+        for _ in range(n_per_class):
+            # Jitter vitals + demographics so calibration scores have spread.
+            vitals = dict(base)
+            for k in ("systolic_bp", "heart_rate", "respiratory_rate", "spo2"):
+                if vitals.get(k) is not None:
+                    vitals[k] = float(vitals[k]) + float(rng.normal(0, 3))
+            vitals["diastolic_bp"] = (vitals.get("systolic_bp") or 120) * 0.65
+            vitals["temperature_c"] = float(36.8 + rng.normal(0, 0.5))
+            age = int(np.clip(rng.normal(55, 18), 18, 95))
+            sex = "male" if rng.random() < 0.5 else "female"
+            patient = {
+                "patient_id": "cal",
+                "transcript": cc,
+                "language": "en",
+                "medical_info": {"age": age, "sex": sex, "conditions": []},
+            }
+            profiles.append((patient, vitals, esi - 1))
+    return profiles
+
+
+def _calibrate(art: dict, alpha: float = conformal.DEFAULT_ALPHA) -> None:
+    """Fit the Mondrian calibrator from a synthetic labeled set and stash it.
+
+    Stores ``art["conformal"]`` (a ``MondrianConformal``) and ``art["conformal_note"]``.
+    Called once inside ``_load()`` so it shares the @lru_cache lifetime.
+    """
+    profiles = _synthetic_calibration_profiles()
+    probs_rows: list[np.ndarray] = []
+    labels: list[int] = []
+    for patient, vitals, esi0 in profiles:
+        try:
+            X = _build_feature_matrix(art, patient, vitals)
+            probs_rows.append(_model_probs(art, X)[0])
+            labels.append(esi0)
+        except Exception:  # noqa: BLE001 — skip any row that fails to featurize
+            continue
+    if not probs_rows:
+        raise RuntimeError("no calibration rows produced")
+
+    probs = np.vstack(probs_rows)
+    y = np.asarray(labels, dtype=np.int64)
+    cal = conformal.MondrianConformal.fit(
+        probs, y, alpha=alpha, source="synthetic_calibration"
+    )
+    art["conformal"] = cal
+    art["conformal_note"] = (
+        "Prediction set uses Mondrian (per-ESI-class) split-conformal calibration "
+        f"at {int(round((1 - alpha) * 100))}% coverage. q̂ is calibrated per class on "
+        "a synthetic labeled set — a single global q̂ collapses to a misleading "
+        "singleton on this clean synthetic distribution. Recalibrate on real "
+        "clinician-confirmed outcomes before relying on the coverage guarantee."
+    )
+    log.info(
+        "triage_ml: Mondrian conformal fit n=%d per-class q̂=%s",
+        probs.shape[0], cal.q_hat_by_esi(),
+    )
+
+
+def recalibrate_from_outcomes(
+    outcomes: list[dict[str, Any]],
+    *,
+    alpha: float = conformal.DEFAULT_ALPHA,
+    weights: list[float] | None = None,
+) -> dict[str, Any]:
+    """Recompute per-ESI-class q̂ from real clinician-confirmed outcomes.
+
+    This is the one-call swap the active-learning label store (separate track)
+    will use. Each outcome is a dict with either:
+
+      * ``probabilities``: {"1": p1, ..., "5": p5}  (model output already stored), OR
+      * ``patient`` + ``vitals``: re-run the model to obtain probabilities;
+
+    and ``confirmed_esi``: the clinician-confirmed ESI level (1..5).
+
+    ``weights`` (optional, parallel to ``outcomes``) enables importance-weighted
+    conformal (Tibshirani et al. 2019) — up-weight calibration points that
+    resemble the current case mix.
+
+    Mutates the live (lru_cached) artifact in place so subsequent ``predict()``
+    calls use the new calibrator immediately. No-ops gracefully (keeps the
+    synthetic calibrator) if no usable outcomes are supplied — so the entry point
+    is safe to call today before any labels exist. Returns a summary dict.
+    """
+    art = _load()
+    if art is None:
+        return {"updated": False, "reason": "artifacts_not_loaded"}
+
+    probs_rows: list[np.ndarray] = []
+    labels: list[int] = []
+    used_weights: list[float] = []
+    for i, oc in enumerate(outcomes or []):
+        esi = oc.get("confirmed_esi")
+        if esi is None or not (1 <= int(esi) <= 5):
+            continue
+        row: np.ndarray | None = None
+        probs_map = oc.get("probabilities")
+        if isinstance(probs_map, dict):
+            try:
+                row = np.array([float(probs_map[str(k)]) for k in range(1, 6)], dtype=np.float64)
+            except (KeyError, TypeError, ValueError):
+                row = None
+        if row is None and oc.get("patient") is not None:
+            try:
+                X = _build_feature_matrix(art, oc["patient"], oc.get("vitals") or {})
+                row = _model_probs(art, X)[0]
+            except Exception:  # noqa: BLE001
+                row = None
+        if row is None:
+            continue
+        probs_rows.append(row)
+        labels.append(int(esi) - 1)
+        if weights is not None and i < len(weights):
+            used_weights.append(float(weights[i]))
+
+    if not probs_rows:
+        return {
+            "updated": False,
+            "reason": "no_usable_outcomes",
+            "n_outcomes": len(outcomes or []),
+            "q_hat_by_class": (
+                art["conformal"].q_hat_by_esi() if art.get("conformal") else None
+            ),
+        }
+
+    probs = np.vstack(probs_rows)
+    y = np.asarray(labels, dtype=np.int64)
+    w = (
+        np.asarray(used_weights, dtype=np.float64)
+        if weights is not None and len(used_weights) == len(labels)
+        else None
+    )
+    cal = conformal.MondrianConformal.fit(
+        probs, y, alpha=alpha, weights=w, source="clinician_confirmed_outcomes"
+    )
+    art["conformal"] = cal
+    art["conformal_note"] = (
+        f"Prediction set uses Mondrian (per-ESI-class) split-conformal calibration "
+        f"at {int(round((1 - alpha) * 100))}% coverage, recalibrated on "
+        f"{probs.shape[0]} clinician-confirmed outcomes"
+        + (" (importance-weighted)." if w is not None else ".")
+    )
+    log.info(
+        "triage_ml: recalibrated conformal from %d real outcomes, q̂=%s",
+        probs.shape[0], cal.q_hat_by_esi(),
+    )
+    return {
+        "updated": True,
+        "n_outcomes_used": int(probs.shape[0]),
+        "weighted": w is not None,
+        "alpha": alpha,
+        "q_hat_by_class": cal.q_hat_by_esi(),
+        "source": cal.source,
+    }
 
 
 def _safe_encode(le, value: Any, modal_fallback: str | None = None) -> int:
@@ -478,11 +716,21 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
 
         esi_level, confidence = _apply_threshold_opt(art, probs)
 
-        # Conformal prediction set
-        q_hat = float(art.get("conformal_q_hat_noisy", art.get("conformal_q_hat", 0.5)))
-        conformal_set = [int(i + 1) for i, p in enumerate(probs) if (1 - p) <= q_hat]
-        if not conformal_set:
-            conformal_set = [esi_level]
+        # Conformal prediction set — Mondrian (per-ESI-class) when calibrated,
+        # else the legacy global scalar so the path never crashes.
+        cal: conformal.MondrianConformal | None = art.get("conformal")
+        if cal is not None:
+            conformal_set = cal.predict_set(probs)
+            q_hat = cal.representative_q_hat()
+            q_hat_by_class = cal.q_hat_by_esi()
+            conformal_source = cal.source
+        else:
+            q_hat = float(art.get("conformal_q_hat_noisy", art.get("conformal_q_hat", 0.5)))
+            conformal_set = [int(i + 1) for i, p in enumerate(probs) if (1 - p) <= q_hat]
+            if not conformal_set:
+                conformal_set = [esi_level]
+            q_hat_by_class = None
+            conformal_source = "global_scalar"
 
         # SHAP explanations from LightGBM (representative, fast)
         top_features = _shap_top_features(
@@ -495,6 +743,12 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
             "probabilities": {str(i + 1): float(p) for i, p in enumerate(probs)},
             "conformal_set": conformal_set,
             "conformal_q_hat": q_hat,
+            "conformal_q_hat_by_class": q_hat_by_class,
+            "conformal_method": (
+                f"mondrian_class_conditional ({conformal_source})"
+                if cal is not None else f"split_conformal ({conformal_source})"
+            ),
+            "conformal_note": art.get("conformal_note"),
             "top_features": top_features,
             "source": source,
             "model_metrics": {

@@ -1181,6 +1181,82 @@ export async function denyAccessRequest(hospitalId: string, requestId: string): 
   return data;
 }
 
+// ---------------------------------------------------------------------------
+// Public governance — the Solace Trust Report. Aggregate-only, no auth, no PHI.
+// Mirrors backend/services/model_cards.trust_report().
+// ---------------------------------------------------------------------------
+export interface TrustReportCalibration {
+  model_id: string;
+  method: string;
+  target_coverage: number | null;
+  provenance: string;
+  labels_are_real_clinical_outcomes: boolean;
+  status: "available" | "unavailable";
+  note: string;
+  q_hat_by_esi: Record<string, number> | null;
+  representative_q_hat?: number;
+  calibration_source?: string;
+  calibration_n_per_class?: Record<string, number>;
+  empirical_coverage: {
+    overall: number;
+    by_esi: Record<string, number>;
+    avg_set_size: number;
+    n: number;
+    evaluation: string;
+  } | null;
+}
+
+export interface TrustReportFairnessModel {
+  model_id: string;
+  name: string;
+  risk_tier: string | null;
+  subgroup_audit_applicable: boolean;
+  groups_audited: string[];
+  demographic_performance_status: string | null;
+  equity_note?: string | null;
+}
+
+export interface TrustReportOverrideAcceptance {
+  scope: string;
+  source: string;
+  total_decisions: number;
+  by_purpose: Record<
+    string,
+    { total: number; accept_rate: number; edit_rate: number; reject_rate: number }
+  >;
+  definition: Record<string, string>;
+  phi_note: string;
+}
+
+export interface TrustReport {
+  report: string;
+  framework: string;
+  as_of: string;
+  preliminary: boolean;
+  data_provenance: string;
+  disclaimer: string;
+  scope: string;
+  model_inventory: {
+    count: number;
+    models: { id: string; name: string; version: string; risk_tier: string | null }[];
+  };
+  calibration: TrustReportCalibration;
+  fairness: {
+    framework: string;
+    models: TrustReportFairnessModel[];
+    data_status: string;
+    provenance: string;
+    disclosure: string;
+  };
+  override_acceptance: TrustReportOverrideAcceptance;
+  endpoints: Record<string, string>;
+}
+
+export async function getTrustReport(): Promise<TrustReport> {
+  const { data } = await api.get<TrustReport>("/api/governance/trust-report");
+  return data;
+}
+
 // Public request-to-join (used on the landing "Join" path when not yet invited).
 export async function requestAccess(
   hospitalId: string,
