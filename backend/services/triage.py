@@ -114,16 +114,40 @@ def _predict_trained(
     if res is None:
         return None
 
-    conformal = res.get("conformal_set") or [res["esi_level"]]
+    ml_esi = int(res["esi_level"])
+    confidence = float(res["confidence"])
+    source = res.get("source", "stacked_ensemble_v1")
+    conformal = res.get("conformal_set") or [ml_esi]
+    clinical_flags: list[str] = []
+    esi_level = ml_esi
+    recommendation = ""
+
+    # Deterministic clinical safety floor: a probabilistic model must never be
+    # allowed to down-triage an obvious life threat (traumatic amputation, not
+    # breathing, uncontrolled hemorrhage, gunshot, stroke ...). The rule engine
+    # can only RAISE acuity, never lower it. Critical on real free-text input,
+    # where the ML — trained on templated synthetic data — under-performs and
+    # over-confidently defaults to the modal class (ESI 3).
+    from services import triage_rules  # noqa: PLC0415 — light, on demand
+
+    shortcut = triage_rules.evaluate(cc)
+    if shortcut is not None and shortcut.esi_level < esi_level:
+        esi_level = shortcut.esi_level
+        confidence = max(confidence, 0.97)  # high-certainty deterministic match
+        conformal = [esi_level]
+        source = f"safety_floor+{source}"
+        clinical_flags.append(shortcut.reason)
+        recommendation = shortcut.recommendation
+
     return TriagePrediction(
-        esi_level=int(res["esi_level"]),
-        confidence=float(res["confidence"]),
-        confidence_band=_format_confidence_band(conformal, res["esi_level"], float(res["confidence"])),
+        esi_level=esi_level,
+        confidence=confidence,
+        confidence_band=_format_confidence_band(conformal, esi_level, confidence),
         shap_values={f["feature"]: float(f.get("shap", 0.0)) for f in res.get("top_features", []) if f.get("feature")},
-        source=res.get("source", "stacked_ensemble_v1"),
-        clinical_flags=[],
+        source=source,
+        clinical_flags=clinical_flags,
         composites={},
-        recommendation="",
+        recommendation=recommendation,
         probabilities=[res["probabilities"].get(str(i), 0.0) for i in range(1, 6)],
     )
 

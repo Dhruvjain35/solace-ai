@@ -28,11 +28,50 @@ class ShortcutResult:
 RULES: list[tuple[re.Pattern[str], ShortcutResult]] = [
     # ESI 1 — life-threatening, immediate intervention
     (
-        re.compile(r"\b(not breathing|cpr|cardiac arrest|drowning|unresponsive|not waking up)\b"),
+        re.compile(
+            r"\b(not breathing|isn'?t breathing|stopped breathing|apnea|apneic|"
+            r"cpr|cardiac arrest|cardiopulmonary arrest|code blue|"
+            r"drowning|drowned|choking|hanging|hanged|"
+            r"unrespons\w*|unconscious|not waking up|no pulse|pulseless)\b"
+        ),
         ShortcutResult(
             esi_level=1,
             reason="rule.esi1.life_threatening_keywords",
             recommendation="ESI 1 — immediate resuscitation. Direct to trauma bay; clinician sees first.",
+        ),
+    ),
+    # ESI 1 — catastrophic trauma: traumatic amputation, dismemberment,
+    # uncontrolled/arterial hemorrhage, penetrating torso/head trauma.
+    (
+        re.compile(
+            r"\b(amputat\w*|dismember\w*|severed|degloving|chainsaw|"
+            r"chopped (off|through)|cut off|sliced off|sawed off|ripped off|"
+            r"exsanguinat\w*|hemorrhagic shock|spurting blood|"
+            r"(massive|uncontroll\w*|profuse|arterial) (bleed\w*|hemorrhag\w*)|"
+            r"gunshot|gsw|impale\w*|stab\w* (wound )?(to (the )?(chest|abdomen|neck|back)))\b"
+        ),
+        ShortcutResult(
+            esi_level=1,
+            reason="rule.esi1.catastrophic_trauma",
+            recommendation="ESI 1 — catastrophic trauma / hemorrhage. Trauma team activation; hemorrhage control, airway, shock protocol.",
+        ),
+    ),
+    # ESI 2 — high-risk presentations that must not wait (chest pain, severe
+    # dyspnea, sepsis, open fracture, anaphylaxis, worst-headache).
+    (
+        re.compile(
+            r"\b(chest pain|chest pressure|chest tightness|"
+            r"difficulty breathing|trouble breathing|shortness of breath|dyspnea|"
+            r"anaphyla\w*|allergic reaction|throat swelling|"
+            r"sepsis|septic|"
+            r"open fracture|compound fracture|"
+            r"worst headache|thunderclap|"
+            r"severe bleed\w*|hemorrhag\w*)\b"
+        ),
+        ShortcutResult(
+            esi_level=2,
+            reason="rule.esi2.high_risk_presentation",
+            recommendation="ESI 2 — high-risk; do not let wait. Expedite to acute bed; vitals + clinician promptly.",
         ),
     ),
     # Suicidal ideation / overdose — ESI 2 by default, but flag for crisis intervention
