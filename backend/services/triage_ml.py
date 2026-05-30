@@ -171,14 +171,14 @@ def _load() -> dict | None:
 
     mode = "stacked_ensemble" if has_full_stack else "lgbm_only"
 
-    # Mondrian (class-conditional) conformal calibration. Replaces the collapsed
-    # global scalar q̂ shipped in the pickle. Best-effort: a failure here must not
-    # break inference, so we fall back to the legacy scalar.
-    try:
-        _calibrate(art)
-    except Exception as e:  # noqa: BLE001
-        log.warning("triage_ml: conformal calibration failed (%s), using global q̂", e)
-        art["conformal"] = None
+    # Mondrian (class-conditional) conformal calibration is DEFERRED, not run here.
+    # Fitting it means running ~150 synthetic profiles through the full ensemble,
+    # which on the real trained_ensemble exceeds the Lambda timeout if done inside
+    # _load() (which gates cold-start + the warmup handler). We mark it pending and
+    # calibrate lazily on the first predict() that needs a conformal set; until then
+    # predict() falls back to the global scalar q̂. See _ensure_calibrated().
+    art["conformal"] = None
+    art["_conformal_pending"] = True
 
     log.info(
         "triage_ml: loaded %d folds, %d features, mode=%s",
@@ -267,11 +267,32 @@ def _synthetic_calibration_profiles(n_per_class: int = 30) -> list[tuple[dict, d
     return profiles
 
 
+def _ensure_calibrated(art: dict, alpha: float = conformal.DEFAULT_ALPHA) -> None:
+    """Lazily fit the Mondrian calibrator on first use, never inside _load().
+
+    _load() marks ``art["_conformal_pending"]`` so cold-start + the warmup handler
+    stay fast (calibration runs ~150 synthetic profiles through the full ensemble,
+    which would otherwise blow the Lambda timeout). The first predict() that needs a
+    conformal set pays that one-time cost; subsequent calls reuse the fitted
+    calibrator stored on the lru_cache'd ``art``. Best-effort: a failure leaves
+    ``art["conformal"]`` None and predict() falls back to the global scalar q̂.
+    """
+    if not art.get("_conformal_pending"):
+        return
+    art["_conformal_pending"] = False  # one attempt, even if it fails — no retry storms
+    try:
+        _calibrate(art)
+    except Exception as e:  # noqa: BLE001
+        log.warning("triage_ml: lazy conformal calibration failed (%s), using global q̂", e)
+        art["conformal"] = None
+
+
 def _calibrate(art: dict, alpha: float = conformal.DEFAULT_ALPHA) -> None:
     """Fit the Mondrian calibrator from a synthetic labeled set and stash it.
 
     Stores ``art["conformal"]`` (a ``MondrianConformal``) and ``art["conformal_note"]``.
-    Called once inside ``_load()`` so it shares the @lru_cache lifetime.
+    Invoked lazily via ``_ensure_calibrated()`` on the first predict() that needs a
+    conformal set — NOT inside ``_load()`` (that would block cold-start/warmup).
     """
     profiles = _synthetic_calibration_profiles()
     probs_rows: list[np.ndarray] = []
@@ -717,7 +738,9 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
         esi_level, confidence = _apply_threshold_opt(art, probs)
 
         # Conformal prediction set — Mondrian (per-ESI-class) when calibrated,
-        # else the legacy global scalar so the path never crashes.
+        # else the legacy global scalar so the path never crashes. Calibration is
+        # fitted lazily here (once), never in _load(), to keep cold-start fast.
+        _ensure_calibrated(art)
         cal: conformal.MondrianConformal | None = art.get("conformal")
         if cal is not None:
             conformal_set = cal.predict_set(probs)

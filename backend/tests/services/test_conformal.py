@@ -158,12 +158,18 @@ def _sample_patient():
 
 
 class TestTriageMLIntegration:
-    def test_load_produces_per_class_calibrator(self, loaded_art):
-        _, art = loaded_art
+    def test_load_defers_calibration_then_lazy_fits_per_class(self, loaded_art):
+        triage_ml, art = loaded_art
+        # _load() must NOT calibrate eagerly — that would run ~150 ensemble
+        # inferences inside the cold-start/warmup path and blow the Lambda timeout.
+        assert art.get("conformal") is None, "calibration must be deferred, not run in _load()"
+        assert art.get("_conformal_pending") is True
+        # Lazy fit on first use produces the per-class Mondrian calibrator.
+        triage_ml._ensure_calibrated(art)
         cal = art.get("conformal")
-        assert cal is not None, "Mondrian calibrator missing from loaded artifact"
-        by_class = cal.q_hat_by_esi()
-        assert set(by_class.keys()) == {"1", "2", "3", "4", "5"}
+        assert cal is not None, "Mondrian calibrator missing after lazy calibration"
+        assert set(cal.q_hat_by_esi().keys()) == {"1", "2", "3", "4", "5"}
+        assert art.get("_conformal_pending") is False
 
     def test_predict_surfaces_per_class_q_hat(self, loaded_art):
         triage_ml, _ = loaded_art
