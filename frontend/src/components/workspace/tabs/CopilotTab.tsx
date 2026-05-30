@@ -9,7 +9,9 @@ import {
 import type {
   CopilotScanItem,
   CopilotAutopopulate,
+  CopilotBlock,
 } from "../../../lib/api-ops";
+import CopilotArtifacts from "./CopilotArtifacts";
 
 /**
  * CopilotTab — an in-app EHR Copilot. Crawls the chart via the agent backend
@@ -55,6 +57,7 @@ export default function CopilotTab() {
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string>("");
+  const [blocks, setBlocks] = useState<CopilotBlock[]>([]);
   const [sources, setSources] = useState<string[]>([]);
   const [busy, setBusy] = useState<"" | "ask" | "summary">("");
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +75,13 @@ export default function CopilotTab() {
     setBusy("ask");
     setError(null);
     setAnswer("");
+    setBlocks([]);
     setSources([]);
     try {
       const r = await copilotAsk(hospitalId, patientId, text);
       setAnswer(r.answer || "No answer returned.");
-      setSources(Array.from(new Set((r.sources || []).map((s) => s.resource || s.tool))));
+      setBlocks(r.blocks || []);
+      setSources(Array.from(new Set((r.sources || []).map((s) => s.resource || s.tool || ""))).filter(Boolean));
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Copilot is unavailable.");
     } finally {
@@ -88,11 +93,13 @@ export default function CopilotTab() {
     setBusy("summary");
     setError(null);
     setAnswer("");
+    setBlocks([]);
     setSources([]);
     try {
       const r = await copilotSummary(hospitalId, patientId);
       setAnswer(r.answer || "No summary returned.");
-      setSources(Array.from(new Set((r.sources || []).map((s) => s.resource || s.tool))));
+      setBlocks(r.blocks || []);
+      setSources(Array.from(new Set((r.sources || []).map((s) => s.resource || s.tool || ""))).filter(Boolean));
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Copilot is unavailable.");
     } finally {
@@ -201,9 +208,15 @@ export default function CopilotTab() {
           ))}
         </div>
 
-        {answer && (
-          <div className="mt-4 rounded-lg bg-surface-low p-4">
-            <RichText text={answer} />
+        {(blocks.length > 0 || answer) && (
+          <div className="mt-4">
+            {blocks.length > 0 ? (
+              <CopilotArtifacts blocks={blocks} />
+            ) : (
+              <div className="rounded-lg bg-surface-low p-4">
+                <RichText text={answer} />
+              </div>
+            )}
             {sources.length > 0 && (
               <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-line pt-2">
                 <span className="text-xs font-medium text-text-muted">Sources:</span>

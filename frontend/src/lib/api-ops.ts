@@ -274,8 +274,43 @@ export async function resultClosureSummary(
 
 // --- EHR Copilot (agentic chart Q&A / summary / scan / autopopulate) ----------
 
-export type CopilotSource = { tool: string; resource?: string; linked?: boolean };
-export type CopilotAnswer = { answer: string; sources: CopilotSource[]; error?: string };
+export type CopilotSource = { tool?: string; resource?: string; linked?: boolean };
+
+/**
+ * Artifact blocks composed by the model and hydrated server-side. The model
+ * only ever chose the block types and which refs to bind; real patient values
+ * were filled in by the deterministic renderer (it never saw them).
+ */
+export type CopilotBlock =
+  | { type: "callout"; text: string; tone?: "info" | "warning" | "success" | "critical" }
+  | { type: "card"; title?: string; text?: string }
+  | { type: "stat"; label?: string; value?: unknown; unit?: string }
+  | { type: "risk_gauge"; title?: string; value?: unknown; conformal?: unknown }
+  | { type: "table"; title?: string; rows?: Record<string, unknown>[]; columns?: string[] }
+  | { type: "timeline"; title?: string; events?: Record<string, unknown>[] }
+  | {
+      type: "differential";
+      title?: string;
+      ranked?: {
+        diagnosis?: string;
+        icd10?: string;
+        likelihood?: string;
+        must_not_miss?: boolean;
+        discriminator?: string;
+      }[];
+    };
+
+export type CopilotPlanStep = { id: string; primitive: string; params: Record<string, unknown> };
+export type CopilotPlan = { reasoning?: string; steps: CopilotPlanStep[] };
+
+export type CopilotAnswer = {
+  answer: string;
+  blocks?: CopilotBlock[];
+  slots?: Record<string, { label: string; value: string }>;
+  plan?: CopilotPlan | null;
+  sources: CopilotSource[];
+  error?: string;
+};
 
 export async function copilotAsk(
   hospitalId: string,
