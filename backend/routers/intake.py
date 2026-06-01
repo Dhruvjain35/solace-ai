@@ -18,12 +18,10 @@ CONSENT_VERSION_CURRENT = "1.0"
 from lib.fallbacks import ESI_LABELS, GENERIC_PATIENT_EXPLANATION
 from services import (
     care_routing,
-    comfort_protocol,
     intake_artifacts,
     transcription,
     triage,
     triage_rules,
-    tts,
     vision,
 )
 from services.workflows import engine as workflow_engine
@@ -200,23 +198,18 @@ async def create_intake(
     esi_label = ESI_LABELS.get(esi_level, str(esi_level))
     patient_explanation = GENERIC_PATIENT_EXPLANATION.get(esi_level, "")
 
-    # 6. Patient-critical Claude/TTS calls ONLY — these produce what the patient
-    # sees on screen and MUST stay synchronous and well under API Gateway's 30s
-    # hard integration timeout. The clinician-only artifacts (prebrief, scribe,
-    # differential, workup, disposition) are DEFERRED to an async Lambda
-    # self-invoke (see step 8b) so ~6 slow Bedrock calls no longer overflow 30s.
+    # 6. NO synchronous Claude/TTS calls remain in this path. Everything the
+    # patient sees IMMEDIATELY (ESI, label, explanation, confidence band, care
+    # routing) is deterministic and computed above. The two slow Bedrock/Polly
+    # calls that used to live here — comfort_protocol.generate (~8s Claude) and
+    # tts.generate_and_upload (~6-14s Polly) — are now DEFERRED alongside the
+    # clinician-only artifacts (see step 8b). Combined with the clinician
+    # artifacts they overflowed API Gateway's 30s hard integration timeout
+    # (reproduced live: text-only intake → HTTP 503 at 30.07s), so the sync path
+    # keeps zero AI round-trips and returns in a few seconds even on a cold start.
     #
-    # comfort_protocol + TTS are the only deferred-eligible-looking calls that
-    # stay here, because the patient hears the comfort guidance as audio on the
-    # result screen. They run in parallel: TTS needs `protocol`, so comfort runs
-    # first, then TTS.
-    protocol = await asyncio.to_thread(
-        comfort_protocol.generate,
-        transcript_text, photo_analysis, esi_level, language,
-        info_dict, qa_list,
-    )
-    audio_script = tts.compose_script(patient_explanation, protocol, patient_name=patient_name)
-    audio_url = await asyncio.to_thread(tts.generate_and_upload, audio_script, language, patient_id)
+    # The result screen polls GET /public-patients/{id} for comfort_protocol +
+    # audio_url once the deferred worker has generated them.
 
     # Patient-facing care routing recommendation. Pure deterministic — runs on the
     # ESI we just computed. Surfaced as the primary CTA on the patient result page.
@@ -225,8 +218,6 @@ async def create_intake(
         transcript=transcript_text,
         patient_age=(info_dict or {}).get("age"),
     )
-
-    # 7. TTS already ran in parallel with stage B above — `audio_url` is in scope.
 
     # 8. Persist
     patient: dict[str, Any] = {
@@ -251,15 +242,16 @@ async def create_intake(
         "triage_recommendation": triage_recommendation_override or triage_result.recommendation,
         "triage_shortcut_reason": shortcut.reason if shortcut else None,
         "probabilities": json.dumps(triage_result.probabilities),
-        # Clinician-only artifacts are generated out-of-band (see step 8b). Seed
-        # empty-but-valid placeholders so a dashboard poll that lands before
-        # generation finishes renders cleanly; artifacts_status drives the UI.
+        # Deferred artifacts (clinician-only AND patient comfort/audio) are
+        # generated out-of-band (see step 8b). empty_artifacts() seeds
+        # empty-but-valid placeholders — comfort_protocol=[] and audio_url=None
+        # included — so both the dashboard poll and the patient-result poll that
+        # land before generation finishes render cleanly; artifacts_status drives
+        # the loading→loaded transition on the patient result screen.
         **intake_artifacts.empty_artifacts(),
         "artifacts_status": intake_artifacts.STATUS_PENDING,
         "patient_explanation": patient_explanation,
-        "comfort_protocol": json.dumps(protocol),
         "care_recommendation": json.dumps(care_routing.serialize(care_rec)),
-        "audio_url": audio_url,
         "pain_flagged": False,
         "status": STATUS_WAITING,
         # HIPAA consent record — who consented, when, to what version
@@ -288,8 +280,12 @@ async def create_intake(
         "esi_level": esi_level,
         "esi_label": esi_label,
         "patient_explanation": patient_explanation,
-        "comfort_protocol": protocol,
-        "audio_url": audio_url,
+        # comfort_protocol + audio are DEFERRED — seed them pending so the result
+        # screen renders ESI/explanation/care routing immediately and polls
+        # GET /public-patients/{id} for these two once the worker fills them in.
+        "comfort_protocol": [],
+        "audio_url": None,
+        "artifacts_status": intake_artifacts.STATUS_PENDING,
         "confidence_band": triage_result.confidence_band,
         "language": language,
         "care_recommendation": care_routing.serialize(care_rec),

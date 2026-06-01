@@ -84,6 +84,9 @@ class TestPendingContract:
         assert json.loads(empty["differential"]) == []
         assert json.loads(empty["workup_orders"]) == {}
         assert json.loads(empty["disposition"]) == {}
+        # Patient-facing deferred artifacts are also seeded pending.
+        assert json.loads(empty["comfort_protocol"]) == []
+        assert empty["audio_url"] is None
 
     def test_seeded_patient_starts_pending(self):
         _seed_pending_patient()
@@ -113,6 +116,13 @@ class TestDeferredGeneration:
         json.loads(p["differential"])
         json.loads(p["workup_orders"])
         json.loads(p["disposition"])
+        # Patient-facing comfort_protocol is now generated in the deferred path
+        # too (it left the synchronous intake path to fix the 30s 503). The
+        # comfort fallback always returns a non-empty list of actions.
+        comfort = json.loads(p["comfort_protocol"])
+        assert isinstance(comfort, list) and len(comfort) > 0
+        # audio_url key is present (may be None when TTS is unavailable locally).
+        assert "audio_url" in p
 
     def test_generation_reconstructs_inputs_from_stored_record(self):
         # Even with native (already-decoded) dict/list fields (local in-memory path),

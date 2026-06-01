@@ -14,6 +14,16 @@ import type { IntakeResponse, PatientEducation } from "../types";
 
 const POLL_MS = 15_000;
 
+// Comfort guidance + the spoken audio are generated out-of-band by the backend
+// AFTER the fast intake response returns (this is what keeps intake under API
+// Gateway's 30s timeout). The result screen shows ESI + explanation instantly,
+// then polls the public-patient endpoint on a short, capped cadence for the two
+// deferred patient-facing artifacts. This is a short-lived active wait for the
+// patient's OWN result — distinct from the clinician dashboard's >=10s
+// background poll (PERF-005) — so we use a tighter 3s cadence with a hard cap.
+const COMFORT_POLL_MS = 3_000;
+const COMFORT_POLL_MAX_ATTEMPTS = 15; // ~45s ceiling, then we stop trying.
+
 // Plain-language "what this means" for each ESI level. Written to reassure a
 // stressed patient: it explains the priority number without medical jargon and
 // without ever implying their wait is unsafe.
@@ -47,6 +57,8 @@ export default function PatientResult() {
   const [educationPublishedAt, setEducationPublishedAt] = useState<string | null>(null);
   const [waitRange, setWaitRange] = useState<string | null>(null);
   const [careRec, setCareRec] = useState<NonNullable<IntakeResponse["care_recommendation"]> | null>(null);
+  // Deferred comfort/audio: pending until the backend worker fills them in.
+  const [comfortPending, setComfortPending] = useState(true);
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`intake:${patientId}`);
@@ -55,11 +67,60 @@ export default function PatientResult() {
         const parsed = JSON.parse(raw) as IntakeResponse;
         setResult(parsed);
         if (parsed.care_recommendation) setCareRec(parsed.care_recommendation);
+        // The fast intake response now seeds comfort/audio as pending — if a
+        // (re-)mount somehow already has comfort actions, mark it loaded.
+        if (parsed.comfort_protocol && parsed.comfort_protocol.length > 0) {
+          setComfortPending(false);
+        }
       } catch {
         /* ignore */
       }
     }
   }, [patientId]);
+
+  // Short, capped poll for the DEFERRED comfort guidance + audio. Stops as soon
+  // as comfort actions arrive (audio may stay null if TTS is disabled) or once
+  // the attempt cap is hit, so we never poll forever for a hospital with TTS off.
+  useEffect(() => {
+    if (!patientId) return;
+    let cancelled = false;
+    let timer: number | null = null;
+    let attempts = 0;
+
+    async function tick() {
+      attempts += 1;
+      try {
+        const p = await getPublicPatient(hospitalId, patientId);
+        if (cancelled) return;
+        const ready = (p.comfort_protocol && p.comfort_protocol.length > 0) || p.comfort_ready;
+        const failed = p.artifacts_status === "failed";
+        if (ready || failed) {
+          setResult((prev) =>
+            prev
+              ? { ...prev, comfort_protocol: p.comfort_protocol ?? [], audio_url: p.audio_url ?? null }
+              : prev
+          );
+          setComfortPending(false);
+          return; // done — stop polling
+        }
+      } catch {
+        // swallow — retry on the next tick (within the cap)
+      } finally {
+        if (!cancelled && attempts < COMFORT_POLL_MAX_ATTEMPTS) {
+          timer = window.setTimeout(tick, COMFORT_POLL_MS);
+        } else if (!cancelled) {
+          // Cap reached without comfort — drop the spinner so the section
+          // doesn't spin indefinitely.
+          setComfortPending(false);
+        }
+      }
+    }
+    tick();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [hospitalId, patientId]);
 
   useEffect(() => {
     if (!patientId) return;
@@ -212,7 +273,18 @@ export default function PatientResult() {
                 </div>
               </div>
             )}
-            <ComfortProtocol actions={result.comfort_protocol} />
+            {comfortPending && result.comfort_protocol.length === 0 ? (
+              <div
+                className="flex items-center gap-2 rounded-lg bg-surface-lowest px-4 py-4 shadow-soft text-text-muted"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                <Loader2 size={16} className="animate-spin text-primary" aria-hidden="true" />
+                <span className="text-[14px]">Preparing your guidance…</span>
+              </div>
+            ) : (
+              <ComfortProtocol actions={result.comfort_protocol} />
+            )}
           </section>
         )}
 
@@ -227,7 +299,18 @@ export default function PatientResult() {
         </footer>
       </div>
 
-      <AudioPlayer audioUrl={result.audio_url} />
+      {comfortPending && !result.audio_url ? (
+        <div
+          className="mx-4 mb-4 flex items-center gap-2 rounded-lg bg-surface-low px-4 py-3 text-sm text-text-muted"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Loader2 size={14} className="animate-spin text-primary" aria-hidden="true" />
+          Preparing your audio guidance…
+        </div>
+      ) : (
+        <AudioPlayer audioUrl={result.audio_url} />
+      )}
     </div>
   );
 }

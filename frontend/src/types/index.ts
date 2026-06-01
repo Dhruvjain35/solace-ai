@@ -226,9 +226,17 @@ export type PatientDetail = PatientSummary & {
 
 export type PublicPatient = {
   patient_id: string;
+  esi_level?: 1 | 2 | 3 | 4 | 5;
+  esi_label?: string;
+  language?: string;
   patient_explanation: string;
   comfort_protocol: ComfortAction[];
   audio_url: string | null;
+  // Deferred-artifact lifecycle for the patient-facing comfort + audio. The
+  // result screen polls until comfort_ready is true (or a cap is hit) and shows
+  // a loading state for those sections meanwhile.
+  artifacts_status?: "pending" | "ready" | "failed" | null;
+  comfort_ready?: boolean;
   patient_education: PatientEducation | null;
   patient_education_published_at: string | null;
   status: "waiting" | "seen";

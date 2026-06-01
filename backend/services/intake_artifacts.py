@@ -1,15 +1,23 @@
-"""Deferred clinician-artifact generation for intake.
+"""Deferred artifact generation for intake.
 
 The patient-facing intake path (routers/intake.py) returns fast — transcription,
-content_guard, triage/ESI, comfort protocol, patient explanation, TTS audio and
-care routing — and persists the patient with ``artifacts_status="pending"`` plus
-empty placeholders for the clinician-only artifacts.
+content_guard, deterministic triage/ESI, patient explanation and care routing —
+and persists the patient with ``artifacts_status="pending"`` plus empty
+placeholders for every deferred artifact. The sync path now runs ZERO AI
+round-trips, so it returns in a few seconds even on a cold start.
 
-This module produces those clinician-only artifacts out-of-band: the **prebrief**,
-the **clinical scribe note**, the **differential**, the **workup orders** and the
-**disposition**. The clinician dashboard polls for them; the patient never sees
-them, so a few extra seconds here is invisible to the waiting patient and keeps
-the synchronous intake well under API Gateway's 30s hard integration timeout.
+This module produces all the slow Bedrock/Polly artifacts out-of-band:
+  * clinician-only: the **prebrief**, **clinical scribe note**, **differential**,
+    **workup orders** and **disposition** (the clinician dashboard polls these;
+    the patient never sees them);
+  * patient-facing: the **comfort protocol** the patient reads and the **TTS
+    audio** they hear on the result screen.
+
+Moving comfort_protocol + TTS here (they were the last two synchronous Claude/
+Polly calls in intake.py) is the actual fix for the intake 503: combined with
+the clinician artifacts they overflowed API Gateway's 30s hard integration
+timeout. The patient-result screen polls GET /public-patients/{id} and shows a
+loading state for comfort + audio until ``artifacts_status`` flips to "ready".
 
 Layering (ARCH-001/002/003): this is a *service*. It calls AI adapters via the
 ``services.*`` generation modules (which themselves live behind ``lib/``) and
@@ -30,7 +38,15 @@ import logging
 from typing import Any
 
 from db import storage
-from services import differential, disposition, prebrief, scribe, workup
+from services import (
+    comfort_protocol,
+    differential,
+    disposition,
+    prebrief,
+    scribe,
+    tts,
+    workup,
+)
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +72,11 @@ def empty_artifacts() -> dict[str, Any]:
     Mirrors the JSON-encoded shapes the dashboard expects so a poll that lands
     before generation finishes renders an empty-but-valid record instead of
     erroring on a missing key.
+
+    Includes the patient-facing comfort_protocol (empty list) and audio_url
+    (None) too — these are now generated in the deferred worker alongside the
+    clinician artifacts, so the patient-result poll sees a clean pending shape
+    until the worker fills them in.
     """
     return {
         "clinician_prebrief": "",
@@ -63,6 +84,9 @@ def empty_artifacts() -> dict[str, Any]:
         "differential": json.dumps([]),
         "workup_orders": json.dumps({}),
         "disposition": json.dumps({}),
+        # Patient-facing deferred artifacts (pending placeholders).
+        "comfort_protocol": json.dumps([]),
+        "audio_url": None,
     }
 
 
@@ -107,12 +131,15 @@ def generate_clinician_artifacts(hospital_id: str, patient_id: str) -> dict[str,
     try:
         transcript_text = patient.get("transcript") or ""
         esi_level = int(patient.get("esi_level") or 3)
+        language = (patient.get("language") or "en")
+        patient_name = patient.get("name") or ""
+        patient_explanation = patient.get("patient_explanation") or ""
         photo_analysis = _parse_json(patient.get("photo_analysis"), {})
         info_dict = _parse_json(patient.get("medical_info"), None)
         qa_list = _parse_json(patient.get("followup_qa"), []) or []
 
         # Stage A (text-only): prebrief, scribe, differential. These mirror the
-        # exact intake.py call signatures (comfort stays in the sync path).
+        # exact intake.py call signatures.
         clinician_prebrief = prebrief.generate(
             transcript_text, photo_analysis, esi_level,
             info_dict, qa_list,
@@ -125,7 +152,7 @@ def generate_clinician_artifacts(hospital_id: str, patient_id: str) -> dict[str,
             info_dict, qa_list, photo_analysis, None,
         )
 
-        # Stage B: workup + disposition consume the differential (TTS stays sync).
+        # Stage B: workup + disposition consume the differential.
         workup_orders = workup.generate(
             transcript_text, esi_level, ddx_list, info_dict, None,
         )
@@ -133,12 +160,32 @@ def generate_clinician_artifacts(hospital_id: str, patient_id: str) -> dict[str,
             transcript_text, esi_level, ddx_list, info_dict, None,
         )
 
+        # Stage C (patient-facing, formerly synchronous in intake.py): the comfort
+        # protocol the patient reads + the TTS audio they hear on the result
+        # screen. These are the two calls that pushed the sync intake path over
+        # API Gateway's 30s budget; deferring them is the actual 503 fix. EXACT
+        # call signatures from the old intake.py. comfort runs first (TTS needs
+        # the protocol), then TTS. Both reuse the already-consented, already-
+        # scanned stored record (SEC-004/005) — no new patient text enters the
+        # AI pipeline here.
+        protocol = comfort_protocol.generate(
+            transcript_text, photo_analysis, esi_level, language,
+            info_dict, qa_list,
+        )
+        audio_script = tts.compose_script(
+            patient_explanation, protocol, patient_name=patient_name,
+        )
+        audio_url = tts.generate_and_upload(audio_script, language, patient_id)
+
         artifacts = {
             "clinician_prebrief": clinician_prebrief,
             "clinical_scribe_note": clinical_scribe_note,
             "differential": json.dumps(ddx_list),
             "workup_orders": json.dumps(workup_orders),
             "disposition": json.dumps(dispo),
+            # Patient-facing deferred artifacts.
+            "comfort_protocol": json.dumps(protocol),
+            "audio_url": audio_url,
             "artifacts_status": STATUS_READY,
         }
         storage.update_patient(patient_id, artifacts)
