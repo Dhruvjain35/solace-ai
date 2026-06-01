@@ -176,6 +176,26 @@ def handler(event, context):
     so the code path is fully JIT-warmed — first real user gets pure compute time.
     The warmup response reports whether the ML path succeeded, which our deploy smoke
     test checks so broken imports / missing artifacts fail the deploy."""
+    # Deferred clinician-artifact generation — re-entry from the intake fast-path's
+    # async self-invoke (InvocationType='Event'). The patient response has already
+    # been returned; this runs prebrief/scribe/differential/workup/disposition
+    # out-of-band and patches the stored patient record (artifacts_status -> ready).
+    # Failure-safe inside the service: it sets artifacts_status=failed and never
+    # raises, so a bad artifact run can't crash the Lambda or retry-storm.
+    if isinstance(event, dict) and event.get("deferred_artifacts"):
+        hospital_id = event.get("hospital_id")
+        patient_id = event.get("patient_id")
+        import json as _json  # noqa: PLC0415
+
+        if not hospital_id or not patient_id:
+            log.warning("deferred_artifacts event missing hospital_id/patient_id")
+            return {"statusCode": 400, "body": _json.dumps({"deferred": False, "reason": "missing_ids"})}
+        from services import intake_artifacts  # noqa: PLC0415
+
+        result = intake_artifacts.generate_clinician_artifacts(hospital_id, patient_id)
+        status = result.get("artifacts_status", "unknown")
+        return {"statusCode": 200, "body": _json.dumps({"deferred": True, "artifacts_status": status})}
+
     if isinstance(event, dict) and (event.get("warmup") or event.get("source") == "aws.events"):
         ml_ok = False
         ml_error: str | None = None

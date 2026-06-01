@@ -145,6 +145,28 @@ def _boto_table(name: str):  # pragma: no cover - AWS mode only
     return boto3.resource("dynamodb", region_name=settings.aws_region).Table(name)
 
 
+# ---- Async Lambda self-invoke (deferred intake artifacts) ---------------------------
+# ARCH-002: boto3 is confined to db/. Callers (lib.async_invoke / the intake service)
+# ask this layer to fan out a fire-and-forget Lambda invocation; they never touch boto3.
+def invoke_lambda_async(function_name: str, payload: dict[str, Any]) -> None:  # pragma: no cover - AWS mode only
+    """Fire an asynchronous ('Event') Lambda invocation. Fire-and-forget: returns
+    immediately, the target runs out-of-band. Used to defer the slow clinician-only
+    artifact generation off the patient-facing intake request (API GW 30s hard cap).
+
+    Failure-safe at the boundary — a transport error is logged (NON-PHI breadcrumb:
+    only the function name, never the payload, which carries a patient_id) and
+    re-raised so the caller can decide whether to fall back to inline generation.
+    """
+    import boto3  # noqa: PLC0415
+
+    client = boto3.client("lambda", region_name=settings.aws_region)
+    client.invoke(
+        FunctionName=function_name,
+        InvocationType="Event",  # async — does not wait for the target to finish
+        Payload=json.dumps(payload).encode(),
+    )
+
+
 def _ddb_get_hospital(hospital_id: str) -> dict[str, Any] | None:
     resp = _boto_table(settings.dynamodb_table_hospitals).get_item(Key={"hospital_id": hospital_id})
     item = resp.get("Item")

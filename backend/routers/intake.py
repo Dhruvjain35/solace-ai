@@ -12,23 +12,19 @@ from fastapi import APIRouter, File, Form, HTTPException, Path, Request, UploadF
 
 from db import media, storage
 from db.constants import STATUS_WAITING
-from lib import ai_log, blocklist, content_guard, idempotency, quota, uploads
+from lib import ai_log, async_invoke, blocklist, content_guard, idempotency, quota, uploads
 
 CONSENT_VERSION_CURRENT = "1.0"
 from lib.fallbacks import ESI_LABELS, GENERIC_PATIENT_EXPLANATION
 from services import (
     care_routing,
     comfort_protocol,
-    differential,
-    disposition,
-    prebrief,
-    scribe,
+    intake_artifacts,
     transcription,
     triage,
     triage_rules,
     tts,
     vision,
-    workup,
 )
 from services.workflows import engine as workflow_engine
 
@@ -204,49 +200,23 @@ async def create_intake(
     esi_label = ESI_LABELS.get(esi_level, str(esi_level))
     patient_explanation = GENERIC_PATIENT_EXPLANATION.get(esi_level, "")
 
-    # 6. Fire the Claude calls in parallel — biggest latency win.
-    # Stage A (text-only): prebrief, scribe, comfort, differential.
-    # We run differential first because workup + disposition depend on its output.
-    prebrief_task = asyncio.to_thread(
-        prebrief.generate,
-        transcript_text, photo_analysis, esi_level,
-        info_dict, qa_list,
-    )
-    scribe_task = asyncio.to_thread(
-        scribe.generate_clinical_note,
-        transcript_text, info_dict, qa_list, photo_analysis,
-    )
-    comfort_task = asyncio.to_thread(
+    # 6. Patient-critical Claude/TTS calls ONLY — these produce what the patient
+    # sees on screen and MUST stay synchronous and well under API Gateway's 30s
+    # hard integration timeout. The clinician-only artifacts (prebrief, scribe,
+    # differential, workup, disposition) are DEFERRED to an async Lambda
+    # self-invoke (see step 8b) so ~6 slow Bedrock calls no longer overflow 30s.
+    #
+    # comfort_protocol + TTS are the only deferred-eligible-looking calls that
+    # stay here, because the patient hears the comfort guidance as audio on the
+    # result screen. They run in parallel: TTS needs `protocol`, so comfort runs
+    # first, then TTS.
+    protocol = await asyncio.to_thread(
         comfort_protocol.generate,
         transcript_text, photo_analysis, esi_level, language,
         info_dict, qa_list,
     )
-    differential_task = asyncio.to_thread(
-        differential.generate,
-        transcript_text, esi_level,
-        info_dict, qa_list, photo_analysis, None,
-    )
-    clinician_prebrief, clinical_scribe_note, protocol, ddx_list = await asyncio.gather(
-        prebrief_task, scribe_task, comfort_task, differential_task
-    )
-
-    # Stage B: workup + disposition consume the differential. Both run in parallel,
-    # AND in parallel with TTS — TTS only needs `protocol` + `patient_explanation`,
-    # both already produced by stage A. Overlapping these saves ~600ms-1.2s on the
-    # critical path (TTS is the slowest of the three).
-    workup_task = asyncio.to_thread(
-        workup.generate,
-        transcript_text, esi_level, ddx_list, info_dict, None,
-    )
-    disposition_task = asyncio.to_thread(
-        disposition.generate,
-        transcript_text, esi_level, ddx_list, info_dict, None,
-    )
     audio_script = tts.compose_script(patient_explanation, protocol, patient_name=patient_name)
-    tts_task = asyncio.to_thread(tts.generate_and_upload, audio_script, language, patient_id)
-    workup_orders, dispo, audio_url = await asyncio.gather(
-        workup_task, disposition_task, tts_task
-    )
+    audio_url = await asyncio.to_thread(tts.generate_and_upload, audio_script, language, patient_id)
 
     # Patient-facing care routing recommendation. Pure deterministic — runs on the
     # ESI we just computed. Surfaced as the primary CTA on the patient result page.
@@ -281,11 +251,11 @@ async def create_intake(
         "triage_recommendation": triage_recommendation_override or triage_result.recommendation,
         "triage_shortcut_reason": shortcut.reason if shortcut else None,
         "probabilities": json.dumps(triage_result.probabilities),
-        "clinician_prebrief": clinician_prebrief,
-        "clinical_scribe_note": clinical_scribe_note,
-        "differential": json.dumps(ddx_list),
-        "workup_orders": json.dumps(workup_orders),
-        "disposition": json.dumps(dispo),
+        # Clinician-only artifacts are generated out-of-band (see step 8b). Seed
+        # empty-but-valid placeholders so a dashboard poll that lands before
+        # generation finishes renders cleanly; artifacts_status drives the UI.
+        **intake_artifacts.empty_artifacts(),
+        "artifacts_status": intake_artifacts.STATUS_PENDING,
         "patient_explanation": patient_explanation,
         "comfort_protocol": json.dumps(protocol),
         "care_recommendation": json.dumps(care_routing.serialize(care_rec)),
@@ -304,6 +274,14 @@ async def create_intake(
         patient["ehr_fhir_id"] = ehr_fhir_id.strip()
         patient["ehr_match_source"] = (ehr_match_source or "fhir").strip()
     storage.put_patient(patient)
+
+    # 8b. Defer the slow clinician-only artifact generation. In AWS mode this is an
+    # async Lambda self-invoke (InvocationType='Event') that re-enters via
+    # main.handler()'s deferred-artifacts branch; in local/test mode it runs in a
+    # daemon thread. Fire-and-forget — never blocks or fails the patient response.
+    # Consent (SEC-004) + content_guard (SEC-005) already ran above; the deferred
+    # path operates on the already-scanned, already-consented stored record.
+    async_invoke.dispatch_deferred_artifacts(hospital_id, patient_id)
 
     response = {
         "patient_id": patient_id,
