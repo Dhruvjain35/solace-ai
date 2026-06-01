@@ -139,6 +139,11 @@ def loaded_art():
     art = triage_ml._load()
     if art is None:
         pytest.skip("ML artifacts not present / not loadable locally")
+    # Calibration is lazy (deferred out of _load() to keep cold-start fast), but the
+    # integration tests below assert on a populated calibrator, so prime it once here.
+    # This makes the fixture order-independent: every test that reads art["conformal"]
+    # sees it fitted no matter which test runs first.
+    triage_ml._ensure_calibrated(art)
     return triage_ml, art
 
 
@@ -159,7 +164,11 @@ def _sample_patient():
 
 class TestTriageMLIntegration:
     def test_load_defers_calibration_then_lazy_fits_per_class(self, loaded_art):
-        triage_ml, art = loaded_art
+        triage_ml, _shared = loaded_art
+        # Assert the DEFERRAL contract on a PRISTINE load without disturbing the
+        # shared lru_cache'd singleton (other tests depend on it being calibrated).
+        # _load.__wrapped__() is the undecorated function — a fresh, uncached build.
+        art = triage_ml._load.__wrapped__()
         # _load() must NOT calibrate eagerly — that would run ~150 ensemble
         # inferences inside the cold-start/warmup path and blow the Lambda timeout.
         assert art.get("conformal") is None, "calibration must be deferred, not run in _load()"

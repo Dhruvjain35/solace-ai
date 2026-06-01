@@ -2,13 +2,22 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Download,
+  FileText,
   Gauge,
   Loader2,
+  Lock,
   Scale,
   ShieldCheck,
   Stethoscope,
 } from "lucide-react";
-import { getTrustReport, type TrustReport as TrustReportData } from "../lib/api";
+import { getTrustReport, getRfpExport, type TrustReport as TrustReportData } from "../lib/api";
+
+const MATURITY_LABEL: Record<string, string> = {
+  production: "Production",
+  beta: "Beta",
+  preliminary: "Preliminary",
+};
 
 // DEPS-006: recharts ships in its own lazily-loaded chunk, off the main bundle.
 const CoverageChart = lazy(() => import("../components/ui/CoverageChart"));
@@ -72,6 +81,27 @@ export default function TrustReport() {
       active = false;
     };
   }, []);
+
+  const [exporting, setExporting] = useState(false);
+
+  async function handleRfpExport() {
+    setExporting(true);
+    try {
+      const bundle = await getRfpExport();
+      // Client-side download — aggregate, no-PHI bundle a procurement team can attach to an RFP.
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "solace-trust-rfp-export.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Could not generate the RFP export. Please try again shortly.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <main className="min-h-[100dvh] bg-surface-low">
@@ -294,6 +324,80 @@ export default function TrustReport() {
                   </table>
                 </div>
               )}
+            </SectionCard>
+
+            {/* AI Bill-of-Materials */}
+            <SectionCard title="AI Bill-of-Materials (AI-BOM)" icon={<FileText size={18} />}>
+              <p className="text-sm text-text-muted">
+                {report.ai_bom.default_provider_posture} &middot; {report.ai_bom.disclosure}
+              </p>
+              <div className="mt-4 space-y-3">
+                {report.ai_bom.components.map((c) => (
+                  <div key={c.component_id} className="rounded-md ring-1 ring-line p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-ink">{c.name}</span>
+                      <span className="text-xs text-text-muted">
+                        {c.provider.default}
+                        {c.provider.baa_covered ? " · BAA-covered" : ""}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-text-muted">
+                      {c.purpose}
+                      {c.configured_model ? ` · ${c.configured_model}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {Object.entries(report.ai_bom.data_handling_controls).map(([k, v]) => (
+                  <div key={k} className="text-xs text-text-muted">
+                    <span className="font-medium text-ink">{v.control}</span> — {v.evidence}
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+
+            {/* AI threat-control attestation pack */}
+            <SectionCard title="AI safety &amp; threat-control attestation" icon={<Lock size={18} />}>
+              <p className="text-sm text-text-muted">{report.attestation_pack.honesty_statement}</p>
+              <p className="mt-1 text-xs text-text-muted">
+                {report.attestation_pack.control_count} controls &middot;{" "}
+                {report.attestation_pack.frameworks.join(", ")}
+              </p>
+              <ul className="mt-4 space-y-3">
+                {report.attestation_pack.controls.map((ctrl) => (
+                  <li key={ctrl.control_id} className="rounded-md ring-1 ring-line p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-ink">{ctrl.title}</span>
+                      <span className="text-xs rounded-full bg-surface-low px-2 py-0.5 text-text-muted">
+                        {MATURITY_LABEL[ctrl.maturity] ?? ctrl.maturity}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-text-muted">{ctrl.statement}</p>
+                    {ctrl.honest_caveat ? (
+                      <p className="mt-1 text-xs text-warning italic">{ctrl.honest_caveat}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+
+            {/* RFP export */}
+            <SectionCard title="Procurement &amp; RFP" icon={<Download size={18} />}>
+              <p className="text-sm text-text-muted">
+                Export this Trust Report, AI-BOM, and attestation pack as a single aggregate,
+                PHI-free bundle your security or procurement team can attach to an RFP response.
+              </p>
+              <button
+                type="button"
+                onClick={handleRfpExport}
+                disabled={exporting}
+                aria-label="Export Trust Report bundle for RFP"
+                className="mt-4 inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
+              >
+                {exporting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Download size={16} aria-hidden />}
+                {exporting ? "Generating…" : "Export for RFP"}
+              </button>
             </SectionCard>
 
             <footer className="pt-2 pb-8 text-xs text-text-muted">

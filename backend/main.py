@@ -13,10 +13,10 @@ from mangum import Mangum
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
-    admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
-    ehr_copilot, governance, hospitals, identity, insurance, intake, notes, onboarding,
-    pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage,
-    voice, wave4, workflows,
+    admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, ehr,
+    ehr_auth, ehr_copilot, governance, hospitals, identity, insurance, intake, notes,
+    onboarding, pain_flag, patients, prescriptions, public, sms as sms_router, transcribe,
+    triage, voice, wave4, workflows,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -137,6 +137,7 @@ app.include_router(patients.router, prefix="/api/{hospital_id}", tags=["patients
 app.include_router(prescriptions.router, prefix="/api/{hospital_id}", tags=["prescriptions"])
 app.include_router(notes.router, prefix="/api/{hospital_id}", tags=["notes"])
 app.include_router(triage.router, prefix="/api/{hospital_id}", tags=["triage"])
+app.include_router(billing.router, prefix="/api/{hospital_id}", tags=["billing"])
 app.include_router(admin.router, prefix="/api/{hospital_id}", tags=["admin"])
 app.include_router(auth.router, prefix="/api/{hospital_id}", tags=["auth"])
 app.include_router(onboarding.router, prefix="/api/{hospital_id}", tags=["onboarding"])

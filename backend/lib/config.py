@@ -79,6 +79,12 @@ class Settings(BaseSettings):
     email_dev_echo: bool = False
     magic_link_ttl_seconds: int = 900  # 15-minute single-use login links
 
+    # Usage metering / billing (Bet #1) — estimated list price per billable
+    # triage encounter, used ONLY to compute an aggregate ROI/value figure for
+    # the billing panel. Not an invoice; configurable per deployment via
+    # BILLING_RATE_PER_ENCOUNTER_USD. No PHI is involved.
+    billing_rate_per_encounter_usd: float = 2.50
+
 
 @lru_cache(maxsize=1)
 def _load() -> Settings:

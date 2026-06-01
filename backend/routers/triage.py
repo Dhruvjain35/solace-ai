@@ -7,6 +7,7 @@ ESI + conformal set + top features on the patient.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -16,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from db import storage
 from lib.auth import audit, require_clinician
 from services import triage_ml
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -92,5 +95,21 @@ def refine_triage(
             "hospital": {"id": hospital_id},
         },
     )
+
+    # Meter one billable usage event for this triage encounter (Bet #1). Failure-safe:
+    # metering must NEVER break the triage request, so any error is swallowed + logged
+    # with a NON-PHI breadcrumb (hospital_id only — never patient_id). Mirrors the
+    # fire-and-forget shape used for provenance.record_override / workflow triggers.
+    try:
+        from lib import metering  # noqa: PLC0415
+
+        metering.record_encounter(
+            hospital_id=hospital_id,
+            encounter_type="triage.refine",
+            model_source=result.get("source", "unknown"),
+            billable=True,
+        )
+    except Exception:  # noqa: BLE001
+        log.warning("billing metering failed for hospital=%s (triage refined OK)", hospital_id)
 
     return {"success": True, "refinement": result, "applied_at": updates["refined_at"]}

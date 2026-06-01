@@ -1228,6 +1228,66 @@ export interface TrustReportOverrideAcceptance {
   phi_note: string;
 }
 
+// AI Bill-of-Materials — every model, version, provider, purpose, data-handling
+// posture. Mirrors backend/services/model_cards.ai_bom().
+export interface AiBomComponent {
+  component_id: string;
+  kind: string;
+  name: string;
+  configured_model: string | null;
+  bedrock_inference_profile: string | null;
+  version_source: string;
+  provider: {
+    default: string;
+    baa_covered: boolean;
+    baa_basis: string;
+    opt_in_fallback: string | null;
+  };
+  purpose: string;
+  data_handling: Record<string, string>;
+  model_card?: string;
+  evidence: string[];
+}
+
+export interface AiBom {
+  artifact: string;
+  spec_alignment: string;
+  as_of: string;
+  default_provider_posture: string;
+  resolved_models: Record<string, unknown>;
+  components: AiBomComponent[];
+  data_handling_controls: Record<
+    string,
+    { control: string; evidence: string; families_redacted?: string[]; family_count?: number }
+  >;
+  disclosure: string;
+}
+
+// AI threat-control / safety attestation pack. Mirrors
+// backend/services/model_cards.attestation_pack().
+export interface AttestationControl {
+  control_id: string;
+  title: string;
+  statement: string;
+  mitigates_threat: string;
+  maturity: string;
+  maturity_definition: string | null;
+  framework_refs: string[];
+  evidence: string[];
+  honest_caveat?: string;
+}
+
+export interface AttestationPack {
+  artifact: string;
+  as_of: string;
+  frameworks: string[];
+  control_count: number;
+  maturity_legend: Record<string, string>;
+  maturity_distribution: Record<string, number>;
+  controls: AttestationControl[];
+  honesty_statement: string;
+}
+
 export interface TrustReport {
   report: string;
   framework: string;
@@ -1240,6 +1300,8 @@ export interface TrustReport {
     count: number;
     models: { id: string; name: string; version: string; risk_tier: string | null }[];
   };
+  ai_bom: AiBom;
+  attestation_pack: AttestationPack;
   calibration: TrustReportCalibration;
   fairness: {
     framework: string;
@@ -1254,6 +1316,35 @@ export interface TrustReport {
 
 export async function getTrustReport(): Promise<TrustReport> {
   const { data } = await api.get<TrustReport>("/api/governance/trust-report");
+  return data;
+}
+
+export async function getAiBom(): Promise<AiBom> {
+  const { data } = await api.get<AiBom>("/api/governance/ai-bom");
+  return data;
+}
+
+export async function getAttestationPack(): Promise<AttestationPack> {
+  const { data } = await api.get<AttestationPack>("/api/governance/attestation-pack");
+  return data;
+}
+
+// The full RFP/procurement bundle — Trust Report + AI-BOM + attestation pack.
+export interface RfpExport {
+  artifact: string;
+  as_of: string;
+  scope: string;
+  preliminary: boolean;
+  disclaimer: string;
+  contents: string[];
+  trust_report: TrustReport;
+  ai_bom: AiBom;
+  attestation_pack: AttestationPack;
+  endpoints: Record<string, string>;
+}
+
+export async function getRfpExport(): Promise<RfpExport> {
+  const { data } = await api.get<RfpExport>("/api/governance/rfp-export");
   return data;
 }
 

@@ -478,6 +478,107 @@ def list_labels(hospital_id: str, *, limit: int = 1000) -> list[dict[str, Any]]:
         return []
 
 
+# ---- Billing / usage-metering events (Bet #1) ---------------------------------------
+# Durable store for backend/lib/metering.py. Records ONE billable event per triage
+# encounter so usage can be aggregated for an ROI/billing panel. NON-PHI by construction:
+# events carry hospital_id, encounter_type, model_source, an opaque event id, a ts, and
+# an optional CPT hint — never patient names/notes/UUID-as-key. Partition by hospital_id,
+# sort by ts_id ("{epoch_ms}#{uuid}") so list-by-hospital is a .query() not a .scan()
+# (PERF-004). CMK-encrypted at rest (COMP-003). 18-month hot TTL (longer than the 90-day
+# clinical tables — billing/usage history is referenced across quarterly review cycles).
+BILLING_EVENTS_TABLE = "solace-billing-events"
+BILLING_EVENTS_TTL_SECONDS = 18 * 30 * 24 * 3600  # ~18 months hot in DDB
+
+
+def put_billing_event(entry: dict[str, Any]) -> None:
+    """Persist one billable usage event.
+
+    AWS mode: write to DynamoDB (CMK, ~18-month TTL). Stamps ts/ts_id/ttl here so
+    callers stay storage-agnostic. Failure-safe at the boundary — a write error is
+    logged (NON-PHI breadcrumb) and swallowed; metering must never break a request.
+    Local mode: no-op — lib.metering keeps its in-memory list authoritative.
+    """
+    if settings.solace_mode != "aws":
+        return
+
+    now = datetime.now(timezone.utc)
+    ts_unix = int(now.timestamp() * 1000)
+    event_uuid = uuid.uuid4().hex[:12]
+    item = dict(entry)
+    item.setdefault("ts", _now_iso())
+    item["hospital_id"] = entry.get("hospital_id") or "_"
+    item["ts_id"] = f"{ts_unix}#{event_uuid}"
+    item["ttl"] = int(time.time()) + BILLING_EVENTS_TTL_SECONDS
+
+    try:
+        _boto_table(BILLING_EVENTS_TABLE).put_item(Item=_to_ddb(item))
+    except Exception as e:  # noqa: BLE001
+        # SEC-002: log only the failure + hospital_id, never the full item.
+        log.warning("billing_event write to DDB failed for hospital=%s: %s",
+                    item.get("hospital_id"), e)
+
+
+def list_billing_events(
+    hospital_id: str, *, since_ms: int | None = None, limit: int = 5000
+) -> list[dict[str, Any]]:
+    """Return billing events for one hospital, newest first.
+
+    Uses .query() on the (hospital_id, ts_id) key — never .scan() (PERF-004). When
+    `since_ms` is set, the sort-key range condition (ts_id > "{since_ms}#") trims the
+    read at the index instead of post-filtering. AWS mode only; local mode returns []
+    (lib.metering falls back to its in-memory list).
+    """
+    if settings.solace_mode != "aws":
+        return []
+    try:
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        cond = Key("hospital_id").eq(hospital_id)
+        if since_ms is not None:
+            # ts_id sorts lexicographically; zero-padded epoch_ms keeps it monotonic
+            # for the windows we care about, and a "#" boundary excludes the marker.
+            cond = cond & Key("ts_id").gt(f"{since_ms}#")
+        resp = _boto_table(BILLING_EVENTS_TABLE).query(
+            KeyConditionExpression=cond,
+            ScanIndexForward=False,  # newest ts_id first
+            Limit=limit,
+        )
+        return [_from_ddb(i) for i in resp.get("Items", [])]
+    except Exception as e:  # noqa: BLE001
+        log.warning("billing_event list failed for hospital=%s: %s", hospital_id, e)
+        return []
+
+
+def aggregate_billing_events(
+    hospital_id: str, *, since_ms: int | None = None, limit: int = 5000
+) -> dict[str, Any]:
+    """Aggregate billable usage for one hospital into NON-PHI counts.
+
+    Returns total billable count, a breakdown by encounter_type and by model_source,
+    and a count of CPT hints. Pure aggregation over list_billing_events — no event
+    identifiers or per-encounter detail leak out. Local mode returns zeros (the
+    in-memory authoritative aggregate lives in lib.metering).
+    """
+    rows = list_billing_events(hospital_id, since_ms=since_ms, limit=limit)
+    billable = [r for r in rows if r.get("billable", True)]
+    by_type: dict[str, int] = {}
+    by_model: dict[str, int] = {}
+    cpt_hints: dict[str, int] = {}
+    for r in billable:
+        by_type[r.get("encounter_type", "unknown")] = by_type.get(r.get("encounter_type", "unknown"), 0) + 1
+        by_model[r.get("model_source", "unknown")] = by_model.get(r.get("model_source", "unknown"), 0) + 1
+        hint = r.get("cpt_hint")
+        if hint:
+            cpt_hints[hint] = cpt_hints.get(hint, 0) + 1
+    return {
+        "billable_encounters": len(billable),
+        "total_events": len(rows),
+        "by_encounter_type": by_type,
+        "by_model_source": by_model,
+        "cpt_hints": cpt_hints,
+    }
+
+
 # ---- Test helpers -------------------------------------------------------------------
 def _reset_for_tests() -> None:
     _patients.clear()

@@ -90,6 +90,52 @@ def trust_report(hospital_id: str | None = Query(default=None)):
         raise HTTPException(status_code=500, detail="trust report failed integrity check") from e
 
 
+@router.get("/api/governance/ai-bom")
+def ai_bom():
+    """PUBLIC AI Bill-of-Materials — every model, version, provider, purpose, and
+    data-handling posture, sourced from live config + code.
+
+    Aggregate-only and PHI-free by construction; the recursive PHI guard runs
+    before it is returned. No auth, no clinician audit() (nothing identifiable).
+    """
+    try:
+        bom = model_cards.ai_bom()
+        model_cards._assert_no_phi(bom)
+        return bom
+    except AssertionError as e:
+        raise HTTPException(status_code=500, detail="ai-bom failed integrity check") from e
+
+
+@router.get("/api/governance/attestation-pack")
+def attestation_pack():
+    """PUBLIC AI threat-control / safety attestation pack.
+
+    Each control is an attestable statement productizing a shipped safeguard,
+    with an evidence path and an honest maturity label. Aggregate-only, no PHI;
+    the recursive PHI guard runs before it is returned.
+    """
+    try:
+        pack = model_cards.attestation_pack()
+        model_cards._assert_no_phi(pack)
+        return pack
+    except AssertionError as e:
+        raise HTTPException(status_code=500, detail="attestation pack failed integrity check") from e
+
+
+@router.get("/api/governance/rfp-export")
+def rfp_export(hospital_id: str | None = Query(default=None)):
+    """PUBLIC RFP / procurement bundle — Trust Report + AI-BOM + attestation pack
+    in one object a security/procurement team can drop into an RFP response.
+
+    Aggregate-only, no PHI; the recursive PHI guard runs over the whole bundle
+    (the nested trust_report() also self-checks). No auth, no clinician audit().
+    """
+    try:
+        return model_cards.rfp_export(hospital_id)
+    except AssertionError as e:
+        raise HTTPException(status_code=500, detail="rfp export failed integrity check") from e
+
+
 @router.get("/api/governance/override-log")
 def override_log(
     hospital_id: str | None = Query(default=None),
