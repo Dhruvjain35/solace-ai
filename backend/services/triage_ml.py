@@ -267,17 +267,39 @@ def _synthetic_calibration_profiles(n_per_class: int = 30) -> list[tuple[dict, d
     return profiles
 
 
-def _ensure_calibrated(art: dict, alpha: float = conformal.DEFAULT_ALPHA) -> None:
-    """Lazily fit the Mondrian calibrator on first use, never inside _load().
+def _ensure_calibrated(art: dict, alpha: float = conformal.DEFAULT_ALPHA, *, block: bool = True) -> None:
+    """Fit the Mondrian calibrator. NEVER blocks a patient request by default on the
+    request path — see ``ensure_calibrated_async``.
 
-    _load() marks ``art["_conformal_pending"]`` so cold-start + the warmup handler
-    stay fast (calibration runs ~150 synthetic profiles through the full ensemble,
-    which would otherwise blow the Lambda timeout). The first predict() that needs a
-    conformal set pays that one-time cost; subsequent calls reuse the fitted
-    calibrator stored on the lru_cache'd ``art``. Best-effort: a failure leaves
-    ``art["conformal"]`` None and predict() falls back to the global scalar q̂.
+    Calibration runs ~150 synthetic profiles through the full ensemble (~7s+ cold),
+    which is far too slow to sit on the synchronous intake/triage request path (it
+    stacks with cold-start init and overflows API Gateway's 30s cap → 503). So:
+      * The warmup handler + a background daemon prime it off the request path.
+      * If a request lands on a not-yet-calibrated container, predict() simply uses
+        the global-scalar q̂ fallback for the conformal SET (the ESI itself is
+        unaffected) and kicks off a non-blocking background calibration for next time.
+    ``block=True`` is retained for the warmup handler and tests that want a sync fit.
     """
     if not art.get("_conformal_pending"):
+        return
+    if not block:
+        # Non-blocking: hand off to a daemon thread so the request returns immediately.
+        # _conformal_pending stays True until the thread actually finishes a fit.
+        if art.get("_conformal_calibrating"):
+            return  # a calibration is already in flight on this container
+        art["_conformal_calibrating"] = True
+        import threading  # noqa: PLC0415
+
+        def _bg() -> None:
+            try:
+                _calibrate(art)
+                art["_conformal_pending"] = False
+            except Exception as e:  # noqa: BLE001
+                log.warning("triage_ml: background conformal calibration failed (%s)", e)
+            finally:
+                art["_conformal_calibrating"] = False
+
+        threading.Thread(target=_bg, name="conformal-calibrate", daemon=True).start()
         return
     art["_conformal_pending"] = False  # one attempt, even if it fails — no retry storms
     try:
@@ -737,10 +759,14 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
 
         esi_level, confidence = _apply_threshold_opt(art, probs)
 
-        # Conformal prediction set — Mondrian (per-ESI-class) when calibrated,
-        # else the legacy global scalar so the path never crashes. Calibration is
-        # fitted lazily here (once), never in _load(), to keep cold-start fast.
-        _ensure_calibrated(art)
+        # Conformal prediction set — Mondrian (per-ESI-class) when calibrated, else
+        # the legacy global scalar so the path never crashes. Calibration (~7s+, 150
+        # ensemble inferences) is kicked to a BACKGROUND thread (block=False) so it
+        # NEVER stalls this request — a cold/uncalibrated container returns instantly
+        # on the global-scalar q̂ and calibrates for next time. The warmup handler
+        # primes it synchronously off the request path. This is the fix for the intake
+        # 503: predict() must never pay the calibration cost on the patient's request.
+        _ensure_calibrated(art, block=False)
         cal: conformal.MondrianConformal | None = art.get("conformal")
         if cal is not None:
             conformal_set = cal.predict_set(probs)

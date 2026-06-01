@@ -206,6 +206,14 @@ def handler(event, context):
             if art is None:
                 ml_error = "artifacts_missing"
             else:
+                # Prime conformal calibration SYNCHRONOUSLY here — the warmup path has
+                # the full 60s budget and is off the patient request path, so paying the
+                # ~7s calibration cost here (every 4-min warmer ping + on cold start)
+                # means real intake/triage requests never trigger it on their hot path.
+                try:
+                    triage_ml._ensure_calibrated(art, block=True)
+                except Exception:  # noqa: BLE001 — never fail warmup on calibration
+                    pass
                 dry_patient = {
                     "patient_id": "warm",
                     "transcript": "chest pain",
