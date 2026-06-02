@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from "framer-motion";
 import { Chip } from "../ui/Chip";
 import { t } from "../../lib/i18n";
 import type { MedicalInfo, Sex } from "../../types";
@@ -7,6 +8,28 @@ type Props = {
   onChange: (next: MedicalInfo) => void;
   language?: string;
 };
+
+// Smoothly reveals/collapses a conditional follow-up section instead of popping it
+// in/out. Animates height + opacity + a small upward slide; respects reduced-motion
+// via framer-motion's built-in handling and keeps the easing subtle for a clinical UI.
+function Reveal({ show, children }: { show: boolean; children: React.ReactNode }) {
+  return (
+    <AnimatePresence initial={false}>
+      {show && (
+        <motion.div
+          initial={{ height: 0, opacity: 0, y: -4 }}
+          animate={{ height: "auto", opacity: 1, y: 0 }}
+          exit={{ height: 0, opacity: 0, y: -4 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          style={{ overflow: "hidden" }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+Reveal.displayName = "Reveal";
 
 const ALLERGY_OPTIONS = ["None", "Penicillin", "Sulfa", "Aspirin", "NSAIDs", "Latex", "Peanuts", "Shellfish"];
 const MEDICATION_OPTIONS = [
@@ -126,7 +149,7 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
         </div>
       </div>
 
-      {showPregnancy && (
+      <Reveal show={showPregnancy}>
         <div>
           <div className="text-sm font-semibold mb-2">{t("form_pregnant", lang)}</div>
           <div className="flex gap-2">
@@ -138,9 +161,9 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
             />
           </div>
         </div>
-      )}
+      </Reveal>
 
-      {showGestational && (
+      <Reveal show={showGestational}>
         <div className="border-l-2 border-primary-fixed pl-4">
           <label className="text-sm font-semibold block mb-2" htmlFor="gest">
             {t("form_gestational_label", lang)}
@@ -159,7 +182,7 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
             className="w-32 h-11 px-3 rounded-md bg-surface-lowest shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none transition-all"
           />
         </div>
-      )}
+      </Reveal>
 
       {/* Allergies + per-allergy severity follow-up.
           Chip values stay canonical English (the backend triage engine is English-trained),
@@ -171,31 +194,41 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
             <Chip key={opt} label={opt} selected={value.allergies.includes(opt)} onToggle={() => toggle("allergies", opt)} />
           ))}
         </div>
-        {nonNoneAllergies.length > 0 && (
+        <Reveal show={nonNoneAllergies.length > 0}>
           <div className="mt-3 flex flex-col gap-2 border-l-2 border-primary-fixed pl-4">
             <div className="text-xs text-text-muted tracking-wide">{t("form_severity_per_allergy", lang)}</div>
-            {nonNoneAllergies.map((a) => (
-              <div key={a} className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-sm font-medium">{a}</span>
-                <div className="flex gap-1.5">
-                  {SEVERITY_ORDER.map((sev) => (
-                    <Chip
-                      key={sev}
-                      label={t(
-                        sev === "mild" ? "form_severity_mild"
-                          : sev === "moderate" ? "form_severity_moderate"
-                          : "form_severity_anaphylaxis",
-                        lang,
-                      )}
-                      selected={value.allergy_severity[a] === sev}
-                      onToggle={() => setSeverity(a, sev)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {nonNoneAllergies.map((a) => (
+                <motion.div
+                  key={a}
+                  layout
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                  className="flex items-center justify-between gap-2 flex-wrap"
+                >
+                  <span className="text-sm font-medium">{a}</span>
+                  <div className="flex gap-1.5">
+                    {SEVERITY_ORDER.map((sev) => (
+                      <Chip
+                        key={sev}
+                        label={t(
+                          sev === "mild" ? "form_severity_mild"
+                            : sev === "moderate" ? "form_severity_moderate"
+                            : "form_severity_anaphylaxis",
+                          lang,
+                        )}
+                        selected={value.allergy_severity[a] === sev}
+                        onToggle={() => setSeverity(a, sev)}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-        )}
+        </Reveal>
       </div>
 
       {/* Medications + blood thinner follow-up */}
@@ -211,7 +244,7 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
             />
           ))}
         </div>
-        {onBloodThinner && (
+        <Reveal show={onBloodThinner}>
           <div className="mt-3 border-l-2 border-primary-fixed pl-4">
             <div className="text-xs text-text-muted tracking-wide mb-2">{t("form_blood_thinner_which", lang)}</div>
             <div className="flex flex-wrap gap-2">
@@ -227,7 +260,7 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
               ))}
             </div>
           </div>
-        )}
+        </Reveal>
       </div>
 
       {/* Conditions + condition-specific follow-ups */}
@@ -244,7 +277,7 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
           ))}
         </div>
 
-        {hasDiabetes && (
+        <Reveal show={hasDiabetes}>
           <div className="mt-3 border-l-2 border-primary-fixed pl-4">
             <div className="text-xs text-text-muted tracking-wide mb-2">{t("form_diabetes_type", lang)}</div>
             <div className="flex gap-2">
@@ -263,9 +296,9 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
               ))}
             </div>
           </div>
-        )}
+        </Reveal>
 
-        {hasHeartFailure && (
+        <Reveal show={hasHeartFailure}>
           <div className="mt-3 border-l-2 border-primary-fixed pl-4">
             <div className="text-xs text-text-muted tracking-wide mb-2">{t("form_nyha_class", lang)}</div>
             <div className="flex gap-2">
@@ -281,7 +314,7 @@ export function MedicalInfoForm({ value, onChange, language = "en" }: Props) {
               ))}
             </div>
           </div>
-        )}
+        </Reveal>
       </div>
 
       {/* Smoking — simple boolean, high clinical signal */}
