@@ -68,7 +68,7 @@ export default function AuthVerify() {
         {phase === "ok" && <CircleCheck className="h-9 w-9 text-primary" strokeWidth={1.5} />}
         {phase === "error" && <CircleAlert className="h-9 w-9 text-error" strokeWidth={1.5} />}
         <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
-          Solace · Clinician Terminal
+          Solace Atlas
         </div>
         <p className="text-sm text-ink leading-snug">{message}</p>
         {phase === "error" && (

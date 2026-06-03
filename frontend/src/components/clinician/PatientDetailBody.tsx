@@ -11,6 +11,16 @@ import { WorkupPanel } from "./WorkupPanel";
 import { DispositionPanel } from "./DispositionPanel";
 import { markSeen, sendDischargeSMS } from "../../lib/api";
 
+/** Human-readable wait: 103 → "1h 43m", 45 → "45 min", 0 → "just now". */
+function formatWait(mins: number | null | undefined): string {
+  if (mins == null) return "";
+  if (mins <= 0) return "just now";
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
@@ -107,8 +117,8 @@ export function PatientDetailBody({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="text-sm text-text-muted font-mono">
-          waited {detail.waited_minutes}m · {detail.language.toUpperCase()}
+        <div className="text-sm text-text-muted">
+          {formatWait(detail.waited_minutes)} wait · {detail.language.toUpperCase()}
         </div>
         {showScribeLink && (
           <Link
@@ -122,7 +132,7 @@ export function PatientDetailBody({
       </div>
 
       {/* ESI reconciliation banner — provisional vs refined */}
-      <div className="bg-surface-lowest rounded-lg p-4 shadow-soft">
+      <div className="bg-surface-lowest rounded-xl p-4 ring-1 ring-line/45">
         <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-2">
           Triage acuity
         </div>
@@ -197,7 +207,7 @@ export function PatientDetailBody({
               { k: "shock_index", label: "Shock index" },
               { k: "cv_risk", label: "CV risk" },
             ] as const).map(({ k, label }) => (
-              <div key={k} className="bg-surface-lowest rounded-lg p-3 shadow-soft">
+              <div key={k} className="bg-surface-lowest rounded-xl p-3 ring-1 ring-line/45">
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">{label}</div>
                 <div className="text-lg font-bold tracking-editorial text-ink mt-0.5">
                   {detail.composites[k] ?? "—"}
@@ -262,7 +272,7 @@ export function PatientDetailBody({
 
       {detail.insurance_info && (
         <Section title="Insurance">
-          <div className="bg-surface-lowest rounded-lg p-4 shadow-soft flex flex-col gap-2">
+          <div className="bg-surface-lowest rounded-xl p-4 ring-1 ring-line/45 flex flex-col gap-2">
             {detail.insurance_info.provider && <InsRow label="Insurer" value={detail.insurance_info.provider} primary />}
             {detail.insurance_info.plan_name && <InsRow label="Plan" value={detail.insurance_info.plan_name} />}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">

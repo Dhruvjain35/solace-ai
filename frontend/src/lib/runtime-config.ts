@@ -28,12 +28,18 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     const r = await fetch("/config.json", { cache: "no-store" });
     if (r.ok) {
       const j = await r.json();
+      // In dev, force a relative API base so calls go through the Vite proxy
+      // (vite.config.ts) instead of hitting the prod API cross-origin — the
+      // latter is CORS-blocked from localhost. In prod we honor config.json.
+      const apiBaseUrl = import.meta.env.DEV
+        ? ""
+        : (j.apiBaseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "");
       cached = {
-        apiBaseUrl: j.apiBaseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "",
+        apiBaseUrl,
         publicUrl: j.publicUrl ?? import.meta.env.VITE_PUBLIC_URL ?? "",
       };
-      // Override axios baseURL so existing code in api.ts picks up the runtime value
-      if (cached.apiBaseUrl) api.defaults.baseURL = cached.apiBaseUrl;
+      // Override axios baseURL so existing code in api.ts picks up the runtime value.
+      api.defaults.baseURL = cached.apiBaseUrl;
       return cached;
     }
   } catch {

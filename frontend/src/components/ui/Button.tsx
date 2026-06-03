@@ -2,16 +2,20 @@ import { ButtonHTMLAttributes, forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 
 type Variant = "primary" | "secondary" | "tertiary" | "danger";
+type Shape = "default" | "pill";
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
   fullWidth?: boolean;
   loading?: boolean;
+  // "pill" → fully rounded (the cleaner marketing-surface treatment). Defaults
+  // to "default" (rounded-md) so existing in-app buttons are unchanged.
+  shape?: Shape;
 };
 
-// Rounded md (6px). Tonal layering, no borders on primary. Ghost border on secondary.
+// Tonal layering, no borders on primary. Ghost border on secondary.
 const base =
-  "inline-flex items-center justify-center gap-2 h-12 px-6 rounded-md font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] tracking-[-0.01em] select-none";
+  "inline-flex items-center justify-center gap-2 h-12 px-6 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] tracking-[-0.01em] select-none";
 
 const variants: Record<Variant, string> = {
   primary:
@@ -27,13 +31,14 @@ const variants: Record<Variant, string> = {
 const secondaryRing = "ring-1 ring-line hover:ring-primary/40";
 
 export const Button = forwardRef<HTMLButtonElement, Props>(
-  ({ variant = "primary", fullWidth, loading = false, disabled, className = "", children, ...rest }, ref) => {
+  ({ variant = "primary", fullWidth, loading = false, shape = "default", disabled, className = "", children, ...rest }, ref) => {
     const extra = variant === "secondary" ? secondaryRing : "";
+    const radius = shape === "pill" ? "rounded-full" : "rounded-md";
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={`${base} ${variants[variant]} ${extra} ${fullWidth ? "w-full" : ""} ${className}`}
+        className={`${base} ${radius} ${variants[variant]} ${extra} ${fullWidth ? "w-full" : ""} ${className}`}
         {...rest}
       >
         {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}

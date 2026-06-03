@@ -16,7 +16,7 @@ export const CLINICIAN_DASHBOARD_TOUR: TourDefinition = {
   steps: [
     {
       id: "intro",
-      title: "Welcome to the Clinician Terminal",
+      title: "Welcome to Solace Atlas",
       body: "A two-minute walkthrough of the triage queue, the ESI acuity model, and the clinical tools. You can dismiss any time and restart from the help button.",
     },
     {

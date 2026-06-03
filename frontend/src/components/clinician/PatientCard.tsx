@@ -9,6 +9,16 @@ type Props = {
   index?: number;
 };
 
+/** Human-readable wait: 100 → "1h 40m", 45 → "45m", 0 → "just now". */
+function formatWait(mins: number | null | undefined): string {
+  if (mins == null) return "";
+  if (mins <= 0) return "just now";
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
 /** Patient queue card. Refined ESI (post-vitals) takes visual priority over provisional. */
 export function PatientCard({ patient, onClick, index = 0 }: Props) {
   const flagged = patient.pain_flagged;
@@ -32,12 +42,12 @@ export function PatientCard({ patient, onClick, index = 0 }: Props) {
       transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1], delay: Math.min(index * 0.04, 0.24) }}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.995 }}
-      className={`text-left w-full rounded-lg p-5 shadow-soft hover:shadow-card transition-shadow ${
+      className={`text-left w-full rounded-2xl p-5 shadow-none hover:shadow-soft transition-shadow ${
         activeFlag
-          ? "bg-error/[0.06] ring-2 ring-error/60 animate-pulse"
+          ? "bg-error/[0.05] ring-2 ring-error/50 animate-pulse"
           : flagged
-          ? "bg-error/[0.04]"
-          : "bg-surface-lowest"
+          ? "bg-error/[0.03] ring-1 ring-error/15"
+          : "bg-surface-lowest ring-1 ring-line/45"
       }`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -67,18 +77,18 @@ export function PatientCard({ patient, onClick, index = 0 }: Props) {
               </span>
             )}
           </div>
-          <div className="text-[14px] text-ink line-clamp-3 font-mono leading-relaxed">
+          <div className="text-[14px] text-ink/90 line-clamp-3 leading-relaxed">
             {patient.clinician_prebrief || <span className="text-text-muted">No pre-brief yet</span>}
           </div>
-          <div className="text-[11px] text-text-muted font-mono tracking-wide flex items-center gap-3">
-            <span>waited {patient.waited_minutes}m</span>
-            <span aria-hidden>·</span>
+          <div className="text-[12px] text-text-muted flex items-center gap-2.5">
+            <span>{formatWait(patient.waited_minutes)} wait</span>
+            <span aria-hidden className="text-line">·</span>
             <span>{patient.language.toUpperCase()}</span>
             {displayConf != null && (
               <>
-                <span aria-hidden>·</span>
+                <span aria-hidden className="text-line">·</span>
                 <span title={refined ? "ML-ensemble confidence" : patient.confidence_band || ""}>
-                  conf {displayConf.toFixed(2)}
+                  {Math.round(displayConf * 100)}% conf
                 </span>
               </>
             )}

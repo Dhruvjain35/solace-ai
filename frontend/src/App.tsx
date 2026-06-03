@@ -17,6 +17,7 @@ import PatientDetailPage from "./pages/PatientDetailPage";
 import ClinicianLanding from "./pages/ClinicianLanding";
 import AuthVerify from "./pages/AuthVerify";
 import ShowcaseDemo from "./pages/ShowcaseDemo";
+import MockupStudio from "./pages/MockupStudio";
 import TrustReport from "./pages/TrustReport";
 
 // Per-hospital routes. Rendered once under the bare `/:hospitalId` prefix
@@ -50,6 +51,8 @@ export default function App() {
       <Route path="/clinicians" element={<ClinicianLanding />} />
       {/* Standalone split-screen showcase: patient intake + live clinician dashboard. */}
       <Route path="/showcase" element={<ShowcaseDemo />} />
+      {/* Presentation mockup studio: real app framed in iPhone + desktop, annotated, export-ready. */}
+      <Route path="/mockups" element={<MockupStudio />} />
       {/* Public Solace Trust Report — aggregate transparency, no auth, no PHI. */}
       <Route path="/trust" element={<TrustReport />} />
       <Route path="/voice" element={<VoiceAgent />} />

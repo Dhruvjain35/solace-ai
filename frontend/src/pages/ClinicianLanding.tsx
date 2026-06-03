@@ -128,80 +128,90 @@ export default function ClinicianLanding() {
   return (
     <div className="min-h-screen bg-surface text-ink font-sans">
       {/* Top bar */}
-      <header className="flex items-center justify-between w-full max-w-6xl mx-auto px-6 py-5">
-        <div className="flex items-center gap-2">
-          <Stethoscope size={22} className="text-primary" aria-hidden />
-          <span className="text-lg font-semibold tracking-editorial">Solace</span>
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-surface/70 border-b border-line/60">
+        <div className="flex items-center justify-between w-full max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Stethoscope size={22} className="text-primary" aria-hidden />
+            <span className="text-lg font-semibold tracking-editorial">Solace</span>
+          </div>
+          <Button variant="secondary" shape="pill" onClick={() => navigate("/demo/clinician")}>
+            Clinician sign-in
+          </Button>
         </div>
-        <Button variant="secondary" onClick={() => navigate("/demo/clinician")}>
-          Clinician sign-in
-        </Button>
       </header>
 
-      {/* Hero */}
-      <section className="w-full max-w-6xl mx-auto px-6 pt-12 pb-20 md:pt-20 md:pb-28">
-        <div className="max-w-3xl">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-primary-dim text-primary text-sm font-medium">
-            <ShieldCheck size={14} aria-hidden />
-            HIPAA-aligned clinical AI
-          </span>
-          <h1 className="mt-6 text-4xl md:text-6xl font-semibold leading-[1.05] tracking-editorial-tight">
-            The doctor&apos;s pal for the whole encounter.
-          </h1>
-          <p className="mt-6 text-lg md:text-xl text-text-muted leading-relaxed">
-            Solace listens, triages, charts, and clears the administrative
-            backlog — so your clinicians spend their attention on patients,
-            not paperwork.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 mt-9">
-            <Button onClick={() => navigate("/demo/clinician")}>
-              Open the clinician dashboard
-              <ArrowRight size={16} aria-hidden />
-            </Button>
-            <Button variant="secondary" onClick={() => navigate("/demo")}>
-              See the patient experience
-            </Button>
+      {/* Hero — clean teal-tinted band with a decorative brand orb */}
+      <section className="relative overflow-hidden hero-surface">
+        {/* decorative orb (purely ornamental) */}
+        <div
+          aria-hidden
+          className="hero-blob pointer-events-none absolute -top-40 -right-32 w-[640px] h-[640px]"
+        />
+        <div className="relative w-full max-w-6xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32">
+          <div className="max-w-3xl">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-lowest/80 ring-1 ring-line text-primary text-sm font-semibold">
+              <ShieldCheck size={14} aria-hidden />
+              HIPAA-aligned clinical AI
+            </span>
+            <h1 className="mt-7 font-display font-semibold text-5xl md:text-7xl leading-[1.02] tracking-[-0.025em]">
+              The doctor&apos;s pal for the whole encounter.
+            </h1>
+            <p className="mt-7 text-lg md:text-2xl text-text-muted leading-relaxed max-w-2xl">
+              Solace listens, triages, charts, and clears the administrative
+              backlog — so your clinicians spend their attention on patients,
+              not paperwork.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 mt-10">
+              <Button shape="pill" onClick={() => navigate("/demo/clinician")}>
+                Open the clinician dashboard
+                <ArrowRight size={16} aria-hidden />
+              </Button>
+              <Button variant="secondary" shape="pill" onClick={() => navigate("/demo")}>
+                See the patient experience
+              </Button>
+            </div>
+            <p className="mt-5 text-sm text-text-muted">No install — patients scan and go.</p>
           </div>
         </div>
       </section>
 
       {/* Value props */}
-      <section className="w-full bg-surface-low">
-        <div className="w-full max-w-6xl mx-auto px-6 py-20">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-editorial">
+      <section className="w-full bg-surface">
+        <div className="w-full max-w-6xl mx-auto px-6 py-24">
+          <h2 className="font-display font-semibold text-3xl md:text-5xl tracking-[-0.02em] leading-tight">
             One platform across the visit
           </h2>
-          <p className="mt-3 text-text-muted max-w-2xl leading-relaxed">
+          <p className="mt-4 text-lg text-text-muted max-w-2xl leading-relaxed">
             Every Solace surface writes back to the chart and leaves an
             immutable audit trail.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-14">
             {VALUE_PROPS.map(({ icon: Icon, title, body }) => (
-              <Card
+              <div
                 key={title}
-                tone="lowest"
-                className="flex flex-col gap-3 transition-shadow duration-200 hover:shadow-lifted"
+                className="card-clean rounded-2xl p-7 flex flex-col gap-4 transition-all duration-200 hover:shadow-card hover:-translate-y-0.5"
               >
-                <span className="inline-flex items-center justify-center w-11 h-11 rounded-md bg-primary-dim text-primary">
-                  <Icon size={20} aria-hidden />
+                <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-dim text-primary">
+                  <Icon size={22} aria-hidden />
                 </span>
-                <h3 className="text-lg font-semibold tracking-editorial">{title}</h3>
+                <h3 className="text-xl font-semibold tracking-editorial">{title}</h3>
                 <p className="text-text-muted leading-relaxed">{body}</p>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Get started — two paths: start a new practice, or join an existing one */}
-      <section id="get-started" className="w-full max-w-6xl mx-auto px-6 py-20">
+      <section id="get-started" className="w-full bg-surface-low">
+       <div className="w-full max-w-6xl mx-auto px-6 py-24">
         {/* Path toggle */}
-        <div className="inline-flex p-1 rounded-lg bg-surface-low ring-1 ring-line mb-10">
+        <div className="inline-flex p-1 rounded-full bg-surface-lowest ring-1 ring-line mb-12">
           <button
             type="button"
             onClick={() => setPath("start")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
-              path === "start" ? "bg-surface-lowest text-ink shadow-soft" : "text-text-muted hover:text-ink"
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+              path === "start" ? "bg-primary text-white shadow-soft" : "text-text-muted hover:text-ink"
             }`}
           >
             <Building2 size={15} aria-hidden />
@@ -210,8 +220,8 @@ export default function ClinicianLanding() {
           <button
             type="button"
             onClick={() => setPath("join")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
-              path === "join" ? "bg-surface-lowest text-ink shadow-soft" : "text-text-muted hover:text-ink"
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+              path === "join" ? "bg-primary text-white shadow-soft" : "text-text-muted hover:text-ink"
             }`}
           >
             <LogIn size={15} aria-hidden />
@@ -223,11 +233,11 @@ export default function ClinicianLanding() {
           <div>
             {path === "start" ? (
               <>
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-secondary-container text-secondary text-sm font-medium">
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary-container text-secondary text-sm font-semibold">
                   <Building2 size={14} aria-hidden />
                   For hospitals &amp; solo practices
                 </span>
-                <h2 className="mt-5 text-2xl md:text-3xl font-semibold tracking-editorial">
+                <h2 className="mt-5 font-display text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
                   Spin up your own workspace
                 </h2>
                 <p className="mt-3 text-text-muted leading-relaxed">
@@ -251,11 +261,11 @@ export default function ClinicianLanding() {
               </>
             ) : (
               <>
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-secondary-container text-secondary text-sm font-medium">
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary-container text-secondary text-sm font-semibold">
                   <LogIn size={14} aria-hidden />
                   For clinicians
                 </span>
-                <h2 className="mt-5 text-2xl md:text-3xl font-semibold tracking-editorial">
+                <h2 className="mt-5 font-display text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
                   Join your hospital&apos;s workspace
                 </h2>
                 <p className="mt-3 text-text-muted leading-relaxed">
@@ -280,7 +290,7 @@ export default function ClinicianLanding() {
           </div>
 
           {path === "join" ? (
-            <Card tone="lowest" className="flex flex-col gap-5">
+            <Card tone="lowest" radius="xl" className="flex flex-col gap-5">
               {joinSent ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 text-ink">
@@ -314,7 +324,7 @@ export default function ClinicianLanding() {
                       onChange={(e) => setJoinSlug(e.target.value)}
                       placeholder="riverside-general"
                       required
-                      className="w-full h-11 px-3 rounded-md bg-surface-low font-mono text-sm text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="w-full h-11 px-3.5 rounded-lg bg-surface-low font-mono text-sm text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
                     <p className="mt-1 text-xs text-text-muted">
                       The slug from your workspace link, e.g. /h/&lt;slug&gt;.
@@ -333,7 +343,7 @@ export default function ClinicianLanding() {
                       onChange={(e) => setJoinEmail(e.target.value)}
                       placeholder="you@hospital.org"
                       required
-                      className="w-full h-11 px-3 rounded-md bg-surface-low text-sm text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="w-full h-11 px-3.5 rounded-lg bg-surface-low text-sm text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
                   </div>
                   {joinError && (
@@ -341,7 +351,7 @@ export default function ClinicianLanding() {
                       {joinError}
                     </p>
                   )}
-                  <Button type="submit" loading={joinSending} disabled={!joinSlug.trim() || !joinEmail.trim()}>
+                  <Button type="submit" shape="pill" loading={joinSending} disabled={!joinSlug.trim() || !joinEmail.trim()}>
                     {joinSending ? "Sending link" : "Email me a sign-in link"}
                     {!joinSending && <ArrowRight size={16} aria-hidden />}
                   </Button>
@@ -349,7 +359,7 @@ export default function ClinicianLanding() {
               )}
             </Card>
           ) : (
-          <Card tone="lowest" className="flex flex-col gap-5">
+          <Card tone="lowest" radius="xl" className="flex flex-col gap-5">
             {created ? (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-success">
@@ -416,7 +426,7 @@ export default function ClinicianLanding() {
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-1">
                   {!created.admin_invited && (
-                    <Button onClick={() => navigate(created.clinician_path)}>
+                    <Button shape="pill" onClick={() => navigate(created.clinician_path)}>
                       Open clinician workspace
                       <ArrowRight size={16} aria-hidden />
                     </Button>
@@ -454,7 +464,7 @@ export default function ClinicianLanding() {
                     onChange={(e) => setHospitalName(e.target.value)}
                     placeholder="Riverside General Hospital"
                     required
-                    className="w-full h-11 px-3 rounded-md bg-surface-low text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="w-full h-11 px-3.5 rounded-lg bg-surface-low text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
                 </div>
 
@@ -474,7 +484,7 @@ export default function ClinicianLanding() {
                     onChange={(e) => setAdminEmail(e.target.value)}
                     placeholder="you@hospital.org"
                     required
-                    className="w-full h-11 px-3 rounded-md bg-surface-low text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="w-full h-11 px-3.5 rounded-lg bg-surface-low text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
                   <p className="mt-1 text-xs text-text-muted">
                     You become the workspace admin. We email you a single-use sign-in link to
@@ -496,7 +506,7 @@ export default function ClinicianLanding() {
                     value={requestedSlug}
                     onChange={(e) => setRequestedSlug(e.target.value)}
                     placeholder="riverside-general"
-                    className="w-full h-11 px-3 rounded-md bg-surface-low font-mono text-sm text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="w-full h-11 px-3.5 rounded-lg bg-surface-low font-mono text-sm text-ink ring-1 ring-line placeholder:text-text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
                   <p className="mt-1 text-xs text-text-muted">
                     Becomes /h/&lt;slug&gt;/clinician. We make it unique
@@ -510,7 +520,7 @@ export default function ClinicianLanding() {
                   </p>
                 )}
 
-                <Button type="submit" loading={provisioning} disabled={!hospitalName.trim()}>
+                <Button type="submit" shape="pill" loading={provisioning} disabled={!hospitalName.trim()}>
                   {provisioning ? "Creating workspace" : "Create workspace"}
                   {!provisioning && <ArrowRight size={16} aria-hidden />}
                 </Button>
@@ -519,27 +529,37 @@ export default function ClinicianLanding() {
           </Card>
           )}
         </div>
+       </div>
       </section>
 
-      {/* Sign-in CTA */}
-      <section className="w-full bg-primary text-white">
-        <div className="w-full max-w-6xl mx-auto px-6 py-16 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-editorial">
-              Ready when your shift is
-            </h2>
-            <p className="mt-2 text-white/70">
-              Sign in to the clinician dashboard and pick up the waiting room.
-            </p>
+      {/* Sign-in CTA — inset rounded gradient panel */}
+      <section className="w-full bg-surface">
+        <div className="w-full max-w-6xl mx-auto px-6 py-20">
+          <div className="relative overflow-hidden rounded-3xl bg-primary bg-primary-gradient text-white px-8 py-14 md:px-14 md:py-16 shadow-card">
+            <div
+              aria-hidden
+              className="hero-blob pointer-events-none absolute -bottom-40 -right-24 w-[460px] h-[460px] opacity-30"
+            />
+            <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+              <div className="max-w-xl">
+                <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-[-0.02em] leading-tight">
+                  Ready when your shift is
+                </h2>
+                <p className="mt-4 text-lg text-white/75 leading-relaxed">
+                  Sign in to the clinician dashboard and pick up the waiting room.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                shape="pill"
+                onClick={() => navigate("/demo/clinician")}
+                className="bg-white text-primary hover:bg-white/90 shrink-0"
+              >
+                Clinician sign-in
+                <ArrowRight size={16} aria-hidden />
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => navigate("/demo/clinician")}
-            className="bg-white text-primary hover:bg-white/90 shrink-0"
-          >
-            Clinician sign-in
-            <ArrowRight size={16} aria-hidden />
-          </Button>
         </div>
       </section>
 

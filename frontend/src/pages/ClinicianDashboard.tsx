@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, ShieldCheck, Activity, Clock3, Bell, Workflow as WorkflowIcon, Mic, FileText, Inbox, BookOpen, Network, Maximize2, AlertCircle, Users2, Mail } from "lucide-react";
-import { PatientCard } from "../components/clinician/PatientCard";
+import { motion } from "framer-motion";
+import { X, ShieldCheck, Activity, Clock3, Bell, Workflow as WorkflowIcon, Mic, FileText, Inbox, BookOpen, Network, AlertCircle, Mail } from "lucide-react";
 import { PainAlarm } from "../components/clinician/PainAlarm";
-import { PatientDetailBody } from "../components/clinician/PatientDetailBody";
+import { StudioBoard } from "../components/clinician/StudioBoard";
 import { Button } from "../components/ui/Button";
 import { TourLauncher } from "../components/tour/TourLauncher";
 import OnboardingWizard from "../components/clinician/OnboardingWizard";
@@ -13,7 +12,6 @@ import { usePollingPatients } from "../hooks/usePollingPatients";
 import {
   buildEHRLaunchURL,
   getOnboarding,
-  getPatientDetail,
   listEHRVendors,
   loginClinician,
   requestMagicLink,
@@ -29,7 +27,6 @@ import {
   saveSession,
   type Session,
 } from "../lib/session";
-import type { PatientDetail } from "../types";
 
 const DEMO_CLINICIANS = ["Dr. Chen", "Dr. Patel", "Dr. Kim"];
 
@@ -55,8 +52,6 @@ export default function ClinicianDashboard() {
   // First-run admin setup wizard, gated by the workspace's onboarded flag.
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"waiting" | "all">("waiting");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PatientDetail | null>(null);
   const [ehrVendors, setEhrVendors] = useState<EHRVendorOption[]>([]);
 
   // Load EHR vendor list for the Sign-in-with buttons. Cheap GET, no auth needed.
@@ -176,13 +171,6 @@ export default function ClinicianDashboard() {
     setSession(null);
   }
 
-  useEffect(() => {
-    if (!selectedId || !session) return;
-    getPatientDetail(hospitalId, selectedId)
-      .then(setDetail)
-      .catch(() => setDetail(null));
-  }, [selectedId, session, hospitalId]);
-
   // Admins of a real (non-demo) workspace see the setup wizard until they
   // complete it. Non-admins and the demo workspace never see it.
   useEffect(() => {
@@ -239,7 +227,7 @@ export default function ClinicianDashboard() {
         >
           <div>
             <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold mb-1">
-              Solace · Clinician Terminal
+              Solace Atlas
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
             <p className="text-[13px] text-text-muted mt-1.5 leading-snug">
@@ -420,14 +408,14 @@ export default function ClinicianDashboard() {
   }
 
   return (
-    <div className="min-h-full grid grid-cols-[260px_1fr] gap-0">
+    <div className="min-h-full grid grid-cols-[268px_1fr] gap-0">
       {/* Self-contained product tour. Auto-runs once per clinician, replayable
           from the help button. Anchors are the data-tour attributes below. */}
       <TourLauncher tourId="clinician-dashboard-v1" subjectId={session.clinician_id} />
       {showOnboarding && (
         <OnboardingWizard hospitalId={hospitalId} onDone={() => setShowOnboarding(false)} />
       )}
-      <aside className="bg-surface-low p-5 flex flex-col gap-5 min-h-screen border-r border-line">
+      <aside className="bg-surface-low p-6 flex flex-col gap-6 min-h-screen border-r border-line/70">
         <div>
           <img
             src="/solace-logo.png"
@@ -436,7 +424,7 @@ export default function ClinicianDashboard() {
             draggable={false}
           />
           <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mt-2">
-            Clinician Terminal
+            Atlas
           </p>
         </div>
 
@@ -496,7 +484,7 @@ export default function ClinicianDashboard() {
             Queue
           </div>
           <button
-            className={`text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === "waiting"
                 ? "bg-primary-fixed text-primary"
                 : "text-text-muted hover:bg-surface-lowest"
@@ -504,12 +492,12 @@ export default function ClinicianDashboard() {
             onClick={() => setStatusFilter("waiting")}
           >
             <span>Waiting</span>
-            <span className="ml-2 text-[11px] font-mono">
+            <span className="ml-2 text-[12px] text-text-muted font-semibold">
               {patients.filter((p) => p.status === "waiting").length}
             </span>
           </button>
           <button
-            className={`text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === "all"
                 ? "bg-primary-fixed text-primary"
                 : "text-text-muted hover:bg-surface-lowest"
@@ -517,7 +505,7 @@ export default function ClinicianDashboard() {
             onClick={() => setStatusFilter("all")}
           >
             <span>All</span>
-            <span className="ml-2 text-[11px] font-mono">{patients.length}</span>
+            <span className="ml-2 text-[12px] text-text-muted font-semibold">{patients.length}</span>
           </button>
         </div>
 
@@ -527,37 +515,37 @@ export default function ClinicianDashboard() {
           </div>
           <Link
             to={`/${hospitalId}/clinician/scribe`}
-            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+            className="text-left px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <Mic size={14} /> Ambient scribe
           </Link>
           <Link
             to={`/${hospitalId}/clinician/inbox`}
-            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+            className="text-left px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <Inbox size={14} /> Inbox + admin
           </Link>
           <Link
             to={`/${hospitalId}/clinician/letters`}
-            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+            className="text-left px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <FileText size={14} /> Letters & forms
           </Link>
           <Link
             to={`/${hospitalId}/clinician/tools`}
-            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+            className="text-left px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <BookOpen size={14} /> Evidence + EWS + HCC + Handoff
           </Link>
           <Link
             to={`/${hospitalId}/clinician/ops`}
-            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+            className="text-left px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <Network size={14} /> Portal + Cohort + Sepsis + Telehealth + HL7
           </Link>
           <Link
             to={`/${hospitalId}/clinician/workflows`}
-            className="text-left px-3 py-2 rounded-md text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
+            className="text-left px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-surface-lowest inline-flex items-center gap-2"
           >
             <WorkflowIcon size={14} /> Workflows
           </Link>
@@ -585,7 +573,7 @@ export default function ClinicianDashboard() {
                 alert("Reset failed: " + (e?.response?.data?.detail || e.message));
               }
             }}
-            className="text-[11px] text-text-muted hover:text-error font-mono tracking-[0.1em] uppercase py-1 transition-colors"
+            className="text-[11px] text-text-muted hover:text-error font-semibold py-1 transition-colors"
             title="Clears non-canonical patients and resets the 5 seeded ones"
           >
             Reset demo
@@ -593,17 +581,9 @@ export default function ClinicianDashboard() {
         )}
       </aside>
 
-      <main
-        className="p-8 relative"
-        style={{
-          background:
-            "radial-gradient(1200px 600px at 20% -10%, rgba(203,227,233,0.25) 0%, transparent 60%), " +
-            "radial-gradient(1000px 500px at 100% 100%, rgba(203,227,233,0.18) 0%, transparent 55%), " +
-            "#F8F9F9",
-        }}
-      >
+      <main className="p-8 lg:p-10 relative bg-surface-lowest">
         {/* Summary stat strip — info-dense + scannable. Refresh on every poll. */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6" data-tour="stat-strip">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8" data-tour="stat-strip">
           <StatTile
             icon={Activity}
             label="Patients waiting"
@@ -618,8 +598,8 @@ export default function ClinicianDashboard() {
           />
           <StatTile
             icon={Clock3}
-            label="Avg wait (min)"
-            value={statBar.avgWaitMinutes}
+            label="Avg wait"
+            value={formatWaitShort(statBar.avgWaitMinutes)}
             tone="muted"
           />
           <StatTile
@@ -670,113 +650,28 @@ export default function ClinicianDashboard() {
             <span className="font-medium">{error}</span>
           </div>
         )}
-        {loading && patients.length === 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-[124px] rounded-lg bg-surface-lowest shadow-soft animate-pulse"
-              />
-            ))}
-          </div>
-        )}
-        {!loading && !error && patients.length === 0 && (
-          <div className="flex flex-col items-center text-center gap-3 py-24 px-6">
-            <div className="h-12 w-12 rounded-full bg-primary-fixed text-primary flex items-center justify-center">
-              <Users2 size={22} aria-hidden />
-            </div>
-            <div className="text-lg font-semibold tracking-tight text-ink">
-              {statusFilter === "waiting" ? "No waiting patients" : "No patients yet"}
-            </div>
-            <div className="text-sm text-text-muted max-w-xs leading-relaxed">
-              Share the QR code in the sidebar for patients to check in. New arrivals appear here
-              automatically.
-            </div>
-          </div>
-        )}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-tour="patient-queue">
-          {patients.map((p, i) => (
-            <PatientCard
-              key={p.patient_id}
-              patient={p}
-              index={i}
-              onClick={() => openWorkspace(p.patient_id)}
-            />
-          ))}
-        </div>
+        <StudioBoard
+          hospitalId={hospitalId}
+          patients={patients}
+          loading={loading}
+          authenticated={authenticated}
+          clinicianId={session.clinician_id}
+        />
       </main>
-
-      <AnimatePresence>
-        {selectedId && (
-          <motion.aside
-            key={selectedId}
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            data-tour="queue-sidebar"
-            className="fixed top-0 right-0 h-full w-full lg:w-[640px] bg-surface border-l border-line shadow-lifted overflow-y-auto z-50 p-6"
-          >
-            <div className="flex items-center justify-between mb-4 gap-3">
-              <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
-                  Patient detail
-                </div>
-                <h2 className="text-2xl font-bold tracking-tight mt-0.5 truncate">
-                  {detail?.name || "Loading…"}
-                </h2>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {detail && (
-                  <Link
-                    to={`/${hospitalId}/clinician/patient/${detail.patient_id}`}
-                    title="Open as full page"
-                    aria-label="Open as full page"
-                    className="w-10 h-10 rounded-md hover:bg-surface-low flex items-center justify-center text-text-muted hover:text-ink transition-colors"
-                  >
-                    <Maximize2 size={18} />
-                  </Link>
-                )}
-                <button
-                  onClick={() => {
-                    setSelectedId(null);
-                    setDetail(null);
-                  }}
-                  aria-label="Close"
-                  className="w-10 h-10 rounded-md hover:bg-surface-low flex items-center justify-center text-text-muted hover:text-ink transition-colors"
-                >
-                  <X size={22} />
-                </button>
-              </div>
-            </div>
-
-            {!detail ? (
-              <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading patient detail">
-                <div className="h-24 rounded-lg bg-surface-low animate-pulse" />
-                <div className="h-40 rounded-lg bg-surface-low animate-pulse" />
-                <div className="h-32 rounded-lg bg-surface-low animate-pulse" />
-              </div>
-            ) : (
-              <PatientDetailBody
-                detail={detail}
-                hospitalId={hospitalId}
-                authenticated={authenticated}
-                onDetailChange={(updater) => setDetail((d) => updater(d))}
-                onAfterMarkSeen={async () => {
-                  setSelectedId(null);
-                  setDetail(null);
-                  await refetch();
-                }}
-              />
-            )}
-          </motion.aside>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------------
+
+/** Compact human-readable wait for the stat strip: 100 → "1h 40m", 45 → "45m". */
+function formatWaitShort(mins: number): string {
+  if (!mins || mins <= 0) return "—";
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 
 function StatTile({
   icon: Icon,
@@ -795,8 +690,8 @@ function StatTile({
     error: "text-error bg-error-container",
   }[tone];
   return (
-    <div className="bg-surface-lowest rounded-lg p-3.5 shadow-card flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-md flex items-center justify-center shrink-0 ${toneClasses}`}>
+    <div className="bg-surface-lowest rounded-xl p-4 ring-1 ring-line/45 flex items-center gap-3">
+      <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${toneClasses}`}>
         <Icon size={18} aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
