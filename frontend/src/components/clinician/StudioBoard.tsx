@@ -373,11 +373,17 @@ function FeatureCard({
   const Icon = feature.icon;
   const reduce = useReducedMotion();
   return (
-    <section
+    <motion.section
+      // layout="position" glides the card to its new slot during live drag-reorder
+      // (and as neighbors make room) WITHOUT animating size — collapse height stays
+      // owned by the body's AnimatePresence below, so the two never fight. Disabled
+      // under reduced-motion.
+      layout={reduce ? false : "position"}
+      transition={{ layout: { duration: reduce ? 0 : 0.22, ease: [0.4, 0, 0.2, 1] } }}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className={`card-clean rounded-2xl overflow-hidden flex flex-col transition-all ${
+      className={`card-clean rounded-2xl overflow-hidden flex flex-col transition-[opacity,box-shadow] ${
         dragging ? "opacity-40 ring-2 ring-primary/50" : ""
       } ${collapsed ? "xl:col-span-2" : ""}`}
     >
@@ -427,7 +433,7 @@ function FeatureCard({
           </motion.div>
         )}
       </AnimatePresence>
-    </section>
+    </motion.section>
   );
 }
 
