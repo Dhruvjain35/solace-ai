@@ -179,15 +179,21 @@ export function StudioBoard({
     setTagIds((prev) => prev.filter((x) => x !== id));
     setActiveId((cur) => (cur === id ? null : cur));
   }
+  // Live reorder: as the dragged card ENTERS another card, splice it into that
+  // slot immediately so the board reflows under the cursor (the Robinhood-Legend
+  // "panels make room" feel). dragId is kept until the drag ends — finalizing only
+  // on drop felt insensitive because nothing moved until you released. Fires on
+  // dragEnter (once per card) rather than dragOver (continuous) to avoid thrash.
   function reorder(targetId: string) {
     if (!dragId || dragId === targetId) return;
     setCards((prev) => {
+      if (prev.indexOf(dragId) === -1) return prev;
+      const idx = prev.indexOf(targetId);
+      if (idx === -1) return prev;
       const next = prev.filter((c) => c !== dragId);
-      const idx = next.indexOf(targetId);
-      next.splice(idx < 0 ? next.length : idx, 0, dragId);
+      next.splice(next.indexOf(targetId), 0, dragId);
       return next;
     });
-    setDragId(null);
   }
 
   return (
@@ -314,8 +320,9 @@ export function StudioBoard({
                 dragging={dragId === id}
                 onDragStart={() => setDragId(id)}
                 onDragEnd={() => setDragId(null)}
+                onDragEnter={() => reorder(id)}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={() => reorder(id)}
+                onDrop={() => setDragId(null)}
                 onRemove={() => removeCard(id)}
               >
                 <CardErrorBoundary key={`${id}-${activeId ?? "none"}`} label={f.label}>
@@ -346,6 +353,7 @@ function FeatureCard({
   onRemove,
   onDragStart,
   onDragEnd,
+  onDragEnter,
   onDragOver,
   onDrop,
   dragging,
@@ -357,6 +365,7 @@ function FeatureCard({
   onRemove: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onDragEnter: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: () => void;
   dragging: boolean;
@@ -365,6 +374,7 @@ function FeatureCard({
   const reduce = useReducedMotion();
   return (
     <section
+      onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={`card-clean rounded-2xl overflow-hidden flex flex-col transition-all ${
