@@ -1,7 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Activity,
   BookOpen,
+  ChevronDown,
   ClipboardList,
   FileSignature,
   FileText,
@@ -69,20 +71,42 @@ const DEFAULT_CARDS = ["queue", "overview", "scribe"];
 
 const storageKey = (clinicianId: string) => `solace-atlas-board-${clinicianId}`;
 
-function loadCards(clinicianId: string): string[] {
+type Board = { cards: string[]; collapsed: Record<string, boolean> };
+
+const validCards = (arr: unknown[]): string[] =>
+  arr.filter((id): id is string => typeof id === "string" && !!FEATURE_MAP[id]);
+
+// Loads the persisted board. v2 format is `{ v, cards, collapsed }`; the legacy v1
+// format was a bare `string[]` of card ids — we still read it so a clinician's saved
+// layout is never wiped on upgrade. Collapsed keys are always pruned to the validated
+// cards + FEATURE_MAP, so stale ids self-heal. A malformed `collapsed` never discards
+// cards. Any failure (corrupt/blocked storage) falls back to the default board.
+function loadBoard(clinicianId: string): Board {
   try {
     const raw = localStorage.getItem(storageKey(clinicianId));
     if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        const valid = arr.filter((id) => typeof id === "string" && FEATURE_MAP[id]);
-        if (valid.length) return valid;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cards = validCards(parsed);
+        return { cards: cards.length ? cards : DEFAULT_CARDS, collapsed: {} };
+      }
+      if (parsed && Array.isArray(parsed.cards)) {
+        const cards = validCards(parsed.cards);
+        const safeCards = cards.length ? cards : DEFAULT_CARDS;
+        const collapsed: Record<string, boolean> = {};
+        const src = parsed.collapsed;
+        if (src && typeof src === "object") {
+          for (const [id, v] of Object.entries(src)) {
+            if (FEATURE_MAP[id] && safeCards.includes(id) && typeof v === "boolean") collapsed[id] = v;
+          }
+        }
+        return { cards: safeCards, collapsed };
       }
     }
   } catch {
     /* ignore corrupt layout */
   }
-  return DEFAULT_CARDS;
+  return { cards: DEFAULT_CARDS, collapsed: {} };
 }
 
 function formatWait(mins: number | null | undefined): string {
@@ -107,20 +131,33 @@ export function StudioBoard({
   authenticated: boolean;
   clinicianId: string;
 }) {
-  const [cards, setCards] = useState<string[]>(() => loadCards(clinicianId));
+  const [cards, setCards] = useState<string[]>(() => loadBoard(clinicianId).cards);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => loadBoard(clinicianId).collapsed);
   const [query, setQuery] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
 
+  // One atomic write carries both card order and collapsed state (v2 object format).
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey(clinicianId), JSON.stringify(cards));
+      localStorage.setItem(storageKey(clinicianId), JSON.stringify({ v: 2, cards, collapsed }));
     } catch {
       /* storage full / blocked — non-fatal */
     }
-  }, [cards, clinicianId]);
+  }, [cards, collapsed, clinicianId]);
+
+  const toggleCollapse = (id: string) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
+  function removeCard(id: string) {
+    setCards((prev) => prev.filter((c) => c !== id));
+    setCollapsed((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
 
   const byId = useMemo(
     () => Object.fromEntries(patients.map((p) => [p.patient_id, p])) as Record<string, PatientSummary>,
@@ -263,7 +300,7 @@ export function StudioBoard({
 
       {/* Board — one provider feeds every patient-bound card */}
       <PatientWorkspaceProvider hospitalId={hospitalId} patientId={activeId || ""} authenticated={authenticated}>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-2 auto-rows-min gap-5 items-start">
           {cards.map((id) => {
             const f = FEATURE_MAP[id];
             if (!f) return null;
@@ -272,22 +309,26 @@ export function StudioBoard({
               <FeatureCard
                 key={id}
                 feature={f}
+                collapsed={!!collapsed[id]}
+                onToggleCollapse={() => toggleCollapse(id)}
                 dragging={dragId === id}
                 onDragStart={() => setDragId(id)}
                 onDragEnd={() => setDragId(null)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => reorder(id)}
-                onRemove={() => setCards((prev) => prev.filter((c) => c !== id))}
+                onRemove={() => removeCard(id)}
               >
-                {f.kind === "queue" ? (
-                  <QueueCardBody patients={patients} loading={loading} activeId={activeId} onSelect={tagPatient} />
-                ) : activeId && Comp ? (
-                  <Suspense fallback={<CardSpinner />}>
-                    <Comp />
-                  </Suspense>
-                ) : (
-                  <CardEmpty label={f.label} />
-                )}
+                <CardErrorBoundary key={`${id}-${activeId ?? "none"}`} label={f.label}>
+                  {f.kind === "queue" ? (
+                    <QueueCardBody patients={patients} loading={loading} activeId={activeId} onSelect={tagPatient} />
+                  ) : activeId && Comp ? (
+                    <Suspense fallback={<CardSpinner />}>
+                      <Comp />
+                    </Suspense>
+                  ) : (
+                    <CardEmpty label={f.label} />
+                  )}
+                </CardErrorBoundary>
               </FeatureCard>
             );
           })}
@@ -300,6 +341,8 @@ export function StudioBoard({
 function FeatureCard({
   feature,
   children,
+  collapsed,
+  onToggleCollapse,
   onRemove,
   onDragStart,
   onDragEnd,
@@ -309,6 +352,8 @@ function FeatureCard({
 }: {
   feature: Feature;
   children: React.ReactNode;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   onRemove: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -317,13 +362,14 @@ function FeatureCard({
   dragging: boolean;
 }) {
   const Icon = feature.icon;
+  const reduce = useReducedMotion();
   return (
     <section
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={`card-clean rounded-2xl overflow-hidden flex flex-col transition-all ${
         dragging ? "opacity-40 ring-2 ring-primary/50" : ""
-      }`}
+      } ${collapsed ? "xl:col-span-2" : ""}`}
     >
       <header
         draggable
@@ -334,16 +380,43 @@ function FeatureCard({
         <GripVertical size={14} className="text-text-muted shrink-0" aria-hidden />
         <Icon size={15} className="text-primary shrink-0" aria-hidden />
         <span className="text-sm font-semibold truncate">{feature.label}</span>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${feature.label}`}
-          className="ml-auto h-7 w-7 rounded-md flex items-center justify-center text-text-muted hover:text-error hover:bg-surface-low transition-colors"
-        >
-          <X size={15} />
-        </button>
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse();
+            }}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? `Expand ${feature.label}` : `Collapse ${feature.label}`}
+            className="h-7 w-7 rounded-md flex items-center justify-center text-text-muted hover:text-ink hover:bg-surface-low transition-colors"
+          >
+            <ChevronDown size={15} className={`transition-transform ${collapsed ? "" : "rotate-180"}`} aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={`Remove ${feature.label}`}
+            className="h-7 w-7 rounded-md flex items-center justify-center text-text-muted hover:text-error hover:bg-surface-low transition-colors"
+          >
+            <X size={15} />
+          </button>
+        </div>
       </header>
-      <div className="p-4 max-h-[560px] overflow-auto">{children}</div>
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.22, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <div className="p-4 max-h-[560px] overflow-auto">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -404,4 +477,31 @@ function CardSpinner() {
       <Loader2 size={18} className="animate-spin mr-2" aria-hidden /> Loading…
     </div>
   );
+}
+
+// Isolates each feature so a single card that throws can never white-screen the
+// whole board (critical: a Scribe/EHR render error must not crash the demo).
+class CardErrorBoundary extends Component<
+  { label: string; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("Atlas feature card crashed:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="text-sm text-text-muted py-8 text-center leading-relaxed">
+          <span className="font-semibold text-ink">{this.props.label}</span> hit a snag and was paused.
+          Try another patient, or remove and re-add this card.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
