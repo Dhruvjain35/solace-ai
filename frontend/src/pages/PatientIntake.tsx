@@ -255,7 +255,9 @@ export default function PatientIntake() {
         } else if (isGatewayTimeout) {
           setError(t("error_network", preferredLanguage));
         } else {
-          setError(detail || e?.message || t("error_generic", preferredLanguage));
+          // USAB-001: never surface raw backend `detail` or JS error text to the
+          // patient — map to a localized, actionable message instead.
+          setError(t("error_generic", preferredLanguage));
         }
       } finally {
         setBusy(false);
@@ -333,7 +335,8 @@ export default function PatientIntake() {
       } else if (!status && /network|fetch|abort|timeout/i.test(e?.message || "")) {
         setError(t("error_network", preferredLanguage));
       } else {
-        setError(e?.response?.data?.detail || e?.message || t("error_generic", preferredLanguage));
+        // USAB-001: localized generic message, not the raw server detail/JS error.
+        setError(t("error_generic", preferredLanguage));
       }
       setStep("followups");
     } finally {

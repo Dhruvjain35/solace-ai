@@ -31,7 +31,7 @@ export function AudioPlayer({ audioUrl }: Props) {
     <div className="sticky bottom-0 w-full bg-surface-lowest/85 backdrop-blur-xl p-4 flex items-center gap-4 shadow-glass">
       <button
         type="button"
-        className="w-12 h-12 rounded-full bg-primary-gradient text-white flex items-center justify-center shadow-soft"
+        className="w-12 h-12 rounded-full bg-primary-gradient text-white flex items-center justify-center shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
         aria-label={playing ? "Pause audio" : "Play audio"}
         onClick={() => {
           const el = ref.current;
