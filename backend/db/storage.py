@@ -729,6 +729,172 @@ def delete_workspace(hospital_id: str, workspace_id: str) -> bool:
     return _workspaces.pop((hospital_id, workspace_id), None) is not None
 
 
+# ---- Per-workspace EHR vendor config ------------------------------------------------
+# Each workspace (a department/clinic/care-team inside a hospital) can bind to its own
+# EHR: vendor id, FHIR base URL, OAuth client_id, authorize/token endpoints, scopes,
+# and — for confidential clients — the AWS Secrets Manager *name* that holds the client
+# secret or private-key PEM. The secret VALUE is never stored here (COMP-007); only the
+# reference name is persisted, and the value is resolved at use time from Secrets Mgr.
+#
+# Table layout (AWS mode): partition key = hospital_id, sort key = workspace_id — the
+# SAME composite key as solace-workspaces, so a config row is structurally owned by the
+# same tenant as its workspace and "list configs for a hospital" is a single .query()
+# on the partition (PERF-004, never .scan()). All key/condition expressions use boto3
+# Key()/Attr() (SEC-009) — no f-string interpolation of caller input. Durable tenant
+# config, so NO TTL. CMK encryption at rest (COMP-003) is a table-level IaC property.
+_ehr_configs: dict[tuple[str, str], dict[str, Any]] = {}  # (hospital_id, workspace_id) -> rec
+
+EHR_CONFIGS_TABLE = "solace-ehr-configs"
+
+
+def put_ehr_config(record: dict[str, Any]) -> None:
+    """Persist (create or overwrite) a workspace EHR-config record.
+
+    Caller (service layer) sets + validates hospital_id and workspace_id. Local mode
+    keys the in-memory store by (hospital_id, workspace_id) so two hospitals can never
+    collide and isolation is structural.
+    """
+    record.setdefault("created_at", _now_iso())
+    if settings.solace_mode == "aws":
+        _boto_table(EHR_CONFIGS_TABLE).put_item(Item=_to_ddb(record))
+        return
+    _ehr_configs[(record["hospital_id"], record["workspace_id"])] = record
+
+
+def get_ehr_config(hospital_id: str, workspace_id: str) -> dict[str, Any] | None:
+    """Fetch one workspace EHR config by its full (hospital_id, workspace_id) key.
+
+    Returns None when no config exists FOR THIS HOSPITAL. A config owned by a different
+    hospital_id is invisible here — the partition key is the owning hospital_id, so a
+    cross-tenant read can never succeed (SEC-008).
+    """
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(EHR_CONFIGS_TABLE).query(
+            KeyConditionExpression=(
+                Key("hospital_id").eq(hospital_id) & Key("workspace_id").eq(workspace_id)
+            ),
+        )
+        items = resp.get("Items", [])
+        return _from_ddb(items[0]) if items else None
+    return _ehr_configs.get((hospital_id, workspace_id))
+
+
+def list_ehr_configs(hospital_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
+    """List every workspace EHR config owned by one hospital, newest first.
+
+    Uses .query() on the hospital_id partition (PERF-004 — never .scan()) with a
+    parameterized Key() expression (SEC-009).
+    """
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(EHR_CONFIGS_TABLE).query(
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+            Limit=limit,
+        )
+        rows = [_from_ddb(i) for i in resp.get("Items", [])]
+    else:
+        rows = [v for (h, _w), v in _ehr_configs.items() if h == hospital_id]
+    rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return rows
+
+
+def update_ehr_config(
+    hospital_id: str, workspace_id: str, updates: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Patch mutable fields on a workspace EHR config, scoped to its owning hospital.
+
+    Returns the updated record, or None if no config exists for this hospital. The DDB
+    ConditionExpression makes the update fail closed if the row is absent, so a
+    cross-tenant or stale id can never silently create a phantom row.
+    """
+    cleaned = _to_ddb(updates)
+    if not cleaned:
+        return get_ehr_config(hospital_id, workspace_id)
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Attr  # noqa: PLC0415
+
+        expr = "SET " + ", ".join(f"#{i}=:{i}" for i in range(len(cleaned)))
+        names = {f"#{i}": k for i, k in enumerate(cleaned.keys())}
+        values = {f":{i}": v for i, v in enumerate(cleaned.values())}
+        try:
+            resp = _boto_table(EHR_CONFIGS_TABLE).update_item(
+                Key={"hospital_id": hospital_id, "workspace_id": workspace_id},
+                UpdateExpression=expr,
+                ExpressionAttributeNames=names,
+                ExpressionAttributeValues=values,
+                ConditionExpression=Attr("workspace_id").exists(),
+                ReturnValues="ALL_NEW",
+            )
+        except Exception as e:  # noqa: BLE001 — ConditionalCheckFailed = not found
+            log.warning("ehr config update failed (missing or cross-tenant): %s", e)
+            return None
+        return _from_ddb(resp.get("Attributes"))
+    existing = _ehr_configs.get((hospital_id, workspace_id))
+    if not existing:
+        return None
+    existing.update(updates)
+    return existing
+
+
+def delete_ehr_config(hospital_id: str, workspace_id: str) -> bool:
+    """Delete a workspace EHR config, scoped to its owning hospital.
+
+    Returns True if a row was removed, False if it did not exist for this hospital.
+    """
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Attr  # noqa: PLC0415
+
+        try:
+            _boto_table(EHR_CONFIGS_TABLE).delete_item(
+                Key={"hospital_id": hospital_id, "workspace_id": workspace_id},
+                ConditionExpression=Attr("workspace_id").exists(),
+            )
+            return True
+        except Exception as e:  # noqa: BLE001 — ConditionalCheckFailed = not found
+            log.warning("ehr config delete failed (missing or cross-tenant): %s", e)
+            return False
+    return _ehr_configs.pop((hospital_id, workspace_id), None) is not None
+
+
+def resolve_secret_value(secret_name: str) -> str | None:
+    """Resolve a client secret / private-key PEM from AWS Secrets Manager BY NAME.
+
+    The per-workspace EHR config stores only the Secrets Manager *name* of a
+    confidential-client secret (COMP-007) — never the value. This is the single
+    db-layer chokepoint (ARCH-002: boto3 stays in db/) that dereferences that name
+    at use time, inside the token exchange.
+
+    Returns the secret string, or None when the name is empty or cannot be
+    resolved (so the caller falls back to public-client / PKCE-only behavior).
+    NEVER logs the secret value or the resolved payload.
+    """
+    if not secret_name:
+        return None
+    if settings.solace_mode != "aws":
+        # Local dev: confidential-client secrets are supplied via env, mirroring the
+        # convention ehr_auth uses for SOLACE_<VENDOR>_PRIVATE_KEY. The env var name
+        # is the configured secret_name upper-cased with non-alnum -> "_".
+        import os  # noqa: PLC0415
+        import re  # noqa: PLC0415
+
+        env_key = re.sub(r"[^A-Z0-9]+", "_", secret_name.upper()).strip("_")
+        raw = os.environ.get(env_key, "")
+        return raw.replace("\\n", "\n").strip() or None
+    try:
+        import boto3  # noqa: PLC0415
+
+        client = boto3.client("secretsmanager", region_name=settings.aws_region)
+        resp = client.get_secret_value(SecretId=secret_name)
+        raw = resp.get("SecretString") or ""
+        return raw.replace("\\n", "\n").strip() or None
+    except Exception as e:  # noqa: BLE001 — NEVER include the secret value in the log
+        log.warning("Secrets Manager resolve failed for a configured EHR secret: %s", type(e).__name__)
+        return None
+
+
 # ---- EHR bulk-export job state ------------------------------------------------------
 # Transient async-job tracking for FHIR Bulk Data $export (ARCH-009: short-TTL
 # DynamoDB in AWS, in-memory dict in local mode). Partition by hospital_id, sort
@@ -837,5 +1003,6 @@ def _reset_for_tests() -> None:
     _notes.clear()
     _appointments.clear()
     _workspaces.clear()
+    _ehr_configs.clear()
     _ehr_bulk_jobs.clear()
     _ehr_subscriptions.clear()

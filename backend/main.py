@@ -14,8 +14,8 @@ from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
     admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, ehr,
-    ehr_auth, ehr_copilot, fhir_bulk, fhir_subscriptions, governance, hospitals, identity,
-    insurance, intake, notes, onboarding, pain_flag, patients, prescriptions, public,
+    ehr_auth, ehr_config, ehr_copilot, fhir_bulk, fhir_subscriptions, governance, hospitals,
+    identity, insurance, intake, notes, onboarding, pain_flag, patients, prescriptions, public,
     sms as sms_router, transcribe, triage, voice, wave4, workflows, workspaces,
 )
 
@@ -150,6 +150,7 @@ app.include_router(fhir_subscriptions.router, prefix="/api/{hospital_id}", tags=
 app.include_router(ehr.router, prefix="/api/{hospital_id}", tags=["ehr"])
 app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflows"])
 app.include_router(workspaces.router, prefix="/api/{hospital_id}", tags=["workspaces"])
+app.include_router(ehr_config.router, prefix="/api/{hospital_id}", tags=["ehr-config"])
 # Wave 1+2 — clinician AI surface (scribe, ddx v2, calculators, screeners,
 # letters, coding, inbox drafts, refills, PA packets, drug check, discharge plan,
 # specialty packs, override audit log).
