@@ -37,9 +37,12 @@ class EHRVendor:
     authorize_url: str  # OAuth2 authorize endpoint (vendor-hosted)
     token_url: str      # OAuth2 token exchange endpoint
     client_id: str      # Solace's registered client_id with this vendor
-    scopes: tuple[str, ...]
+    scopes: tuple[str, ...]              # SMART v1 (`.read`) — the fallback spelling
     sandbox: bool       # True = demo / sandbox / non-PHI environment
     pkce_required: bool = True  # SMART-on-FHIR public clients MUST use PKCE
+    # SMART v2 (`.cruds`) spelling of the same minimum-necessary set. Empty tuple
+    # means "use v1" — callers should prefer v2 when present, fall back to v1.
+    scopes_v2: tuple[str, ...] = ()
 
     def to_public_dict(self) -> dict:
         return {
@@ -49,23 +52,60 @@ class EHRVendor:
             "sandbox": self.sandbox,
         }
 
+    def scope_string(self, *, smart_version: str = "v2") -> str:
+        """Space-delimited scope string for the requested SMART version.
+
+        ``smart_version="v2"`` returns the granular ``resource.cruds`` spelling
+        when the vendor defines one, else transparently falls back to v1. Any
+        other value (``"v1"``) forces the legacy ``.read`` spelling — used as the
+        retry when a tenant's authorize endpoint rejects v2 scopes.
+        """
+        if smart_version == "v2" and self.scopes_v2:
+            return " ".join(self.scopes_v2)
+        return " ".join(self.scopes)
+
 
 # SMART-on-FHIR scope set per https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html
 # `launch/patient` lets the EHR pass us a patient context on launch (when applicable).
 # `online_access` requests a refresh token so we don't have to re-prompt every 30 min.
-_DEFAULT_SCOPES: tuple[str, ...] = (
+#
+# Identity / launch scopes are spelled identically in SMART v1 and v2 — only the
+# resource scopes differ (`.read` in v1 vs the `.cruds` permission string in v2).
+_IDENTITY_SCOPES: tuple[str, ...] = (
     "openid",
     "fhirUser",
     "launch",
     "online_access",
     "profile",
-    "user/Patient.read",
-    "user/Practitioner.read",
-    "user/Encounter.read",
-    "user/Observation.read",
-    "user/MedicationRequest.read",
-    "user/AllergyIntolerance.read",
-    "user/Condition.read",
+)
+
+# Minimum-necessary FHIR resource set Solace reads to power triage / the copilot.
+# All read+search (HIPAA §164.502(b) minimum-necessary): we never request write/
+# create/delete here, so the v2 permission string is "rs" (read + search).
+_READ_RESOURCES: tuple[str, ...] = (
+    "Patient",
+    "Practitioner",
+    "Encounter",
+    "Observation",
+    "MedicationRequest",
+    "AllergyIntolerance",
+    "Condition",
+)
+
+# SMART v1 resource scopes — Epic and some Cerner tenants still only understand
+# the `.read` spelling. Kept as the safe fallback when a tenant rejects v2.
+_DEFAULT_SCOPES: tuple[str, ...] = _IDENTITY_SCOPES + tuple(
+    f"user/{r}.read" for r in _READ_RESOURCES
+)
+
+# SMART v2 resource scopes — the granular `resource.cruds` grammar
+# (https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html#scopes-for-requesting-fhir-resources).
+# `.rs` = read + search only, the minimum-necessary set for read-oriented triage.
+# Per the marketplace gap analysis, vendors that have moved to SMART v2 (current
+# Epic, Oracle Health) reject the v1 `.read` spelling at the authorize endpoint,
+# so we must request the v2 form first and fall back to v1 only when needed.
+_DEFAULT_SCOPES_V2: tuple[str, ...] = _IDENTITY_SCOPES + tuple(
+    f"user/{r}.rs" for r in _READ_RESOURCES
 )
 
 
@@ -109,6 +149,7 @@ VENDORS: dict[str, EHRVendor] = {
         # SMART Health IT accepts any client_id — this string is shipped to demos.
         client_id=_env("SOLACE_SMART_CLIENT_ID", "solace_demo"),
         scopes=_DEFAULT_SCOPES,
+        scopes_v2=_DEFAULT_SCOPES_V2,
         sandbox=True,
     ),
     "epic": EHRVendor(
@@ -120,6 +161,7 @@ VENDORS: dict[str, EHRVendor] = {
         token_url=_env("SOLACE_EPIC_TOKEN_URL", _EPIC_TOKEN),
         client_id=_env("SOLACE_EPIC_CLIENT_ID", ""),
         scopes=_DEFAULT_SCOPES,
+        scopes_v2=_DEFAULT_SCOPES_V2,
         sandbox=_env("SOLACE_EPIC_SANDBOX", "true").lower() == "true",
     ),
     "cerner": EHRVendor(
@@ -131,6 +173,7 @@ VENDORS: dict[str, EHRVendor] = {
         token_url=_env("SOLACE_CERNER_TOKEN_URL", _CERNER_TOKEN),
         client_id=_env("SOLACE_CERNER_CLIENT_ID", ""),
         scopes=_DEFAULT_SCOPES,
+        scopes_v2=_DEFAULT_SCOPES_V2,
         sandbox=_env("SOLACE_CERNER_SANDBOX", "true").lower() == "true",
     ),
     "athena": EHRVendor(
@@ -151,6 +194,7 @@ VENDORS: dict[str, EHRVendor] = {
         ),
         client_id=_env("SOLACE_ATHENA_CLIENT_ID", ""),
         scopes=_DEFAULT_SCOPES,
+        scopes_v2=_DEFAULT_SCOPES_V2,
         sandbox=_env("SOLACE_ATHENA_SANDBOX", "true").lower() == "true",
     ),
 }
@@ -158,6 +202,56 @@ VENDORS: dict[str, EHRVendor] = {
 
 def get(vendor_id: str) -> EHRVendor | None:
     return VENDORS.get((vendor_id or "").lower())
+
+
+def from_workspace_config(cfg: dict) -> EHRVendor:
+    """Build an :class:`EHRVendor` from a per-workspace EHR-config record.
+
+    The per-workspace binding (``services.ehr_config``) stores the same SMART
+    metadata a static ``VENDORS`` entry carries — vendor id, FHIR base URL,
+    authorize/token endpoints, client_id, and the chosen scope set — but scoped
+    to one ``(hospital_id, workspace_id)`` instead of process-wide env vars.
+
+    This lets the SMART flow resolve a tenant's real Epic/Cerner/Athena binding
+    at request time instead of a single shipped-everywhere default. Where a field
+    is absent from the stored config we fall back to the static vendor template
+    for that ``vendor`` id (so a workspace can override only the URLs it needs).
+
+    NOTE: this NEVER carries a client secret or private key — those live only in
+    AWS Secrets Manager, referenced by name on the config record (COMP-007). The
+    returned ``EHRVendor`` is pure non-secret routing metadata.
+    """
+    vendor_id = str(cfg.get("vendor", "")).lower()
+    base = VENDORS.get(vendor_id)
+
+    def _f(key: str, fallback: str) -> str:
+        val = cfg.get(key)
+        return str(val) if val not in (None, "") else fallback
+
+    raw_scopes = cfg.get("scopes")
+    if isinstance(raw_scopes, (list, tuple)) and raw_scopes:
+        scopes_v1: tuple[str, ...] = tuple(str(s) for s in raw_scopes)
+    else:
+        scopes_v1 = base.scopes if base else _DEFAULT_SCOPES
+
+    raw_scopes_v2 = cfg.get("scopes_v2")
+    if isinstance(raw_scopes_v2, (list, tuple)) and raw_scopes_v2:
+        scopes_v2: tuple[str, ...] = tuple(str(s) for s in raw_scopes_v2)
+    else:
+        scopes_v2 = base.scopes_v2 if base else _DEFAULT_SCOPES_V2
+
+    return EHRVendor(
+        id=vendor_id or (base.id if base else "smart"),
+        label=_f("label", base.label if base else vendor_id),
+        color=_f("color", base.color if base else "#1F4E79"),
+        fhir_base_url=_f("fhir_base_url", base.fhir_base_url if base else ""),
+        authorize_url=_f("authorize_url", base.authorize_url if base else ""),
+        token_url=_f("token_url", base.token_url if base else ""),
+        client_id=_f("client_id", base.client_id if base else ""),
+        scopes=scopes_v1,
+        scopes_v2=scopes_v2,
+        sandbox=bool(cfg.get("sandbox", base.sandbox if base else True)),
+    )
 
 
 def list_public() -> list[dict]:
