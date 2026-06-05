@@ -108,7 +108,10 @@ def recreate_function(image_uri: str) -> str:
             "DYNAMODB_TABLE_NOTES": "solace-notes",
             "S3_BUCKET_MEDIA": MEDIA_BUCKET,
             # No SOLACE_MODELS_BUCKET — models are baked into the image
-            "CLAUDE_PROVIDER": "direct",  # flip to "bedrock" after AWS BAA + model access
+            # COMP-005 (L1): default to Bedrock so PHI stays inside the AWS BAA.
+            # "direct" routes clinical text to the third-party Anthropic API (no BAA)
+            # and must only ever be an explicit, reviewed local-dev override.
+            "CLAUDE_PROVIDER": "bedrock",
             "DEMO_HOSPITAL_ID": "demo",
             "DEMO_HOSPITAL_NAME": "Solace Demo Hospital",
             "ELEVENLABS_VOICE_ID": "21m00Tcm4TlvDq8ikWAM",
@@ -184,7 +187,28 @@ def smoke() -> bool:
     return ok
 
 
+def plan() -> None:
+    """DRY-RUN: print the prod deploy plan. Makes NO AWS mutations."""
+    print("DRY RUN — no AWS mutations, no prod deploy.\n")
+    print(f"Account {ACCOUNT}  Region {REGION}\n")
+    print("Would (in order):")
+    print(f"  1. ensure ECR repo '{REPO}' (CMK-encrypted, scan-on-push)")
+    print(f"  2. tag + push solace-lambda:latest → ECR (~1.8GB image)")
+    print(f"  3. create/update Lambda '{FUNCTION}' (Image mode, arm64, 2048MB);")
+    print(f"     a Zip-mode function would be DELETED + recreated in place")
+    print(f"     env CLAUDE_PROVIDER=bedrock (COMP-005 — BAA-covered)")
+    print(f"  4. re-point API Gateway '{API_NAME}' integrations at the new function")
+    print(f"  5. re-point EventBridge warmer '{RULE_NAME}' at the new function")
+    print(f"  6. invoke a warmup smoke test (ml_ok)")
+    print("\nThis is an outward-facing PROD deploy. Re-run with --apply to execute:")
+    print("    python scripts/deploy_container.py --apply")
+
+
 def main() -> None:
+    if "--apply" not in set(sys.argv[1:]):
+        plan()
+        return
+
     print(f"Account {ACCOUNT}  Region {REGION}\n")
 
     print("ECR repo:")
