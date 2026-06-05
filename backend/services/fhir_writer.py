@@ -258,6 +258,88 @@ def build_medication_statement(
     return resource
 
 
+def build_service_request(
+    *,
+    patient_ref: str,
+    code: str,
+    display: str,
+    system: str = "http://loinc.org",
+    intent: str = "order",
+    priority: str = "routine",
+    category_code: str = "108252007",  # SNOMED: Laboratory procedure
+    category_display: str = "Laboratory procedure",
+    reason_text: str = "",
+    requester_display: str = "Solace AI scribe",
+    encounter_ref: str | None = None,
+) -> dict[str, Any]:
+    """A FHIR R4 ServiceRequest — an order (lab, imaging, referral, procedure).
+
+    USCDI v3 surfaces orders via ServiceRequest. Solace builds the order as a
+    *proposal/order* that a clinician confirms before it is written back (see
+    `confirm_and_write`). `code`+`system` is the orderable (LOINC for labs,
+    CPT/SNOMED for procedures); `category_code` tags the order class so the EHR
+    files it in the right queue.
+
+    `intent` defaults to "order"; use "proposal" for an AI-suggested order that
+    has not yet been signed. `status` is fixed to "active" for an order and
+    "draft" for a proposal so an unconfirmed suggestion never looks live.
+    """
+    status = "draft" if intent == "proposal" else "active"
+    resource: dict[str, Any] = {
+        "resourceType": "ServiceRequest",
+        "status": status,
+        "intent": intent,
+        "priority": priority,
+        "category": [{"coding": [{
+            "system": "http://snomed.info/sct",
+            "code": category_code,
+            "display": category_display,
+        }]}],
+        "code": {
+            "coding": [{"system": system, "code": code, "display": display}],
+            "text": display,
+        },
+        "subject": {"reference": patient_ref},
+        "authoredOn": _now_iso(),
+        "requester": {"display": requester_display},
+    }
+    if reason_text:
+        resource["reasonCode"] = [{"text": reason_text}]
+    if encounter_ref:
+        resource["encounter"] = {"reference": encounter_ref}
+    return resource
+
+
+def build_procedure(
+    *,
+    patient_ref: str,
+    code: str,
+    display: str,
+    system: str = "http://snomed.info/sct",
+    status: str = "completed",
+    performed: str | None = None,
+    encounter_ref: str | None = None,
+) -> dict[str, Any]:
+    """A FHIR R4 Procedure — a performed clinical procedure (USCDI v3).
+
+    Defaults to a completed SNOMED-coded procedure performed "now". Pass CPT via
+    `system="http://www.ama-assn.org/go/cpt"` for billing-coded procedures.
+    """
+    resource: dict[str, Any] = {
+        "resourceType": "Procedure",
+        "status": status,
+        "code": {
+            "coding": [{"system": system, "code": code, "display": display}],
+            "text": display,
+        },
+        "subject": {"reference": patient_ref},
+        "performedDateTime": performed or _now_iso(),
+    }
+    if encounter_ref:
+        resource["encounter"] = {"reference": encounter_ref}
+    return resource
+
+
 # ---- Provenance ------------------------------------------------------------------
 def build_provenance(
     *,
@@ -404,3 +486,75 @@ def write_bundle_with_provenance(
     )
     prov_result = write(prov, fhir_base_url=fhir_base_url, access_token=access_token)
     return {"resources": res_results, "provenance": prov_result}
+
+
+# ---- Confirm-before-write -------------------------------------------------------
+# Every Solace-authored write to a patient's chart is clinician-confirmed: the
+# UI first shows a preview of the exact resource, the clinician signs off, and
+# only then does the write fire. These helpers make that contract explicit and
+# uniform across resource types (ServiceRequest orders, clinical-note
+# DocumentReference, problem-list Condition).
+
+
+def preview_write(resource: dict[str, Any]) -> dict[str, Any]:
+    """Describe a write WITHOUT performing any I/O (confirm-before-write step 1).
+
+    Returns a small preview the router can surface to the clinician for sign-off
+    — the resource type, a human label, and the resource itself — so nothing
+    reaches the EHR until `confirm_and_write(..., confirmed=True)` is called.
+    """
+    rt = resource.get("resourceType") or "Resource"
+    label = _preview_label(resource)
+    return {
+        "confirm_required": True,
+        "resource_type": rt,
+        "label": label,
+        "resource": resource,
+    }
+
+
+def confirm_and_write(
+    resource: dict[str, Any],
+    *,
+    confirmed: bool,
+    fhir_base_url: str | None = None,
+    access_token: str | None = None,
+    signing_clinician_ref: str | None = None,
+    signing_clinician_display: str = "",
+) -> dict[str, Any]:
+    """Write `resource` only when `confirmed` is True (confirm-before-write).
+
+    When `confirmed` is False this performs NO external I/O and returns the
+    `preview_write` payload so the caller can render the confirmation step.
+    When True it writes the resource and attaches a Solace Provenance
+    attestation (the signing clinician is recorded as the verifier).
+
+    The router stays responsible for verifying clinician identity / consent and
+    calling audit(); this helper only enforces the explicit confirmation gate so
+    an unconfirmed suggestion can never be written by accident.
+    """
+    if not confirmed:
+        return preview_write(resource)
+    return write_with_provenance(
+        resource,
+        fhir_base_url=fhir_base_url,
+        access_token=access_token,
+        signing_clinician_ref=signing_clinician_ref,
+        signing_clinician_display=signing_clinician_display,
+    )
+
+
+def _preview_label(resource: dict[str, Any]) -> str:
+    """A short human label for a write preview (no raw identifiers)."""
+    rt = resource.get("resourceType") or "Resource"
+    code = resource.get("code") or {}
+    text = code.get("text") if isinstance(code, dict) else ""
+    if not text and isinstance(code, dict):
+        coding = code.get("coding") or []
+        if coding:
+            text = coding[0].get("display") or coding[0].get("code") or ""
+    if rt == "DocumentReference":
+        type_cc = resource.get("type") or {}
+        coding = type_cc.get("coding") or []
+        text = (coding[0].get("display") if coding else "") or "Clinical note"
+    return f"{rt}: {text}" if text else rt

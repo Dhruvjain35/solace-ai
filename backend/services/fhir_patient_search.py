@@ -699,3 +699,451 @@ def _ref_display(ref: dict | None) -> str:
     if not ref:
         return ""
     return str(ref.get("display") or ref.get("reference") or "")
+
+
+# ==================================================================================
+# USCDI v3 / US Core resource reads
+# ==================================================================================
+#
+# Everything above resolves *identity* (which chart) and pre-fills a small
+# Solace record shape. This section adds breadth: read the rest of the USCDI v3
+# data classes for an already-resolved patient — Condition (problems),
+# Medication (request + statement), AllergyIntolerance, Immunization,
+# Observation (labs + vitals), DocumentReference, Encounter, Procedure.
+#
+# Two design choices keep this safe and reusable:
+#   * Every read is **parametrized by base_url + access_token** (defaulting to
+#     the env-driven SMART sandbox), so `ehr_gateway.read_resource` can pass a
+#     specific hospital's vendor FHIR base + SMART token through the SAME code
+#     path for Epic / Oracle / athena — no per-vendor read duplication.
+#   * Each read returns a flat, PHI-minimal Solace dict (coded value + display
+#     + date), never the raw FHIR resource, so callers/log lines stay free of
+#     incidental identifiers (supports COMP-001 / no-PHI-in-logs posture).
+
+# US Core resource types Solace surfaces, mapped to the FHIR search param that
+# scopes them to one patient. (DocumentReference/Encounter/Observation/etc. all
+# use `patient`; this map is the single source of truth for the read surface.)
+USCDI_RESOURCE_TYPES: tuple[str, ...] = (
+    "Condition",
+    "MedicationRequest",
+    "MedicationStatement",
+    "AllergyIntolerance",
+    "Immunization",
+    "Observation",
+    "DocumentReference",
+    "Encounter",
+    "Procedure",
+)
+
+# Observation US Core profiles split by `category`; callers ask for "labs" or
+# "vitals" and we translate to the FHIR observation-category token.
+_OBS_CATEGORY = {
+    "labs": "laboratory",
+    "vitals": "vital-signs",
+    "social": "social-history",
+}
+
+_DEFAULT_READ_COUNT = "50"
+
+
+def _search_at(
+    base_url: str,
+    resource_type: str,
+    params: dict[str, str],
+    *,
+    access_token: str = "",
+    timeout_s: float = RESOURCE_TIMEOUT_S,
+    http_client: Any = None,
+) -> dict[str, Any] | None:
+    """`_search` against an explicit base_url + token (vendor-routable).
+
+    Mirrors `_search` (timeout-bounded, fail-soft to None) but does not read
+    module-level env, so the gateway can drive a hospital-specific Epic/Oracle/
+    athena FHIR endpoint through the same normalization helpers below.
+
+    `http_client` is an optional injected ``httpx.Client`` (or compatible) so
+    tests can wire the offline mock FHIR server without touching the network;
+    when omitted a short-lived client is created per call.
+    """
+    base = (base_url or "").rstrip("/")
+    if not base:
+        return None
+    url = f"{base}/{resource_type}"
+    headers = {"Accept": "application/fhir+json"}
+    tok = (access_token or "").strip()
+    if tok:
+        headers["Authorization"] = f"Bearer {tok}"
+    try:
+        if http_client is not None:
+            resp = http_client.get(url, params=params, headers=headers, timeout=timeout_s)
+            if resp.status_code != 200:
+                log.info("FHIR %s -> %d", resource_type, resp.status_code)
+                return None
+            return resp.json()
+        with httpx.Client(timeout=timeout_s, headers=headers) as c:
+            resp = c.get(url, params=params, timeout=timeout_s)
+            if resp.status_code != 200:
+                log.info("FHIR %s -> %d", resource_type, resp.status_code)
+                return None
+            return resp.json()
+    except httpx.TimeoutException:
+        log.info("FHIR %s timed out", resource_type)
+        return None
+    except Exception as e:  # noqa: BLE001
+        log.info("FHIR %s error: %s", resource_type, e)
+        return None
+
+
+def _bundle_resources(bundle: dict[str, Any] | None, resource_type: str) -> list[dict[str, Any]]:
+    """Pull resources of `resource_type` out of a FHIR search Bundle."""
+    if not bundle:
+        return []
+    out: list[dict[str, Any]] = []
+    for e in bundle.get("entry", []) or []:
+        r = e.get("resource") or {}
+        if r.get("resourceType") == resource_type:
+            out.append(r)
+    return out
+
+
+def read_uscdi_resources(
+    patient_id: str,
+    resource_type: str,
+    *,
+    base_url: str = "",
+    access_token: str = "",
+    observation_category: str = "",
+    count: str = _DEFAULT_READ_COUNT,
+    active_only: bool = False,
+    http_client: Any = None,
+) -> list[dict[str, Any]]:
+    """Read one US Core resource type for `patient_id`, normalized for Solace.
+
+    `resource_type` must be one of `USCDI_RESOURCE_TYPES`. `observation_category`
+    ("labs" | "vitals" | "social") scopes Observation reads; it is ignored for
+    other types. `active_only` adds the relevant active filter for Condition /
+    MedicationRequest. Returns a list of flat dicts (never raw FHIR), [] on any
+    error so the caller's flow continues.
+    """
+    if resource_type not in USCDI_RESOURCE_TYPES:
+        log.info("read_uscdi_resources: unsupported type %s", resource_type)
+        return []
+    pid = (patient_id or "").strip()
+    if not pid:
+        return []
+
+    params: dict[str, str] = {"patient": pid, "_count": count}
+    if resource_type == "Observation":
+        cat = _OBS_CATEGORY.get((observation_category or "").lower())
+        if cat:
+            params["category"] = cat
+        params["_sort"] = "-date"
+    elif resource_type == "Encounter":
+        params["_sort"] = "-date"
+    elif resource_type == "DocumentReference":
+        params["_sort"] = "-date"
+    elif resource_type == "Condition" and active_only:
+        params["clinical-status"] = "active"
+    elif resource_type == "MedicationRequest" and active_only:
+        params["status"] = "active"
+
+    base = (base_url or "").strip()
+    if base or http_client is not None:
+        bundle = _search_at(
+            base, resource_type, params,
+            access_token=access_token, http_client=http_client,
+        )
+    else:
+        bundle = _search(resource_type, params)
+    resources = _bundle_resources(bundle, resource_type)
+    return [_normalize_uscdi(resource_type, r) for r in resources]
+
+
+def read_uscdi_summary(
+    patient_id: str,
+    *,
+    base_url: str = "",
+    access_token: str = "",
+    http_client: Any = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Read the full USCDI v3 clinical picture for `patient_id` in parallel.
+
+    Returns a dict keyed by a Solace-facing section name
+    (problems / medications / allergies / immunizations / labs / vitals /
+    documents / encounters / procedures), each a list of normalized dicts.
+    Fail-soft: any individual read that errors yields an empty list for that
+    section rather than failing the whole summary.
+    """
+    pid = (patient_id or "").strip()
+    if not pid:
+        return {}
+
+    # (section, resource_type, observation_category)
+    plan: list[tuple[str, str, str]] = [
+        ("problems", "Condition", ""),
+        ("medications", "MedicationRequest", ""),
+        ("medication_statements", "MedicationStatement", ""),
+        ("allergies", "AllergyIntolerance", ""),
+        ("immunizations", "Immunization", ""),
+        ("labs", "Observation", "labs"),
+        ("vitals", "Observation", "vitals"),
+        ("documents", "DocumentReference", ""),
+        ("encounters", "Encounter", ""),
+        ("procedures", "Procedure", ""),
+    ]
+    out: dict[str, list[dict[str, Any]]] = {section: [] for section, _, _ in plan}
+    with ThreadPoolExecutor(max_workers=min(8, len(plan))) as pool:
+        fut_to_section = {
+            pool.submit(
+                read_uscdi_resources,
+                pid,
+                rtype,
+                base_url=base_url,
+                access_token=access_token,
+                observation_category=obs_cat,
+                http_client=http_client,
+            ): section
+            for section, rtype, obs_cat in plan
+        }
+        for fut in as_completed(fut_to_section):
+            section = fut_to_section[fut]
+            try:
+                out[section] = fut.result() or []
+            except Exception as e:  # noqa: BLE001
+                log.info("USCDI summary %s read failed: %s", section, e)
+                out[section] = []
+    return out
+
+
+# ----------------------------------------------------------------------------------
+# US Core normalizers — raw FHIR resource -> flat Solace dict (PHI-minimal)
+# ----------------------------------------------------------------------------------
+
+
+def _normalize_uscdi(resource_type: str, r: dict[str, Any]) -> dict[str, Any]:
+    """Dispatch to the per-type normalizer; fall back to a thin coded summary."""
+    fn = _USCDI_NORMALIZERS.get(resource_type)
+    if fn:
+        return fn(r)
+    return {
+        "id": r.get("id", ""),
+        "type": resource_type,
+        "display": _coding_display(r.get("code") or {}),
+    }
+
+
+def _norm_condition(r: dict[str, Any]) -> dict[str, Any]:
+    code = r.get("code") or {}
+    return {
+        "id": r.get("id", ""),
+        "display": code.get("text") or _coding_display(code),
+        "code": _first_code(code),
+        "clinical_status": _coding_code(r.get("clinicalStatus") or {}),
+        "category": _coding_code((r.get("category") or [{}])[0]),
+        "onset": (r.get("onsetDateTime") or "")[:10],
+        "recorded": (r.get("recordedDate") or "")[:10],
+    }
+
+
+def _norm_medication_request(r: dict[str, Any]) -> dict[str, Any]:
+    med = r.get("medicationCodeableConcept") or {}
+    dosage = ""
+    di = r.get("dosageInstruction") or []
+    if di:
+        dosage = di[0].get("text") or ""
+    return {
+        "id": r.get("id", ""),
+        "display": med.get("text") or _coding_display(med),
+        "code": _first_code(med),
+        "status": str(r.get("status") or ""),
+        "intent": str(r.get("intent") or ""),
+        "dosage": dosage,
+        "authored": (r.get("authoredOn") or "")[:10],
+    }
+
+
+def _norm_medication_statement(r: dict[str, Any]) -> dict[str, Any]:
+    med = r.get("medicationCodeableConcept") or {}
+    dosage = ""
+    d = r.get("dosage") or []
+    if d:
+        dosage = d[0].get("text") or ""
+    return {
+        "id": r.get("id", ""),
+        "display": med.get("text") or _coding_display(med),
+        "code": _first_code(med),
+        "status": str(r.get("status") or ""),
+        "dosage": dosage,
+        "asserted": (r.get("dateAsserted") or "")[:10],
+    }
+
+
+def _norm_allergy(r: dict[str, Any]) -> dict[str, Any]:
+    code = r.get("code") or {}
+    reactions: list[str] = []
+    for rx in r.get("reaction") or []:
+        for m in rx.get("manifestation") or []:
+            txt = m.get("text") or _coding_display(m)
+            if txt:
+                reactions.append(txt)
+    return {
+        "id": r.get("id", ""),
+        "display": code.get("text") or _coding_display(code),
+        "code": _first_code(code),
+        "clinical_status": _coding_code(r.get("clinicalStatus") or {}),
+        "criticality": str(r.get("criticality") or ""),
+        "reactions": reactions,
+    }
+
+
+def _norm_immunization(r: dict[str, Any]) -> dict[str, Any]:
+    vc = r.get("vaccineCode") or {}
+    return {
+        "id": r.get("id", ""),
+        "display": vc.get("text") or _coding_display(vc),
+        "code": _first_code(vc),
+        "status": str(r.get("status") or ""),
+        "occurrence": (r.get("occurrenceDateTime") or "")[:10],
+    }
+
+
+def _norm_observation(r: dict[str, Any]) -> dict[str, Any]:
+    code = r.get("code") or {}
+    value, unit = _observation_value(r)
+    category = ""
+    cats = r.get("category") or []
+    if cats:
+        category = _coding_code(cats[0])
+    return {
+        "id": r.get("id", ""),
+        "display": code.get("text") or _coding_display(code),
+        "code": _first_code(code),
+        "category": category,
+        "value": value,
+        "unit": unit,
+        "status": str(r.get("status") or ""),
+        "effective": (r.get("effectiveDateTime") or (r.get("effectivePeriod") or {}).get("start") or "")[:10],
+    }
+
+
+def _norm_document_reference(r: dict[str, Any]) -> dict[str, Any]:
+    type_cc = r.get("type") or {}
+    category = ""
+    cats = r.get("category") or []
+    if cats:
+        category = _coding_display(cats[0]) or _coding_code(cats[0])
+    author = ""
+    authors = r.get("author") or []
+    if authors:
+        author = authors[0].get("display") or _ref_display(authors[0])
+    return {
+        "id": r.get("id", ""),
+        "type": type_cc.get("text") or _coding_display(type_cc),
+        "category": category,
+        "status": str(r.get("status") or ""),
+        "doc_status": str(r.get("docStatus") or ""),
+        "author": author,
+        "date": (r.get("date") or "")[:10],
+    }
+
+
+def _norm_encounter(r: dict[str, Any]) -> dict[str, Any]:
+    period = r.get("period") or {}
+    type_text = ""
+    types = r.get("type") or []
+    if types:
+        type_text = types[0].get("text") or _coding_display(types[0])
+    reason = ""
+    rc = r.get("reasonCode") or []
+    if rc:
+        reason = rc[0].get("text") or _coding_display(rc[0])
+    return {
+        "id": r.get("id", ""),
+        "type": type_text or "Encounter",
+        "class": _coding_code(r.get("class") or {}) if isinstance(r.get("class"), dict) else "",
+        "status": str(r.get("status") or ""),
+        "start": (period.get("start") or "")[:10],
+        "end": (period.get("end") or "")[:10],
+        "reason": reason,
+        "facility": _ref_display(r.get("serviceProvider")),
+    }
+
+
+def _norm_procedure(r: dict[str, Any]) -> dict[str, Any]:
+    code = r.get("code") or {}
+    performed = (
+        r.get("performedDateTime")
+        or (r.get("performedPeriod") or {}).get("start")
+        or ""
+    )
+    return {
+        "id": r.get("id", ""),
+        "display": code.get("text") or _coding_display(code),
+        "code": _first_code(code),
+        "status": str(r.get("status") or ""),
+        "performed": str(performed)[:10],
+    }
+
+
+_USCDI_NORMALIZERS = {
+    "Condition": _norm_condition,
+    "MedicationRequest": _norm_medication_request,
+    "MedicationStatement": _norm_medication_statement,
+    "AllergyIntolerance": _norm_allergy,
+    "Immunization": _norm_immunization,
+    "Observation": _norm_observation,
+    "DocumentReference": _norm_document_reference,
+    "Encounter": _norm_encounter,
+    "Procedure": _norm_procedure,
+}
+
+
+# ----------------------------------------------------------------------------------
+# US Core coding helpers
+# ----------------------------------------------------------------------------------
+
+
+def _coding_code(field: dict) -> str:
+    """First coding's `code` (e.g. clinical-status 'active')."""
+    coding = (field or {}).get("coding") or []
+    if coding:
+        return str(coding[0].get("code") or "")
+    return ""
+
+
+def _first_code(field: dict) -> dict[str, str]:
+    """First coding as a {system, code, display} triple (empty when absent)."""
+    coding = (field or {}).get("coding") or []
+    if not coding:
+        return {"system": "", "code": "", "display": ""}
+    c = coding[0]
+    return {
+        "system": str(c.get("system") or ""),
+        "code": str(c.get("code") or ""),
+        "display": str(c.get("display") or ""),
+    }
+
+
+def _observation_value(r: dict[str, Any]) -> tuple[Any, str]:
+    """Extract a (value, unit) pair from a FHIR Observation's value[x]."""
+    vq = r.get("valueQuantity")
+    if isinstance(vq, dict):
+        return vq.get("value"), str(vq.get("unit") or vq.get("code") or "")
+    vcc = r.get("valueCodeableConcept")
+    if isinstance(vcc, dict):
+        return vcc.get("text") or _coding_display(vcc), ""
+    if "valueString" in r:
+        return r.get("valueString"), ""
+    if "valueBoolean" in r:
+        return r.get("valueBoolean"), ""
+    # Component-only observations (e.g. blood pressure) — summarize components.
+    comps = r.get("component") or []
+    if comps:
+        parts = []
+        for c in comps:
+            cq = c.get("valueQuantity") or {}
+            disp = _coding_display(c.get("code") or {})
+            if cq.get("value") is not None:
+                parts.append(f"{disp}:{cq.get('value')}{cq.get('unit') or ''}".strip())
+        return "; ".join(parts), ""
+    return None, ""

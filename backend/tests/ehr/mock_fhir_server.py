@@ -67,6 +67,9 @@ class MockFHIRServer:
         self.error_for: dict[str, int] = {}
         self.error_once: int | None = None
         self._id_counter = 0
+        # Seeded read store: resource_type -> [resource, ...]. GET searches
+        # return these as a FHIR Bundle (drives the USCDI read path tests).
+        self.store: dict[str, list[dict[str, Any]]] = {}
 
     # -- configuration -------------------------------------------------------
     def fail(self, resource_type: str, status: int) -> None:
@@ -75,11 +78,20 @@ class MockFHIRServer:
     def fail_next(self, status: int) -> None:
         self.error_once = status
 
+    def seed(self, resource_type: str, resources: list[dict[str, Any]]) -> None:
+        """Seed resources a GET search of `resource_type` will return.
+
+        Used by the USCDI read-path tests: ``seed("Condition", [...])`` makes a
+        ``GET {base}/Condition?patient=...`` return those resources in a Bundle.
+        """
+        self.store.setdefault(resource_type, []).extend(resources)
+
     def reset(self) -> None:
         self.requests.clear()
         self.error_for.clear()
         self.error_once = None
         self._id_counter = 0
+        self.store.clear()
 
     # -- introspection -------------------------------------------------------
     @property
@@ -110,6 +122,10 @@ class MockFHIRServer:
                 "access_token": "mock-access-token", "token_type": "bearer",
                 "expires_in": 3600,
             }
+
+        # GET = a FHIR search; return a Bundle of seeded resources (USCDI reads).
+        if method == "GET":
+            return self._handle_search(url, headers)
 
         resource_type = (body or {}).get("resourceType") or url.rstrip("/").rsplit("/", 1)[-1]
         self.requests.append(RecordedRequest(
@@ -142,6 +158,57 @@ class MockFHIRServer:
             "Location": location,
             "ETag": 'W/"1"',
         }, created
+
+    # -- search (GET) handler ------------------------------------------------
+    def _handle_search(self, url: str, headers: dict[str, str]
+                       ) -> tuple[int, dict[str, str], dict[str, Any]]:
+        """Serve a FHIR search as a searchset Bundle of seeded resources.
+
+        The resource type is the last path segment before the query string;
+        ``category=`` (Observation) filters by the seeded resource's category
+        code. Honors the same ``error_for`` / ``error_once`` knobs as writes.
+        """
+        from urllib.parse import urlsplit, parse_qs
+
+        parts = urlsplit(url)
+        resource_type = parts.path.rstrip("/").rsplit("/", 1)[-1]
+        params = {k: v[0] for k, v in parse_qs(parts.query).items()}
+        self.requests.append(RecordedRequest(
+            method="GET", url=url, resource_type=resource_type,
+            body={"_params": params}, headers=dict(headers),
+        ))
+
+        status: int | None = None
+        if self.error_once is not None:
+            status, self.error_once = self.error_once, None
+        elif resource_type in self.error_for:
+            status = self.error_for[resource_type]
+        if status is not None:
+            outcome = _OPERATION_OUTCOMES.get(status, {
+                "resourceType": "OperationOutcome",
+                "issue": [{"severity": "error", "code": "exception",
+                           "diagnostics": f"HTTP {status}"}],
+            })
+            return status, {"Content-Type": "application/fhir+json"}, outcome
+
+        resources = list(self.store.get(resource_type, []))
+        category = params.get("category")
+        if category and resource_type == "Observation":
+            resources = [
+                r for r in resources
+                if any(
+                    coding.get("code") == category
+                    for cat in (r.get("category") or [])
+                    for coding in (cat.get("coding") or [])
+                )
+            ]
+        bundle = {
+            "resourceType": "Bundle",
+            "type": "searchset",
+            "total": len(resources),
+            "entry": [{"resource": r} for r in resources],
+        }
+        return 200, {"Content-Type": "application/fhir+json"}, bundle
 
     # -- httpx transport face ------------------------------------------------
     def httpx_transport(self) -> httpx.MockTransport:
@@ -224,6 +291,18 @@ class InjectableHTTPClient:
             timeout: float | None = None, **_: Any) -> FakeResponse:
         status, resp_headers, payload = self.server._handle(
             "PUT", url, json or {}, headers or {})
+        return FakeResponse(status, resp_headers, payload)
+
+    def get(self, url: str, *, params: dict[str, str] | None = None,
+            headers: dict[str, str] | None = None,
+            timeout: float | None = None, **_: Any) -> FakeResponse:
+        # Fold query params into the URL so the search handler sees them.
+        if params:
+            from urllib.parse import urlencode
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{urlencode(params)}"
+        status, resp_headers, payload = self.server._handle(
+            "GET", url, {}, headers or {})
         return FakeResponse(status, resp_headers, payload)
 
 
