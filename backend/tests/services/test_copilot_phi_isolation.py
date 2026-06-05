@@ -37,6 +37,9 @@ PHI_TOKENS = ["marcus", "welby", "warfarin", "metoprolol", "penicillin",
 _PATIENT = {
     "patient_id": "p1",
     "hospital_id": "h1",
+    # SEC-004: a consented patient carries a recorded authorization instant.
+    "consent_granted_at": "2024-03-15T10:00:00Z",
+    "consent_version": "v1",
     "name": PHI_NAME,
     "chief_complaint": "chest pain radiating to the left arm",
     "transcript": f"{PHI_NAME} reports crushing chest pain for two hours.",
@@ -230,6 +233,7 @@ class TestArtifactHydration:
 class TestRiskOpPrimitives:
     VITALS_PATIENT = {
         "patient_id": "p2", "hospital_id": "h1",
+        "consent_granted_at": "2024-03-15T10:00:00Z", "consent_version": "v1",
         "name": "Jane Roe", "chief_complaint": "fever and confusion",
         "transcript": "febrile, hypotensive.", "esi_level": 2,
         "vitals": {"systolic_bp": 85, "heart_rate": 122, "respiratory_rate": 24,
@@ -325,3 +329,76 @@ class TestPlanGate:
     def test_rejects_none(self):
         with pytest.raises(gate.PlanRejected):
             gate.validate(None)
+
+
+# ---------------------------------------------------------------------------
+# Consent gate (SEC-004) — no AI call may run without recorded authorization
+# ---------------------------------------------------------------------------
+
+from fastapi import HTTPException  # noqa: E402
+
+from lib import consent  # noqa: E402
+
+# A patient identical to _PATIENT but with NO recorded AI-processing consent.
+_PATIENT_NO_CONSENT = {k: v for k, v in _PATIENT.items()
+                       if k not in ("consent_granted_at", "consent_version")}
+
+
+class TestConsentGate:
+    """The copilot must refuse to touch PHI or call the model for a patient who
+    never authorized AI processing. This is the SEC-004 leak gate: it proves the
+    model is NEVER invoked when consent is absent."""
+
+    @pytest.fixture
+    def no_model_allowed(self, monkeypatch):
+        """Stub the model so any call is a hard test failure, and serve a
+        patient with no consent on record."""
+        calls: list[dict] = []
+
+        def forbidden_create(**kw):
+            calls.append(kw)
+            raise AssertionError(
+                "claude.messages_create was invoked despite missing consent (SEC-004)"
+            )
+
+        monkeypatch.setattr(claude, "available", lambda: True)
+        monkeypatch.setattr(claude, "messages_create", forbidden_create)
+        monkeypatch.setattr("db.storage.get_patient", lambda pid: dict(_PATIENT_NO_CONSENT))
+        monkeypatch.setattr(executor, "_crawl_ehr", lambda ctx: dict(_EHR_RECORD))
+        return calls
+
+    def test_ask_blocked_without_consent(self, no_model_allowed):
+        with pytest.raises(HTTPException) as ei:
+            pipeline.answer_question("h1", "p1", "Is the patient on anticoagulants?")
+        assert ei.value.status_code == 403
+        assert not no_model_allowed, "model was called before the consent gate"
+
+    def test_summary_blocked_without_consent(self, no_model_allowed):
+        with pytest.raises(HTTPException) as ei:
+            pipeline.catch_me_up("h1", "p1")
+        assert ei.value.status_code == 403
+        assert not no_model_allowed
+
+    def test_consented_patient_is_allowed(self, monkeypatch):
+        """The same path succeeds once consent is on record (regression guard so
+        the gate can never silently block every patient)."""
+        monkeypatch.setattr("db.storage.get_patient", lambda pid: dict(_PATIENT))
+        # build_chart must NOT raise for a consented patient.
+        ctx = context.build_chart("h1", "p1")
+        assert ctx["patient_id"] == "p1"
+
+    def test_revoked_consent_is_blocked(self, monkeypatch):
+        revoked = dict(_PATIENT, consent_revoked_at="2024-04-01T00:00:00Z")
+        monkeypatch.setattr("db.storage.get_patient", lambda pid: dict(revoked))
+        with pytest.raises(HTTPException) as ei:
+            context.build_chart("h1", "p1")
+        assert ei.value.status_code == 403
+
+    def test_helper_unit_semantics(self):
+        assert consent.has_ai_consent(_PATIENT) is True
+        assert consent.has_ai_consent(_PATIENT_NO_CONSENT) is False
+        assert consent.has_ai_consent(None) is False
+        assert consent.has_ai_consent(
+            dict(_PATIENT, consent_revoked_at="2024-04-01T00:00:00Z")) is False
+        with pytest.raises(consent.ConsentMissing):
+            consent.assert_ai_consent(_PATIENT_NO_CONSENT)
