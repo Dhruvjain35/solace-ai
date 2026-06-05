@@ -138,7 +138,23 @@ def point_warmer_at_alias() -> None:
             raise
 
 
+def plan() -> None:
+    """DRY-RUN: print the provisioned-concurrency plan. Makes NO AWS mutations."""
+    print("DRY RUN — no AWS mutations.\n")
+    print("Would (in order):")
+    print(f"  1. publish a new version of '{FUNCTION}'")
+    print(f"  2. point alias '{ALIAS}' at that version")
+    print(f"  3. set provisioned concurrency = 1 on the alias (this BILLS)")
+    print(f"  4. re-point API Gateway '{API_NAME}' + EventBridge '{RULE_NAME}' at the alias")
+    print("\nProvisioned concurrency incurs ongoing cost. Re-run with --apply:")
+    print("    python scripts/enable_provisioned.py --apply")
+
+
 def main() -> None:
+    if "--apply" not in set(sys.argv[1:]):
+        plan()
+        return
+
     print("Lambda alias + provisioned concurrency:")
     publish_and_alias()
     set_provisioned(1)

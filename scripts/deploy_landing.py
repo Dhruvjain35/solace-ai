@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -87,7 +88,22 @@ def deploy(app_id: str, zip_path: Path) -> str:
     return f"https://{BRANCH}.{app_id}.amplifyapp.com"
 
 
+def plan() -> None:
+    """DRY-RUN: print the landing deploy plan. Makes NO AWS mutations."""
+    print("DRY RUN — no AWS mutations, no live Amplify deploy.\n")
+    print("Would (in order):")
+    print(f"  1. zip {LANDING}/index.html → {ZIP_PATH}")
+    print(f"  2. ensure Amplify app '{APP_NAME}' + branch '{BRANCH}' (PRODUCTION stage)")
+    print(f"  3. create_deployment + upload zip + start_deployment to the live branch")
+    print("\nThis publishes the marketing landing page live. Re-run with --apply:")
+    print("    python scripts/deploy_landing.py --apply")
+
+
 def main() -> None:
+    if "--apply" not in set(sys.argv[1:]):
+        plan()
+        return
+
     print("Building zip:")
     z = build_zip()
     print("\nAmplify app:")
