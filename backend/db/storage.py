@@ -729,6 +729,106 @@ def delete_workspace(hospital_id: str, workspace_id: str) -> bool:
     return _workspaces.pop((hospital_id, workspace_id), None) is not None
 
 
+# ---- EHR bulk-export job state ------------------------------------------------------
+# Transient async-job tracking for FHIR Bulk Data $export (ARCH-009: short-TTL
+# DynamoDB in AWS, in-memory dict in local mode). Partition by hospital_id, sort
+# by job_id so list-by-hospital is a parameterized .query() (SEC-009, PERF-004).
+EHR_BULK_JOBS_TABLE = "solace-ehr-bulk-jobs"
+EHR_BULK_JOB_TTL_SECONDS = 7 * 24 * 3600  # 7 days — a job + its manifest is short-lived
+_ehr_bulk_jobs: dict[tuple[str, str], dict[str, Any]] = {}  # (hospital_id, job_id) -> record
+
+
+def put_bulk_job(record: dict[str, Any]) -> None:
+    """Persist/update a bulk-export job record. Requires hospital_id + job_id."""
+    record.setdefault("created_at", _now_iso())
+    record.setdefault("ttl", int(time.time()) + EHR_BULK_JOB_TTL_SECONDS)
+    if settings.solace_mode == "aws":
+        _boto_table(EHR_BULK_JOBS_TABLE).put_item(Item=_to_ddb(record))
+        return
+    _ehr_bulk_jobs[(record["hospital_id"], record["job_id"])] = record
+
+
+def get_bulk_job(hospital_id: str, job_id: str) -> dict[str, Any] | None:
+    """Fetch one bulk-export job by parameterized composite key (SEC-009)."""
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(EHR_BULK_JOBS_TABLE).query(
+            KeyConditionExpression=(
+                Key("hospital_id").eq(hospital_id) & Key("job_id").eq(job_id)
+            ),
+        )
+        items = resp.get("Items", [])
+        return _from_ddb(items[0]) if items else None
+    return _ehr_bulk_jobs.get((hospital_id, job_id))
+
+
+def list_bulk_jobs(hospital_id: str) -> list[dict[str, Any]]:
+    """List a hospital's bulk-export jobs via parameterized .query() (no .scan())."""
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(EHR_BULK_JOBS_TABLE).query(
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+        )
+        items = [_from_ddb(i) for i in resp.get("Items", [])]
+        items.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return items
+    rows = [r for (h, _j), r in _ehr_bulk_jobs.items() if h == hospital_id]
+    rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return rows
+
+
+# ---- EHR Subscription registration state --------------------------------------------
+# Tracks FHIR Subscription resources Solace created so the webhook receiver can
+# verify the shared secret and resolve which hospital a notification belongs to.
+EHR_SUBSCRIPTIONS_TABLE = "solace-ehr-subscriptions"
+EHR_SUBSCRIPTION_TTL_SECONDS = 90 * 24 * 3600  # 90 days — subscriptions are renewed
+_ehr_subscriptions: dict[tuple[str, str], dict[str, Any]] = {}  # (hospital_id, sub_id) -> rec
+
+
+def put_subscription(record: dict[str, Any]) -> None:
+    """Persist a Subscription registration. Requires hospital_id + subscription_id."""
+    record.setdefault("created_at", _now_iso())
+    record.setdefault("ttl", int(time.time()) + EHR_SUBSCRIPTION_TTL_SECONDS)
+    if settings.solace_mode == "aws":
+        _boto_table(EHR_SUBSCRIPTIONS_TABLE).put_item(Item=_to_ddb(record))
+        return
+    _ehr_subscriptions[(record["hospital_id"], record["subscription_id"])] = record
+
+
+def get_subscription(hospital_id: str, subscription_id: str) -> dict[str, Any] | None:
+    """Fetch one Subscription registration by parameterized composite key."""
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(EHR_SUBSCRIPTIONS_TABLE).query(
+            KeyConditionExpression=(
+                Key("hospital_id").eq(hospital_id)
+                & Key("subscription_id").eq(subscription_id)
+            ),
+        )
+        items = resp.get("Items", [])
+        return _from_ddb(items[0]) if items else None
+    return _ehr_subscriptions.get((hospital_id, subscription_id))
+
+
+def list_subscriptions(hospital_id: str) -> list[dict[str, Any]]:
+    """List a hospital's Subscription registrations via parameterized .query()."""
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(EHR_SUBSCRIPTIONS_TABLE).query(
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+        )
+        items = [_from_ddb(i) for i in resp.get("Items", [])]
+        items.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return items
+    rows = [r for (h, _s), r in _ehr_subscriptions.items() if h == hospital_id]
+    rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return rows
+
+
 # ---- Test helpers -------------------------------------------------------------------
 def _reset_for_tests() -> None:
     _patients.clear()
@@ -737,3 +837,5 @@ def _reset_for_tests() -> None:
     _notes.clear()
     _appointments.clear()
     _workspaces.clear()
+    _ehr_bulk_jobs.clear()
+    _ehr_subscriptions.clear()
