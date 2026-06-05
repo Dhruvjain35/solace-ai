@@ -12,7 +12,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from db import storage
-from lib import tenant
+from lib import consent, tenant
 
 
 def parse_medical_info(raw: Any) -> dict[str, Any]:
@@ -51,6 +51,19 @@ def build_chart(hospital_id: str, patient_id: str) -> dict[str, Any]:
         )
     except tenant.CrossTenantAccess:
         raise HTTPException(status_code=404, detail="Patient not found") from None
+
+    # SEC-004 consent gate (HIPAA §164.508). The copilot reads PHI from this
+    # chart and (for ask/summary) derives model prompts from it — including the
+    # clinical.differential primitive, which re-sends the stored transcript to
+    # Bedrock. None of that may happen without the patient's recorded AI-
+    # processing authorization. Enforced here at the PHI boundary so EVERY entry
+    # point (ask/summary/scan/autopopulate) is covered with no bypass. The router
+    # maps ConsentMissing to a 403 with a clinician-safe message.
+    try:
+        consent.assert_ai_consent(patient)
+    except consent.ConsentMissing as e:
+        raise HTTPException(status_code=403, detail=str(e)) from None
+
     info = parse_medical_info(patient.get("medical_info"))
     chart = {
         "name": patient.get("name") or info.get("name") or "",

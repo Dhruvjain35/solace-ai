@@ -27,6 +27,10 @@ from lib import tenant  # noqa: E402
 _PATIENT_H1 = {
     "patient_id": "p1",
     "hospital_id": "h1",
+    # SEC-004: build_chart now also enforces the AI-processing consent gate, so
+    # this tenancy fixture must carry a recorded authorization to exercise the
+    # happy path. The cross-tenant/missing-patient cases reject before consent.
+    "consent_granted_at": "2024-03-15T10:00:00Z",
     "name": "Marcus Welby",
     "chief_complaint": "chest pain",
     "transcript": "reports crushing chest pain.",
