@@ -439,6 +439,7 @@ function SmsSelfServe({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="(512) 555-0177"
+          aria-label="Phone number to text your care instructions to"
           className="flex-1 h-11 px-3 rounded-md bg-surface-low ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none"
           autoFocus
         />
@@ -450,9 +451,10 @@ function SmsSelfServe({
             try {
               const r = await sendCareInstructionsSelfServe(hospitalId, patientId, phone);
               if (r.success) setDone(true);
-              else setError(r.message || (r.reason === "not_configured" ? "SMS isn't enabled for this hospital yet." : "Couldn't send. Try again."));
-            } catch (e: any) {
-              setError(e?.response?.data?.detail || "Couldn't send.");
+              else setError(r.reason === "not_configured" ? "SMS isn't enabled for this hospital yet." : "Couldn't send. Try again.");
+            } catch {
+              // USAB-001: don't echo the raw server detail back to the patient.
+              setError("Couldn't send. Please try again.");
             } finally {
               setBusy(false);
             }

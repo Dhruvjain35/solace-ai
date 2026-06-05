@@ -1,24 +1,42 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import PatientIntake from "./pages/PatientIntake";
 import PatientResult from "./pages/PatientResult";
 import ClinicianDashboard from "./pages/ClinicianDashboard";
 import QRCard from "./pages/QRCard";
 import VoiceAgent from "./pages/VoiceAgent";
 import EHRCallback from "./pages/EHRCallback";
-import PatientPrintView from "./pages/PatientPrintView";
 import PatientSchedule from "./pages/PatientSchedule";
-import WorkflowsAdmin from "./pages/WorkflowsAdmin";
-import ClinicianScribe from "./pages/ClinicianScribe";
-import ClinicianLetters from "./pages/ClinicianLetters";
-import ClinicianInbox from "./pages/ClinicianInbox";
-import ClinicianTools from "./pages/ClinicianTools";
-import ClinicianOps from "./pages/ClinicianOps";
-import PatientDetailPage from "./pages/PatientDetailPage";
 import ClinicianLanding from "./pages/ClinicianLanding";
 import AuthVerify from "./pages/AuthVerify";
-import ShowcaseDemo from "./pages/ShowcaseDemo";
-import MockupStudio from "./pages/MockupStudio";
-import TrustReport from "./pages/TrustReport";
+
+// DEPS-006 / PERF-007: keep recharts and the heavy demo/clinician-tool pages out
+// of the root bundle. These routes are off the patient critical path (intake →
+// result) and the clinician's first paint (dashboard), so they load on demand.
+// TrustReport is the only consumer of recharts; lazy-loading it pulls recharts
+// into its own chunk instead of the eager main bundle.
+const PatientPrintView = lazy(() => import("./pages/PatientPrintView"));
+const WorkflowsAdmin = lazy(() => import("./pages/WorkflowsAdmin"));
+const ClinicianScribe = lazy(() => import("./pages/ClinicianScribe"));
+const ClinicianLetters = lazy(() => import("./pages/ClinicianLetters"));
+const ClinicianInbox = lazy(() => import("./pages/ClinicianInbox"));
+const ClinicianTools = lazy(() => import("./pages/ClinicianTools"));
+const ClinicianOps = lazy(() => import("./pages/ClinicianOps"));
+const PatientDetailPage = lazy(() => import("./pages/PatientDetailPage"));
+const ShowcaseDemo = lazy(() => import("./pages/ShowcaseDemo"));
+const MockupStudio = lazy(() => import("./pages/MockupStudio"));
+const TrustReport = lazy(() => import("./pages/TrustReport"));
+
+// USAB-006: a lightweight, centered busy state covers the brief lazy-chunk fetch.
+function RouteFallback() {
+  return (
+    <div className="min-h-[100dvh] flex items-center justify-center text-text-muted" role="status" aria-live="polite">
+      <Loader2 size={20} className="animate-spin" aria-hidden="true" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
 
 // Per-hospital routes. Rendered once under the bare `/:hospitalId` prefix
 // (legacy, keeps `/demo` working) and once under `/h/:hospitalId` (provisioned
@@ -46,20 +64,22 @@ function hospitalRoutes(prefix: string) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/demo" replace />} />
-      <Route path="/clinicians" element={<ClinicianLanding />} />
-      {/* Standalone split-screen showcase: patient intake + live clinician dashboard. */}
-      <Route path="/showcase" element={<ShowcaseDemo />} />
-      {/* Presentation mockup studio: real app framed in iPhone + desktop, annotated, export-ready. */}
-      <Route path="/mockups" element={<MockupStudio />} />
-      {/* Public Solace Trust Report — aggregate transparency, no auth, no PHI. */}
-      <Route path="/trust" element={<TrustReport />} />
-      <Route path="/voice" element={<VoiceAgent />} />
-      <Route path="/ehr/callback" element={<EHRCallback />} />
-      {hospitalRoutes("")}
-      {hospitalRoutes("/h")}
-      <Route path="*" element={<Navigate to="/demo" replace />} />
-    </Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/demo" replace />} />
+        <Route path="/clinicians" element={<ClinicianLanding />} />
+        {/* Standalone split-screen showcase: patient intake + live clinician dashboard. */}
+        <Route path="/showcase" element={<ShowcaseDemo />} />
+        {/* Presentation mockup studio: real app framed in iPhone + desktop, annotated, export-ready. */}
+        <Route path="/mockups" element={<MockupStudio />} />
+        {/* Public Solace Trust Report — aggregate transparency, no auth, no PHI. */}
+        <Route path="/trust" element={<TrustReport />} />
+        <Route path="/voice" element={<VoiceAgent />} />
+        <Route path="/ehr/callback" element={<EHRCallback />} />
+        {hospitalRoutes("")}
+        {hospitalRoutes("/h")}
+        <Route path="*" element={<Navigate to="/demo" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

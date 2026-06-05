@@ -36,7 +36,8 @@ export default function PatientSchedule() {
     setLoading(true);
     getAppointmentAvailability(hospitalId, 7)
       .then(setSlots)
-      .catch((e) => setError(e?.message || "Couldn't load availability."))
+      // USAB-001: never surface the raw JS error to the patient.
+      .catch(() => setError("Couldn't load availability. Please refresh and try again."))
       .finally(() => setLoading(false));
   }, [hospitalId]);
 
@@ -73,11 +74,12 @@ export default function PatientSchedule() {
       }
     } catch (e: any) {
       const status = e?.response?.status;
-      const detail = e?.response?.data?.detail;
+      // USAB-001: map known statuses to friendly copy; otherwise a clean generic
+      // message — never the raw server detail or JS error string.
       setError(
         status === 409
           ? "Someone just booked that slot — please pick another."
-          : detail || e?.message || "Couldn't book. Try again."
+          : "Couldn't book that slot. Please try again."
       );
     } finally {
       setBusy(false);

@@ -50,7 +50,7 @@ export function PhotoCapture({
             <button
               type="button"
               onClick={openPrimaryCamera}
-              className="bg-surface-lowest/90 backdrop-blur w-10 h-10 rounded-full flex items-center justify-center shadow-soft"
+              className="bg-surface-lowest/90 backdrop-blur w-10 h-10 rounded-full flex items-center justify-center shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
               aria-label="Retake photo"
             >
               <RefreshCw size={18} />
@@ -58,7 +58,7 @@ export function PhotoCapture({
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="bg-surface-lowest/90 backdrop-blur w-10 h-10 rounded-full flex items-center justify-center shadow-soft"
+              className="bg-surface-lowest/90 backdrop-blur w-10 h-10 rounded-full flex items-center justify-center shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
               aria-label="Remove photo"
             >
               <X size={18} />
@@ -92,7 +92,7 @@ export function PhotoCapture({
       <button
         type="button"
         onClick={openPrimaryCamera}
-        className="w-full rounded-lg bg-surface-low hover:bg-primary-dim transition-colors py-8 flex flex-col items-center gap-2 active:scale-[0.99]"
+        className="w-full rounded-lg bg-surface-low hover:bg-primary-dim transition-colors py-8 flex flex-col items-center gap-2 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       >
         <div className="w-14 h-14 rounded-full bg-primary-fixed text-primary flex items-center justify-center">
           <Camera size={26} />
@@ -103,7 +103,7 @@ export function PhotoCapture({
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="self-center inline-flex items-center gap-1 text-sm text-text-muted underline underline-offset-2 px-3 py-1"
+        className="self-center inline-flex items-center gap-1 px-3 py-1 text-sm text-text-muted underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       >
         <ImagePlus size={14} /> or upload from library
       </button>

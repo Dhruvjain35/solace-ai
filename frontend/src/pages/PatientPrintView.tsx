@@ -33,7 +33,8 @@ export default function PatientPrintView() {
     }
     getPatientDetail(hospitalId, patientId)
       .then(setDetail)
-      .catch((e) => setError(e?.response?.data?.detail || "Failed to load record"))
+      // USAB-001: show a clean, actionable message rather than the raw server detail.
+      .catch(() => setError("Couldn't load this record. Refresh, or re-open it from the dashboard."))
       .finally(() => setLoading(false));
   }, [hospitalId, patientId]);
 
