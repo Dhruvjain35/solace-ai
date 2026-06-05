@@ -187,8 +187,8 @@ export default function ScribeTab() {
       sessionStreamRef.current?.getTracks().forEach((t) => t.stop());
       sessionStreamRef.current = null;
       const r = await finalizeScribeSession(hospitalId, sessionId, true);
-      setFinalNote(r.structured);
-      setFinalSoapText(r.soap_text);
+      setFinalNote(normalizeNote(r.structured, sessionId));
+      setFinalSoapText(r.soap_text || "");
       setSessionStatus("finalized");
       sessionStatusRef.current = "finalized";
     } catch (e: unknown) {
@@ -207,8 +207,8 @@ export default function ScribeTab() {
         section_name: sectionName,
         specialty: "ed",
       });
-      setFinalNote(r.structured);
-      setFinalSoapText(r.soap_text);
+      setFinalNote(normalizeNote(r.structured, finalNote.session_id));
+      setFinalSoapText(r.soap_text || "");
     } catch (e: unknown) {
       setErrorMsg(humanizeError(errText(e)));
     } finally {
@@ -472,6 +472,17 @@ type SpeechWindow = {
 // Small UI helpers — kept inline so the tab stays self-contained.
 // ---------------------------------------------------------------------------
 
+/** Coerce a finalize/regenerate payload into a fully-formed note so a missing or
+ *  malformed field from the backend can never crash the render (demo-safety). */
+function normalizeNote(
+  n: ScribeStructuredNote | null | undefined,
+  sessionId: string,
+): ScribeStructuredNote {
+  const sections = n && Array.isArray(n.sections) ? n.sections : [];
+  const segments = n && Array.isArray(n.transcript_segments) ? n.transcript_segments : [];
+  return { session_id: n?.session_id ?? sessionId, sections, transcript_segments: segments };
+}
+
 /** Pull a usable message string out of an unknown thrown value. */
 function errText(e: unknown): string {
   const err = e as { response?: { data?: { detail?: string } }; message?: string };
@@ -530,7 +541,8 @@ function SessionNoteSection({
     coveragePct >= 80 ? { bar: "bg-success", text: "text-success" } :
     coveragePct >= 50 ? { bar: "bg-warning", text: "text-warning" } :
     { bar: "bg-error", text: "text-error" };
-  const sectionLabel = section.name.replace(/_/g, " ").toLowerCase();
+  const sectionLabel = (section.name || "section").replace(/_/g, " ").toLowerCase();
+  const lines = section.lines || [];
   return (
     <div className="mb-4 last:mb-0">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -557,15 +569,17 @@ function SessionNoteSection({
         </div>
       </div>
       <div className="mt-1.5 space-y-2">
-        {section.lines.length === 0 && (
+        {lines.length === 0 && (
           <div className="text-sm text-text-muted italic">No content captured for this section.</div>
         )}
-        {section.lines.map((line, i) => (
+        {lines.map((line, i) => {
+          const evidence = line.linked_evidence || [];
+          return (
           <div key={i} className="text-sm">
             <div className="text-ink">{line.text}</div>
-            {line.linked_evidence.length > 0 ? (
+            {evidence.length > 0 ? (
               <div className="mt-1 flex flex-wrap gap-1">
-                {line.linked_evidence.map((ev, j) => (
+                {evidence.map((ev, j) => (
                   <button
                     key={`${ev.segment_id}-${j}`}
                     type="button"
@@ -586,7 +600,8 @@ function SessionNoteSection({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

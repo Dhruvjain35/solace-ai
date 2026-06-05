@@ -10,6 +10,7 @@ import EHRCallback from "./pages/EHRCallback";
 import PatientSchedule from "./pages/PatientSchedule";
 import ClinicianLanding from "./pages/ClinicianLanding";
 import AuthVerify from "./pages/AuthVerify";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 // DEPS-006 / PERF-007: keep recharts and the heavy demo/clinician-tool pages out
 // of the root bundle. These routes are off the patient critical path (intake →
@@ -64,22 +65,24 @@ function hospitalRoutes(prefix: string) {
 
 export default function App() {
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route path="/" element={<Navigate to="/demo" replace />} />
-        <Route path="/clinicians" element={<ClinicianLanding />} />
-        {/* Standalone split-screen showcase: patient intake + live clinician dashboard. */}
-        <Route path="/showcase" element={<ShowcaseDemo />} />
-        {/* Presentation mockup studio: real app framed in iPhone + desktop, annotated, export-ready. */}
-        <Route path="/mockups" element={<MockupStudio />} />
-        {/* Public Solace Trust Report — aggregate transparency, no auth, no PHI. */}
-        <Route path="/trust" element={<TrustReport />} />
-        <Route path="/voice" element={<VoiceAgent />} />
-        <Route path="/ehr/callback" element={<EHRCallback />} />
-        {hospitalRoutes("")}
-        {hospitalRoutes("/h")}
-        <Route path="*" element={<Navigate to="/demo" replace />} />
-      </Routes>
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/demo" replace />} />
+          <Route path="/clinicians" element={<ClinicianLanding />} />
+          {/* Standalone split-screen showcase: patient intake + live clinician dashboard. */}
+          <Route path="/showcase" element={<ShowcaseDemo />} />
+          {/* Presentation mockup studio: real app framed in iPhone + desktop, annotated, export-ready. */}
+          <Route path="/mockups" element={<MockupStudio />} />
+          {/* Public Solace Trust Report — aggregate transparency, no auth, no PHI. */}
+          <Route path="/trust" element={<TrustReport />} />
+          <Route path="/voice" element={<VoiceAgent />} />
+          <Route path="/ehr/callback" element={<EHRCallback />} />
+          {hospitalRoutes("")}
+          {hospitalRoutes("/h")}
+          <Route path="*" element={<Navigate to="/demo" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

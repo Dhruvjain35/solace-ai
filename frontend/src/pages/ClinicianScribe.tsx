@@ -314,8 +314,8 @@ export default function ClinicianScribe() {
       sessionStreamRef.current?.getTracks().forEach((t) => t.stop());
       sessionStreamRef.current = null;
       const r = await finalizeScribeSession(hospitalId, sessionId, true);
-      setFinalNote(r.structured);
-      setFinalSoapText(r.soap_text);
+      setFinalNote(normalizeNote(r.structured, sessionId));
+      setFinalSoapText(r.soap_text || "");
       setSessionStatus("finalized");
       setTab("session");
     } catch (e: any) {
@@ -332,8 +332,8 @@ export default function ClinicianScribe() {
         section_name: sectionName,
         specialty,
       });
-      setFinalNote(r.structured);
-      setFinalSoapText(r.soap_text);
+      setFinalNote(normalizeNote(r.structured, finalNote.session_id));
+      setFinalSoapText(r.soap_text || "");
     } catch (e: any) {
       setErrorMsg(humanizeError(e?.response?.data?.detail || e?.message || "unknown"));
     } finally { setRegenSection(null); }
@@ -1071,6 +1071,16 @@ function fmtMs(ms: number): string {
  * Evidence chips, shows the section's evidence-coverage bar, and offers an
  * in-place regenerate. Kept inline so the scribe page stays self-contained.
  */
+/** Coerce a finalize/regenerate payload into a fully-formed note so a missing or
+ *  malformed field from the backend can never crash the render (demo-safety). */
+function normalizeNote(n: ScribeStructuredNote, sessionId: string): ScribeStructuredNote {
+  return {
+    session_id: n?.session_id ?? sessionId,
+    sections: Array.isArray(n?.sections) ? n.sections : [],
+    transcript_segments: Array.isArray(n?.transcript_segments) ? n.transcript_segments : [],
+  };
+}
+
 function SessionNoteSection({
   section,
   regenerating,
@@ -1090,6 +1100,7 @@ function SessionNoteSection({
     coveragePct >= 80 ? { bar: "bg-emerald-500", text: "text-emerald-700" } :
     coveragePct >= 50 ? { bar: "bg-amber-500", text: "text-amber-700" } :
     { bar: "bg-rose-500", text: "text-rose-700" };
+  const lines = section.lines || [];
   return (
     <div className="mb-4 last:mb-0">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1120,15 +1131,17 @@ function SessionNoteSection({
         </div>
       </div>
       <div className="mt-1.5 space-y-2">
-        {section.lines.length === 0 && (
+        {lines.length === 0 && (
           <div className="text-sm text-slate-400 italic">No content captured for this section.</div>
         )}
-        {section.lines.map((line, i) => (
+        {lines.map((line, i) => {
+          const evidence = line.linked_evidence || [];
+          return (
           <div key={i} className="text-sm">
             <div className="text-slate-900">{line.text}</div>
-            {line.linked_evidence.length > 0 ? (
+            {evidence.length > 0 ? (
               <div className="mt-1 flex flex-wrap gap-1">
-                {line.linked_evidence.map((ev, j) => (
+                {evidence.map((ev, j) => (
                   <button
                     key={`${ev.segment_id}-${j}`}
                     type="button"
@@ -1148,7 +1161,8 @@ function SessionNoteSection({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
