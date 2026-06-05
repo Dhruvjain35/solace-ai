@@ -601,6 +601,134 @@ def aggregate_billing_events(
     }
 
 
+# ---- Workspace helpers (multi-tenant sub-scope within a hospital) -------------------
+# A Workspace is a sub-tenant scope WITHIN a hospital (e.g. a department, clinic, or
+# care team). hospital_id remains the top-level tenant boundary (the organization);
+# workspace_id is a child scope that is always owned by exactly one hospital_id.
+#
+# Table layout (AWS mode): partition key = hospital_id, sort key = workspace_id. This
+# makes "list workspaces for a hospital" a single .query() on the partition (PERF-004,
+# never a .scan()) and makes cross-tenant isolation structural — you cannot read a
+# workspace row without naming the owning hospital_id in the key. All key/condition
+# expressions use boto3 Key() (SEC-009) — no f-string interpolation of caller input.
+#
+# The workspace record itself is DURABLE tenant config (not transient nonce/quota
+# state), so it carries NO TTL — ARCH-009's TTL guidance applies to transient state.
+# CMK encryption at rest (COMP-003) is a table-level property provisioned in IaC,
+# identical to solace-patients / solace-hospitals.
+_workspaces: dict[str, dict[str, Any]] = {}  # (hospital_id, workspace_id) -> record
+
+WORKSPACES_TABLE = "solace-workspaces"
+
+
+def put_workspace(record: dict[str, Any]) -> None:
+    """Persist (create or overwrite) a workspace record.
+
+    Caller (service layer) is responsible for setting hospital_id + workspace_id and
+    for validating them. Local mode keys the in-memory store by (hospital_id,
+    workspace_id) so two hospitals can never collide and isolation is structural.
+    """
+    record.setdefault("created_at", _now_iso())
+    if settings.solace_mode == "aws":
+        _boto_table(WORKSPACES_TABLE).put_item(Item=_to_ddb(record))
+        return
+    _workspaces[(record["hospital_id"], record["workspace_id"])] = record
+
+
+def get_workspace(hospital_id: str, workspace_id: str) -> dict[str, Any] | None:
+    """Fetch one workspace by its full (hospital_id, workspace_id) key.
+
+    Returns None when no such workspace exists FOR THIS HOSPITAL. A workspace that
+    exists under a different hospital_id is invisible here — cross-tenant reads can
+    never succeed because the partition key is the owning hospital_id (SEC-008).
+    """
+    if settings.solace_mode == "aws":
+        resp = _boto_table(WORKSPACES_TABLE).get_item(
+            Key={"hospital_id": hospital_id, "workspace_id": workspace_id}
+        )
+        item = resp.get("Item")
+        return _from_ddb(item) if item else None
+    return _workspaces.get((hospital_id, workspace_id))
+
+
+def list_workspaces(hospital_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
+    """Return all workspaces owned by one hospital, newest first.
+
+    Uses .query() on the hospital_id partition (PERF-004 — never .scan()) with a
+    parameterized Key() expression (SEC-009).
+    """
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+        resp = _boto_table(WORKSPACES_TABLE).query(
+            KeyConditionExpression=Key("hospital_id").eq(hospital_id),
+            Limit=limit,
+        )
+        rows = [_from_ddb(i) for i in resp.get("Items", [])]
+    else:
+        rows = [v for (h, _w), v in _workspaces.items() if h == hospital_id]
+    rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return rows
+
+
+def update_workspace(
+    hospital_id: str, workspace_id: str, updates: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Patch mutable fields on a workspace, scoped to its owning hospital.
+
+    Returns the updated record, or None if the workspace does not exist for this
+    hospital. The DDB ConditionExpression makes the update fail closed if the row is
+    absent, so a cross-tenant or stale id can never silently create a phantom row.
+    """
+    cleaned = _to_ddb(updates)
+    if not cleaned:
+        return get_workspace(hospital_id, workspace_id)
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Attr  # noqa: PLC0415
+
+        expr = "SET " + ", ".join(f"#{i}=:{i}" for i in range(len(cleaned)))
+        names = {f"#{i}": k for i, k in enumerate(cleaned.keys())}
+        values = {f":{i}": v for i, v in enumerate(cleaned.values())}
+        try:
+            resp = _boto_table(WORKSPACES_TABLE).update_item(
+                Key={"hospital_id": hospital_id, "workspace_id": workspace_id},
+                UpdateExpression=expr,
+                ExpressionAttributeNames=names,
+                ExpressionAttributeValues=values,
+                ConditionExpression=Attr("workspace_id").exists(),
+                ReturnValues="ALL_NEW",
+            )
+        except Exception as e:  # noqa: BLE001 — ConditionalCheckFailed = not found
+            log.warning("workspace update failed (missing or cross-tenant): %s", e)
+            return None
+        return _from_ddb(resp.get("Attributes"))
+    existing = _workspaces.get((hospital_id, workspace_id))
+    if not existing:
+        return None
+    existing.update(updates)
+    return existing
+
+
+def delete_workspace(hospital_id: str, workspace_id: str) -> bool:
+    """Delete a workspace, scoped to its owning hospital.
+
+    Returns True if a row was removed, False if it did not exist for this hospital.
+    """
+    if settings.solace_mode == "aws":
+        from boto3.dynamodb.conditions import Attr  # noqa: PLC0415
+
+        try:
+            _boto_table(WORKSPACES_TABLE).delete_item(
+                Key={"hospital_id": hospital_id, "workspace_id": workspace_id},
+                ConditionExpression=Attr("workspace_id").exists(),
+            )
+            return True
+        except Exception as e:  # noqa: BLE001 — ConditionalCheckFailed = not found
+            log.warning("workspace delete failed (missing or cross-tenant): %s", e)
+            return False
+    return _workspaces.pop((hospital_id, workspace_id), None) is not None
+
+
 # ---- Test helpers -------------------------------------------------------------------
 def _reset_for_tests() -> None:
     _patients.clear()
@@ -608,3 +736,4 @@ def _reset_for_tests() -> None:
     _prescriptions.clear()
     _notes.clear()
     _appointments.clear()
+    _workspaces.clear()

@@ -16,7 +16,7 @@ from routers import (
     admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, ehr,
     ehr_auth, ehr_copilot, governance, hospitals, identity, insurance, intake, notes,
     onboarding, pain_flag, patients, prescriptions, public, sms as sms_router, transcribe,
-    triage, voice, wave4, workflows,
+    triage, voice, wave4, workflows, workspaces,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -144,6 +144,7 @@ app.include_router(onboarding.router, prefix="/api/{hospital_id}", tags=["onboar
 app.include_router(public.router, prefix="/api/{hospital_id}", tags=["public"])
 app.include_router(ehr.router, prefix="/api/{hospital_id}", tags=["ehr"])
 app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflows"])
+app.include_router(workspaces.router, prefix="/api/{hospital_id}", tags=["workspaces"])
 # Wave 1+2 — clinician AI surface (scribe, ddx v2, calculators, screeners,
 # letters, coding, inbox drafts, refills, PA packets, drug check, discharge plan,
 # specialty packs, override audit log).
