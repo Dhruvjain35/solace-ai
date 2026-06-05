@@ -442,6 +442,42 @@ class OracleEHRClient:
             )
         return self._post(resource)
 
+    def write_service_request(
+        self,
+        *,
+        patient_ref: str,
+        code: str,
+        display: str,
+        system: str = "http://loinc.org",
+        intent: str = "order",
+        priority: str = "routine",
+        reason_text: str = "",
+        encounter_ref: str | None = None,
+    ) -> dict[str, Any]:
+        """Write a ``ServiceRequest`` (order) to Oracle Health.
+
+        Reuses ``fhir_writer.build_service_request``; Oracle uses a plain
+        ``POST {base}/ServiceRequest`` create (no $-operation). Oracle requires
+        ``status``, ``intent`` and ``code`` — all supplied by the builder — and
+        accepts a patient-scoped order without an encounter, so ``encounter_ref``
+        stays optional.
+
+        Divergence from Epic: Oracle does not require the order to be tied to an
+        Encounter, and honors the ``intent`` you send (``proposal`` vs
+        ``order``) rather than forcing ``order`` for external apps.
+        """
+        resource = fhir_writer.build_service_request(
+            patient_ref=patient_ref,
+            code=code,
+            display=display,
+            system=system,
+            intent=intent,
+            priority=priority,
+            reason_text=reason_text,
+            encounter_ref=encounter_ref,
+        )
+        return self._post(resource)
+
 
 # ----------------------------------------------------------------------------------
 # Helpers
