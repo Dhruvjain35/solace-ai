@@ -4,6 +4,17 @@
   "subject": {
     "reference": "Patient/test-patient-001"
   },
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+          "code": "problem-list-item",
+          "display": "Problem List Item"
+        }
+      ]
+    }
+  ],
   "clinicalStatus": {
     "coding": [
       {
