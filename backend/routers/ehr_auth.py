@@ -168,19 +168,24 @@ def _confidential_client_kid(vendor_id: str) -> str | None:
     return os.environ.get(f"SOLACE_{vendor_id.upper()}_KID") or None
 
 
-def _resolve_smart_endpoints(vendor: ehr_vendors.EHRVendor) -> tuple[str, str]:
-    """Resolve authorize + token URLs, preferring live SMART discovery.
+def _resolve_smart_endpoints(
+    vendor: ehr_vendors.EHRVendor,
+) -> tuple[str, str, str, str]:
+    """Resolve authorize/token URLs + jwks_uri/issuer, preferring live discovery.
 
     Fetches ``.well-known/smart-configuration`` from the vendor's FHIR base URL.
     On success the discovered endpoints win (they track tenant-specific routing);
     on any failure we fall back to the statically-registered vendor URLs so SMART
-    v1 servers and offline mocks still work.
+    v1 servers and offline mocks still work. Returns
+    ``(authorize_url, token_url, jwks_uri, issuer)``; ``jwks_uri``/``issuer`` are
+    empty strings when discovery is unavailable (the id_token verification then
+    degrades to TLS-channel trust).
     """
     cfg = smart_auth.fetch_smart_configuration(vendor.fhir_base_url)
     if cfg and cfg.authorization_endpoint and cfg.token_endpoint:
         log.info("SMART discovery ok for %s", vendor.id)
-        return cfg.authorization_endpoint, cfg.token_endpoint
-    return vendor.authorize_url, vendor.token_url
+        return cfg.authorization_endpoint, cfg.token_endpoint, cfg.jwks_uri, cfg.issuer
+    return vendor.authorize_url, vendor.token_url, "", ""
 
 
 @router.get("/launch")
@@ -230,7 +235,7 @@ def launch(
         fhir_base = iss
 
     # SMART v2 discovery: prefer the live .well-known endpoints over static config.
-    authorize_url, token_url = _resolve_smart_endpoints(v)
+    authorize_url, token_url, jwks_uri, issuer = _resolve_smart_endpoints(v)
 
     state = smart_auth.generate_state()
     nonce = smart_auth.generate_nonce()
@@ -243,6 +248,11 @@ def launch(
         "nonce": nonce,
         "token_url": token_url,
         "fhir_base_url": fhir_base,
+        # Carry the discovered JWKS endpoint + issuer so the callback can verify
+        # the id_token signature against the issuer's published keys.
+        "jwks_uri": jwks_uri,
+        "issuer": issuer,
+        "client_id": v.client_id,
         "launch_type": "ehr" if is_ehr_launch else "standalone",
         "exp": int(time.time()) + _STATE_TTL,
     })
@@ -331,17 +341,36 @@ def callback(
         )
         return _redirect_with_error(rec["redirect_uri"], "token_exchange_failed")
 
-    # OIDC nonce check: the id_token's `nonce` claim MUST equal the nonce we sent
-    # at /launch. A missing or mismatched nonce means a replayed / cross-session
-    # id_token — reject it. Servers that issue no id_token (pure OAuth) are
-    # tolerated; the check only fires when an id_token is actually present.
+    # OIDC id_token verification. SMART id_tokens are signed by the issuer; we
+    # verify the RSA signature against the issuer's published JWKS (discovered at
+    # /launch) AND validate the nonce / issuer / audience / expiry claims. When
+    # the JWKS is unavailable or the key is EC (no offline EC math), we degrade to
+    # the prior TLS-channel trust: still enforce the nonce, but skip the crypto.
+    # Servers that issue no id_token (pure OAuth) are tolerated.
     id_token: str = payload.get("id_token", "")
     expected_nonce = rec.get("nonce", "")
     if id_token and expected_nonce:
-        token_nonce = smart_auth.decode_jwt_claims(id_token).get("nonce", "")
-        if not smart_auth.validate_nonce(token_nonce, expected_nonce):
-            log.warning("EHR id_token nonce mismatch for %s", vendor.id)
-            return _redirect_with_error(rec["redirect_uri"], "nonce_mismatch")
+        try:
+            result = smart_auth.verify_id_token(
+                id_token,
+                jwks_uri=rec.get("jwks_uri", ""),
+                expected_issuer=rec.get("issuer", ""),
+                expected_audience=rec.get("client_id", ""),
+                expected_nonce=expected_nonce,
+            )
+        except smart_auth.IdTokenVerificationError as e:
+            # Signature/claim verification produced a definitive failure — reject.
+            log.warning("EHR id_token verification failed for %s: %s", vendor.id, e)
+            return _redirect_with_error(rec["redirect_uri"], "id_token_invalid")
+        if result.verified:
+            log.info("EHR id_token signature verified for %s", vendor.id)
+        else:
+            # Fallback path (no JWKS / EC key). verify_id_token already enforced
+            # the nonce claim; this log records that we relied on TLS trust.
+            log.info(
+                "EHR id_token unverified (TLS-trust fallback) for %s: %s",
+                vendor.id, result.reason,
+            )
 
     # SMART launch context — patient / encounter the EHR bound to this session.
     launch_context = smart_auth.extract_launch_context(payload)
