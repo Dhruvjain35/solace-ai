@@ -80,3 +80,4 @@ Thumbs.db
 # EHR signing keys — never commit private key material
 backend/.secrets/
 .secrets/
+frontend/vite.config.js
