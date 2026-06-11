@@ -28,6 +28,13 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      // Workspace provisioning lives outside /api (POST /hospitals/provision);
+      // forward it too so the /get-started flow works in dev.
+      "/hospitals": {
+        target: process.env.VITE_DEV_API_TARGET || "https://djfjrel7b1ebi.cloudfront.net",
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 });
