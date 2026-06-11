@@ -37,7 +37,7 @@ HEADERS_YAML = f"""customHeaders:
       - key: 'Permissions-Policy'
         value: 'camera=(self), microphone=(self), geolocation=(), accelerometer=(), gyroscope=()'
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: {MEDIA_S3}; media-src 'self' {MEDIA_S3}; connect-src 'self' {CLOUDFRONT_API} {APIGW_DIRECT}; font-src 'self' data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: {MEDIA_S3}; media-src 'self' {MEDIA_S3}; connect-src 'self' {CLOUDFRONT_API} {APIGW_DIRECT}; font-src 'self' data: https://fonts.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
       - key: 'Cross-Origin-Opener-Policy'
         value: 'same-origin'
       - key: 'Cross-Origin-Resource-Policy'
