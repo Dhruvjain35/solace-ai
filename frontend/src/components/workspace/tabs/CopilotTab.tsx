@@ -12,13 +12,17 @@ import type {
   CopilotBlock,
 } from "../../../lib/api-ops";
 import CopilotArtifacts from "./CopilotArtifacts";
+import { AgentChat, AgentConsole } from "../../copilot-agent";
 
 /**
- * CopilotTab — an in-app EHR Copilot. Crawls the chart via the agent backend
- * and supports four flows: ask (grounded Q&A), catch-me-up summary, a proactive
- * fixable-issue scan, and an EHR→chart autopopulation review.
+ * CopilotTab — an in-app EHR Copilot with two modes:
+ *  - Assist (default): four read-only flows — ask (grounded Q&A), catch-me-up
+ *    summary, a proactive fixable-issue scan, and an EHR→chart autopopulation
+ *    review.
+ *  - Agent: a conversational agent that reads the chart, reasons, and PROPOSES
+ *    writes for per-action clinician confirmation, with a live trace console.
  *
- * Read-only with respect to the chart — it proposes, the clinician decides.
+ * In both modes the Copilot proposes; the clinician decides.
  */
 
 const SUGGESTIONS = [
@@ -55,6 +59,7 @@ function RichText({ text }: { text: string }) {
 export default function CopilotTab() {
   const { hospitalId, patientId, patient } = usePatientWorkspace();
 
+  const [mode, setMode] = useState<"assist" | "agent">("assist");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string>("");
   const [blocks, setBlocks] = useState<CopilotBlock[]>([]);
@@ -144,6 +149,37 @@ export default function CopilotTab() {
         </p>
       </header>
 
+      {/* Mode switch — Assist (read-only flows) vs Agent (propose-and-confirm) */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setMode("assist")}
+          className={
+            mode === "assist"
+              ? "rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+              : "rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-low"
+          }
+        >
+          Assist
+        </button>
+        <button
+          onClick={() => setMode("agent")}
+          className={
+            mode === "agent"
+              ? "rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+              : "rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-low"
+          }
+        >
+          Agent
+        </button>
+      </div>
+
+      {mode === "agent" ? (
+        <div className="space-y-4">
+          <AgentChat />
+          <AgentConsole />
+        </div>
+      ) : (
+        <>
       {error && (
         <div className="rounded-lg bg-error-container px-4 py-3 text-sm text-error">
           {error}
@@ -340,6 +376,8 @@ export default function CopilotTab() {
             </>
           )}
         </section>
+      )}
+        </>
       )}
     </div>
   );

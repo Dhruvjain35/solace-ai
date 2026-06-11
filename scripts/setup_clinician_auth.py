@@ -186,6 +186,13 @@ def main() -> None:
             "Projection": {"ProjectionType": "ALL"},
         }],
     )
+    # Public contact/sales inquiries (POST /api/contact). Non-PHI marketing
+    # inbound; simple PK lookup only, so no GSI.
+    ensure_table(
+        "solace-contact-requests",
+        [{"AttributeName": "contact_id", "KeyType": "HASH"}],
+        [{"AttributeName": "contact_id", "AttributeType": "S"}],
+    )
     ensure_table(
         "solace-audit-log",
         [
@@ -207,7 +214,7 @@ def main() -> None:
         }],
     )
     waiter = ddb.get_waiter("table_exists")
-    for t in ["solace-clinicians", "solace-audit-log", "solace-magic-tokens", "solace-access-requests"]:
+    for t in ["solace-clinicians", "solace-audit-log", "solace-magic-tokens", "solace-access-requests", "solace-contact-requests"]:
         waiter.wait(TableName=t)
     enable_ttl("solace-audit-log", "ttl")
     enable_ttl("solace-magic-tokens", "expires_at")

@@ -995,6 +995,33 @@ def list_subscriptions(hospital_id: str) -> list[dict[str, Any]]:
     return rows
 
 
+# ---- Contact / sales inquiries (public marketing form) ------------------------------
+# Inbound from POST /api/contact (routers/contact.py). NON-PHI by construction —
+# name/work-email/org/topic/message from a public marketing form, never patient
+# data. Mirrors the access-requests pattern: simple PK (contact_id), in-memory
+# dict locally, DDB `solace-contact-requests` in aws mode (table provisioned
+# idempotently by scripts/setup_clinician_auth.py).
+CONTACT_REQUESTS_TABLE = "solace-contact-requests"
+_contact_requests: dict[str, dict[str, Any]] = {}  # contact_id -> record
+
+
+def put_contact_request(record: dict[str, Any]) -> None:
+    """Persist one contact/sales inquiry. Caller sets contact_id + created_at."""
+    record.setdefault("created_at", _now_iso())
+    if settings.solace_mode == "aws":
+        _boto_table(CONTACT_REQUESTS_TABLE).put_item(Item=_to_ddb(record))
+        return
+    _contact_requests[record["contact_id"]] = record
+
+
+def get_contact_request(contact_id: str) -> dict[str, Any] | None:
+    if settings.solace_mode == "aws":
+        resp = _boto_table(CONTACT_REQUESTS_TABLE).get_item(Key={"contact_id": contact_id})
+        item = resp.get("Item")
+        return _from_ddb(item) if item else None
+    return _contact_requests.get(contact_id)
+
+
 # ---- Test helpers -------------------------------------------------------------------
 def _reset_for_tests() -> None:
     _patients.clear()
@@ -1006,3 +1033,4 @@ def _reset_for_tests() -> None:
     _ehr_configs.clear()
     _ehr_bulk_jobs.clear()
     _ehr_subscriptions.clear()
+    _contact_requests.clear()

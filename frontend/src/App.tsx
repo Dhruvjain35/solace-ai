@@ -29,6 +29,19 @@ const ShowcaseDemo = lazy(() => import("./pages/ShowcaseDemo"));
 const MockupStudio = lazy(() => import("./pages/MockupStudio"));
 const TrustReport = lazy(() => import("./pages/TrustReport"));
 
+// Marketing site + onboarding entry. All lazy: none of these are on the
+// patient or clinician critical paths, and they pull marketing-only motion UI.
+const Landing = lazy(() => import("./pages/marketing/Landing"));
+const ScribePage = lazy(() => import("./pages/marketing/ScribePage"));
+const TriagePage = lazy(() => import("./pages/marketing/TriagePage"));
+const CopilotPage = lazy(() => import("./pages/marketing/CopilotPage"));
+const IntegrationsPage = lazy(() => import("./pages/marketing/IntegrationsPage"));
+const SecurityPage = lazy(() => import("./pages/marketing/SecurityPage"));
+const AboutPage = lazy(() => import("./pages/marketing/AboutPage"));
+const ContactPage = lazy(() => import("./pages/marketing/ContactPage"));
+const GetStarted = lazy(() => import("./pages/GetStarted"));
+const EhrHub = lazy(() => import("./pages/EhrHub"));
+
 // USAB-006: a lightweight, centered busy state covers the brief lazy-chunk fetch.
 function RouteFallback() {
   return (
@@ -60,6 +73,7 @@ function hospitalRoutes(prefix: string) {
     <Route key={`${prefix}-inbox`} path={`${prefix}/:hospitalId/clinician/inbox`} element={<ClinicianInbox />} />,
     <Route key={`${prefix}-tools`} path={`${prefix}/:hospitalId/clinician/tools`} element={<ClinicianTools />} />,
     <Route key={`${prefix}-ops`} path={`${prefix}/:hospitalId/clinician/ops`} element={<ClinicianOps />} />,
+    <Route key={`${prefix}-ehr`} path={`${prefix}/:hospitalId/clinician/ehr`} element={<EhrHub />} />,
   ];
 }
 
@@ -68,7 +82,15 @@ export default function App() {
     <ErrorBoundary>
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<Navigate to="/demo" replace />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/scribe" element={<ScribePage />} />
+          <Route path="/triage" element={<TriagePage />} />
+          <Route path="/copilot" element={<CopilotPage />} />
+          <Route path="/integrations" element={<IntegrationsPage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/get-started" element={<GetStarted />} />
           <Route path="/clinicians" element={<ClinicianLanding />} />
           {/* Standalone split-screen showcase: patient intake + live clinician dashboard. */}
           <Route path="/showcase" element={<ShowcaseDemo />} />

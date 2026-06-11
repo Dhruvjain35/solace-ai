@@ -13,10 +13,11 @@ from mangum import Mangum
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
-    admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, ehr,
+    admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, contact,
+    copilot_agent, ehr,
     ehr_auth, ehr_config, ehr_copilot, ehr_jwks, fhir_bulk, fhir_subscriptions, governance, hospitals,
     identity, insurance, intake, notes, onboarding, pain_flag, patients, prescriptions, public,
-    sms as sms_router, transcribe, triage, voice, wave4, workflows, workspaces,
+    sms as sms_router, transcribe, triage, vision, voice, wave4, workflows, workspaces,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -156,6 +157,10 @@ app.include_router(ehr_config.router, prefix="/api/{hospital_id}", tags=["ehr-co
 # specialty packs, override audit log).
 app.include_router(clinical_ai.router, prefix="/api/{hospital_id}", tags=["clinical-ai"])
 app.include_router(ehr_copilot.router, prefix="/api/{hospital_id}", tags=["ehr-copilot"])
+# Copilot Agent — bounded tool loop + confirm-gated chart writes.
+app.include_router(copilot_agent.router, prefix="/api/{hospital_id}", tags=["copilot-agent"])
+# Vision OCR (Azure Document Intelligence prebuilt-read).
+app.include_router(vision.router, prefix="/api/{hospital_id}", tags=["vision"])
 # Care operations (eligibility, no-show, HEDIS, SDoH, FHIR write-back).
 app.include_router(care_ops.router, prefix="/api/{hospital_id}", tags=["care-ops"])
 # Wave 4 — HL7 v2 emit, multi-encounter, fax intake, sepsis bundle, cohort export,
@@ -176,6 +181,9 @@ app.include_router(ehr_jwks.router)
 # Hospital workspace provisioning — public onboarding. Mounted at the fixed
 # `/hospitals/...` base (NOT per-hospital) because it CREATES the hospital_id.
 app.include_router(hospitals.router, tags=["hospitals"])
+# Public contact/sales form — fixed two-segment path `/api/contact`, so it can
+# never collide with the three-segment per-hospital `/api/{hospital_id}/...` routes.
+app.include_router(contact.router, tags=["contact"])
 # Voice agent — uses its own /api/voice prefix (NOT per-hospital path) because Twilio
 # webhooks arrive at a fixed URL and route by the dialed number, not a URL path.
 app.include_router(voice.router)

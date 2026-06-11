@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     model_clinical: str = "claude-haiku-4-5"
     model_utility: str = "claude-haiku-4-5"
 
+    # Azure Document Intelligence (vision OCR — prebuilt-read). Optional: the
+    # /vision endpoint answers 503 with a clear message until BOTH are set.
+    azure_di_endpoint: str = ""      # e.g. https://<resource>.cognitiveservices.azure.com
+    azure_di_key: str = ""
+
     # AWS secret source — when set, overrides .env values on startup
     aws_secret_name: str = "solace/api-keys"
 
@@ -78,6 +83,11 @@ class Settings(BaseSettings):
     email_from: str = "Solace <no-reply@solace.health>"
     email_dev_echo: bool = False
     magic_link_ttl_seconds: int = 900  # 15-minute single-use login links
+
+    # Contact / sales inbound (POST /api/contact). When set, each submission is
+    # forwarded to this address via the transactional email service. Empty
+    # (default) = store only, skip the notify send entirely.
+    contact_notify_email: str = ""
 
     # Usage metering / billing (Bet #1) — estimated list price per billable
     # triage encounter, used ONLY to compute an aggregate ROI/value figure for
@@ -125,6 +135,8 @@ def hydrate_from_secrets_manager() -> None:
         "ANTHROPIC_API_KEY": "anthropic_api_key",
         "ELEVENLABS_API_KEY": "elevenlabs_api_key",
         "ELEVENLABS_VOICE_ID": "elevenlabs_voice_id",
+        "AZURE_DI_ENDPOINT": "azure_di_endpoint",
+        "AZURE_DI_KEY": "azure_di_key",
     }
     missing = []
     for secret_key, attr in required_mapping.items():
