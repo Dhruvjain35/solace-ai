@@ -14,7 +14,7 @@ from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
     admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, ehr,
-    ehr_auth, ehr_config, ehr_copilot, fhir_bulk, fhir_subscriptions, governance, hospitals,
+    ehr_auth, ehr_config, ehr_copilot, ehr_jwks, fhir_bulk, fhir_subscriptions, governance, hospitals,
     identity, insurance, intake, notes, onboarding, pain_flag, patients, prescriptions, public,
     sms as sms_router, transcribe, triage, voice, wave4, workflows, workspaces,
 )
@@ -171,6 +171,8 @@ app.include_router(fhir_subscriptions.webhook_router, tags=["ehr-subscriptions"]
 app.include_router(cds_hooks_router.router)
 # Public governance / model cards (no auth — for procurement teams + auditors).
 app.include_router(governance.router)
+# Public JWKS for EHR confidential-client auth (no auth — vendors fetch our pubkeys).
+app.include_router(ehr_jwks.router)
 # Hospital workspace provisioning — public onboarding. Mounted at the fixed
 # `/hospitals/...` base (NOT per-hospital) because it CREATES the hospital_id.
 app.include_router(hospitals.router, tags=["hospitals"])

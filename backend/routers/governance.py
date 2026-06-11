@@ -15,9 +15,13 @@ from lib.auth import audit, require_clinician
 from services import model_cards
 
 # Fields safe to expose on the PUBLIC override log. Deliberately EXCLUDES
-# clinician_id (identifying) and notes (clinician free-text — potential PHI).
-# The full raw log is available via the clinician-authed endpoint below.
-_PUBLIC_OVERRIDE_FIELDS = ("ts", "hospital_id", "patient_id", "purpose", "model", "decision", "diff_chars")
+# clinician_id (identifying), notes (clinician free-text — potential PHI), AND
+# patient_id: this endpoint is UNAUTHENTICATED and accepts any hospital_id, so a
+# patient_id here would let anyone harvest patient UUIDs tied to a clinical
+# AI-decision purpose across every tenant (PHI under HIPAA). The full raw log,
+# incl. patient_id/clinician_id/notes, is available only via the clinician-authed
+# /override-log/full endpoint below.
+_PUBLIC_OVERRIDE_FIELDS = ("ts", "hospital_id", "purpose", "model", "decision", "diff_chars")
 
 
 def _redact_override(entry: dict) -> dict:

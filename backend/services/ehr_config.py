@@ -36,6 +36,7 @@ from urllib.parse import urlparse
 
 from db import storage
 from lib import ehr_vendors
+from lib import url_guard
 from services import workspaces as workspace_service
 
 log = logging.getLogger(__name__)
@@ -97,10 +98,14 @@ _SECRET_REF_RE = re.compile(r"^[A-Za-z0-9/_+=.@-]{1,512}$")
 
 
 def _require_https(url: str, field: str) -> str:
-    """Validate an endpoint URL is a well-formed absolute HTTPS URL.
+    """Validate an endpoint URL is a well-formed, public, absolute HTTPS URL.
 
     Plain-HTTP FHIR/OAuth endpoints are rejected (COMP-004 — no cleartext path to
-    PHI), with a localhost exception for offline/mock testing only.
+    PHI), with a localhost exception for offline/mock testing only. Additionally
+    (C3 — SSRF), the host must resolve to a publicly routable address: a config
+    URL pointed at the cloud metadata endpoint or an internal VPC host is rejected
+    so a clinician-writable config can't turn the OAuth/discovery/bulk fetches into
+    server-side request forgery. See ``lib.url_guard``.
     """
     url = (url or "").strip()
     if not url:
@@ -108,9 +113,10 @@ def _require_https(url: str, field: str) -> str:
     parsed = urlparse(url)
     if parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1"):
         return url  # offline mock harness only
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise InvalidEHRConfig(f"{field} must be an absolute https:// URL")
-    return url
+    try:
+        return url_guard.assert_public_https(url, field)
+    except url_guard.UnsafeURL as e:
+        raise InvalidEHRConfig(str(e)) from e
 
 
 def _validate_secret_ref(value: str, field: str) -> str:

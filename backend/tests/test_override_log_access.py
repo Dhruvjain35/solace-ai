@@ -19,6 +19,7 @@ from main import app  # noqa: E402
 
 _CANARY_NOTES = "PATIENT-DISCLOSED-SUICIDAL-IDEATION-canary"
 _CANARY_CLINICIAN = "dr-jane-doe-canary"
+_CANARY_PATIENT = "11111111-1111-1111-1111-111111111111"
 
 
 @pytest.fixture
@@ -34,7 +35,7 @@ def _seed_override():
         model_name="claude-haiku-4-5",
         decision="edited",
         clinician_id=_CANARY_CLINICIAN,
-        patient_id="11111111-1111-1111-1111-111111111111",
+        patient_id=_CANARY_PATIENT,
         hospital_id="demo",
         diff_chars=42,
         notes=_CANARY_NOTES,
@@ -51,8 +52,11 @@ def test_public_override_log_redacts_clinician_and_notes(client):
     raw = r.text
     assert _CANARY_NOTES not in raw
     assert _CANARY_CLINICIAN not in raw
+    # patient_id is PHI on this UNAUTHENTICATED, any-hospital endpoint — must be stripped.
+    assert _CANARY_PATIENT not in raw
     assert "notes" not in raw
     assert "clinician_id" not in raw
+    assert "patient_id" not in raw
     # non-sensitive fields still present
     entry = body["entries"][0]
     assert entry["decision"] == "edited"

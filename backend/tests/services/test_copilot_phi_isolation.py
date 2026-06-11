@@ -108,10 +108,10 @@ def captured(monkeypatch):
     monkeypatch.setattr(claude, "messages_create", fake_create)
     monkeypatch.setattr("db.storage.get_patient", lambda pid: dict(_PATIENT))
     monkeypatch.setattr(executor, "_crawl_ehr", lambda ctx: dict(_EHR_RECORD))
-    monkeypatch.setattr(differential, "generate", lambda **kw: [
-        {"diagnosis": "Acute coronary syndrome", "icd10": "I24.9",
-         "likelihood": "high", "must_not_miss": True, "discriminator": "troponin"},
-    ])
+    # NOTE: differential.generate is intentionally NOT stubbed. It issues a real
+    # claude.messages_create(purpose="differential") call, so the leak boundary
+    # below MUST see and vet that payload — stubbing it (as a prior version did)
+    # hid the single most PHI-dangerous model call from the CI gate (C2).
     return payloads
 
 
@@ -145,7 +145,10 @@ class TestLeakBoundary:
     def test_both_passes_were_exercised(self, captured):
         pipeline.answer_question("h1", "p1", "anything")
         purposes = {p["purpose"] for p in captured}
-        assert purposes == {"copilot_plan", "copilot_narrate"}
+        # The plan + narrate passes AND the real differential call must all run —
+        # the differential being exercised (not stubbed) is what makes the leak
+        # boundary above meaningful for clinical.differential (C2).
+        assert {"copilot_plan", "copilot_narrate", "differential"} <= purposes
 
 
 # ---------------------------------------------------------------------------

@@ -76,3 +76,7 @@ backend/tmp/
 # OS
 .DS_Store
 Thumbs.db
+
+# EHR signing keys — never commit private key material
+backend/.secrets/
+.secrets/

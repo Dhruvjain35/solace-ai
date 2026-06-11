@@ -279,13 +279,28 @@ def _clinical_differential(ex: Any, params: dict[str, Any]) -> dict[str, Any]:
         esi = int(esi)
     except (TypeError, ValueError):
         esi = 3
+    # PHI-ISOLATION (C2): the copilot must never send the raw free-text transcript
+    # (it carries the patient name + narrative) or raw medication / allergy / vital
+    # VALUES to the model. Feed the differential a CODED clinical context only — the
+    # chief complaint + coded problem list + ESI. Medication/allergy/vital context is
+    # deliberately withheld from this model call (those values still reach the
+    # clinician via slots in other primitives), keeping clinical.differential inside
+    # the "coded metadata only" guarantee. The leak test exercises this real call.
+    conditions = [c for c in (chart.get("conditions") or [])
+                  if isinstance(c, str) and c.strip()]
+    cc = (chart.get("chief_complaint") or "").strip()
+    context_parts = []
+    if cc:
+        context_parts.append(f"Chief complaint: {cc}.")
+    if conditions:
+        context_parts.append("Known conditions: " + ", ".join(conditions) + ".")
+    coded_context = " ".join(context_parts)
     ranked = differential.generate(
-        transcript=chart.get("transcript") or "",
+        transcript=coded_context,  # coded summary, NOT the raw transcript
         esi_level=esi,
-        medical_info={"conditions": chart["conditions"], "medications": chart["medications"],
-                      "allergies": chart["allergies"], "age": chart.get("age"),
+        medical_info={"conditions": conditions, "age": chart.get("age"),
                       "sex": chart.get("sex")},
-        vitals=chart.get("vitals") or {},
+        vitals={},  # raw vitals are PHI under the copilot guarantee — withheld
     )
     coded = [{
         "diagnosis": d.get("diagnosis"),        # coded clinical label (not an identifier)

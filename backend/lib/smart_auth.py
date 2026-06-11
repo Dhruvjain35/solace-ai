@@ -31,6 +31,8 @@ from typing import Any
 
 import httpx
 
+from lib import url_guard
+
 log = logging.getLogger(__name__)
 
 # SMART spec bounds: a PKCE verifier is 43-128 chars; a nonce / state need only
@@ -196,7 +198,10 @@ def fetch_smart_configuration(fhir_base_url: str) -> SmartConfiguration | None:
         return None
     url = discovery_url(fhir_base_url)
     try:
-        with httpx.Client(timeout=_DISCOVERY_TIMEOUT, follow_redirects=True) as client:
+        # C3 (SSRF): reject a discovery URL pointed at metadata/internal hosts, and
+        # do NOT follow redirects (a 30x could bounce past the check into the VPC).
+        url_guard.assert_public_https(url, "fhir_base_url")
+        with httpx.Client(timeout=_DISCOVERY_TIMEOUT, follow_redirects=False) as client:
             resp = client.get(url, headers={"Accept": "application/json"})
         if resp.status_code != 200:
             log.info("SMART discovery %s -> %d", url, resp.status_code)
@@ -654,7 +659,9 @@ def fetch_jwks(jwks_uri: str) -> list[dict[str, Any]]:
     if not jwks_uri:
         return []
     try:
-        with httpx.Client(timeout=_JWKS_TIMEOUT, follow_redirects=True) as client:
+        # C3 (SSRF): same guard as discovery — public host only, no redirect bounce.
+        url_guard.assert_public_https(jwks_uri, "jwks_uri")
+        with httpx.Client(timeout=_JWKS_TIMEOUT, follow_redirects=False) as client:
             resp = client.get(jwks_uri, headers={"Accept": "application/json"})
         if resp.status_code != 200:
             log.info("JWKS fetch %s -> %d", jwks_uri, resp.status_code)

@@ -51,7 +51,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
-from lib import ehr_vendors, jwt_auth, smart_auth
+from lib import ehr_vendors, jwt_auth, smart_auth, url_guard
 from services import ehr_config as ehr_config_service
 
 log = logging.getLogger(__name__)
@@ -351,7 +351,15 @@ def callback(
         return _redirect_with_error(rec["redirect_uri"], "client_auth_failed")
 
     try:
-        with httpx.Client(timeout=15.0) as client:
+        # C3 (SSRF): the token POST carries the OAuth code + (for confidential
+        # clients) a signed private_key_jwt assertion. Refuse to send it anywhere
+        # but a public HTTPS host, and never follow a redirect into the VPC.
+        url_guard.assert_public_https(token_url, "token_url")
+    except url_guard.UnsafeURL as e:
+        log.warning("EHR token exchange blocked unsafe token_url (%s): %s", vendor.id, e)
+        return _redirect_with_error(rec["redirect_uri"], "token_exchange_failed")
+    try:
+        with httpx.Client(timeout=15.0, follow_redirects=False) as client:
             resp = client.post(
                 token_url,
                 data=form,
