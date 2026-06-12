@@ -8,7 +8,7 @@ import {
   type Transition,
   type Variants,
 } from 'framer-motion';
-import { FileText, Activity, MessagesSquare, HeartPulse } from 'lucide-react';
+import { FileText, Activity, MessagesSquare } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
 import LaptopRig from './LaptopRig';
 import ProductWord from './ProductWord';
@@ -237,8 +237,8 @@ export default function DarkTriage() {
         />
       </div>
 
-      {/* ===== 5 · Gradient mega paragraph, per-word scrub ===== */}
-      <div ref={gradRef} className="mx-auto max-w-5xl px-6 py-[12vh] md:px-12">
+      {/* ===== 5 · Gradient mega paragraph — the closing beat of the dark act ===== */}
+      <div ref={gradRef} className="mx-auto max-w-5xl px-6 pb-[16vh] pt-[14vh] md:px-12">
         <p className="font-sofia text-[clamp(38px,5.8vw,84px)] font-medium leading-[1.16] tracking-[-0.02em]">
           {/* Screen readers get one continuous sentence; the word-split scrub
               layer is decorative (same pattern as BigStatement). */}
@@ -259,19 +259,16 @@ export default function DarkTriage() {
         </p>
       </div>
 
-      {/* ===== 6 · Exit tease — hands off to the light closing act ===== */}
-      <div className="flex justify-center py-[10vh]">
-        <motion.div
-          initial={{ opacity: 0, y: reduce ? 0 : 70 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={moveWithFade}
-          aria-hidden="true"
-          className="flex aspect-square w-[min(40vw,320px)] items-center justify-center rounded-hims-lg bg-white shadow-halo"
-        >
-          <HeartPulse size={96} strokeWidth={1.5} className="text-ink" />
-        </motion.div>
-      </div>
+      {/* ===== 6 · Transition — warm the base toward the mint closing act so
+          the hand-off reads as a fade, not a hard black-to-mint cut. ===== */}
+      <div
+        aria-hidden="true"
+        className="h-[16vh] w-full"
+        style={{
+          backgroundImage:
+            'radial-gradient(120% 130% at 50% 100%, rgba(31,191,143,0.22), rgba(31,191,143,0) 68%)',
+        }}
+      />
     </section>
   );
 }
