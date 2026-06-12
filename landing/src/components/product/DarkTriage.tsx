@@ -10,10 +10,8 @@ import {
 } from 'framer-motion';
 import { FileText, Activity, MessagesSquare, HeartPulse } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
-import useIsWide from '../../lib/useIsWide';
 import LaptopRig from './LaptopRig';
 import ProductWord from './ProductWord';
-import QueueScreen from './QueueScreen';
 import EhrScreen from './EhrScreen';
 
 /*
@@ -92,20 +90,8 @@ function ScrubWord({
 }
 
 export default function DarkTriage() {
-  const shotsRef = useRef<HTMLDivElement>(null);
   const gradRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
-  // Full parallax choreography only runs ≥lg.
-  const isWide = useIsWide();
-
-  // ---- Screenshot pair: two parallax rates so the cards drift apart ----
-  const { scrollYProgress: shotsP } = useScroll({
-    target: shotsRef,
-    offset: ['start end', 'end start'],
-  });
-  const still = reduce || !isWide;
-  // The laptop drives its own 3D entrance; only the browser card parallaxes.
-  const shotY2 = useTransform(shotsP, [0, 1], still ? [0, 0] : [130, -90]);
 
   // ---- Gradient paragraph: per-word opacity scrub through mid-viewport ----
   const { scrollYProgress: gradP } = useScroll({
@@ -240,27 +226,15 @@ export default function DarkTriage() {
         </div>
       </div>
 
-      {/* ===== 4 · Clinician hardware: 3D laptop + floating EHR window ===== */}
-      {/* Near full-bleed below sm so the DOM screens (cqw units) render as
-          large as the viewport allows — the dashboards stay legible. */}
-      <div
-        ref={shotsRef}
-        className="mx-auto mt-[8vh] w-full max-w-[1100px] px-3 sm:px-6"
-      >
+      {/* ===== 4 · Clinician hardware: one laptop, the patient snapshot =====
+          A single device keeps the section from stacking two near-identical
+          computers; the patient snapshot is the richer view (differential +
+          what-drove-the-ESI), so it carries the section alone. */}
+      <div className="mx-auto mt-[8vh] w-full max-w-[1100px] px-3 sm:px-6">
         <LaptopRig
           screen={<EhrScreen />}
           alt="Solace Atlas patient snapshot: the AI summary, possible causes with must-not-miss flags, and the reasons behind the urgency score"
         />
-        {/* Second full laptop — the live workspace — mirroring the first. */}
-        <motion.div
-          style={{ y: still ? 0 : shotY2 }}
-          className="relative z-10 mt-[6vh]"
-        >
-          <LaptopRig
-            screen={<QueueScreen />}
-            alt="Solace Atlas workspace: the live patient queue, ambient scribe and patient snapshot"
-          />
-        </motion.div>
       </div>
 
       {/* ===== 5 · Gradient mega paragraph, per-word scrub ===== */}
