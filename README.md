@@ -1,5 +1,12 @@
 # Solace
 
+> **Repo layout** — three independent pieces:
+> | Folder | What | Where it runs |
+> |---|---|---|
+> | `landing/` | Marketing site ([live](https://solacehealth-eight.vercel.app)) | Vercel, auto-deploys from `main` (see `landing/README.md`) |
+> | `frontend/` | The product app (patient intake + Atlas clinician terminal) | solaceaidemo.vercel.app |
+> | `backend/` | FastAPI on AWS Lambda | AWS |
+
 **AI-native patient intake and clinical triage for emergency departments.**
 
 Solace eliminates the dead time between a patient walking through the ED door and a clinician knowing what they need. A patient scans a QR code, speaks their symptoms in any language, and optionally photographs their injury or insurance card. Within seconds they hear a warm voice explain their triage level and what to expect while they wait. On the other side of the department, the clinician already has a full AI-generated pre-brief — provisional ESI level, SHAP attribution, clinical scribe draft, EHR pull — before the patient is roomed.
