@@ -24,12 +24,12 @@ export default function ProductWord({
   const reduce = useReducedMotion();
   const offset = from === 'right' ? '38%' : '-38%';
   return (
-    // The clip wrapper masks the horizontal slide overshoot. `leading-none`
-    // sits the line box flush to the cap height, so descenders (the "g" in
-    // Triage.) poke below it and get clipped — pad the clip box to give them
-    // room, then cancel the padding with a negative margin so layout is
-    // unchanged.
-    <div className="overflow-hidden pb-[0.24em] -mb-[0.24em]">
+    // Mask ONLY the horizontal slide overshoot. `overflow-hidden` would also
+    // clip vertically and slice descenders (the "g" in "Triage."), so instead
+    // use clip-path inset with the horizontal edges at 0 (clip left/right) and
+    // the vertical edges pushed out to -100% (never clip top/bottom). The slide
+    // is purely an x-translate, so this loses nothing.
+    <div style={{ clipPath: 'inset(-100% 0 -100% 0)' }}>
       <motion.h2
         id={id}
         initial={{ opacity: 0, x: reduce ? 0 : offset }}
