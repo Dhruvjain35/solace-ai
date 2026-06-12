@@ -21,8 +21,8 @@ export default function Product() {
         }
       />
       <FeatureIntro />
-      <TileGrid />
       <SideBySide />
+      <TileGrid />
       <BigStatement
         className="text-grad-solace"
         text="Emergency care should feel calm, not scary. That's why we built Solace. Care starts the moment you speak, and your care team always knows why."

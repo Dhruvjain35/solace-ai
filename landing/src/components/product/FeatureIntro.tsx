@@ -21,9 +21,10 @@ export default function FeatureIntro() {
       aria-labelledby="feature-intro-heading"
       className="overflow-hidden bg-white"
       style={{
-        // Barely-there mint wash (the hims band rhythm): starts white against
-        // the statement above, ends on the faint mint TileGrid opens with.
-        backgroundImage: 'linear-gradient(180deg, #ffffff 0%, #f2f9f6 100%)',
+        // Barely-there wash (the hims band rhythm): starts white against the
+        // statement above, settles onto the off-white the SideBySide phone
+        // section opens with so Intake flows straight into it.
+        backgroundImage: 'linear-gradient(180deg, #ffffff 0%, #fafaf8 100%)',
       }}
     >
       {/* --- Centered statement --- */}
