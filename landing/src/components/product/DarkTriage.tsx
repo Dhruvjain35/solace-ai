@@ -33,10 +33,35 @@ const GRADIENT_COPY =
   'No more guessing from the doorway. Want the story before you walk in? Read one line, or read every word the patient said. Whatever works for you, works for us.';
 const WORDS = GRADIENT_COPY.split(' ');
 
-const CIRCLES = [
-  { label: 'Summary', Icon: FileText },
-  { label: 'Vitals', Icon: Activity },
-  { label: 'Transcript', Icon: MessagesSquare },
+// The pre-arrival brief, as a clinician actually receives it: a summary line,
+// the vitals strip, and the patient's own words. Replaces the old row of empty
+// circle buttons — same three facets, but shown as real content.
+const BRIEF_ROWS = [
+  {
+    label: 'Summary',
+    Icon: FileText,
+    body: (
+      <>58M, exertional chest tightness radiating to the left arm. One hour, worsening.</>
+    ),
+  },
+  {
+    label: 'Vitals',
+    Icon: Activity,
+    body: (
+      <span className="font-mono text-[13px] tracking-[0.02em] text-white/80">
+        HR 118 · BP 148/92 · SpO₂ 94% · Temp 99.1°F
+      </span>
+    ),
+  },
+  {
+    label: 'Transcript',
+    Icon: MessagesSquare,
+    body: (
+      <span className="italic text-white/75">
+        “It started after I climbed the stairs and it just won't ease up.”
+      </span>
+    ),
+  },
 ] as const;
 
 // One word of the gradient paragraph: opacity scrubs 0.16 → 1 as the scroll
@@ -114,59 +139,96 @@ export default function DarkTriage() {
         />
       </div>
 
-      {/* ===== 2 + 3 · Dark feature card with circle actions ===== */}
+      {/* ===== 2 + 3 · Dark feature card with the pre-arrival brief ===== */}
       <div className="px-4 sm:px-6">
         <div
-          className="mx-auto flex min-h-[64vh] max-w-[1180px] flex-col items-center justify-center overflow-hidden rounded-hims p-12 text-center lg:p-24"
+          className="mx-auto grid max-w-[1180px] items-center gap-10 overflow-hidden rounded-hims p-8 sm:p-12 lg:grid-cols-2 lg:gap-16 lg:p-20"
           style={{
-            // A mint bloom at the card's top over the dark base — the depth
+            // A mint bloom at the card's top-left over the dark base — the depth
             // the reference's maroon-violet card gets from its inner glow.
             backgroundImage:
-              'radial-gradient(80% 60% at 50% 0%, rgba(31,191,143,0.18), rgba(31,191,143,0) 65%), linear-gradient(157deg, #11352c 0%, #0b231d 55%, #07150f 100%)',
+              'radial-gradient(70% 70% at 18% 0%, rgba(31,191,143,0.20), rgba(31,191,143,0) 62%), linear-gradient(157deg, #11352c 0%, #0b231d 55%, #07150f 100%)',
           }}
         >
-          <motion.h3
-            initial={{ opacity: 0, y: reduce ? 0 : 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={moveWithFade}
-            className="max-w-2xl font-sofia text-[clamp(28px,2.6vw,40px)] font-medium leading-[1.2] tracking-[-0.02em] text-white"
-          >
-            Your clinicians meet the story before the patient
-            reaches the bed.
-          </motion.h3>
-          <motion.p
-            initial={{ opacity: 0, y: reduce ? 0 : 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ ...moveWithFade, delay: 0.08 }}
-            className="mt-5 max-w-xl text-base text-white/70 md:text-lg"
-          >
-            The summary, the vitals and the full conversation. One tap each.
-          </motion.p>
+          {/* Left: the claim */}
+          <div className="text-center lg:text-left">
+            <motion.p
+              initial={{ opacity: 0, y: reduce ? 0 : 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.6 }}
+              transition={moveWithFade}
+              className="text-[12px] font-semibold uppercase tracking-[0.18em] text-solace-green-300/80"
+            >
+              Before the patient arrives
+            </motion.p>
+            <motion.h3
+              initial={{ opacity: 0, y: reduce ? 0 : 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ ...moveWithFade, delay: 0.05 }}
+              className="mt-4 font-sofia text-[clamp(28px,2.6vw,42px)] font-medium leading-[1.12] tracking-[-0.02em] text-white"
+            >
+              Your clinicians meet the story before the patient reaches the bed.
+            </motion.h3>
+            <motion.p
+              initial={{ opacity: 0, y: reduce ? 0 : 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ ...moveWithFade, delay: 0.1 }}
+              className="mt-5 text-base leading-relaxed text-white/65 md:text-lg"
+            >
+              The summary, the vitals, and the patient's own words — ready the
+              moment they pick up the chart.
+            </motion.p>
+          </div>
 
-          <motion.ul
+          {/* Right: the brief itself, as the care team sees it */}
+          <motion.div
             variants={circleRow}
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.5 }}
-            className="mt-14 flex flex-nowrap items-start justify-center gap-x-6 gap-y-8 sm:gap-x-10 lg:mt-16"
+            viewport={{ once: true, amount: 0.4 }}
+            className="overflow-hidden rounded-hims-lg bg-white/[0.05] ring-1 ring-white/10 backdrop-blur-sm"
           >
-            {CIRCLES.map(({ label, Icon }) => (
-              <motion.li
-                key={label}
-                variants={circleItem}
-                className="flex flex-col items-center gap-3"
-              >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-pop sm:h-20 sm:w-20">
-                  <Icon size={28} strokeWidth={1.75} aria-hidden="true" />
-                </span>
-                <span className="text-sm font-medium text-white/80">
-                  {label}
-                </span>
-              </motion.li>
-            ))}
-          </motion.ul>
+            {/* Brief header: who's coming + acuity */}
+            <motion.div
+              variants={circleItem}
+              className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4"
+            >
+              <div>
+                <p className="font-sofia text-[17px] font-medium tracking-[-0.01em] text-white">
+                  Marcus R. · 58
+                </p>
+                <p className="text-[12px] text-white/45">Arriving · ~4 min out</p>
+              </div>
+              <span className="rounded-pill bg-solace-green-500/15 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-solace-green-300 ring-1 ring-solace-green-500/30">
+                ESI 2 · Urgent
+              </span>
+            </motion.div>
+
+            {/* The three facets, as real rows */}
+            <ul className="divide-y divide-white/[0.07]">
+              {BRIEF_ROWS.map(({ label, Icon, body }) => (
+                <motion.li
+                  key={label}
+                  variants={circleItem}
+                  className="flex items-start gap-4 px-6 py-5"
+                >
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-pop">
+                    <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
+                      {label}
+                    </p>
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-white/90">
+                      {body}
+                    </p>
+                  </div>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
         </div>
       </div>
 
