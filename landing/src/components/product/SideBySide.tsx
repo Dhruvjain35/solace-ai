@@ -4,6 +4,7 @@ import {
   motion,
   useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
   type MotionValue,
   type Transition,
@@ -94,10 +95,15 @@ export default function SideBySide() {
   // then phone with simple in-view reveals.
   const isWide = useIsWide();
 
-  const { scrollYProgress: p } = useScroll({
+  const { scrollYProgress: rawP } = useScroll({
     target: trackRef,
     offset: ['start start', 'end end'],
   });
+  // Smooth the raw scroll position with a spring so every scrubbed transform
+  // (copy swaps, phone rise, screen cross-fades, progress bar) eases with
+  // momentum instead of snapping pixel-for-pixel to the wheel — the buttery
+  // feel the rest of the page's reveals already have.
+  const p = useSpring(rawP, { stiffness: 90, damping: 28, restDelta: 0.0004 });
 
   // Phone: a short rise as the section pins (himsMove feel via the expo
   // ease), stays pinned, then drifts up -8vh over the last 5%. The card's

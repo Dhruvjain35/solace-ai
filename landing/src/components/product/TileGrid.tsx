@@ -7,7 +7,7 @@ import {
   useReducedMotion,
 } from 'framer-motion';
 import type { ReactNode } from 'react';
-import { Mic } from 'lucide-react';
+import { Mic, Check } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
 import useIsWide from '../../lib/useIsWide';
 
@@ -181,13 +181,26 @@ export default function TileGrid() {
           </Tile>
 
           <Tile index={1} reduce={reduce} className="h-[200px] bg-ink">
-            <div className="flex h-full flex-col justify-center p-6">
-              <p className="font-sofia text-[26px] font-medium leading-tight tracking-[-0.02em] text-white">
-                Priority 2 · Urgent
-              </p>
-              <p className="mt-2 text-sm text-white/70">
-                the sickest are always seen first
-              </p>
+            <div className="flex h-full flex-col justify-between p-6">
+              {/* Acuity ladder: ESI 1–5, this patient's level lit. */}
+              <div className="flex items-center gap-1.5" aria-hidden="true">
+                {[1, 2, 3, 4, 5].map((lvl) => (
+                  <span
+                    key={lvl}
+                    className={`h-1.5 flex-1 rounded-full ${
+                      lvl === 2 ? 'bg-solace-green-500' : 'bg-white/15'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div>
+                <p className="font-sofia text-[26px] font-medium leading-tight tracking-[-0.02em] text-white">
+                  Priority 2 · Urgent
+                </p>
+                <p className="mt-2 text-sm text-white/70">
+                  the sickest are always seen first
+                </p>
+              </div>
             </div>
           </Tile>
 
@@ -258,13 +271,32 @@ export default function TileGrid() {
         {/* ---- Column 3 (drifts up) ---- */}
         <motion.div style={{ y: yOdd }} className={`${col} hidden pt-4 md:flex`}>
           <Tile index={5} reduce={reduce} className="h-[280px] bg-ink">
-            <div className="flex h-full flex-col justify-center p-6 text-white">
-              <p className="font-sofia text-[40px] font-medium leading-none tracking-[-0.02em]">
-                35–45 min
-              </p>
-              <p className="mt-2.5 text-sm text-white/70">
-                your real wait time, updated every 15 seconds
-              </p>
+            <div className="flex h-full flex-col justify-between p-6 text-white">
+              {/* Live pulse — the wait time is updating right now. */}
+              <div className="flex items-center gap-2">
+                <motion.span
+                  className="h-2 w-2 rounded-full bg-solace-green-500"
+                  animate={
+                    still || !onStage ? { opacity: 1 } : { opacity: [1, 0.3, 1] }
+                  }
+                  transition={
+                    still || !onStage
+                      ? { duration: 0 }
+                      : { duration: 1.6, ease: 'easeInOut', repeat: Infinity }
+                  }
+                />
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/50">
+                  Live
+                </span>
+              </div>
+              <div>
+                <p className="font-sofia text-[40px] font-medium leading-none tracking-[-0.02em]">
+                  35–45 min
+                </p>
+                <p className="mt-2.5 text-sm text-white/70">
+                  your real wait time, updated every 15 seconds
+                </p>
+              </div>
             </div>
           </Tile>
 
@@ -384,11 +416,36 @@ export default function TileGrid() {
                 <p className="mt-3 font-sofia text-[30px] font-medium leading-[1.15] tracking-[-0.02em] text-ink">
                   Every AI step, written down.
                 </p>
+                {/* A peek at the audit trail itself. */}
+                <ul className="mt-5 space-y-2" aria-hidden="true">
+                  {[
+                    { t: 'Read transcript', at: '14:02' },
+                    { t: 'Read insurance card', at: '14:02' },
+                    { t: 'Vision: injury photo', at: '14:03' },
+                  ].map((row) => (
+                    <li
+                      key={row.t}
+                      className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 text-[12px] ring-1 ring-black/[0.05]"
+                    >
+                      <span className="flex items-center gap-2 text-ink/80">
+                        <Check
+                          size={13}
+                          strokeWidth={2.4}
+                          className="text-solace-green-600"
+                          aria-hidden="true"
+                        />
+                        {row.t}
+                      </span>
+                      <span className="font-mono text-[11px] text-ink/40">
+                        {row.at}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
               <p className="text-[15px] leading-relaxed text-muted">
-                Whenever the AI reads your words, your card or your photo,
-                that moment is saved to your record. Your clinician can always
-                see exactly what the AI saw.
+                Every read is saved to your record, so your clinician sees exactly
+                what the AI saw.
               </p>
             </div>
           </Tile>
@@ -398,7 +455,20 @@ export default function TileGrid() {
               <p className="font-sofia text-[64px] font-medium leading-none tracking-hims">
                 98%
               </p>
-              <p className="mt-2.5 text-sm text-white/70">the AI tells your care team how sure it is, every time</p>
+              {/* Confidence meter — fills to the number on view. */}
+              <div
+                className="mt-5 h-1.5 w-full max-w-[180px] overflow-hidden rounded-full bg-white/15"
+                aria-hidden="true"
+              >
+                <motion.div
+                  className="h-full rounded-full bg-solace-green-500"
+                  initial={{ width: '0%' }}
+                  whileInView={{ width: '98%' }}
+                  viewport={{ once: true, amount: 0.6 }}
+                  transition={reduce ? { duration: 0 } : himsMove}
+                />
+              </div>
+              <p className="mt-4 text-sm text-white/70">the AI tells your care team how sure it is, every time</p>
             </div>
           </Tile>
         </motion.div>
