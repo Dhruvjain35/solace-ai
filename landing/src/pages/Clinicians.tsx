@@ -1,10 +1,10 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  AnimatePresence,
   motion,
   useReducedMotion,
   useScroll,
   useTransform,
-  type Variants,
 } from 'framer-motion';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -397,23 +397,126 @@ function FeatureTiles({ reduce }: { reduce: boolean | null }) {
 
 /* ===== 6 · Dark act: mega type, circle actions, the live queue ===== */
 
-const CIRCLES = [
-  { label: 'Summary', Icon: FileText },
-  { label: 'Vitals', Icon: Activity },
-  { label: 'Transcript', Icon: MessagesSquare },
+// The patient snapshot as three tabs the clinician flicks between — the
+// "one tap away" idea made literal. Each tab is a real facet of the chart.
+const SNAPSHOT_TABS = [
+  {
+    label: 'Summary',
+    Icon: FileText,
+    body: (
+      <>
+        34F, severe right-upper-quadrant pain radiating to the shoulder. Three
+        hours, with nausea. No fever.
+      </>
+    ),
+  },
+  {
+    label: 'Vitals',
+    Icon: Activity,
+    body: (
+      <span className="font-mono text-[14px] tracking-[0.02em] text-white/85">
+        HR 104 · BP 138/86 · SpO₂ 98% · Temp 100.4°F
+      </span>
+    ),
+  },
+  {
+    label: 'Transcript',
+    Icon: MessagesSquare,
+    body: (
+      <span className="italic text-white/80">
+        “The pain comes in waves and nothing I take touches it.”
+      </span>
+    ),
+  },
 ] as const;
 
-function DarkAct({ reduce }: { reduce: boolean | null }) {
-  // Circle pop-in: scale on HIMS_EXPO, fade on HIMS_OUT, staggered.
-  const circleRow: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
-  };
-  const circleItem: Variants = {
-    hidden: { opacity: 0, scale: reduce ? 1 : 0.6 },
-    show: { opacity: 1, scale: 1, transition: { ...himsMove, opacity: himsFade } },
-  };
+// The tabbed snapshot card: auto-flips through the three facets, and each tab
+// is clickable. Reduced motion holds it on Summary.
+function SnapshotCard({ reduce }: { reduce: boolean | null }) {
+  const [tab, setTab] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    const id = setInterval(
+      () => setTab((t) => (t + 1) % SNAPSHOT_TABS.length),
+      2800,
+    );
+    return () => clearInterval(id);
+  }, [reduce, tab]);
 
+  const active = SNAPSHOT_TABS[tab];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: reduce ? 0 : 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.4 }}
+      transition={{ ...himsMove, opacity: himsFade }}
+      className="mt-12 w-full max-w-lg overflow-hidden rounded-hims-lg bg-white/[0.05] text-left ring-1 ring-white/10 backdrop-blur-sm"
+    >
+      {/* Patient header */}
+      <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <img
+            src="/assets/faces/patient-elena.jpg"
+            alt=""
+            loading="lazy"
+            className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white/15"
+          />
+          <div className="min-w-0">
+            <p className="truncate font-sofia text-[17px] font-medium tracking-[-0.01em] text-white">
+              Elena R. · 34
+            </p>
+            <p className="text-[12px] text-white/45">Bay 3 · 12 min wait</p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-pill bg-[#ba1a1a]/15 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#ff9a8f] ring-1 ring-[#ba1a1a]/35">
+          ESI 2 · Urgent
+        </span>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 px-6 pt-5">
+        {SNAPSHOT_TABS.map(({ label, Icon }, i) => {
+          const on = i === tab;
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setTab(i)}
+              aria-pressed={on}
+              className={`flex items-center gap-2 rounded-pill px-3.5 py-2 text-[13px] font-medium transition-colors ${
+                on
+                  ? 'bg-white text-ink'
+                  : 'bg-white/[0.06] text-white/60 hover:bg-white/10 hover:text-white/80'
+              }`}
+            >
+              <Icon size={15} strokeWidth={1.9} aria-hidden="true" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active facet */}
+      <div className="px-6 pb-7 pt-5">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={tab}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? undefined : { opacity: 0, y: -8 }}
+            transition={{ duration: reduce ? 0 : 0.28, ease: [0.4, 0, 0.2, 1] }}
+            className="min-h-[3.5em] text-[15px] leading-relaxed text-white/90"
+          >
+            {active.body}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+function DarkAct({ reduce }: { reduce: boolean | null }) {
   return (
     <section aria-labelledby="queue-heading" className="overflow-hidden bg-ink">
       {/* --- Mega type --- */}
@@ -457,26 +560,7 @@ function DarkAct({ reduce }: { reduce: boolean | null }) {
             it, move on.
           </motion.p>
 
-          <motion.ul
-            variants={circleRow}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.5 }}
-            className="mt-14 flex flex-nowrap items-start justify-center gap-x-6 gap-y-8 sm:gap-x-10 lg:mt-16"
-          >
-            {CIRCLES.map(({ label, Icon }) => (
-              <motion.li
-                key={label}
-                variants={circleItem}
-                className="flex flex-col items-center gap-3"
-              >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-pop sm:h-20 sm:w-20">
-                  <Icon size={28} strokeWidth={1.75} aria-hidden="true" />
-                </span>
-                <span className="text-sm font-medium text-white/80">{label}</span>
-              </motion.li>
-            ))}
-          </motion.ul>
+          <SnapshotCard reduce={reduce} />
         </div>
       </div>
 
