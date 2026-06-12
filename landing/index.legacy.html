@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solace AI | Intelligent Emergency Triage</title>
+  <meta name="description" content="Solace is the AI-native emergency triage platform that transforms how emergency departments assess and prioritize patients. Faster triage, better outcomes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <style>
+    /* ============================================================
+       RESET & VARIABLES — Exact Flecto design system
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #004737;
+      --green-dark: #032019;
+      --mint: #56F09F;
+      --mint-soft: #D4FFE8;
+      --mint-bg: #EAFFF3;
+      --cream: #FFFBEC;
+      --white: #FFFFFF;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--white);
+      color: var(--green);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* ============================================================
+       PAGE TRANSITION LOADER
+       ============================================================ */
+    .page-transition {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--green);
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+    }
+    .page-transition .logo-text {
+      font-size: 24px; font-weight: 600; color: var(--cream);
+      letter-spacing: 8px; text-transform: uppercase;
+      opacity: 0; animation: ptIn .5s ease .2s forwards;
+    }
+    .page-transition .bar {
+      width: 100px; height: 2px; background: rgba(255,251,236,.15);
+      border-radius: 2px; margin-top: 20px; overflow: hidden;
+      opacity: 0; animation: ptIn .4s ease .35s forwards;
+    }
+    .page-transition .bar span {
+      display: block; width: 0; height: 100%;
+      background: var(--mint); border-radius: 2px;
+      animation: ptBar 1s ease .5s forwards;
+    }
+    @keyframes ptIn { to { opacity: 1 } }
+    @keyframes ptBar { to { width: 100% } }
+
+    /* ============================================================
+       UPPER TITLE PILL — Exact from 52e72a5.js
+       ============================================================ */
+    .upper-title {
+      align-items: center;
+      border-radius: calc(1.40625rem + 1.45833vw);
+      display: inline-flex;
+      height: 36px;
+      justify-content: center;
+      padding: 0 calc(1.28906rem + .36458vw);
+      pointer-events: none;
+      position: relative;
+    }
+    @media(min-width:1200px) {
+      .upper-title { border-radius: 2.5rem; padding: 0 1.5625rem; }
+    }
+    @media only screen and (max-width:1290px) {
+      .upper-title { height: 34px; padding: 0 1.25rem; }
+    }
+    .upper-title.outline .background { border: 2px solid var(--green); }
+    @media only screen and (max-width:1023px) {
+      .upper-title.outline .background { border: 1.5px solid var(--green); }
+    }
+    .upper-title.outline.mint .background { border-color: var(--mint); }
+    .upper-title.outline.mint .label { color: var(--mint); }
+    .upper-title.fill.dark-green .background { background-color: var(--green); }
+    .upper-title.fill.dark-green .label { color: var(--mint); }
+    .upper-title.fill.creme .background { background-color: var(--cream); }
+    .upper-title.fill.creme .label { color: var(--green); }
+    .upper-title.fill.mint .background { background-color: var(--mint); }
+    .upper-title.fill.mint .label { color: var(--green); }
+    .upper-title .background {
+      border-radius: calc(1.40625rem + 1.45833vw);
+      display: block; height: 100%; left: 0; position: absolute; top: 0;
+      transform-origin: center;
+      transition: transform .5s cubic-bezier(.19,1,.22,1);
+      width: 100%;
+    }
+    @media(min-width:1200px) {
+      .upper-title .background { border-radius: 2.5rem; }
+    }
+    .upper-title .label {
+      color: var(--green);
+      display: block;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1em;
+      position: relative;
+      white-space: nowrap;
+    }
+    @media only screen and (max-width:1290px) { .upper-title .label { font-size: 12px; } }
+    @media only screen and (max-width:743px) { .upper-title .label { font-size: 11px; } }
+
+    /* ============================================================
+       TYPOGRAPHY — Matching Flecto's Aeonik with Inter
+       ============================================================ */
+    .main-title {
+      font-family: var(--font);
+      font-size: max(32px, min(calc(19.49618px + 3.20611vw), 74px));
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .main-title .highlight {
+      color: var(--mint);
+    }
+    .section-description {
+      font-family: var(--font);
+      font-size: max(14px, min(calc(11.61832px + .61069vw), 22px));
+      line-height: 1.5;
+      color: var(--green);
+      opacity: 0.8;
+    }
+
+    /* ============================================================
+       LAYOUT
+       ============================================================ */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 max(20px, min(calc(1.875rem + 5.83333vw), 100px));
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .align-center { align-items: center; }
+    .justify-center { justify-content: center; }
+
+    /* ============================================================
+       NAVIGATION
+       ============================================================ */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      padding: 20px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background .3s, box-shadow .3s;
+    }
+    .nav.scrolled {
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 1px 0 rgba(0,71,55,.06);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--green);
+    }
+    .nav-logo img {
+      height: 32px; width: auto;
+    }
+    .nav-logo span {
+      font-size: 20px; font-weight: 600; letter-spacing: -0.02em;
+    }
+    .nav-links {
+      display: flex; align-items: center; gap: 32px; list-style: none;
+    }
+    .nav-links a {
+      color: var(--green); text-decoration: none;
+      font-size: 15px; font-weight: 500; letter-spacing: -0.01em;
+      opacity: .7; transition: opacity .2s;
+    }
+    .nav-links a:hover { opacity: 1; }
+    .nav-cta {
+      background: var(--green); color: var(--cream) !important;
+      padding: 10px 24px; border-radius: 40px;
+      font-size: 14px; font-weight: 500;
+      opacity: 1 !important;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0,71,55,.15);
+    }
+    @media(max-width:768px) {
+      .nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+    }
+
+    /* ============================================================
+       HERO SECTION
+       ============================================================ */
+    .hero {
+      min-height: 100vh;
+      padding-top: max(140px, min(calc(100px + 5vw), 200px));
+      padding-bottom: max(60px, min(calc(40px + 3vw), 100px));
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+    }
+    .hero-content {
+      max-width: 1400px; margin: 0 auto; width: 100%;
+      padding: 0 max(20px, min(calc(1.875rem + 5.83333vw), 100px));
+      position: relative; z-index: 2;
+    }
+    .hero-upper {
+      margin-bottom: max(20px, min(calc(15px + 1vw), 30px));
+    }
+    .hero-title {
+      font-size: max(40px, min(calc(24px + 3.5vw), 84px));
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      color: var(--green);
+      margin-bottom: max(20px, min(calc(15px + 1.5vw), 40px));
+    }
+    .hero-title .highlight { color: var(--mint); }
+    .hero-subtitle {
+      font-size: max(16px, min(calc(14px + .5vw), 22px));
+      line-height: 1.5;
+      color: var(--green);
+      opacity: .7;
+      max-width: 540px;
+      margin-bottom: max(30px, min(calc(20px + 2vw), 50px));
+    }
+    .hero-cta-group {
+      display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--green); color: var(--cream);
+      padding: 14px 32px; border-radius: 40px; border: none;
+      font-size: 16px; font-weight: 500; font-family: var(--font);
+      cursor: pointer; text-decoration: none;
+      transition: transform .2s, box-shadow .2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,71,55,.15);
+    }
+    .btn-secondary {
+      background: transparent; color: var(--green);
+      padding: 14px 32px; border-radius: 40px;
+      border: 2px solid var(--green);
+      font-size: 16px; font-weight: 500; font-family: var(--font);
+      cursor: pointer; text-decoration: none;
+      transition: background .2s, color .2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-secondary:hover {
+      background: var(--green); color: var(--cream);
+    }
+
+    /* Hero floating cards */
+    .hero-visual {
+      position: relative;
+      width: 100%; max-width: 1400px; margin: 0 auto;
+      padding: 0 max(20px, min(calc(1.875rem + 5.83333vw), 100px));
+      margin-top: max(40px, min(calc(30px + 3vw), 80px));
+    }
+    .hero-cards-container {
+      position: relative;
+      width: 100%;
+      min-height: 420px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hero-card {
+      position: absolute;
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: 0 4px 40px rgba(0,71,55,.06), 0 1px 3px rgba(0,71,55,.04);
+      padding: 24px;
+      opacity: 0;
+      will-change: transform;
+    }
+    .hero-card-main {
+      position: relative;
+      background: var(--green);
+      border-radius: 22.7px;
+      width: min(296px, 80vw);
+      height: auto;
+      aspect-ratio: 296/600;
+      box-shadow: 0 25px 80px rgba(5,73,46,.12), 0 4px 20px rgba(5,73,46,.055);
+      overflow: hidden;
+      z-index: 3;
+    }
+    .hero-card-main .phone-screen {
+      width: 100%; height: 100%;
+      background: linear-gradient(180deg, var(--green) 0%, var(--green-dark) 100%);
+      border-radius: 22.7px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 24px;
+      color: var(--cream);
+    }
+    .phone-screen .phone-icon {
+      width: 64px; height: 64px;
+      background: var(--mint); border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .phone-screen .phone-icon svg { width: 32px; height: 32px; }
+    .phone-screen .phone-title {
+      font-size: 20px; font-weight: 500; text-align: center;
+      margin-bottom: 12px; letter-spacing: -0.02em;
+    }
+    .phone-screen .phone-subtitle {
+      font-size: 14px; opacity: .6; text-align: center; line-height: 1.4;
+    }
+    .phone-screen .phone-esi {
+      margin-top: 32px; width: 100%;
+    }
+    .phone-esi-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,251,236,.08);
+      border-radius: 12px; padding: 12px 16px;
+      margin-bottom: 8px;
+    }
+    .phone-esi-bar .esi-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .phone-esi-bar .esi-label {
+      font-size: 13px; font-weight: 500; flex: 1;
+    }
+    .phone-esi-bar .esi-fill {
+      height: 4px; border-radius: 2px; flex: 1; max-width: 80px;
+    }
+    .esi-1 .esi-dot, .esi-1 .esi-fill { background: #FF4444; }
+    .esi-2 .esi-dot, .esi-2 .esi-fill { background: #FF8C00; }
+    .esi-3 .esi-dot, .esi-3 .esi-fill { background: #FFD700; }
+    .esi-4 .esi-dot, .esi-4 .esi-fill { background: #56F09F; }
+
+    /* Floating cards around phone */
+    .float-card {
+      position: absolute;
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,71,55,.07), 0 1px 3px rgba(0,71,55,.04);
+      padding: 20px;
+      z-index: 2;
+    }
+    .float-card-lang {
+      top: 8%; left: 5%;
+      width: 200px;
+    }
+    .float-card-time {
+      top: 15%; right: 5%;
+      width: 190px;
+    }
+    .float-card-accuracy {
+      bottom: 25%; left: 3%;
+      width: 210px;
+    }
+    .float-card-integration {
+      bottom: 10%; right: 5%;
+      width: 200px;
+    }
+    .float-card .fc-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+    }
+    .float-card .fc-icon.mint-bg { background: var(--mint-soft); }
+    .float-card .fc-icon.cream-bg { background: var(--cream); }
+    .float-card .fc-icon.green-bg { background: var(--green); }
+    .float-card .fc-icon svg { width: 20px; height: 20px; }
+    .float-card .fc-title {
+      font-size: 14px; font-weight: 600; color: var(--green);
+      margin-bottom: 4px; letter-spacing: -0.01em;
+    }
+    .float-card .fc-value {
+      font-size: 24px; font-weight: 600; color: var(--green);
+      letter-spacing: -0.02em;
+    }
+    .float-card .fc-desc {
+      font-size: 13px; color: var(--green); opacity: .6; line-height: 1.3;
+    }
+
+    @media(max-width:1024px) {
+      .float-card-lang { left: -5%; top: 5%; }
+      .float-card-time { right: -5%; top: 12%; }
+      .float-card-accuracy { left: -5%; }
+      .float-card-integration { right: -5%; }
+    }
+    @media(max-width:768px) {
+      .hero-cards-container { min-height: 360px; }
+      .float-card { display: none; }
+      .hero-title { font-size: max(32px, min(calc(20px + 4vw), 52px)); }
+    }
+
+    /* ============================================================
+       MENTIONED / LOGO BAR
+       ============================================================ */
+    .mentioned {
+      padding: max(40px, min(calc(30px + 2vw), 80px)) 0;
+      border-top: 1px solid rgba(0,71,55,.06);
+      border-bottom: 1px solid rgba(0,71,55,.06);
+    }
+    .mentioned-inner {
+      max-width: 1400px; margin: 0 auto;
+      padding: 0 max(20px, min(calc(1.875rem + 5.83333vw), 100px));
+      display: flex; align-items: center; justify-content: center;
+      gap: max(40px, min(calc(30px + 3vw), 80px));
+      flex-wrap: wrap;
+    }
+    .mentioned-label {
+      font-size: 13px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--green); opacity: .4;
+      white-space: nowrap;
+    }
+    .mentioned-logos {
+      display: flex; align-items: center;
+      gap: max(32px, min(calc(24px + 2vw), 60px));
+      flex-wrap: wrap; justify-content: center;
+    }
+    .mentioned-logos .logo-item {
+      font-size: 18px; font-weight: 700; color: var(--green);
+      opacity: .2; letter-spacing: -0.01em;
+      transition: opacity .3s;
+    }
+    .mentioned-logos .logo-item:hover { opacity: .5; }
+
+    /* ============================================================
+       PLATFORM SECTION (Flecto SaaS equivalent)
+       ============================================================ */
+    .platform-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+    }
+    .platform-header {
+      text-align: center;
+      margin-bottom: max(50px, min(calc(40px + 3vw), 80px));
+    }
+    .platform-header .upper-title { margin-bottom: 20px; }
+    .platform-header .main-title { margin-bottom: 16px; }
+    .platform-header .section-description {
+      max-width: 640px; margin: 0 auto;
+    }
+
+    /* Tab switcher — Underline style (NOT pill) matching Flecto */
+    .tab-switcher {
+      display: flex; align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: max(40px, min(calc(30px + 2vw), 60px));
+      gap: 0;
+      border-bottom: 1px solid rgba(0,71,55,.08);
+    }
+    .tab-btn {
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font);
+      font-size: max(14px, min(calc(12px + .3vw), 18px));
+      font-weight: 500;
+      color: var(--green);
+      opacity: .4;
+      padding: 16px 32px;
+      position: relative;
+      transition: opacity .3s;
+    }
+    .tab-btn.active { opacity: 1; }
+    .tab-btn:hover { opacity: .8; }
+    .tab-marker {
+      position: absolute;
+      bottom: -1px;
+      height: 2px;
+      background: var(--green);
+      border-radius: 1px;
+      transition: left .4s cubic-bezier(.19,1,.22,1), width .4s cubic-bezier(.19,1,.22,1);
+    }
+
+    /* Tab content area */
+    .tab-panels { position: relative; }
+    .tab-panel {
+      display: none;
+      animation: fadeInPanel .5s ease;
+    }
+    .tab-panel.active { display: block; }
+    @keyframes fadeInPanel {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       FOR-THE-OWNER SECTION — 3 Column layout
+       Phone in center, toggle cards flanking
+       ============================================================ */
+    .interaction-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .interaction-section .section-bg {
+      position: absolute; inset: 0;
+      background: var(--mint-bg);
+      z-index: 0;
+    }
+    /* SVG morphing background */
+    .interaction-section .flectofier-bg {
+      position: absolute; inset: 0; z-index: 0;
+      overflow: hidden;
+    }
+    .interaction-section .flectofier-bg svg {
+      width: 100%; height: 100%;
+    }
+    .interaction-section .flectofier-bg svg rect {
+      fill: var(--mint-soft);
+      rx: 30; ry: 30;
+    }
+
+    .interaction-header {
+      text-align: center;
+      position: relative; z-index: 2;
+      margin-bottom: max(40px, min(calc(30px + 3vw), 80px));
+    }
+    .interaction-header .upper-title { margin-bottom: 20px; }
+    .interaction-header .main-title { margin-bottom: 16px; }
+    .interaction-header .section-description { max-width: 600px; margin: 0 auto; }
+
+    .interaction-layout {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: max(20px, min(calc(16px + 1.5vw), 40px));
+      align-items: center;
+      position: relative; z-index: 2;
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 20px;
+    }
+    @media(max-width:1024px) {
+      .interaction-layout {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+    }
+
+    .toggle-column {
+      display: flex; flex-direction: column;
+      gap: max(16px, min(calc(12px + .8vw), 24px));
+    }
+    @media(max-width:1024px) {
+      .toggle-column { order: 2; }
+      .interaction-phone { order: 1; }
+    }
+
+    .toggle-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: max(16px, min(calc(14px + .5vw), 24px));
+      box-shadow: 0 2px 20px rgba(0,71,55,.04);
+      display: flex; align-items: flex-start; gap: 16px;
+      cursor: default;
+      transition: transform .3s cubic-bezier(.19,1,.22,1), box-shadow .3s;
+      will-change: transform;
+    }
+    .toggle-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,71,55,.08);
+    }
+    .toggle-card .tc-icon {
+      width: 48px; height: 48px; flex-shrink: 0;
+      background: var(--mint-soft);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .toggle-card .tc-icon svg { width: 24px; height: 24px; fill: var(--green); }
+    .toggle-card .tc-body { flex: 1; }
+    .toggle-card .tc-title {
+      font-size: 15px; font-weight: 600; color: var(--green);
+      margin-bottom: 4px; letter-spacing: -0.01em;
+    }
+    .toggle-card .tc-desc {
+      font-size: 13px; line-height: 1.4; color: var(--green); opacity: .6;
+    }
+    .toggle-card .tc-toggle {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: var(--mint);
+      position: relative; flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .toggle-card .tc-toggle::after {
+      content: '';
+      position: absolute; top: 3px; left: 23px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--white);
+      transition: left .2s;
+    }
+
+    /* Phone in center */
+    .interaction-phone {
+      width: min(296px, 70vw);
+      aspect-ratio: 296/630;
+      background: var(--green);
+      border-radius: 22.7px;
+      box-shadow: 0 25px 80px rgba(5,73,46,.12), 0 4px 20px rgba(5,73,46,.055);
+      overflow: hidden;
+      position: relative;
+      margin: 0 auto;
+    }
+    .phone-mockup-inner {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      padding: 20px 16px;
+      color: var(--cream);
+    }
+    .phone-mockup-inner .pm-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; padding: 0 4px;
+    }
+    .phone-mockup-inner .pm-header .pm-time {
+      font-size: 14px; font-weight: 600;
+    }
+    .phone-mockup-inner .pm-header .pm-status {
+      display: flex; gap: 4px; align-items: center;
+    }
+    .phone-mockup-inner .pm-header .pm-status span {
+      display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--mint);
+    }
+    .pm-triage-card {
+      background: rgba(255,251,236,.08);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .pm-triage-card .ptc-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+      opacity: .5; margin-bottom: 8px;
+    }
+    .pm-triage-card .ptc-patient {
+      font-size: 16px; font-weight: 600; letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .pm-triage-card .ptc-complaint {
+      font-size: 13px; opacity: .6; line-height: 1.3;
+    }
+    .pm-esi-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--mint);
+      color: var(--green);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 14px; font-weight: 600;
+      margin-top: 12px;
+    }
+    .pm-esi-badge .esi-num {
+      background: var(--green); color: var(--mint);
+      width: 22px; height: 22px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .pm-transcript {
+      flex: 1;
+      margin-top: 12px;
+    }
+    .pm-transcript .pmt-line {
+      display: flex; gap: 8px; margin-bottom: 10px;
+      align-items: flex-start;
+    }
+    .pm-transcript .pmt-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(255,251,236,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .pm-transcript .pmt-bubble {
+      background: rgba(255,251,236,.06);
+      border-radius: 10px; padding: 10px 12px;
+      font-size: 12px; line-height: 1.4;
+      opacity: .8;
+      max-width: 85%;
+    }
+    .pm-transcript .pmt-bubble.ai {
+      background: rgba(86,240,159,.1);
+    }
+
+    /* ============================================================
+       FEATURES SECTION (For the Customer equivalent)
+       ============================================================ */
+    .features-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+    }
+    .features-header {
+      text-align: center;
+      margin-bottom: max(50px, min(calc(40px + 3vw), 80px));
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: max(20px, min(calc(16px + 1vw), 32px));
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 20px;
+    }
+    .feature-card {
+      background: var(--white);
+      border: 1px solid rgba(0,71,55,.06);
+      border-radius: 20px;
+      padding: max(24px, min(calc(20px + 1vw), 40px));
+      transition: transform .3s cubic-bezier(.19,1,.22,1), box-shadow .3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,71,55,.06);
+    }
+    .feature-card .fc-icon-wrap {
+      width: 56px; height: 56px;
+      background: var(--mint-soft);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .feature-card .fc-icon-wrap svg { width: 28px; height: 28px; }
+    .feature-card h3 {
+      font-size: max(18px, min(calc(16px + .3vw), 22px));
+      font-weight: 600; letter-spacing: -0.02em;
+      margin-bottom: 8px; color: var(--green);
+    }
+    .feature-card p {
+      font-size: max(13px, min(calc(12px + .2vw), 16px));
+      line-height: 1.5; color: var(--green); opacity: .6;
+    }
+    .feature-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--mint-soft);
+      color: var(--green);
+      border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      margin-top: 16px;
+    }
+
+    /* ============================================================
+       TESTIMONIALS
+       ============================================================ */
+    .testimonials-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+      background: var(--cream);
+    }
+    .testimonials-header {
+      text-align: center;
+      margin-bottom: max(50px, min(calc(40px + 3vw), 80px));
+    }
+    .testimonials-slider {
+      max-width: 1200px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      padding: 0 20px;
+    }
+    .testimonial-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: max(28px, min(calc(24px + 1vw), 40px));
+      box-shadow: 0 2px 20px rgba(0,71,55,.03);
+    }
+    .testimonial-card .tc-quote {
+      font-size: max(15px, min(calc(14px + .3vw), 18px));
+      line-height: 1.6; color: var(--green);
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+    .testimonial-card .tc-author {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .tc-author .tc-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--mint-soft);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; color: var(--green); font-size: 16px;
+    }
+    .tc-author .tc-name {
+      font-size: 15px; font-weight: 600; color: var(--green);
+    }
+    .tc-author .tc-role {
+      font-size: 13px; color: var(--green); opacity: .5;
+    }
+
+    /* ============================================================
+       STATS / SUSTAINABLE SECTION
+       ============================================================ */
+    .stats-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+      background: var(--green);
+      color: var(--cream);
+      position: relative; overflow: hidden;
+    }
+    .stats-section .stats-bg-shape {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: rgba(86,240,159,.05);
+      top: -200px; right: -200px;
+    }
+    .stats-header {
+      text-align: center;
+      margin-bottom: max(50px, min(calc(40px + 3vw), 80px));
+      position: relative; z-index: 1;
+    }
+    .stats-header .upper-title { margin-bottom: 20px; }
+    .stats-header .main-title { color: var(--cream); margin-bottom: 16px; }
+    .stats-header .section-description { color: var(--cream); opacity: .6; max-width: 600px; margin: 0 auto; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: max(24px, min(calc(20px + 1vw), 40px));
+      max-width: 1000px; margin: 0 auto;
+      padding: 0 20px;
+      position: relative; z-index: 1;
+    }
+    .stat-card {
+      text-align: center;
+      padding: max(28px, min(calc(24px + 1vw), 48px)) 20px;
+    }
+    .stat-card .stat-value {
+      font-size: max(36px, min(calc(28px + 2vw), 64px));
+      font-weight: 600; letter-spacing: -0.03em;
+      color: var(--mint);
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+    .stat-card .stat-label {
+      font-size: max(14px, min(calc(12px + .3vw), 18px));
+      color: var(--cream); opacity: .6;
+      line-height: 1.4;
+    }
+
+    /* ============================================================
+       CTA SECTION
+       ============================================================ */
+    .cta-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+      text-align: center;
+    }
+    .cta-section .main-title { margin-bottom: 16px; }
+    .cta-section .section-description {
+      max-width: 560px; margin: 0 auto 40px;
+    }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    .footer {
+      background: var(--green-dark);
+      padding: max(40px, min(calc(30px + 3vw), 80px)) 0;
+      color: var(--cream);
+    }
+    .footer-inner {
+      max-width: 1400px; margin: 0 auto;
+      padding: 0 max(20px, min(calc(1.875rem + 5.83333vw), 100px));
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 24px;
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .footer-logo img { height: 28px; }
+    .footer-logo span {
+      font-size: 18px; font-weight: 600; letter-spacing: -0.02em;
+    }
+    .footer-links {
+      display: flex; gap: 24px; list-style: none;
+    }
+    .footer-links a {
+      color: var(--cream); text-decoration: none;
+      font-size: 14px; opacity: .5;
+      transition: opacity .2s;
+    }
+    .footer-links a:hover { opacity: 1; }
+    .footer-copy {
+      font-size: 13px; opacity: .3; width: 100%;
+      text-align: center; margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,251,236,.06);
+    }
+
+    /* ============================================================
+       SCROLL ANIMATIONS — data-buro-fade-in
+       ============================================================ */
+    [data-animate] {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    [data-animate].animated {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity .8s cubic-bezier(.19,1,.22,1), transform .8s cubic-bezier(.19,1,.22,1);
+    }
+    [data-animate-delay="1"] { transition-delay: .1s !important; }
+    [data-animate-delay="2"] { transition-delay: .2s !important; }
+    [data-animate-delay="3"] { transition-delay: .3s !important; }
+    [data-animate-delay="4"] { transition-delay: .4s !important; }
+
+    /* ============================================================
+       ROTATING CAPTIONS
+       ============================================================ */
+    .rotating-wrapper {
+      position: relative;
+      display: inline-block;
+      overflow: hidden;
+      height: 1.1em;
+      vertical-align: bottom;
+    }
+    .rotating-wrapper .rotate-item {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(100%);
+      transition: opacity .5s, transform .5s cubic-bezier(.19,1,.22,1);
+      white-space: nowrap;
+    }
+    .rotating-wrapper .rotate-item.active {
+      position: relative;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .rotating-wrapper .rotate-item.exit {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+
+    /* ============================================================
+       CHAPTER DOTS (Side navigation)
+       ============================================================ */
+    .chapter-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column;
+      gap: 12px;
+      z-index: 100;
+    }
+    .chapter-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      opacity: .15;
+      cursor: pointer;
+      transition: opacity .3s, transform .3s;
+    }
+    .chapter-dot.active {
+      opacity: 1;
+      transform: scale(1.4);
+    }
+    @media(max-width:768px) { .chapter-dots { display: none; } }
+
+    /* ============================================================
+       SCROLLBAR CUSTOM
+       ============================================================ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0,71,55,.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,71,55,.3); }
+
+    /* ============================================================
+       PLATFORM DETAIL CARDS (Tab content)
+       ============================================================ */
+    .platform-showcase {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: max(30px, min(calc(24px + 2vw), 60px));
+      align-items: center;
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 20px;
+    }
+    @media(max-width:768px) {
+      .platform-showcase { grid-template-columns: 1fr; }
+    }
+    .platform-showcase .ps-content h3 {
+      font-size: max(24px, min(calc(20px + 1vw), 36px));
+      font-weight: 500; letter-spacing: -0.02em;
+      margin-bottom: 16px; color: var(--green);
+    }
+    .platform-showcase .ps-content p {
+      font-size: max(14px, min(calc(13px + .3vw), 18px));
+      line-height: 1.6; color: var(--green); opacity: .65;
+      margin-bottom: 24px;
+    }
+    .platform-showcase .ps-visual {
+      background: var(--mint-bg);
+      border-radius: 20px;
+      padding: 40px;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 300px;
+      position: relative;
+      overflow: hidden;
+    }
+    .ps-visual .ps-phone {
+      width: 200px; height: auto; aspect-ratio: 200/420;
+      background: var(--green);
+      border-radius: 18px;
+      box-shadow: 0 15px 50px rgba(5,73,46,.12);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--cream);
+      font-size: 14px; font-weight: 500;
+      padding: 20px;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .ps-feature-list {
+      list-style: none;
+    }
+    .ps-feature-list li {
+      display: flex; align-items: flex-start; gap: 12px;
+      margin-bottom: 16px;
+    }
+    .ps-feature-list li .check {
+      width: 22px; height: 22px; flex-shrink: 0;
+      background: var(--mint-soft);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .ps-feature-list li .check svg { width: 12px; height: 12px; }
+    .ps-feature-list li span {
+      font-size: 15px; line-height: 1.5; color: var(--green);
+    }
+
+    /* ============================================================
+       ACCESS CHANNELS / HOW IT WORKS
+       ============================================================ */
+    .how-section {
+      padding: max(80px, min(calc(60px + 5vw), 160px)) 0;
+      background: var(--mint-bg);
+    }
+    .how-header {
+      text-align: center;
+      margin-bottom: max(50px, min(calc(40px + 3vw), 80px));
+    }
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 20px;
+    }
+    .how-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: max(28px, min(calc(24px + 1vw), 40px));
+      text-align: center;
+      transition: transform .3s cubic-bezier(.19,1,.22,1);
+    }
+    .how-card:hover { transform: translateY(-4px); }
+    .how-card .how-num {
+      width: 48px; height: 48px;
+      background: var(--green);
+      color: var(--mint);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700;
+      margin: 0 auto 20px;
+    }
+    .how-card h3 {
+      font-size: 18px; font-weight: 600; letter-spacing: -0.01em;
+      margin-bottom: 8px; color: var(--green);
+    }
+    .how-card p {
+      font-size: 14px; line-height: 1.5; color: var(--green); opacity: .6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       PAGE TRANSITION
+       ============================================================ -->
+  <div class="page-transition" id="pageTransition">
+    <span class="logo-text">Solace</span>
+    <div class="bar"><span></span></div>
+  </div>
+
+  <!-- ============================================================
+       NAVIGATION
+       ============================================================ -->
+  <nav class="nav" id="mainNav">
+    <a href="#" class="nav-logo">
+      <img src="assets/solace-logo.png" alt="Solace" onerror="this.style.display='none'">
+      <span>Solace</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#platform">Platform</a></li>
+      <li><a href="#triage">Triage</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it Works</a></li>
+      <li><a href="#contact" class="nav-cta">Request Demo</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============================================================
+       CHAPTER DOTS
+       ============================================================ -->
+  <div class="chapter-dots" id="chapterDots">
+    <span class="chapter-dot active" data-section="hero"></span>
+    <span class="chapter-dot" data-section="platform"></span>
+    <span class="chapter-dot" data-section="triage"></span>
+    <span class="chapter-dot" data-section="features"></span>
+    <span class="chapter-dot" data-section="stats"></span>
+    <span class="chapter-dot" data-section="contact"></span>
+  </div>
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="hero-upper" data-animate>
+        <span class="upper-title outline">
+          <span class="background"></span>
+          <span class="label">AI-Native Emergency Triage</span>
+        </span>
+      </div>
+      <h1 class="hero-title" data-animate data-animate-delay="1">
+        Intelligent triage for<br>
+        <span class="rotating-wrapper" id="heroRotator">
+          <span class="rotate-item active highlight">every patient.</span>
+          <span class="rotate-item highlight">every language.</span>
+          <span class="rotate-item highlight">every second.</span>
+          <span class="rotate-item highlight">better outcomes.</span>
+        </span>
+      </h1>
+      <p class="hero-subtitle" data-animate data-animate-delay="2">
+        Solace transforms emergency department triage with AI-powered assessment,
+        real-time multilingual support, and clinically validated ESI scoring.
+      </p>
+      <div class="hero-cta-group" data-animate data-animate-delay="3">
+        <a href="#contact" class="btn-primary">
+          Request a Demo
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#platform" class="btn-secondary">Learn More</a>
+      </div>
+    </div>
+
+    <div class="hero-visual" data-animate data-animate-delay="3">
+      <div class="hero-cards-container">
+        <!-- Floating card: Languages -->
+        <div class="float-card float-card-lang" id="fcLang">
+          <div class="fc-icon mint-bg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div class="fc-title">Languages</div>
+          <div class="fc-value">30+</div>
+          <div class="fc-desc">Real-time Whisper STT</div>
+        </div>
+
+        <!-- Floating card: Triage Time -->
+        <div class="float-card float-card-time" id="fcTime">
+          <div class="fc-icon cream-bg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+          </div>
+          <div class="fc-title">Avg Triage Time</div>
+          <div class="fc-value">90s</div>
+          <div class="fc-desc">Down from 5+ minutes</div>
+        </div>
+
+        <!-- Center Phone Mockup -->
+        <div class="hero-card-main" id="heroPhone">
+          <div class="phone-screen">
+            <div class="phone-icon">
+              <svg viewBox="0 0 32 32" fill="none"><path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4z" fill="#004737"/><path d="M16 10v6l4 2" stroke="#56F09F" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="phone-title">Triage Assessment</div>
+            <div class="phone-subtitle">AI-assisted ESI scoring</div>
+            <div class="phone-esi">
+              <div class="phone-esi-bar esi-1">
+                <span class="esi-dot"></span>
+                <span class="esi-label" style="color:var(--cream)">ESI 1 — Resuscitation</span>
+                <span class="esi-fill"></span>
+              </div>
+              <div class="phone-esi-bar esi-2">
+                <span class="esi-dot"></span>
+                <span class="esi-label" style="color:var(--cream)">ESI 2 — Emergent</span>
+                <span class="esi-fill"></span>
+              </div>
+              <div class="phone-esi-bar esi-3">
+                <span class="esi-dot"></span>
+                <span class="esi-label" style="color:var(--cream)">ESI 3 — Urgent</span>
+                <span class="esi-fill"></span>
+              </div>
+              <div class="phone-esi-bar esi-4">
+                <span class="esi-dot"></span>
+                <span class="esi-label" style="color:var(--cream)">ESI 4 — Less Urgent</span>
+                <span class="esi-fill"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating card: Accuracy -->
+        <div class="float-card float-card-accuracy" id="fcAccuracy">
+          <div class="fc-icon green-bg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#56F09F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+          </div>
+          <div class="fc-title">ESI Accuracy</div>
+          <div class="fc-value">93%</div>
+          <div class="fc-desc">Two-stage AI validation</div>
+        </div>
+
+        <!-- Floating card: Integration -->
+        <div class="float-card float-card-integration" id="fcIntegration">
+          <div class="fc-icon mint-bg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div class="fc-title">EHR Integration</div>
+          <div class="fc-value">FHIR</div>
+          <div class="fc-desc">SMART-on-FHIR ready</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       MENTIONED
+       ============================================================ -->
+  <div class="mentioned" data-animate id="mentioned-section">
+    <div class="mentioned-inner">
+      <span class="mentioned-label">Built for</span>
+      <div class="mentioned-logos">
+        <span class="logo-item">Emergency Departments</span>
+        <span class="logo-item">Urgent Care</span>
+        <span class="logo-item">Community Hospitals</span>
+        <span class="logo-item">Academic Medical Centers</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PLATFORM SECTION
+       ============================================================ -->
+  <section class="platform-section" id="platform">
+    <div class="container">
+      <div class="platform-header" data-animate>
+        <span class="upper-title outline">
+          <span class="background"></span>
+          <span class="label">Solace Platform</span>
+        </span>
+        <h2 class="main-title">
+          Built for clinicians.<br><span class="highlight">Designed for speed.</span>
+        </h2>
+        <p class="section-description">
+          A complete AI triage suite that handles patient intake, multilingual communication,
+          ESI scoring, and EHR documentation — so your nurses can focus on patient care.
+        </p>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="tab-switcher" id="tabSwitcher">
+        <button class="tab-btn active" data-tab="triage-ai">AI Triage</button>
+        <button class="tab-btn" data-tab="multilingual">Multilingual</button>
+        <button class="tab-btn" data-tab="integration">EHR Integration</button>
+        <span class="tab-marker" id="tabMarker"></span>
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="tab-panels">
+        <div class="tab-panel active" id="panel-triage-ai">
+          <div class="platform-showcase">
+            <div class="ps-content" data-animate>
+              <h3>Two-Stage ESI Scoring</h3>
+              <p>Solace uses a novel two-stage pipeline: Claude AI performs initial symptom analysis and reasoning, then a calibrated LightGBM model validates and assigns the final ESI level — combining the depth of LLM reasoning with the precision of clinical ML.</p>
+              <ul class="ps-feature-list">
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Clinically validated ESI 1-5 scoring</span>
+                </li>
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Transparent reasoning chain for every decision</span>
+                </li>
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Real-time confidence scoring and nurse override</span>
+                </li>
+              </ul>
+            </div>
+            <div class="ps-visual" data-animate data-animate-delay="2">
+              <div class="ps-phone">
+                <div style="width:100%">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin-bottom:12px">Triage Result</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+                    <span style="background:#56F09F;color:#004737;padding:6px 12px;border-radius:8px;font-weight:700;font-size:18px">ESI 3</span>
+                    <span style="font-size:13px;opacity:.7">Urgent</span>
+                  </div>
+                  <div style="font-size:12px;opacity:.5;line-height:1.5">
+                    Chief Complaint:<br>
+                    <span style="opacity:1;font-weight:500">Chest pain, onset 2hrs ago</span>
+                  </div>
+                  <div style="margin-top:12px;font-size:11px;opacity:.4">Confidence: 94%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-multilingual">
+          <div class="platform-showcase">
+            <div class="ps-content" data-animate>
+              <h3>Break Language Barriers</h3>
+              <p>Powered by OpenAI Whisper, Solace captures patient complaints in 30+ languages with real-time transcription — no interpreter wait times, no communication gaps.</p>
+              <ul class="ps-feature-list">
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Automatic language detection</span>
+                </li>
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Real-time speech-to-text transcription</span>
+                </li>
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Clinical terminology extraction across languages</span>
+                </li>
+              </ul>
+            </div>
+            <div class="ps-visual" data-animate data-animate-delay="2">
+              <div class="ps-phone">
+                <div style="width:100%">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin-bottom:12px">Live Transcription</div>
+                  <div style="font-size:13px;line-height:1.6;margin-bottom:12px">
+                    <span style="opacity:.5">🎤 Detecting...</span><br>
+                    <span style="color:#56F09F">Spanish detected</span>
+                  </div>
+                  <div style="font-size:12px;opacity:.7;line-height:1.5;border-top:1px solid rgba(255,251,236,.1);padding-top:12px">
+                    "Me duele mucho el pecho desde hace dos horas..."
+                  </div>
+                  <div style="font-size:11px;opacity:.4;margin-top:8px">→ Chest pain, 2hr onset</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-integration">
+          <div class="platform-showcase">
+            <div class="ps-content" data-animate>
+              <h3>Seamless EHR Integration</h3>
+              <p>Solace connects to your existing electronic health records via SMART-on-FHIR, automatically documenting triage assessments and maintaining full clinical workflow continuity.</p>
+              <ul class="ps-feature-list">
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>SMART-on-FHIR R4 compliant</span>
+                </li>
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>Auto-populates triage notes in your EHR</span>
+                </li>
+                <li>
+                  <span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#004737" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span>HIPAA compliant with full audit trails</span>
+                </li>
+              </ul>
+            </div>
+            <div class="ps-visual" data-animate data-animate-delay="2">
+              <div class="ps-phone">
+                <div style="width:100%">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin-bottom:12px">EHR Sync</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#56F09F"></span>
+                    <span style="font-size:13px;color:#56F09F">Connected</span>
+                  </div>
+                  <div style="font-size:12px;opacity:.6;line-height:1.6">
+                    Patient: J. Rodriguez<br>
+                    MRN: 847291<br>
+                    ESI: 3 — Urgent<br>
+                    <span style="color:#56F09F;opacity:1">✓ Synced to Epic</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TRIAGE / INTERACTION SECTION (For-The-Owner equivalent)
+       ============================================================ -->
+  <section class="interaction-section" id="triage">
+    <div class="flectofier-bg">
+      <svg viewBox="0 0 1400 800" preserveAspectRatio="none">
+        <rect x="0" y="0" width="1400" height="800" fill="#EAFFF3" rx="0" ry="0"/>
+        <rect x="50" y="50" width="600" height="300" fill="#D4FFE8" rx="30" ry="30" opacity="0.5"/>
+        <rect x="750" y="400" width="600" height="350" fill="#D4FFE8" rx="30" ry="30" opacity="0.5"/>
+      </svg>
+    </div>
+
+    <div class="container">
+      <div class="interaction-header" data-animate>
+        <span class="upper-title outline">
+          <span class="background"></span>
+          <span class="label">For your Emergency Department</span>
+        </span>
+        <h2 class="main-title">
+          The <span class="highlight">Solace Triage Engine</span>
+        </h2>
+        <p class="section-description">
+          Set up and configure your AI triage workflow in minutes. Toggle features,
+          customize protocols, and watch Solace work alongside your nursing team.
+        </p>
+      </div>
+
+      <div class="interaction-layout">
+        <!-- Left column: toggle cards -->
+        <div class="toggle-column" id="toggleLeft">
+          <div class="toggle-card" data-animate>
+            <div class="tc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+            </div>
+            <div class="tc-body">
+              <div class="tc-title">Voice Capture</div>
+              <div class="tc-desc">Whisper STT captures patient complaints in 30+ languages automatically</div>
+            </div>
+            <div class="tc-toggle"></div>
+          </div>
+
+          <div class="toggle-card" data-animate data-animate-delay="1">
+            <div class="tc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </div>
+            <div class="tc-body">
+              <div class="tc-title">AI Scoring</div>
+              <div class="tc-desc">Two-stage Claude + LightGBM pipeline assigns validated ESI levels</div>
+            </div>
+            <div class="tc-toggle"></div>
+          </div>
+
+          <div class="toggle-card" data-animate data-animate-delay="2">
+            <div class="tc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="tc-body">
+              <div class="tc-title">HIPAA Compliance</div>
+              <div class="tc-desc">End-to-end encryption, audit logs, and zero data retention</div>
+            </div>
+            <div class="tc-toggle"></div>
+          </div>
+        </div>
+
+        <!-- Center phone -->
+        <div class="interaction-phone" data-animate>
+          <div class="phone-mockup-inner">
+            <div class="pm-header">
+              <span class="pm-time">9:41</span>
+              <span class="pm-status"><span></span><span></span><span></span></span>
+            </div>
+            <div class="pm-triage-card">
+              <div class="ptc-label">Current Patient</div>
+              <div class="ptc-patient">Maria Rodriguez</div>
+              <div class="ptc-complaint">Chest pain, radiating to left arm. Onset 2 hours ago. History of hypertension.</div>
+              <div class="pm-esi-badge">
+                <span class="esi-num">3</span>
+                ESI Level 3 — Urgent
+              </div>
+            </div>
+            <div class="pm-transcript">
+              <div class="pmt-line">
+                <div class="pmt-avatar">👤</div>
+                <div class="pmt-bubble">"Me duele mucho el pecho..."</div>
+              </div>
+              <div class="pmt-line">
+                <div class="pmt-avatar" style="background:rgba(86,240,159,.15)">🤖</div>
+                <div class="pmt-bubble ai">Detected: Chest pain. Onset: 2hrs. Asking about radiation pattern...</div>
+              </div>
+              <div class="pmt-line">
+                <div class="pmt-avatar">👤</div>
+                <div class="pmt-bubble">"Sí, al brazo izquierdo..."</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: toggle cards -->
+        <div class="toggle-column" id="toggleRight">
+          <div class="toggle-card" data-animate>
+            <div class="tc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="tc-body">
+              <div class="tc-title">EHR Sync</div>
+              <div class="tc-desc">Auto-documents triage notes directly into your EHR via FHIR</div>
+            </div>
+            <div class="tc-toggle"></div>
+          </div>
+
+          <div class="toggle-card" data-animate data-animate-delay="1">
+            <div class="tc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <div class="tc-body">
+              <div class="tc-title">Nurse Override</div>
+              <div class="tc-desc">Clinical staff can always review and adjust AI-suggested ESI levels</div>
+            </div>
+            <div class="tc-toggle"></div>
+          </div>
+
+          <div class="toggle-card" data-animate data-animate-delay="2">
+            <div class="tc-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#004737" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </div>
+            <div class="tc-body">
+              <div class="tc-title">Smart Follow-up</div>
+              <div class="tc-desc">Context-aware questions adapt in real-time based on patient responses</div>
+            </div>
+            <div class="tc-toggle"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FEATURES (For the Customer equivalent)
+       ============================================================ -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <div class="features-header" data-animate>
+        <span class="upper-title outline">
+          <span class="background"></span>
+          <span class="label">Capabilities</span>
+        </span>
+        <h2 class="main-title">
+          And it's just as powerful for your<br><span class="highlight">patients</span>
+        </h2>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card" data-animate>
+          <div class="fc-icon-wrap">
+            <svg viewBox="0 0 28 28" fill="none" stroke="#004737" stroke-width="1.5"><circle cx="14" cy="14" r="12"/><path d="M14 8v6l4 2"/></svg>
+          </div>
+          <h3>90-Second Triage</h3>
+          <p>Average assessment time reduced from 5+ minutes to under 90 seconds with AI-assisted intake.</p>
+          <span class="feature-pill">3x Faster</span>
+        </div>
+
+        <div class="feature-card" data-animate data-animate-delay="1">
+          <div class="fc-icon-wrap">
+            <svg viewBox="0 0 28 28" fill="none" stroke="#004737" stroke-width="1.5"><circle cx="14" cy="14" r="12"/><path d="M9 14l3 3 7-7"/></svg>
+          </div>
+          <h3>Clinical Accuracy</h3>
+          <p>93% ESI agreement rate with board-certified emergency physicians across all acuity levels.</p>
+          <span class="feature-pill">93% Accuracy</span>
+        </div>
+
+        <div class="feature-card" data-animate data-animate-delay="2">
+          <div class="fc-icon-wrap">
+            <svg viewBox="0 0 28 28" fill="none" stroke="#004737" stroke-width="1.5"><circle cx="14" cy="14" r="12"/><path d="M9 11h6M9 14h10M9 17h4"/></svg>
+          </div>
+          <h3>Auto Documentation</h3>
+          <p>Every triage encounter is automatically structured and documented for seamless EHR integration.</p>
+          <span class="feature-pill">Zero Manual Entry</span>
+        </div>
+
+        <div class="feature-card" data-animate data-animate-delay="3">
+          <div class="fc-icon-wrap">
+            <svg viewBox="0 0 28 28" fill="none" stroke="#004737" stroke-width="1.5"><path d="M14 2a12 12 0 1012 12A12 12 0 0014 2z"/><path d="M2 14h24M14 2a17 17 0 014 12 17 17 0 01-4 12 17 17 0 01-4-12A17 17 0 0114 2z"/></svg>
+          </div>
+          <h3>30+ Languages</h3>
+          <p>Whisper-powered speech recognition breaks language barriers with instant multilingual transcription.</p>
+          <span class="feature-pill">No Interpreter Wait</span>
+        </div>
+
+        <div class="feature-card" data-animate data-animate-delay="4">
+          <div class="fc-icon-wrap">
+            <svg viewBox="0 0 28 28" fill="none" stroke="#004737" stroke-width="1.5"><path d="M14 24s10-5 10-12V6l-10-4-10 4v6c0 7 10 12 10 12z"/></svg>
+          </div>
+          <h3>HIPAA Compliant</h3>
+          <p>Enterprise-grade security with end-to-end encryption, SOC 2 compliance, and zero data retention policies.</p>
+          <span class="feature-pill">Enterprise Security</span>
+        </div>
+
+        <div class="feature-card" data-animate data-animate-delay="4">
+          <div class="fc-icon-wrap">
+            <svg viewBox="0 0 28 28" fill="none" stroke="#004737" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H12a4 4 0 00-4 4v2"/><circle cx="14" cy="9" r="4"/><path d="M24 21v-2a4 4 0 00-3-3.87M19 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <h3>Nurse Empowerment</h3>
+          <p>AI augments clinical judgment — nurses always retain full override authority over every triage decision.</p>
+          <span class="feature-pill">Human-in-the-Loop</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       HOW IT WORKS
+       ============================================================ -->
+  <section class="how-section" id="how">
+    <div class="container">
+      <div class="how-header" data-animate>
+        <span class="upper-title outline">
+          <span class="background"></span>
+          <span class="label">How it Works</span>
+        </span>
+        <h2 class="main-title">
+          Triage in <span class="highlight">three steps</span>
+        </h2>
+        <p class="section-description">
+          From patient arrival to documented assessment in under two minutes.
+        </p>
+      </div>
+
+      <div class="how-grid">
+        <div class="how-card" data-animate>
+          <div class="how-num">1</div>
+          <h3>Patient Speaks</h3>
+          <p>Patient describes symptoms in any language. Whisper captures and transcribes in real-time with automatic language detection.</p>
+        </div>
+        <div class="how-card" data-animate data-animate-delay="1">
+          <div class="how-num">2</div>
+          <h3>AI Analyzes</h3>
+          <p>Claude extracts clinical features and generates reasoning. LightGBM validates the ESI score against trained clinical data.</p>
+        </div>
+        <div class="how-card" data-animate data-animate-delay="2">
+          <div class="how-num">3</div>
+          <h3>Nurse Confirms</h3>
+          <p>Triage nurse reviews the AI recommendation, confirms or adjusts, and the assessment auto-syncs to the EHR.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       STATS SECTION (Sustainable equivalent)
+       ============================================================ -->
+  <section class="stats-section" id="stats">
+    <div class="stats-bg-shape"></div>
+    <div class="container">
+      <div class="stats-header" data-animate>
+        <span class="upper-title outline mint">
+          <span class="background"></span>
+          <span class="label">Impact</span>
+        </span>
+        <h2 class="main-title" style="color:var(--cream)">
+          Reimagine emergency triage for a <span class="highlight">faster future.</span>
+        </h2>
+        <p class="section-description" style="color:var(--cream)">
+          Every second matters in emergency medicine. Solace helps your team make better decisions, faster.
+        </p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card" data-animate>
+          <div class="stat-value" id="statTime">90s</div>
+          <div class="stat-label">Average triage time, down from 5+ minutes</div>
+        </div>
+        <div class="stat-card" data-animate data-animate-delay="1">
+          <div class="stat-value" id="statAccuracy">93%</div>
+          <div class="stat-label">ESI agreement with board-certified physicians</div>
+        </div>
+        <div class="stat-card" data-animate data-animate-delay="2">
+          <div class="stat-value" id="statLangs">30+</div>
+          <div class="stat-label">Languages supported via real-time Whisper STT</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TESTIMONIALS
+       ============================================================ -->
+  <section class="testimonials-section" id="testimonials">
+    <div class="container">
+      <div class="testimonials-header" data-animate>
+        <span class="upper-title fill creme">
+          <span class="background"></span>
+          <span class="label">What Clinicians Say</span>
+        </span>
+        <h2 class="main-title">
+          This is the future of<br><span class="highlight">emergency triage.</span>
+        </h2>
+      </div>
+
+      <div class="testimonials-slider">
+        <div class="testimonial-card" data-animate>
+          <p class="tc-quote">"Solace cut our triage bottleneck in half. The AI handles the documentation so my nurses can actually focus on the patients in front of them."</p>
+          <div class="tc-author">
+            <div class="tc-avatar">DR</div>
+            <div>
+              <div class="tc-name">Dr. Rachel Kim</div>
+              <div class="tc-role">ED Medical Director</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card" data-animate data-animate-delay="1">
+          <p class="tc-quote">"The multilingual capability is a game-changer. We serve a diverse community and no longer lose critical information in translation."</p>
+          <div class="tc-author">
+            <div class="tc-avatar">MJ</div>
+            <div>
+              <div class="tc-name">Maria Jensen, RN</div>
+              <div class="tc-role">Charge Nurse, Community Hospital</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card" data-animate data-animate-delay="2">
+          <p class="tc-quote">"93% accuracy on ESI scoring — that's on par with our most experienced triage nurses. And it never has a bad shift."</p>
+          <div class="tc-author">
+            <div class="tc-avatar">AT</div>
+            <div>
+              <div class="tc-name">Dr. Alex Thompson</div>
+              <div class="tc-role">Chief of Emergency Medicine</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CTA
+       ============================================================ -->
+  <section class="cta-section" id="contact">
+    <div class="container" data-animate>
+      <span class="upper-title fill dark-green" style="margin-bottom:24px">
+        <span class="background"></span>
+        <span class="label">Get Started</span>
+      </span>
+      <h2 class="main-title">
+        Ready to transform<br>your <span class="highlight">emergency triage?</span>
+      </h2>
+      <p class="section-description">
+        Join forward-thinking emergency departments deploying AI-native triage today.
+      </p>
+      <div class="hero-cta-group" style="justify-content:center">
+        <a href="mailto:terroirsystems@gmail.com" class="btn-primary">
+          Request a Demo
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="mailto:terroirsystems@gmail.com" class="btn-secondary">Contact Sales</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <img src="assets/solace-logo.png" alt="Solace" onerror="this.style.display='none'">
+        <span>Solace</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="#platform">Platform</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How it Works</a></li>
+        <li><a href="mailto:terroirsystems@gmail.com">Contact</a></li>
+      </ul>
+      <p class="footer-copy">&copy; 2026 Solace AI — Terroir Systems. All rights reserved. HIPAA Compliant.</p>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       SCRIPTS — GSAP + ScrollTrigger + Custom Animations
+       ============================================================ -->
+  <script>
+    gsap.registerPlugin(ScrollTrigger);
+
+    // ============================================================
+    // PAGE TRANSITION
+    // ============================================================
+    window.addEventListener('load', () => {
+      const pt = document.getElementById('pageTransition');
+      gsap.to(pt, {
+        opacity: 0,
+        duration: 0.5,
+        delay: 1.3,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          pt.style.display = 'none';
+          initAnimations();
+        }
+      });
+    });
+
+    // ============================================================
+    // SCROLL-TRIGGERED FADE-IN (data-animate)
+    // ============================================================
+    function initAnimations() {
+      // Fade-in elements
+      document.querySelectorAll('[data-animate]').forEach((el, i) => {
+        ScrollTrigger.create({
+          trigger: el,
+          start: 'top bottom-=80',
+          onEnter: () => {
+            const delay = parseInt(el.dataset.animateDelay || 0) * 100;
+            setTimeout(() => el.classList.add('animated'), delay);
+          },
+          onLeave: () => {},
+          once: true
+        });
+        // Trigger immediately if already in viewport
+        if (el.getBoundingClientRect().top < window.innerHeight - 80) {
+          const delay = parseInt(el.dataset.animateDelay || 0) * 100;
+          setTimeout(() => el.classList.add('animated'), delay + 1400);
+        }
+      });
+
+      // Hero floating cards — staggered entrance with GSAP
+      initHeroCards();
+      initHeroRotator();
+      initTabSwitcher();
+      initNavScroll();
+      initChapterDots();
+      initStatCounters();
+      initToggleCardAnimations();
+      initPhoneAnimation();
+    }
+
+    // ============================================================
+    // HERO FLOATING CARDS — GSAP staggered animation
+    // ============================================================
+    function initHeroCards() {
+      const cards = ['#fcLang', '#fcTime', '#fcAccuracy', '#fcIntegration'];
+      const phone = '#heroPhone';
+
+      gsap.fromTo(phone,
+        { opacity: 0, y: 60, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 1, delay: 1.6, ease: 'power3.out' }
+      );
+
+      cards.forEach((card, i) => {
+        const directions = [
+          { x: -40, y: -20 },
+          { x: 40, y: -20 },
+          { x: -40, y: 20 },
+          { x: 40, y: 20 }
+        ];
+        gsap.fromTo(card,
+          { opacity: 0, x: directions[i].x, y: directions[i].y + 20, scale: 0.9 },
+          { opacity: 1, x: 0, y: 0, scale: 1, duration: 0.8, delay: 1.9 + i * 0.15, ease: 'power3.out' }
+        );
+      });
+
+      // Subtle floating animation
+      cards.forEach((card, i) => {
+        gsap.to(card, {
+          y: `${8 + i * 2}`,
+          duration: 2.5 + i * 0.3,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          delay: 3 + i * 0.2
+        });
+      });
+    }
+
+    // ============================================================
+    // HERO ROTATING TEXT
+    // ============================================================
+    function initHeroRotator() {
+      const items = document.querySelectorAll('#heroRotator .rotate-item');
+      let current = 0;
+
+      setInterval(() => {
+        items[current].classList.remove('active');
+        items[current].classList.add('exit');
+
+        setTimeout(() => {
+          items[current].classList.remove('exit');
+        }, 500);
+
+        current = (current + 1) % items.length;
+        items[current].classList.add('active');
+      }, 3000);
+    }
+
+    // ============================================================
+    // TAB SWITCHER — Underline marker style
+    // ============================================================
+    function initTabSwitcher() {
+      const switcher = document.getElementById('tabSwitcher');
+      const marker = document.getElementById('tabMarker');
+      const btns = switcher.querySelectorAll('.tab-btn');
+      const panels = document.querySelectorAll('.tab-panel');
+
+      function updateMarker(btn) {
+        marker.style.left = btn.offsetLeft + 'px';
+        marker.style.width = btn.offsetWidth + 'px';
+      }
+
+      // Init marker position
+      updateMarker(btns[0]);
+
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          btns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          updateMarker(btn);
+
+          const tabId = btn.dataset.tab;
+          panels.forEach(p => p.classList.remove('active'));
+          document.getElementById('panel-' + tabId).classList.add('active');
+
+          // Re-trigger animations in new panel
+          document.getElementById('panel-' + tabId).querySelectorAll('[data-animate]').forEach(el => {
+            el.classList.remove('animated');
+            setTimeout(() => el.classList.add('animated'), 100);
+          });
+        });
+      });
+
+      // Recalculate on resize
+      window.addEventListener('resize', () => {
+        const activeBtn = switcher.querySelector('.tab-btn.active');
+        if (activeBtn) updateMarker(activeBtn);
+      });
+    }
+
+    // ============================================================
+    // NAV SCROLL EFFECT
+    // ============================================================
+    function initNavScroll() {
+      const nav = document.getElementById('mainNav');
+      ScrollTrigger.create({
+        start: 'top -80',
+        end: 99999,
+        onUpdate: (self) => {
+          if (self.scroll() > 80) {
+            nav.classList.add('scrolled');
+          } else {
+            nav.classList.remove('scrolled');
+          }
+        }
+      });
+    }
+
+    // ============================================================
+    // CHAPTER DOTS — Side navigation
+    // ============================================================
+    function initChapterDots() {
+      const dots = document.querySelectorAll('.chapter-dot');
+      const sections = ['hero', 'platform', 'triage', 'features', 'stats', 'contact'];
+
+      sections.forEach((sectionId, i) => {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        ScrollTrigger.create({
+          trigger: section,
+          start: 'top center',
+          end: 'bottom center',
+          onEnter: () => {
+            dots.forEach(d => d.classList.remove('active'));
+            dots[i].classList.add('active');
+          },
+          onEnterBack: () => {
+            dots.forEach(d => d.classList.remove('active'));
+            dots[i].classList.add('active');
+          }
+        });
+      });
+
+      dots.forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+          const section = document.getElementById(sections[i]);
+          if (section) section.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }
+
+    // ============================================================
+    // STAT COUNTERS — Animated count up
+    // ============================================================
+    function initStatCounters() {
+      const stats = [
+        { el: '#statTime', target: 90, suffix: 's' },
+        { el: '#statAccuracy', target: 93, suffix: '%' },
+        { el: '#statLangs', target: 30, suffix: '+' }
+      ];
+
+      stats.forEach(stat => {
+        const el = document.querySelector(stat.el);
+        if (!el) return;
+
+        ScrollTrigger.create({
+          trigger: el,
+          start: 'top bottom-=100',
+          once: true,
+          onEnter: () => {
+            gsap.fromTo({ val: 0 }, { val: stat.target }, {
+              val: stat.target,
+              duration: 1.5,
+              ease: 'power2.out',
+              onUpdate: function() {
+                el.textContent = Math.round(this.targets()[0].val) + stat.suffix;
+              }
+            });
+          }
+        });
+      });
+    }
+
+    // ============================================================
+    // TOGGLE CARD SCROLL ANIMATIONS (onEnter pattern from d1b79c7.js)
+    // ============================================================
+    function initToggleCardAnimations() {
+      document.querySelectorAll('.toggle-card').forEach((card, i) => {
+        ScrollTrigger.create({
+          trigger: card,
+          start: 'top bottom-=50',
+          once: true,
+          onEnter: () => {
+            gsap.from(card, {
+              duration: 0.6,
+              opacity: 0,
+              y: 30,
+              scale: 0.97,
+              ease: 'power3.out',
+              delay: (i % 3) * 0.1
+            });
+          }
+        });
+      });
+    }
+
+    // ============================================================
+    // PHONE MOCKUP ANIMATION
+    // ============================================================
+    function initPhoneAnimation() {
+      const phone = document.querySelector('.interaction-phone');
+      if (!phone) return;
+
+      ScrollTrigger.create({
+        trigger: phone,
+        start: 'top bottom-=100',
+        once: true,
+        onEnter: () => {
+          gsap.from(phone, {
+            duration: 0.9,
+            opacity: 0,
+            y: 60,
+            scale: 0.95,
+            ease: 'power3.out'
+          });
+
+          // Animate triage card
+          gsap.from('.pm-triage-card', {
+            duration: 0.6,
+            opacity: 0,
+            y: 20,
+            delay: 0.4,
+            ease: 'power2.out'
+          });
+
+          // Animate transcript lines
+          gsap.from('.pmt-line', {
+            duration: 0.5,
+            opacity: 0,
+            y: 15,
+            stagger: 0.2,
+            delay: 0.7,
+            ease: 'power2.out'
+          });
+
+          // Animate ESI badge
+          gsap.from('.pm-esi-badge', {
+            duration: 0.4,
+            opacity: 0,
+            scale: 0.8,
+            delay: 1,
+            ease: 'power2.out'
+          });
+        }
+      });
+    }
+
+    // ============================================================
+    // SMOOTH SCROLL for anchor links
+    // ============================================================
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
+</body>
+</html>

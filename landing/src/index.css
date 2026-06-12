@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-ink font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    @apply bg-solace-mint/30;
+  }
+}
+
+@layer components {
+  /* Big editorial headline, matching Cruise's tight light display type */
+  .h-display {
+    @apply font-display font-normal leading-[0.95] tracking-tightest;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-gradient-to-br from-solace-green-700 to-solace-mint px-7 py-3.5 text-sm font-medium text-white shadow-lift transition duration-300 ease-standard hover:scale-[1.03] hover:shadow-glow;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill border border-solace-green-100 bg-white px-7 py-3.5 text-sm font-medium text-solace-green-700 transition duration-300 ease-standard hover:bg-solace-soft;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-pill bg-solace-soft px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.12em] text-solace-green-700;
+  }
+  /* forhims display voice: Sofia 500, tight, calm. The Product page's only
+     headline style — size set per-use with clamp(). */
+  .h-hims {
+    @apply font-sofia font-medium leading-[1.04] tracking-hims;
+  }
+  /* Gradient statement text (forhims' green→blue paragraph, Solace mint→slate).
+     First stop is green-600 rather than mint so every word clears 3:1 on white. */
+  .text-grad-solace {
+    background-image: linear-gradient(123.97deg, #0F8A68 10.62%, #5E9DA8 49.7%, #3C5560 89.61%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-grad-dark {
+    background-image: linear-gradient(123.97deg, #7CCBB2 10.62%, #B5D8CD 55%, #E7F4EF 89.61%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* WebKit paints its own centered play glyph over videos it declined to
+   autoplay (Low Power Mode, autoplay site settings). The phone-rig video
+   has a gesture fallback that starts it — never show the system chrome. */
+video::-webkit-media-controls,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-start-playback-button,
+video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+}

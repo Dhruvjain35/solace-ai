@@ -1,0 +1,11 @@
+.vercel
+node_modules/
+
+# scratch (video frame extraction)
+.cruise-frames/
+.demo-frames/
+.work/
+
+# build artifacts
+dist/
+*.tsbuildinfo
