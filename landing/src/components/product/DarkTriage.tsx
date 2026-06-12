@@ -177,7 +177,7 @@ export default function DarkTriage() {
               transition={{ ...moveWithFade, delay: 0.1 }}
               className="mt-5 text-base leading-relaxed text-white/65 md:text-lg"
             >
-              The summary, the vitals, and the patient's own words — ready the
+              The summary, the vitals, and the patient's own words. Ready the
               moment they pick up the chart.
             </motion.p>
           </div>
@@ -195,13 +195,21 @@ export default function DarkTriage() {
               variants={circleItem}
               className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4"
             >
-              <div>
-                <p className="font-sofia text-[17px] font-medium tracking-[-0.01em] text-white">
-                  Marcus R. · 58
-                </p>
-                <p className="text-[12px] text-white/45">Arriving · ~4 min out</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <img
+                  src="/assets/faces/patient-marcus.jpg"
+                  alt=""
+                  loading="lazy"
+                  className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white/15"
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-sofia text-[17px] font-medium tracking-[-0.01em] text-white">
+                    Marcus R. · 58
+                  </p>
+                  <p className="text-[12px] text-white/45">Arriving · ~4 min out</p>
+                </div>
               </div>
-              <span className="rounded-pill bg-solace-green-500/15 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-solace-green-300 ring-1 ring-solace-green-500/30">
+              <span className="shrink-0 rounded-pill bg-solace-green-500/15 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-solace-green-300 ring-1 ring-solace-green-500/30">
                 ESI 2 · Urgent
               </span>
             </motion.div>
