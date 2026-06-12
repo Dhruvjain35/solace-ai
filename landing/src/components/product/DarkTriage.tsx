@@ -12,6 +12,7 @@ import { FileText, Activity, MessagesSquare, HeartPulse } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
 import useIsWide from '../../lib/useIsWide';
 import LaptopRig from './LaptopRig';
+import ProductWord from './ProductWord';
 import QueueScreen from './QueueScreen';
 import EhrScreen from './EhrScreen';
 
@@ -102,18 +103,15 @@ export default function DarkTriage() {
       aria-labelledby="triage-heading"
       className="overflow-hidden bg-ink"
     >
-      {/* ===== 1 · Mega word ===== */}
+      {/* ===== 1 · Mega word — slides in from the left (Intake came from the
+          right, so consecutive acts feel like panels sliding through) ===== */}
       <div className="px-4 py-[10vh] text-center lg:py-[14vh]">
-        <motion.h2
+        <ProductWord
           id="triage-heading"
-          initial={{ opacity: 0, y: reduce ? 0 : 90 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={moveWithFade}
-          className="font-sofia text-[clamp(110px,16vw,240px)] font-medium leading-none tracking-hims text-white"
-        >
-          Triage.
-        </motion.h2>
+          word="Triage."
+          from="left"
+          className="text-[clamp(110px,16vw,240px)] text-white"
+        />
       </div>
 
       {/* ===== 2 + 3 · Dark feature card with circle actions ===== */}
