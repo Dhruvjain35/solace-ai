@@ -19,6 +19,11 @@
   ::selection {
     @apply bg-solace-mint/30;
   }
+  /* Offset hash-anchored sections (e.g. product-menu deep links) so the fixed
+     nav pill never covers the heading you just jumped to. */
+  [id] {
+    scroll-margin-top: 96px;
+  }
 }
 
 @layer components {
@@ -36,7 +41,7 @@
     @apply inline-flex items-center gap-2 rounded-pill bg-solace-soft px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.12em] text-solace-green-700;
   }
   /* forhims display voice: Sofia 500, tight, calm. The Product page's only
-     headline style — size set per-use with clamp(). */
+     headline style, size set per-use with clamp(). */
   .h-hims {
     @apply font-sofia font-medium leading-[1.04] tracking-hims;
   }
@@ -87,7 +92,7 @@
 
 /* WebKit paints its own centered play glyph over videos it declined to
    autoplay (Low Power Mode, autoplay site settings). The phone-rig video
-   has a gesture fallback that starts it — never show the system chrome. */
+   has a gesture fallback that starts it, never show the system chrome. */
 video::-webkit-media-controls,
 video::-webkit-media-controls-panel,
 video::-webkit-media-controls-start-playback-button,

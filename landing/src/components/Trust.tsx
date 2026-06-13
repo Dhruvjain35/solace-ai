@@ -5,25 +5,25 @@ const CARDS = [
   {
     n: '01',
     title: 'HIPAA-compliant by design',
-    body: 'Explicit consent tracking and dual-write audit logging — 90 days hot, six years cold. Built for PHI from the very first commit, not bolted on after.',
+    body: 'Explicit consent tracking and dual-write audit logging: 90 days hot, six years cold. Built for PHI from the very first commit, not bolted on after.',
     tint: 'from-solace-green-900 to-ink',
   },
   {
     n: '02',
     title: 'Encrypted end to end',
-    body: 'Every record is encrypted at rest with AWS KMS and in transit over TLS, across every service in the pipeline — phone, browser, model and EHR.',
+    body: 'Every record is encrypted at rest with AWS KMS and in transit over TLS, across every service in the pipeline: phone, browser, model and EHR.',
     tint: 'from-solace-green-700 to-solace-green-900',
   },
   {
     n: '03',
     title: 'PHI redacted before any model call',
-    body: 'Protected health information is stripped before it ever reaches an LLM. The model sees the clinical signal it needs — and nothing it doesn’t.',
+    body: 'Protected health information is stripped before it ever reaches an LLM. The model sees the clinical signal it needs, and nothing it doesn’t.',
     tint: 'from-[#0d5f4a] to-ink',
   },
   {
     n: '04',
     title: 'AWS BAA signed',
-    body: 'Solace runs on AWS under a signed Business Associate Addendum, with explainable, auditable triage — every ESI score backed by a SHAP breakdown a clinician can check.',
+    body: 'Solace runs on AWS under a signed Business Associate Addendum, with explainable, auditable triage: every ESI score backed by a SHAP breakdown a clinician can check.',
     tint: 'from-solace-green-900 to-[#06302a]',
   },
 ];

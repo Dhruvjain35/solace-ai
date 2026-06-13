@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { himsFade, himsMove } from '../../lib/hims';
 
 /*
- * ExpandingLogo — the navbar mark. Idle is the standalone "S" (solace-mark.png);
+ * ExpandingLogo, the navbar mark. Idle is the standalone "S" (solace-mark.png);
  * when `expanded` (hover, or the one-shot intro on first load) the "solace"
  * wordmark unfurls to its right by animating the clip width, on the house
  * curves. Sizes keep the real logo's proportions: the box sits a touch taller

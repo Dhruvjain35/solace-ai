@@ -4,11 +4,11 @@ import { Plus } from 'lucide-react';
 import { reveal } from '../lib/motion';
 
 const ITEMS = [
-  { q: 'Do patients need to download an app?', a: 'No. Patients scan a QR code in the waiting room and use Solace in the browser — no app, no account, no login. Intake works in 30+ languages by voice.' },
+  { q: 'Do patients need to download an app?', a: 'No. Patients scan a QR code in the waiting room and use Solace in the browser, no app, no account, no login. Intake works in 30+ languages by voice.' },
   { q: 'How does Solace assign an acuity level?', a: 'A Claude language model produces an initial assessment, then a LightGBM ensemble refines it into an ESI level. Every score ships with a SHAP explanation so clinicians can see the reasoning.' },
-  { q: 'Which EHRs does Solace connect to?', a: 'Solace integrates over SMART-on-FHIR, supporting Epic, Oracle Health (Cerner), athenahealth and other FHIR R4 systems — reading back allergies, medications and prior visits.' },
+  { q: 'Which EHRs does Solace connect to?', a: 'Solace integrates over SMART-on-FHIR, supporting Epic, Oracle Health (Cerner), athenahealth and other FHIR R4 systems, reading back allergies, medications and prior visits.' },
   { q: 'Is Solace HIPAA compliant?', a: 'Yes. All data is encrypted at rest (KMS) and in transit (TLS), PHI is redacted before any model call, and we maintain dual-write audit logging. Solace operates under an AWS Business Associate Addendum (BAA).' },
-  { q: 'How long does triage take?', a: 'Six AI calls run in parallel, returning an ESI level, plan and estimated wait in seconds — getting most ER visits started about 10 minutes sooner.' },
+  { q: 'How long does triage take?', a: 'Six AI calls run in parallel, returning an ESI level, plan and estimated wait in seconds, getting most ER visits started about 10 minutes sooner.' },
 ];
 
 export default function FAQ() {

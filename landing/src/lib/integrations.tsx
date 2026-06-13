@@ -124,7 +124,7 @@ export const INTEGRATIONS: Integration[] = [
     slug: 'smart-on-fhir',
     name: 'SMART on FHIR',
     mark: <span className="whitespace-nowrap text-[19px] font-semibold tracking-tight text-ink">SMART <span className="text-solace-green-600">on FHIR</span></span>,
-    blurb: 'The open standard underneath every Solace connection — try it on the public sandbox today.',
+    blurb: 'The open standard underneath every Solace connection. Try it on the public sandbox today.',
     tier: 'native',
   },
 ];

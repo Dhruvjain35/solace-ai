@@ -18,7 +18,7 @@ import EhrScreen from '../product/EhrScreen';
  * Real, in-DOM product visuals for the per-platform integration guide. These
  * replace the four reused static screenshots: instead of the same PNGs on every
  * platform, each guide gets vendor-specific diagrams built from the Integration
- * record — a SMART-on-FHIR connection flow, the exact scopes Solace requests,
+ * record: a SMART-on-FHIR connection flow, the exact scopes Solace requests,
  * a coded write-back result, and the live Atlas EhrScreen framed in a browser
  * card. Everything rides the two house curves and respects reduced motion.
  */
@@ -53,10 +53,10 @@ function Rise({
 }
 
 /* ============================================================= *
- * 1 · ConnectionFlow — the SMART on FHIR handshake as a stepped *
+ * 1 · ConnectionFlow, the SMART on FHIR handshake as a stepped  *
  *     diagram. Horizontal on desktop, vertical on mobile, the   *
  *     vendor name interpolated into the authorize + write-back  *
- *     nodes. No standing access — the closing note.             *
+ *     nodes. No standing access, the closing note.              *
  * ============================================================= */
 
 type FlowNode = {
@@ -154,7 +154,7 @@ export function ConnectionFlow({
             aria-hidden="true"
             className={dark ? 'text-solace-mint' : 'text-solace-green-600'}
           />
-          No standing access — the token is scoped to the launch and expires with
+          No standing access, the token is scoped to the launch and expires with
           the session.
         </p>
       </Rise>
@@ -163,7 +163,7 @@ export function ConnectionFlow({
 }
 
 /* ============================================================= *
- * 2 · ScopeCard — the exact minimum-necessary SMART v2 scopes   *
+ * 2 · ScopeCard, the exact minimum-necessary SMART v2 scopes    *
  *     Solace requests, as mono chips, with the HIPAA cite.      *
  * ============================================================= */
 
@@ -213,7 +213,7 @@ export function ScopeCard({ reduce }: { reduce: boolean | null }) {
 }
 
 /* ============================================================= *
- * 3 · WriteBackCard — a coded write-back result: each resource  *
+ * 3 · WriteBackCard, a coded write-back result: each resource   *
  *     Solace posted, with its real code system and a green tick.*
  * ============================================================= */
 
@@ -301,7 +301,7 @@ export function WriteBackCard({
 }
 
 /* ============================================================= *
- * 4 · ChartFrame — the live Atlas EhrScreen in a clean browser  *
+ * 4 · ChartFrame, the live Atlas EhrScreen in a clean browser   *
  *     card. This is the chart Solace reads and writes; it needs *
  *     the [container-type:inline-size] wrapper + 16/10 aspect   *
  *     for the cqw units inside EhrScreen to scale.              *
@@ -328,7 +328,7 @@ export function ChartFrame({
             atlas.solace.health · launched from {vendor}
           </span>
         </div>
-        {/* live DOM screen — cqw scales inside the container */}
+        {/* live DOM screen, cqw scales inside the container */}
         <div className="aspect-[16/10] w-full [container-type:inline-size]">
           <span className="sr-only">
             The Solace Atlas patient snapshot Solace reads from and writes back to

@@ -5,10 +5,10 @@ import { reveal, stagger, slideUp } from '../lib/motion';
 import { ArrowRight } from 'lucide-react';
 
 const PRODUCTS = [
-  { name: 'Multilingual Voice Intake', body: 'Patients speak symptoms in 30+ languages — Whisper transcribes, adaptive forms branch.', shot: SHOTS.voice, kind: 'phone' as const },
+  { name: 'Multilingual Voice Intake', body: 'Patients speak symptoms in 30+ languages. Whisper transcribes, adaptive forms branch.', shot: SHOTS.voice, kind: 'phone' as const },
   { name: 'Explainable Triage', body: 'An ESI acuity level in seconds, each score backed by a SHAP explanation.', shot: SHOTS.working, kind: 'phone' as const },
   { name: 'Clinician Pre-Brief', body: 'Matched allergies, meds and prior visits from the connected health record.', shot: SHOTS.ehr, kind: 'window' as const },
-  { name: 'Plan & Discharge', body: 'A clear priority, wait time and next steps — generated in the patient’s language.', shot: SHOTS.plan, kind: 'phone' as const },
+  { name: 'Plan & Discharge', body: 'A clear priority, wait time and next steps, generated in the patient’s language.', shot: SHOTS.plan, kind: 'phone' as const },
   { name: 'Vision Capture', body: 'Insurance cards and injuries photographed once, auto-filled with Claude Vision.', shot: SHOTS.insurance, kind: 'phone' as const },
 ];
 

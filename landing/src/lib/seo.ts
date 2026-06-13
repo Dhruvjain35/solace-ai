@@ -11,7 +11,7 @@ type Meta = { title: string; description: string };
 const SITE = 'Solace';
 
 const DEFAULT: Meta = {
-  title: 'Solace — AI-native intake & triage for the emergency department',
+  title: 'Solace: AI-native intake & triage for the emergency department',
   description:
     'Solace turns ED intake into a calm, AI-native workflow: multilingual voice intake for patients and an instant, explainable acuity pre-brief for clinicians.',
 };
@@ -19,27 +19,27 @@ const DEFAULT: Meta = {
 const MAP: Record<string, Meta> = {
   '/': DEFAULT,
   '/how-it-works': {
-    title: 'How it works — from QR check-in to explainable triage · Solace',
+    title: 'How it works: from QR check-in to explainable triage · Solace',
     description:
       'The whole Solace flow: a patient checks in by voice from a QR code, and the care team meets an explainable acuity pre-brief before the patient reaches a bed.',
   },
   '/clinicians': {
-    title: 'For clinicians — meet the story before the patient · Solace',
+    title: 'For clinicians: meet the story before the patient · Solace',
     description:
       'A clear summary, the dangerous causes to rule out, and the suggested tests, ready while your patient is still in the waiting room.',
   },
   '/integrations': {
-    title: 'Integrations — connect Solace to the EHR you already run',
+    title: 'Integrations: connect Solace to the EHR you already run',
     description:
       'Built on SMART on FHIR R4. Solace connects to Epic, Oracle Health, athenahealth and any standards-based EHR, with coded write-back and no rip-and-replace.',
   },
   '/security': {
-    title: 'Security — built so the model never touches PHI · Solace',
+    title: 'Security: built so the model never touches PHI · Solace',
     description:
       'PHI isolation enforced in code, consent-gated AI, confirm-gated write-backs, customer-managed encryption, and a leak-gate test that fails the build if PHI could reach a prompt.',
   },
   '/hipaa': {
-    title: 'HIPAA compliance — handled as a Business Associate · Solace',
+    title: 'HIPAA compliance: handled as a Business Associate · Solace',
     description:
       'How Solace meets the Privacy, Security and Breach Notification Rules as a HIPAA Business Associate, and exactly what your organization gets when you bring us in.',
   },
@@ -54,22 +54,22 @@ const MAP: Record<string, Meta> = {
       'The terms that govern your use of Solace, written for licensed clinicians and healthcare organizations, including the clinical-decision-support disclaimer.',
   },
   '/contact': {
-    title: 'Contact Solace — book a demo or a security review',
+    title: 'Contact Solace: book a demo or a security review',
     description:
-      'Demos, security reviews, integration questions, support or press — tell us what you need and the right person on our team will reply within one business day.',
+      'Demos, security reviews, integration questions, support or press, tell us what you need and the right person on our team will reply within one business day.',
   },
   '/demo': {
-    title: 'Book a demo — see Solace on your floor',
+    title: 'Book a demo: see Solace on your floor',
     description:
       'A live walkthrough on a workflow that looks like yours, in about 20 minutes. Nothing to install, HIPAA-grade from the first call.',
   },
   '/pricing': {
-    title: 'Pricing — simple, honest pricing · Solace',
+    title: 'Pricing: simple, honest pricing · Solace',
     description:
       'Start free on your own, then bring the whole team. Everything in your tier is included, nothing sold back to you feature by feature.',
   },
   '/company': {
-    title: 'Company — calm should be standard care · Solace',
+    title: 'Company: calm should be standard care · Solace',
     description:
       'We are building emergency rooms where no one waits in the dark, not patients, and not the people caring for them.',
   },
@@ -82,7 +82,7 @@ export function metaForPath(path: string): Meta {
     const item = getIntegration(m[1]);
     if (item) {
       return {
-        title: `${item.name} integration — connect over SMART on FHIR · ${SITE}`,
+        title: `${item.name} integration: connect over SMART on FHIR · ${SITE}`,
         description: `Connect Solace to ${item.name}: a step-by-step guide, the minimum-necessary scopes, and coded, confirm-gated write-back.`,
       };
     }

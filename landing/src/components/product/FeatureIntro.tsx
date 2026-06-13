@@ -3,11 +3,11 @@ import { himsFade, himsMove } from '../../lib/hims';
 import ProductWord from './ProductWord';
 
 /*
- * FeatureIntro — the "Everything you need to run a calmer ED." statement that
+ * FeatureIntro, the "Everything you need to run a calmer ED." statement that
  * hands off to the tile grid below. The giant centered statement rises in on
  * the house two-curve rule; the "Intake" product word then SLIDES in from the
  * right (ProductWord) to open the intake act. The old floating app-icon card
- * that sat between them was cut — it read as filler, not product.
+ * that sat between them was cut. It read as filler, not product.
  */
 
 // The two-curve rule: opacity on HIMS_OUT (~0.2s), transform on HIMS_EXPO (~0.6s).

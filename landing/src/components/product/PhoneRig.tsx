@@ -10,22 +10,22 @@ import { INTAKE_POSTER_SRC, INTAKE_VIDEO_SRC } from '../../lib/hims';
 import CanvasIntake from './CanvasIntake';
 
 /*
- * PhoneRig — Dhruv's AI-generated hand+iPhone mockup (transparent
+ * PhoneRig, Dhruv's AI-generated hand+iPhone mockup (transparent
  * background, front-facing, modern device), with the real Solace screens
  * corner-pinned onto the glass via a runtime homography (CSS matrix3d).
  * Unlike the earlier failed photo composites, this asset was made for the
  * job: alpha matte ships with it, the screen is near-planar, and the dark
- * bezel forgives ±2px — so the overlay reads as part of the image.
+ * bezel forgives ±2px, so the overlay reads as part of the image.
  *
  * The overlay's top edge sits just below the device's dynamic island; the
  * white glass beside/above the island stays from the source image and
  * blends seamlessly with the white app screens.
  *
- * SCREEN_QUAD: full-glass corners as fractions of the 1728×2304 image —
+ * SCREEN_QUAD: full-glass corners as fractions of the 1728×2304 image,
  * TL, TR, BR, BL. Measured from the photo's pixels (/tmp/pw/measure-glass.js
  * scans each edge for the bezel→glass luminance step), then tucked 4–5px
  * under the dark bezel so no edge ever undershoots into the photo's white
- * screen at any rendered scale. Don't recalibrate from screenshots — measure.
+ * screen at any rendered scale. Don't recalibrate from screenshots. Measure.
  */
 // hand-b1: Dhruv's chosen mockup (Downloads/mockup.png), black studio bg
 // removed via Vision segmentation, magenta calibration screen. The arm
@@ -48,7 +48,7 @@ const SCREEN_QUAD: ReadonlyArray<readonly [number, number]> = [
   [0.4259, 0.8273], // BL
 ];
 
-// Logical overlay size before transformation — proportional to the real
+// Logical overlay size before transformation, proportional to the real
 // glass area so content keeps its aspect.
 const BASE_W = 400;
 const BASE_H = 927;
@@ -107,13 +107,13 @@ export function IntakeVideo() {
   // Some Safari configs (Low Power Mode, a per-site "Never Auto-Play"
   // setting) hard-block <video> autoplay and paint a system play glyph
   // that page CSS cannot hide in modern Safari. When that happens we swap
-  // to an animated-WebP twin of the recording — animated images have no
+  // to an animated-WebP twin of the recording, animated images have no
   // autoplay policy, so the screen always plays.
   const [blocked, setBlocked] = useState(false);
 
   // No pause/visibility staging here, ever: WebKit starts the native
   // autoplay almost immediately, and any pause() that races it cancels
-  // the autoplay grant — that exact race is what froze the hero video in
+  // the autoplay grant, that exact race is what froze the hero video in
   // Safari while Chrome shrugged it off.
   useEffect(() => {
     if (blocked) return;
@@ -128,7 +128,7 @@ export function IntakeVideo() {
     // there is NO eager v.play() here: invoking play() clears the
     // element's can-autoplay flag (HTML spec) and cancels the native
     // attribute-driven autoplay.
-    // Reveal only once frames are genuinely advancing — NOT on 'playing'.
+    // Reveal only once frames are genuinely advancing, NOT on 'playing'.
     // Low Power Mode Safari fires 'playing', suspends a beat later, and
     // its system play glyph would flash on the just-revealed video.
     const reveal = () => {
@@ -182,7 +182,7 @@ export function IntakeVideo() {
 
   if (blocked) {
     // WebCodecs canvas player: same mp4, same hardware decoder a <video>
-    // would use, but no autoplay policy — full quality and smooth even on
+    // would use, but no autoplay policy, full quality and smooth even on
     // the Low Power Mode machines that blocked the <video> in the first
     // place. (The software-decoded WebP fallback stuttered exactly there.)
     return <CanvasIntake />;
@@ -204,7 +204,7 @@ export function IntakeVideo() {
         className="absolute inset-0 h-full w-full"
       />
       {/* React never serializes `muted` into markup (facebook/react#10389),
-          and Safari's autoplay gate reads the markup attributes — so the
+          and Safari's autoplay gate reads the markup attributes, so the
           tag is injected verbatim with autoplay+muted+playsinline present
           at parse time. */}
       <div
@@ -234,7 +234,7 @@ export default function PhoneRig({
       className={`relative ${className}`}
       style={{ aspectRatio: `${PHOTO_W} / ${PHOTO_H}` }}
     >
-      {/* The hand+device mockup — its own alpha, no matting needed. */}
+      {/* The hand+device mockup, its own alpha, no matting needed. */}
       <img
         src={PHOTO}
         alt={alt}

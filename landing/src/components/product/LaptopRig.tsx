@@ -10,7 +10,7 @@ import { himsFade, himsMove } from '../../lib/hims';
 import useIsWide from '../../lib/useIsWide';
 
 /*
- * LaptopRig — a pure-CSS MacBook-style mockup for the dark clinician section,
+ * LaptopRig, a pure-CSS MacBook-style mockup for the dark clinician section,
  * presented Apple-product-page style: the lid scroll-tilts open (rotateX
  * 26°→4°) while a glare band sweeps across the screen, and the whole machine
  * floats on a mint under-glow against the bg-ink stage.
@@ -18,7 +18,7 @@ import useIsWide from '../../lib/useIsWide';
  * ≥lg the presentation is scroll-linked (exempt from the two-curve rule, like
  * FeatureIntro's card). Below lg the laptop renders flat and rises in once on
  * the house curves. Reduced motion zeroes every transform; the glare stays
- * parked offscreen. Only the screenshot's alt is exposed to AT — every other
+ * parked offscreen. Only the screenshot's alt is exposed to AT. Every other
  * piece of the rig is decoration.
  */
 
@@ -29,7 +29,7 @@ interface LaptopRigProps {
   /** Screenshot source; ignored when `screen` is provided. */
   src?: string;
   alt: string;
-  /** Live DOM screen — vector-crisp at any size (cqw units scale inside). */
+  /** Live DOM screen, vector-crisp at any size (cqw units scale inside). */
   screen?: ReactNode;
   className?: string;
 }
@@ -40,7 +40,7 @@ export default function LaptopRig({ src, alt, screen, className }: LaptopRigProp
   const isWide = useIsWide();
 
   // Progress runs 0→1 from the rig entering the bottom of the viewport until
-  // it sits just above center — the lid finishes settling as you reach it.
+  // it sits just above center, the lid finishes settling as you reach it.
   const { scrollYProgress } = useScroll({
     target: rigRef,
     offset: ['start end', 'center 0.45'],
@@ -93,7 +93,7 @@ export default function LaptopRig({ src, alt, screen, className }: LaptopRigProp
                 'linear-gradient(180deg, rgba(255,255,255,0.04), transparent 45%)',
             }}
           />
-          {/* glare sweep — rides the same scroll progress as the tilt */}
+          {/* glare sweep, rides the same scroll progress as the tilt */}
           <motion.div
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-[-30%] left-0 w-[40%]"

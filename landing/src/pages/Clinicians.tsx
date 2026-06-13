@@ -397,7 +397,7 @@ function FeatureTiles({ reduce }: { reduce: boolean | null }) {
 
 /* ===== 6 · Dark act: mega type, circle actions, the live queue ===== */
 
-// The patient snapshot as three tabs the clinician flicks between — the
+// The patient snapshot as three tabs the clinician flicks between, the
 // "one tap away" idea made literal. Each tab is a real facet of the chart.
 const SNAPSHOT_TABS = [
   {

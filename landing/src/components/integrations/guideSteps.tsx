@@ -48,7 +48,7 @@ export function getGuideSteps(item: Integration): GuideStep[] {
       },
       {
         title: 'Add the redirect URI and minimum scopes',
-        body: `Add Solace’s redirect URI and request only the minimum-necessary SMART v2 scopes — patient/observation.read, document.write and the few your workflow needs. Nothing broad, nothing unused.`,
+        body: `Add Solace’s redirect URI and request only the minimum-necessary SMART v2 scopes: patient/observation.read, document.write and the few your workflow needs. Nothing broad, nothing unused.`,
         Icon: KeyRound,
       },
       {
@@ -58,7 +58,7 @@ export function getGuideSteps(item: Integration): GuideStep[] {
       },
       {
         title: `Sign in with ${item.name} SSO`,
-        body: `A clinician signs in with ${item.name} single sign-on. Solace launches in context, matches the patient and reads the chart — no separate password, no copy-paste.`,
+        body: `A clinician signs in with ${item.name} single sign-on. Solace launches in context, matches the patient and reads the chart, no separate password, no copy-paste.`,
         Icon: LogIn,
       },
       {
@@ -73,7 +73,7 @@ export function getGuideSteps(item: Integration): GuideStep[] {
   return [
     {
       title: 'Try it on the SMART sandbox first',
-      body: `Point Solace at the public SMART Health IT sandbox to see the full read-and-write loop against ${item.name}-style FHIR R4 data — no ${item.name} credentials required.`,
+      body: `Point Solace at the public SMART Health IT sandbox to see the full read-and-write loop against ${item.name}-style FHIR R4 data, no ${item.name} credentials required.`,
       Icon: FlaskConical,
     },
     {

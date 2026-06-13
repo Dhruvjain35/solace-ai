@@ -7,11 +7,11 @@ import {
 } from '../../lib/hims';
 
 /*
- * CanvasIntake — the blocked-autoplay player. Safari configs like Low Power
+ * CanvasIntake, the blocked-autoplay player. Safari configs like Low Power
  * Mode refuse to start a <video> without a gesture, and the animated-image
  * fallback decodes in SOFTWARE, which stutters on exactly those throttled
  * machines. This player instead demuxes the same mp4 (mp4box) and decodes
- * it with WebCodecs — the same HARDWARE decoder <video> uses — painting
+ * it with WebCodecs, the same HARDWARE decoder <video> uses, painting
  * frames onto a <canvas>. A canvas is not a media element, so no autoplay
  * policy applies: full video quality, hardware-smooth, zero gestures, and
  * no system play button can ever appear.
@@ -101,7 +101,7 @@ export default function CanvasIntake() {
             flushing = false;
           })
           .catch(() => {
-            // flush rejects if the decoder was closed mid-flight — fatal
+            // flush rejects if the decoder was closed mid-flight, fatal
             // only if we're still alive.
             fail();
           });
@@ -137,7 +137,7 @@ export default function CanvasIntake() {
       const buf = await (await fetch(INTAKE_VIDEO_SRC)).arrayBuffer();
       const file = (MP4Box as any).createFile();
       // mp4box only emits samples for data appended AFTER extraction is
-      // configured, and configuration needs the moov atom — so the asset
+      // configured, and configuration needs the moov atom, so the asset
       // is remuxed with +faststart (moov first) and streamed in chunks:
       // onReady fires on an early chunk, extraction starts, and the rest
       // of the stream delivers the samples.

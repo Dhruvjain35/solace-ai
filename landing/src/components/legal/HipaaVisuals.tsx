@@ -3,7 +3,7 @@ import { Check, ArrowRight, ArrowDown } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
 
 /*
- * HIPAA visuals — the two demonstrations that turn the compliance prose into
+ * HIPAA visuals: the two demonstrations that turn the compliance prose into
  * something you can read at a glance:
  *  - SafeguardsMatrix: the Security Rule's three safeguard categories mapped to
  *    the specific controls Solace actually ships.
@@ -43,7 +43,7 @@ const COLUMNS = [
       'Passwordless magic-link sign-in, short-lived JWTs',
       'Customer-managed KMS encryption, in transit and at rest',
       'CloudFront + WAF edge, TLS-only, SSRF guards',
-      'Confirm-gated writes — no chart change without a clinician',
+      'Confirm-gated writes: no chart change without a clinician',
     ],
   },
   {

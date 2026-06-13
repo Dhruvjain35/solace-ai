@@ -9,7 +9,7 @@ import LegalLayout, {
 } from '../components/legal/LegalLayout';
 
 /*
- * Terms — Solace's long-form Terms of Service. Original content covering
+ * Terms, Solace's long-form Terms of Service. Original content covering
  * acceptance, eligibility, accounts, acceptable use, the BAA governing PHI,
  * intellectual property, the clinical-decision-support disclaimer (triage aid
  * only, not a medical device claim), warranties, limitation of liability,

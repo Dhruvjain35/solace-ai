@@ -11,12 +11,12 @@ import useIsWide from '../../lib/useIsWide';
 import PhoneRig from './PhoneRig';
 
 /*
- * AppHero — section 1 of the Product page, a structural clone of the
+ * AppHero, section 1 of the Product page, a structural clone of the
  * app.forhims.com hero ("Total care. Totally different.") remapped onto
  * Solace. A giant inset rounded card pins a full-screen stage; as you scroll
  * the 300vh track, the headline lifts away, the hand+phone rises from the
  * bottom and grows toward the camera, and three lines of ghost mega type
- * ("it's / all in / the app.") sweep vertically behind it — the reference's
+ * ("it's / all in / the app.") sweep vertically behind it, the reference's
  * lilac glow kept as a faint memory under a Solace mint radial.
  */
 
@@ -27,7 +27,7 @@ const GLOW_GRADIENT =
   'radial-gradient(95% 70% at 50% 100%, rgba(31,191,143,0.42), rgba(150,133,255,0.26) 42%, rgba(255,255,255,0) 70%)';
 
 // Ghost-type sweep bands across track progress (start, end). Bands overlap on
-// purpose — one line exits the top as the next enters the bottom, so a line
+// purpose, one line exits the top as the next enters the bottom, so a line
 // is always on stage while the phone grows.
 // Mobile bands: the 220vh track sweeps faster, so each line gets a wider
 // slice and the parade ends before the section boundary enters the frame.
@@ -68,7 +68,7 @@ function GhostLine({
     reduce ? [a, a + span / 2, b] : [a, a + span * 0.3, b - span * 0.3, b],
     reduce ? [0, 1, 0] : [0, 1, 1, 0],
   );
-  // Lateral drift across the fixed high lane — the word stays fully above
+  // Lateral drift across the fixed high lane, the word stays fully above
   // the device for its entire life.
   const x = useTransform(progress, [a, b], reduce ? ['0vw', '0vw'] : ['12vw', '-12vw']);
   return (
@@ -108,7 +108,7 @@ export default function AppHero() {
   // then grows toward the camera mid-track. On mobile it rests lower so the
   // scroll cue and the bezel don't collide. ----
   // The phone holds waist-high while the ghost words parade through the
-  // clear band above it, then rises and grows once the last word has left —
+  // clear band above it, then rises and grows once the last word has left,
   // words and device never share vertical space, so the type always reads.
   const phoneY = useTransform(
     p,

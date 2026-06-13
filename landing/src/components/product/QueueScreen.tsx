@@ -13,7 +13,7 @@ import {
 import AtlasSidebar, { ATLAS_FONT, ATLAS_MONO } from './AtlasSidebar';
 
 /*
- * QueueScreen — the Solace Atlas clinician workspace (live queue + ambient
+ * QueueScreen, the Solace Atlas clinician workspace (live queue + ambient
  * scribe + tagged-patient snapshot preview), rebuilt as live DOM for the
  * LaptopRig from the 2026-06-11 recon of solaceaidemo.vercel.app/demo/clinician.
  * All sizes in cqw so it scales vector-crisp; decorative inside the rig.

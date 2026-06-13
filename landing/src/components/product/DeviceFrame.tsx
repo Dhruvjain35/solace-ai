@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Signal, Wifi, BatteryFull } from 'lucide-react';
 
 /*
- * DeviceFrame — a CSS-built iPhone, vector-crisp at any scale. The screen
+ * DeviceFrame, a CSS-built iPhone, vector-crisp at any scale. The screen
  * content is part of the device, so registration problems are impossible:
  * no photo perspective, no masks, no bleed. Width is set by the parent;
  * everything inside scales via container-query units (cqw).

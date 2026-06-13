@@ -79,7 +79,7 @@ export default function Integrations() {
         <Reveal index={2} reduce={reduce}>
           <p className="mx-auto mt-7 max-w-xl text-base text-muted md:text-lg">
             Built on SMART on FHIR R4, so Solace reads the chart and writes the
-            visit back in standard codes — no rip-and-replace, no parallel
+            visit back in standard codes, no rip-and-replace, no parallel
             system to keep in sync.
           </p>
         </Reveal>
@@ -113,7 +113,7 @@ export default function Integrations() {
         </div>
       </section>
 
-      {/* ===== 3 · How connection works — three-step strip ===== */}
+      {/* ===== 3 · How connection works, three-step strip ===== */}
       <section
         aria-labelledby="how-connect-heading"
         className="bg-ink px-6 py-[9vh] md:py-[12vh]"

@@ -76,7 +76,7 @@ export default function Integrations() {
       </div>
 
       <p className="mx-auto mt-12 max-w-xl px-6 text-center text-muted">
-        SMART-on-FHIR OAuth into your EHR — encrypted end to end, with read-back of
+        SMART-on-FHIR OAuth into your EHR, encrypted end to end, with read-back of
         allergies, medications and prior visits.
       </p>
     </section>

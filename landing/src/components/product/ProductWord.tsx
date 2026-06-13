@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { himsFade, himsMove } from '../../lib/hims';
 
 /*
- * ProductWord — the giant product-type word that opens each act (Intake,
+ * ProductWord, the giant product-type word that opens each act (Intake,
  * Triage., ...). Enters with a horizontal SLIDE inside a clipping wrapper:
  * the word travels in from one side while the mask hides the overshoot.
  * House two-curve rule holds: opacity rides himsFade, the x transform rides

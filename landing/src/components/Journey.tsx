@@ -10,7 +10,7 @@ const STEPS = [
     phase: 'Waiting room',
     agent: 'Solace Intake',
     title: 'patients describe symptoms by voice, in 30+ languages.',
-    body: 'A QR code on the wall — no app, no account. Whisper transcribes, and an adaptive form branches on every answer. Photos of injuries and insurance cards auto-fill with Claude Vision.',
+    body: 'A QR code on the wall, no app, no account. Whisper transcribes, and an adaptive form branches on every answer. Photos of injuries and insurance cards auto-fill with Claude Vision.',
     shot: SHOTS.voice,
     kind: 'phone' as const,
   },
@@ -19,7 +19,7 @@ const STEPS = [
     phase: 'Triage',
     agent: 'Solace Triage Engine',
     title: 'six AI calls run in parallel and return an acuity score in seconds.',
-    body: 'Whisper, a Claude pre-brief, the SOAP scribe, a comfort protocol and a LightGBM ensemble all fire at once — producing an ESI level with a SHAP explanation you can trust.',
+    body: 'Whisper, a Claude pre-brief, the SOAP scribe, a comfort protocol and a LightGBM ensemble all fire at once, producing an ESI level with a SHAP explanation you can trust.',
     shot: SHOTS.working,
     kind: 'phone' as const,
   },
@@ -28,7 +28,7 @@ const STEPS = [
     phase: 'At the bedside',
     agent: 'Solace Pre-Brief',
     title: 'the clinician walks in already informed.',
-    body: 'Auto-matched allergies, medications, conditions and prior visits from the connected health record — plus a provisional ESI that refines as bedside vitals come in.',
+    body: 'Auto-matched allergies, medications, conditions and prior visits from the connected health record, plus a provisional ESI that refines as bedside vitals come in.',
     shot: SHOTS.ehr,
     kind: 'window' as const,
   },
@@ -37,7 +37,7 @@ const STEPS = [
     phase: 'Discharge & after',
     agent: 'Solace Plan + Phone',
     title: 'every patient leaves with a plan, and the phones answer themselves.',
-    body: 'A clear ESI, estimated wait and next steps in the patient’s language — while an inbound voice agent handles scheduling, questions and emergency escalation, 24/7.',
+    body: 'A clear ESI, estimated wait and next steps in the patient’s language, while an inbound voice agent handles scheduling, questions and emergency escalation, 24/7.',
     shot: SHOTS.plan,
     kind: 'phone' as const,
   },
@@ -78,13 +78,13 @@ export default function Journey() {
                   className={flip ? 'md:order-2' : ''}
                 >
                   {s.kind === 'phone' ? (
-                    <PhoneShot src={s.shot} alt={`${s.agent} — Solace`} flip={flip} className="min-h-[520px]" />
+                    <PhoneShot src={s.shot} alt={`${s.agent}, Solace`} flip={flip} className="min-h-[520px]" />
                   ) : (
                     <div className="relative">
                       <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] bg-gradient-to-br from-solace-mint/30 to-solace-green-700/10 blur-3xl" />
                       <img
                         src={s.shot}
-                        alt={`${s.agent} — Solace`}
+                        alt={`${s.agent}, Solace`}
                         loading="lazy"
                         className="w-full rounded-2xl shadow-lift ring-1 ring-black/5"
                       />

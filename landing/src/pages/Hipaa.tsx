@@ -10,7 +10,7 @@ import LegalLayout, {
 import { SafeguardsMatrix, TrustChain } from '../components/legal/HipaaVisuals';
 
 /*
- * HIPAA — Solace's compliance page, framed honestly: Solace is a Business
+ * HIPAA, Solace's compliance page, framed honestly: Solace is a Business
  * Associate, not a Covered Entity. It explains how Solace meets the Privacy,
  * Security and Breach Notification rules as a BA, maps the administrative,
  * technical and physical safeguards to what Solace actually does, and tells a

@@ -15,7 +15,7 @@ import ProductWord from './ProductWord';
 import EhrScreen from './EhrScreen';
 
 /*
- * DarkTriage — the clinician act of the Product page, cloning the black "Care"
+ * DarkTriage, the clinician act of the Product page, cloning the black "Care"
  * band of app.forhims.com (mega word → dark feature card with pinned circle
  * actions → app-window screenshots → purple gradient mega paragraph → white
  * app-icon tease), remapped onto Solace's triage terminal. Runs in normal
@@ -23,7 +23,7 @@ import EhrScreen from './EhrScreen';
  * scroll-linked (parallax drift + per-word opacity scrub).
  */
 
-// transforms ride HIMS_EXPO (600ms), opacity rides HIMS_OUT (200ms) — the
+// transforms ride HIMS_EXPO (600ms), opacity rides HIMS_OUT (200ms), the
 // same two-curve split every Product section uses.
 const moveWithFade: Transition = { ...himsMove, opacity: himsFade };
 
@@ -33,7 +33,7 @@ const WORDS = GRADIENT_COPY.split(' ');
 
 // The pre-arrival brief, as a clinician actually receives it: a summary line,
 // the vitals strip, and the patient's own words. Replaces the old row of empty
-// circle buttons — same three facets, but shown as real content.
+// circle buttons, same three facets, but shown as real content.
 const BRIEF_ROWS = [
   {
     label: 'Summary',
@@ -114,7 +114,7 @@ export default function DarkTriage() {
       aria-labelledby="triage-heading"
       className="overflow-hidden bg-ink"
     >
-      {/* ===== 1 · Mega word — slides in from the left (Intake came from the
+      {/* ===== 1 · Mega word, slides in from the left (Intake came from the
           right, so consecutive acts feel like panels sliding through) ===== */}
       <div className="px-4 py-[10vh] text-center lg:py-[14vh]">
         <ProductWord
@@ -130,7 +130,7 @@ export default function DarkTriage() {
         <div
           className="mx-auto grid max-w-[1180px] items-center gap-10 overflow-hidden rounded-hims p-8 sm:p-12 lg:grid-cols-2 lg:gap-16 lg:p-20"
           style={{
-            // A mint bloom at the card's top-left over the dark base — the depth
+            // A mint bloom at the card's top-left over the dark base, the depth
             // the reference's maroon-violet card gets from its inner glow.
             backgroundImage:
               'radial-gradient(70% 70% at 18% 0%, rgba(31,191,143,0.20), rgba(31,191,143,0) 62%), linear-gradient(157deg, #11352c 0%, #0b231d 55%, #07150f 100%)',
@@ -229,7 +229,7 @@ export default function DarkTriage() {
         />
       </div>
 
-      {/* ===== 5 · Gradient mega paragraph — the closing beat of the dark act.
+      {/* ===== 5 · Gradient mega paragraph, the closing beat of the dark act.
           The mint closing band that follows is an inset card floating on this
           same ink, so the act ends on clean black, not a glow. ===== */}
       <div ref={gradRef} className="mx-auto max-w-5xl px-6 pb-[9vh] pt-[10vh] md:px-12 md:pb-[14vh] md:pt-[14vh]">

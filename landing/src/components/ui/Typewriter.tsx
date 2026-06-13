@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
-// Cycling typewriter — types a word, holds, deletes, moves to the next.
+// Cycling typewriter, types a word, holds, deletes, moves to the next.
 // Mirrors the cruisenow.ai hero ("Charts." -> "Docs." ...).
 export default function Typewriter({
   words,

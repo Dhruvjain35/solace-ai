@@ -16,7 +16,7 @@ import { himsFade, himsMove } from '../lib/hims';
 import { submitLead, mailtoLead } from '../lib/lead';
 
 /*
- * Contact — a premium contact page on the Product / Company design system.
+ * Contact, a premium contact page on the Product / Company design system.
  * The landing has no backend, so the form composes a prefilled mailto: to
  * hello@solace.health and shows a graceful success state once opened. A hero,
  * a grid of contact reasons (each an icon + line), the mailto form, and a

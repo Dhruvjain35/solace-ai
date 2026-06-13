@@ -12,7 +12,7 @@ import {
 } from '../components/security/data';
 
 /*
- * Security — the marketing-grade trust page (not a legal document). It runs on
+ * Security, the marketing-grade trust page (not a legal document). It runs on
  * the Product / Company design system: two-curve reveals, font-sofia display,
  * the mint band rhythm, pill CTAs. A centered hero, a trust-signal stat row,
  * a grid of icon control cards grounded 1:1 in Solace's real architecture
@@ -77,7 +77,7 @@ export default function Security() {
         </Reveal>
       </section>
 
-      {/* ===== 2 · PHI isolation — the before/after demonstration ===== */}
+      {/* ===== 2 · PHI isolation, the before/after demonstration ===== */}
       <section
         aria-labelledby="phiscrub-heading"
         className="bg-white px-6 py-[8vh] md:py-[12vh]"
@@ -109,7 +109,7 @@ export default function Security() {
           </Reveal>
           <Reveal index={4} reduce={reduce}>
             <p className="mt-6 text-center text-[13px] text-muted/80">
-              Re-identification happens only in your trusted runtime — never in a model call.
+              Re-identification happens only in your trusted runtime, never in a model call.
             </p>
           </Reveal>
         </div>
@@ -412,7 +412,7 @@ export default function Security() {
         </div>
       </section>
 
-      {/* ===== 6 · Close — CTA to contact ===== */}
+      {/* ===== 6 · Close, CTA to contact ===== */}
       <section
         aria-labelledby="security-cta-heading"
         className="bg-white px-6 pb-[18vh] pt-[6vh]"

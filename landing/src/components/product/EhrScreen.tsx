@@ -12,7 +12,7 @@ import {
 import AtlasSidebar, { ATLAS_FONT, ATLAS_MONO } from './AtlasSidebar';
 
 /*
- * EhrScreen — the Solace Atlas patient snapshot opened full-width: acuity,
+ * EhrScreen, the Solace Atlas patient snapshot opened full-width: acuity,
  * AI pre-brief, differential with must-not-miss flags, workup order set and
  * the SHAP attribution bars ("what drove this ESI"). Rebuilt as live DOM
  * for the LaptopRig from the 2026-06-11 recon of the live dashboard.
@@ -32,7 +32,7 @@ const LABS = ['Troponin (serial)', 'BNP', 'D-dimer', 'CBC', 'BMP'] as const;
 const IMAGING = ['ECG', 'CXR PA/lateral', 'CT chest PE protocol'] as const;
 const MONITORING = ['Cardiac monitor', 'SpO₂', 'Vitals q15min'] as const;
 
-// SHAP attribution rows — burnt-amber bars push acuity up, green pull down.
+// SHAP attribution rows, burnt-amber bars push acuity up, green pull down.
 const DRIVERS = [
   { name: 'dyspnea_flag', value: '+1.12', width: '92%', up: true },
   { name: 'pain_score', value: '+0.86', width: '70%', up: true },
