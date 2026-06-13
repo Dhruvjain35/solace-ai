@@ -1,5 +1,6 @@
 import { Children, isValidElement, cloneElement, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Link2 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { himsFade, himsMove } from '../../lib/hims';
 import { ReadingProgress, ScrollSpyToc, MobileToc, BackToTop } from './Reading';
@@ -81,7 +82,7 @@ export function Section({
         aria-labelledby={`${id}-h`}
         className="scroll-mt-32 py-12 first:pt-0"
       >
-        <div className="flex items-baseline gap-4">
+        <div className="group flex items-baseline gap-4">
           {number ? (
             <span
               aria-hidden="true"
@@ -96,6 +97,13 @@ export function Section({
           >
             {title}
           </h2>
+          <a
+            href={`#${id}`}
+            aria-label={`Link to “${title}”`}
+            className="shrink-0 self-center text-muted/40 opacity-0 transition-opacity duration-200 hover:text-solace-green-600 focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <Link2 size={16} strokeWidth={2} aria-hidden="true" />
+          </a>
         </div>
         <div
           className={`prose-legal mt-5 space-y-4 text-[15px] leading-relaxed text-muted md:text-base ${
