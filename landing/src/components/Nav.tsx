@@ -68,9 +68,20 @@ export default function Nav() {
           aria-label="Solace home"
           onMouseEnter={() => setLogoHover(true)}
           onMouseLeave={() => setLogoHover(false)}
-          className="flex items-center rounded-pill bg-white px-4 py-2.5 shadow-soft ring-1 ring-black/[0.06] transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
+          className="group relative flex items-center rounded-pill px-3.5 py-2 transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
         >
-          <ExpandingLogo expanded={logoHover || logoIntro} reduce={reduce} light={light} />
+          {/* Soft mint halo on hover instead of a hard pill — blends into the bar. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-pill opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              background:
+                'radial-gradient(120% 120% at 30% 50%, rgba(31,191,143,0.14), rgba(31,191,143,0) 70%)',
+            }}
+          />
+          <span className="relative">
+            <ExpandingLogo expanded={logoHover || logoIntro} reduce={reduce} light={light} />
+          </span>
         </Link>
 
         <div className="hidden items-center md:flex">
