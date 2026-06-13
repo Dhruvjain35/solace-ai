@@ -6,7 +6,7 @@ import { himsFade, himsMove } from '../../lib/hims';
 import { INTEGRATIONS, type Integration } from '../../lib/integrations';
 
 /*
- * IntegrationMarquee — the "works with your EHR" band. Two rows of logo cards
+ * IntegrationMarquee, the "works with your EHR" band. Two rows of logo cards
  * drift in opposite directions on a pure-CSS keyframe loop (.marquee-strip in
  * index.css): the strip renders twice inside a w-max flex and translates
  * exactly -50%, so the loop is seamless and immune to re-render hiccups.

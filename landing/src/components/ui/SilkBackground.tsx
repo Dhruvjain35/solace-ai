@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-// Animated "silk" gradient — flowing domain-warped noise in Solace greens,
+// Animated "silk" gradient, flowing domain-warped noise in Solace greens,
 // rendered on a single fullscreen WebGL quad. This is the cinematic backdrop
 // that mirrors cruisenow.ai's hero. Falls back to a static CSS gradient if
 // WebGL is unavailable or the user prefers reduced motion.

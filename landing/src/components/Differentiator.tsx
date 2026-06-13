@@ -42,7 +42,7 @@ export default function Differentiator() {
         </div>
 
         <Link to="/demo" className="relative mt-12 inline-flex rounded-pill bg-gradient-to-br from-solace-green-700 to-solace-mint px-7 py-3.5 text-sm font-medium text-white transition hover:scale-[1.03]">
-          Book a Demo — it’s on us
+          Book a Demo, it’s on us
         </Link>
       </motion.div>
     </section>

@@ -12,17 +12,17 @@ import { himsFade, himsMove } from '../../lib/hims';
 import useIsWide from '../../lib/useIsWide';
 
 /*
- * TileGrid — the forhims full-bleed masonry band (scroll_04 reference): five
+ * TileGrid, the forhims full-bleed masonry band (scroll_04 reference): five
  * columns of tiles with tight 10px gutters, 20px corners, bleeding past both
- * viewport edges ≥md. No app screenshots — every tile is a typographic
+ * viewport edges ≥md. No app screenshots, every tile is a typographic
  * feature card in the house palette (ink, deep green, white, pale teal),
  * each one backed by a real shipped Solace capability (see the solace-ai
  * repo: 20-language i18n, voice capture, ~7s spoken triage, 19-field
  * insurance OCR, AI follow-ups, pain re-escalation, attribution log).
  *
- * The living-wall feel comes from scroll-linked column drift — odd columns
+ * The living-wall feel comes from scroll-linked column drift: odd columns
  * float up (-6vh), even columns down (+6vh) across the band's viewport
- * transit — exactly the useScroll + useTransform idiom from IntakeShowcase.
+ * transit, exactly the useScroll + useTransform idiom from IntakeShowcase.
  */
 
 // The pale teal gradient extracted from the reference's tile backgrounds.
@@ -72,12 +72,12 @@ function Kicker({ tone, children }: { tone: 'light' | 'dark'; children: string }
   );
 }
 
-// Animated voice bars — the "speak naturally" tile's mic level meter.
+// Animated voice bars, the "speak naturally" tile's mic level meter.
 const BAR_HEIGHTS = [10, 22, 14, 30, 40, 26, 34, 18, 28, 12, 20, 9];
 function VoiceBars({ still }: { still: boolean }) {
   return (
     <div aria-hidden="true" className="flex h-11 items-center gap-[5px]">
-      {/* Bars 8+ only fit once the 2-col tiles widen past ~sm — below that
+      {/* Bars 8+ only fit once the 2-col tiles widen past ~sm; below that
           they would run through the tile's right padding edge. */}
       {BAR_HEIGHTS.map((h, i) => (
         <motion.span
@@ -116,7 +116,7 @@ export default function TileGrid() {
   const sectionRef = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
 
-  // Column drift only runs ≥lg — below that the band stacks into fewer,
+  // Column drift only runs ≥lg; below that the band stacks into fewer,
   // calmer columns.
   const isWide = useIsWide();
 
@@ -126,7 +126,7 @@ export default function TileGrid() {
     offset: ['start end', 'end start'],
   });
   // Stop the infinite loops (voice bars, EKG trace) whenever the band is
-  // off-screen — framer keyframe loops otherwise tick for the page's whole
+  // off-screen, framer keyframe loops otherwise tick for the page's whole
   // lifetime, and the EKG column is display:none below lg anyway.
   const onStage = useInView(sectionRef, { amount: 0.05 });
   const still = reduce || !isWide;
@@ -155,7 +155,7 @@ export default function TileGrid() {
       <div className="grid grid-cols-2 gap-2.5 px-2.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {/* ---- Column 1 (drifts up) ---- */}
         <motion.div style={{ y: yOdd }} className={col}>
-          {/* Voice-first capture — MicButton + Transcribe in the real app. */}
+          {/* Voice-first capture, MicButton + Transcribe in the real app. */}
           <Tile index={0} reduce={reduce} className="h-[340px]">
             <div
               aria-hidden="true"
@@ -224,7 +224,7 @@ export default function TileGrid() {
 
         {/* ---- Column 2 (drifts down) ---- */}
         <motion.div style={{ y: yEven }} className={`${col} pt-10`}>
-          {/* Insurance OCR — 19 fields via Claude Vision in the real app. */}
+          {/* Insurance OCR, 19 fields via Claude Vision in the real app. */}
           <Tile
             index={3}
             reduce={reduce}
@@ -281,7 +281,7 @@ export default function TileGrid() {
             </div>
           </Tile>
 
-          {/* AI follow-ups — 2–3 questions picked from the transcript. */}
+          {/* AI follow-ups, 2–3 questions picked from the transcript. */}
           <Tile index={6} reduce={reduce} className="h-[470px]">
             <div
               aria-hidden="true"
@@ -369,7 +369,7 @@ export default function TileGrid() {
             </div>
           </Tile>
 
-          {/* Pain re-escalation — "My pain got worse" in the waiting room. */}
+          {/* Pain re-escalation, "My pain got worse" in the waiting room. */}
           <Tile index={9} reduce={reduce} className="h-[320px] bg-ink">
             <div className="flex h-full flex-col justify-between p-6">
               <Kicker tone="light">While you wait</Kicker>
@@ -436,7 +436,7 @@ export default function TileGrid() {
               <p className="font-sofia text-[64px] font-medium leading-none tracking-hims">
                 98%
               </p>
-              {/* Confidence meter — fills to the number on view. */}
+              {/* Confidence meter, fills to the number on view. */}
               <div
                 className="mt-5 h-1.5 w-full max-w-[180px] overflow-hidden rounded-full bg-white/15"
                 aria-hidden="true"

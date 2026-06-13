@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
+  AnimatePresence,
   motion,
   useMotionTemplate,
   useMotionValue,
@@ -10,11 +11,40 @@ import { Link, useLocation } from 'react-router-dom';
 import ExpandingLogo from './ui/ExpandingLogo';
 import { transitions } from '../lib/motion';
 
+// The four shipping products. The first three carry a trademark; Atlas, the
+// clinician copilot, is the workspace they all live inside. Each points at the
+// section of the site where that product is actually shown.
+const PRODUCTS = [
+  {
+    name: 'Solace Smart Patient Intake',
+    tm: true,
+    to: '/how-it-works#patient-side-heading',
+    desc: 'Multilingual voice intake from a QR code',
+  },
+  {
+    name: 'Solace Triage',
+    tm: true,
+    to: '/#triage-heading',
+    desc: 'Explainable ESI acuity pre-brief',
+  },
+  {
+    name: 'Solace Ambient Scribe',
+    tm: true,
+    to: '/clinicians#queue-heading',
+    desc: 'Ambient SOAP notes, drafted as you work',
+  },
+  {
+    name: 'Solace Atlas',
+    tm: false,
+    to: '/clinicians#atlas-heading',
+    desc: 'The EHR copilot at the bedside',
+  },
+];
+
 const LINKS = [
   { label: 'How it Works', to: '/how-it-works' },
   { label: 'For Clinicians', to: '/clinicians' },
   { label: 'Integrations', to: '/integrations' },
-  { label: 'Company', to: '/company' },
   { label: 'Pricing', to: '/pricing' },
 ];
 
@@ -22,9 +52,12 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const [logoHover, setLogoHover] = useState(false);
   const [logoIntro, setLogoIntro] = useState(true);
   const lastY = useRef(0);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>();
   const reduce = useReducedMotion();
   useLocation(); // keep router context subscription for active states below
 
@@ -36,7 +69,7 @@ export default function Nav() {
   }, []);
 
   // Pointer-tracked glow on the logo: a soft mint light that follows the cursor
-  // (spring-smoothed) and fades in/out — interactive, not a static blob.
+  // (spring-smoothed) and fades in/out, interactive, not a static blob.
   const gx = useMotionValue(50);
   const gy = useMotionValue(50);
   const sgx = useSpring(gx, { stiffness: 140, damping: 18, mass: 0.4 });
@@ -80,6 +113,24 @@ export default function Nav() {
   // Over the dark hero (home, not scrolled) -> light text on a glass pill.
   const light = onDarkHero && !scrolled;
 
+  // Hover intent on the products menu: open instantly, close on a short delay
+  // so a quick diagonal move into the panel doesn't dismiss it.
+  const openProducts = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setProductsOpen(true);
+  };
+  const closeProducts = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setProductsOpen(false), 120);
+  };
+
+  const closeAllMobile = () => {
+    setOpen(false);
+    setMobileProductsOpen(false);
+  };
+
+  const linkTone = light ? 'text-white/80 hover:text-white' : 'text-muted hover:text-ink';
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -102,7 +153,7 @@ export default function Nav() {
           onMouseMove={onLogoMove}
           className="relative flex items-center rounded-pill px-3.5 py-2 transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
         >
-          {/* Cursor-tracked mint glow — interactive, spring-smoothed, logo only. */}
+          {/* Cursor-tracked mint glow, interactive, spring-smoothed, logo only. */}
           <motion.span
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 rounded-pill"
@@ -114,13 +165,67 @@ export default function Nav() {
         </Link>
 
         <div className="hidden items-center md:flex">
+          {/* Our Products: hover-revealed dropdown of the four named products. */}
+          <div className="relative" onMouseEnter={openProducts} onMouseLeave={closeProducts}>
+            <button
+              type="button"
+              aria-haspopup="true"
+              aria-expanded={productsOpen}
+              onClick={() => setProductsOpen((v) => !v)}
+              className={`flex items-center gap-1 rounded-pill px-4 py-2 text-sm transition-colors ${linkTone}`}
+            >
+              Our Products
+              <motion.svg
+                width="11"
+                height="11"
+                viewBox="0 0 12 12"
+                fill="none"
+                aria-hidden="true"
+                animate={{ rotate: productsOpen ? 180 : 0 }}
+                transition={{ duration: 0.25, ease: [0.215, 0.61, 0.355, 1] }}
+                className="mt-px opacity-70"
+              >
+                <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </motion.svg>
+            </button>
+
+            <AnimatePresence>
+              {productsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: [0.215, 0.61, 0.355, 1] }}
+                  className="absolute left-0 top-full z-50 w-[332px] pt-3"
+                >
+                  <div className="overflow-hidden rounded-tile border border-solace-soft bg-white p-2 shadow-lift">
+                    {PRODUCTS.map((p) => (
+                      <Link
+                        key={p.name}
+                        to={p.to}
+                        onClick={() => setProductsOpen(false)}
+                        className="group block rounded-2xl px-3.5 py-3 transition-colors hover:bg-solace-soft/60"
+                      >
+                        <span className="block font-sofia text-[15px] font-semibold tracking-hims text-ink">
+                          {p.name}
+                          {p.tm && <sup className="ml-0.5 text-[9px] font-medium text-muted">TM</sup>}
+                        </span>
+                        <span className="mt-0.5 block text-[12.5px] leading-snug text-muted">
+                          {p.desc}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {LINKS.map((l) => (
             <Link
               key={l.to}
               to={l.to}
-              className={`rounded-pill px-4 py-2 text-sm transition-colors ${
-                light ? 'text-white/80 hover:text-white' : 'text-muted hover:text-ink'
-              }`}
+              className={`rounded-pill px-4 py-2 text-sm transition-colors ${linkTone}`}
             >
               {l.label}
             </Link>
@@ -155,12 +260,61 @@ export default function Nav() {
 
       {open && (
         <div className="absolute left-4 right-4 top-full mt-2 rounded-3xl border border-solace-soft bg-white p-4 shadow-lift md:hidden">
+          {/* Mobile: Our Products is a collapsible group at the top. */}
+          <button
+            type="button"
+            aria-expanded={mobileProductsOpen}
+            onClick={() => setMobileProductsOpen((v) => !v)}
+            className="flex w-full items-center justify-between py-3 text-sm font-medium text-ink"
+          >
+            Our Products
+            <motion.svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden="true"
+              animate={{ rotate: mobileProductsOpen ? 180 : 0 }}
+              transition={{ duration: 0.25, ease: [0.215, 0.61, 0.355, 1] }}
+              className="opacity-60"
+            >
+              <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </motion.svg>
+          </button>
+          <AnimatePresence initial={false}>
+            {mobileProductsOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.215, 0.61, 0.355, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="ml-1 border-l border-solace-soft pl-3 pb-1">
+                  {PRODUCTS.map((p) => (
+                    <Link
+                      key={p.name}
+                      to={p.to}
+                      onClick={closeAllMobile}
+                      className="block py-2.5 text-sm text-muted"
+                    >
+                      {p.name}
+                      {p.tm && <sup className="ml-0.5 text-[8px] text-muted/70">TM</sup>}
+                    </Link>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="my-1 h-px bg-solace-soft" />
+
           {LINKS.map((l) => (
-            <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block py-3 text-sm text-muted">
+            <Link key={l.to} to={l.to} onClick={closeAllMobile} className="block py-3 text-sm text-muted">
               {l.label}
             </Link>
           ))}
-          <Link to="/demo" onClick={() => setOpen(false)} className="btn-primary mt-2 w-full">
+          <Link to="/demo" onClick={closeAllMobile} className="btn-primary mt-2 w-full">
             Book a Demo
           </Link>
         </div>

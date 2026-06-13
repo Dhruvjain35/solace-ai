@@ -53,7 +53,7 @@ export default function Metrics() {
 
         <div className="mt-12 flex justify-center">
           <a href="#demo" className="btn-primary">
-            Book a Demo — see it on your floor
+            Book a Demo, see it on your floor
           </a>
         </div>
       </div>

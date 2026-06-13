@@ -41,7 +41,7 @@ const SECURITY_NOTES = [
   {
     tag: 'phi-isolation',
     title: 'PHI isolation in code',
-    body: 'The AI plans and narrates over coded metadata. Raw PHI never reaches the model — and a leak test gates every release.',
+    body: 'The AI plans and narrates over coded metadata. Raw PHI never reaches the model, and a leak test gates every release.',
   },
   {
     tag: 'smart-v2-scopes',
@@ -81,7 +81,7 @@ function NotFound() {
         </Reveal>
         <Reveal index={2} reduce={reduce}>
           <p className="mx-auto mt-6 max-w-md text-base text-muted md:text-lg">
-            It may be listed under a different name — every platform Solace
+            It may be listed under a different name. Every platform Solace
             connects to lives on the integrations hub.
           </p>
         </Reveal>
@@ -157,7 +157,7 @@ export default function IntegrationGuide() {
         </div>
       </section>
 
-      {/* ===== 1.5 · The connection at a glance — SMART flow diagram ===== */}
+      {/* ===== 1.5 · The connection at a glance, SMART flow diagram ===== */}
       <section
         aria-labelledby="flow-heading"
         className="bg-white px-6 pb-[8vh] pt-[2vh]"
@@ -183,7 +183,7 @@ export default function IntegrationGuide() {
         </div>
       </section>
 
-      {/* ===== 2 · The connect guide — numbered steps ===== */}
+      {/* ===== 2 · The connect guide, numbered steps ===== */}
       <section
         aria-labelledby="connect-heading"
         className="bg-white pb-[12vh] pt-[6vh]"
@@ -280,7 +280,7 @@ export default function IntegrationGuide() {
                 </h3>
                 <p className="mt-4 max-w-md text-base leading-relaxed text-white/65 md:text-lg">
                   Solace matches the patient and reads demographics, problems,
-                  medications and allergies over USCDI — then drafts acuity, a
+                  medications and allergies over USCDI, then drafts acuity, a
                   differential and a coded workup before the clinician walks in.
                   This is the Atlas snapshot, live from {item.name}.
                 </p>
@@ -384,7 +384,7 @@ export default function IntegrationGuide() {
         <Reveal index={1} reduce={reduce}>
           <p className="mx-auto mt-6 max-w-md text-base text-muted md:text-lg">
             Book a walkthrough on your own stack, or try the full read-and-write
-            loop on the public sandbox first — no credentials.
+            loop on the public sandbox first, no credentials.
           </p>
         </Reveal>
         <Reveal

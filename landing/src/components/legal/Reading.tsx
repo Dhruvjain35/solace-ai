@@ -14,7 +14,7 @@ import type { LegalSection } from './LegalLayout';
  * to the top of the viewport, a scroll-spy table of contents that highlights
  * the section currently in view, and a numbered "On this page" nav. Split out
  * of LegalLayout so the shell stays declarative and under budget. All three are
- * reduced-motion safe — the bar snaps instead of springs, the spy still tracks.
+ * reduced-motion safe, the bar snaps instead of springs, the spy still tracks.
  */
 
 // Slim brand-mint progress bar fixed at the very top of the page. Rides the

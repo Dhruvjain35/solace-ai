@@ -5,7 +5,7 @@ import { himsFade, himsMove } from '../lib/hims';
 import BigStatement from '../components/product/BigStatement';
 
 /*
- * Pricing — three typographic tier cards on the Product page's design system
+ * Pricing, three typographic tier cards on the Product page's design system
  * (the app.forhims.com clone). White mega opening, the paper / ink / deep
  * green cards with hairline feature rows (no checkmark lists), a gradient
  * statement about what one subscription covers, and a single FAQ-style row
@@ -201,7 +201,7 @@ export default function Pricing() {
 
   return (
     <div className="bg-white">
-      {/* ===== 1 · Opening — white, centered mega type ===== */}
+      {/* ===== 1 · Opening, white, centered mega type ===== */}
       <section
         aria-labelledby="pricing-heading"
         className="flex flex-col items-center px-6 pb-[8vh] pt-[24vh] text-center"
@@ -253,7 +253,7 @@ export default function Pricing() {
         text="One subscription covers the notes, the queue, the letters and the intake. About half what the big ambient scribes charge, with the whole front door included."
       />
 
-      {/* ===== 4 · Close — one FAQ-style row about the demo ===== */}
+      {/* ===== 4 · Close, one FAQ-style row about the demo ===== */}
       <section
         aria-labelledby="pricing-close-heading"
         className="bg-white pb-[16vh] pt-[2vh]"

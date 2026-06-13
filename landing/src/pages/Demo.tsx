@@ -5,7 +5,7 @@ import { himsFade, himsMove } from '../lib/hims';
 import { submitLead, mailtoLead } from '../lib/lead';
 
 /*
- * Demo — the booking page, rebuilt in the light house style of the Product
+ * Demo, the booking page, rebuilt in the light house style of the Product
  * page (app.forhims.com clone). White stage under the floating pill nav,
  * ink Sofia display type, paper form card with pill inputs. Everything
  * animates on mount with the two-curve reveal (opacity on HIMS_OUT,
@@ -57,7 +57,7 @@ export default function Demo() {
       }}
     >
       <div className="mx-auto grid max-w-[1100px] items-center gap-12 lg:grid-cols-2 lg:gap-16">
-        {/* ===== Left — headline, sub, reassurance rows ===== */}
+        {/* ===== Left, headline, sub, reassurance rows ===== */}
         <div>
           <motion.h1
             id="demo-heading"
@@ -92,7 +92,7 @@ export default function Demo() {
           </ul>
         </div>
 
-        {/* ===== Right — paper form card ===== */}
+        {/* ===== Right, paper form card ===== */}
         <motion.div
           {...reveal(reduce, 3)}
           className="rounded-hims bg-paper p-8 ring-1 ring-black/5 md:p-10"

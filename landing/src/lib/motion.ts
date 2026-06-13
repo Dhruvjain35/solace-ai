@@ -1,4 +1,4 @@
-// Motion presets — values extracted 1:1 from cruisenow.ai via designlang.
+// Motion presets, values extracted 1:1 from cruisenow.ai via designlang.
 // Easing is easeOutQuart, the single curve the reference uses everywhere.
 import type { Variants, Transition } from 'framer-motion';
 

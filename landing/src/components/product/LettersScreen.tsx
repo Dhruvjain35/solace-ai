@@ -2,7 +2,7 @@ import { FileText, GripVertical, X, PenLine } from 'lucide-react';
 import AtlasSidebar, { ATLAS_FONT } from './AtlasSidebar';
 
 /*
- * LettersScreen — the Solace Atlas letters & forms workspace as live DOM
+ * LettersScreen, the Solace Atlas letters & forms workspace as live DOM
  * for the LaptopRig. The real product ships 24 chart-aware templates
  * (work/school notes, FMLA, return-to-play, travel, medical necessity);
  * the AI drafts from the visit and the clinician signs. Decorative only.

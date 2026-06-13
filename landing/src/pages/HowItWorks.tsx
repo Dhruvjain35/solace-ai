@@ -17,7 +17,7 @@ import PhoneRig from '../components/product/PhoneRig';
 import ClosingShowcase from '../components/product/ClosingShowcase';
 
 /*
- * How it works — the complete start-to-finish journey on the Product page's
+ * How it works, the complete start-to-finish journey on the Product page's
  * design system (the app.forhims.com clone). The numbered steps alternate
  * with phone cards showing the matching app moment, so the journey is shown,
  * not just described: lang after 02, symptoms + questions at 03, insurance
@@ -231,7 +231,7 @@ const CARD_VARIANTS: Record<
 
 // One phone moment: the PhoneRig inside a rounded card whose curved bottom
 // edge crops the hand (the forhims composite pattern), revealed on the two
-// house curves and drifting ±6vh across its viewport transit — the TileGrid
+// house curves and drifting ±6vh across its viewport transit, the TileGrid
 // column-drift idiom, gated to ≥lg and motion-safe.
 function PhoneCard({
   screen,
@@ -330,7 +330,7 @@ export default function HowItWorks() {
 
   return (
     <div className="bg-white">
-      {/* ===== 1 · Opening — white, centered mega type ===== */}
+      {/* ===== 1 · Opening, white, centered mega type ===== */}
       <section
         aria-labelledby="hiw-heading"
         className="bg-white px-6 pb-[10vh] pt-[26vh] text-center"
@@ -357,7 +357,7 @@ export default function HowItWorks() {
         </Reveal>
       </section>
 
-      {/* ===== 2 · The patient's side — steps alternating with the app ===== */}
+      {/* ===== 2 · The patient's side, steps alternating with the app ===== */}
       <section
         aria-labelledby="patient-side-heading"
         className="overflow-hidden bg-white pb-[12vh] pt-[4vh]"
@@ -395,7 +395,7 @@ export default function HowItWorks() {
           {/* 03 */}
           <StepRow step={PATIENT_STEPS[2]} index={0} reduce={reduce} />
 
-          {/* the story, told — and the follow-up questions it earns */}
+          {/* the story, told, and the follow-up questions it earns */}
           <div className="my-[8vh] grid gap-10 md:grid-cols-2 md:gap-6">
             <PhoneCard
               screen={APP_SCREENS.symptoms}
@@ -449,7 +449,7 @@ export default function HowItWorks() {
         text="By the time a clinician says your name, your story is already on their screen."
       />
 
-      {/* ===== 3 · The clinician's side — the ink stage ===== */}
+      {/* ===== 3 · The clinician's side, the ink stage ===== */}
       <section
         aria-labelledby="clinician-side-heading"
         className="overflow-hidden bg-ink pb-[14vh] pt-[12vh]"
@@ -527,7 +527,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      {/* ===== 4 · Close — the patient-outcome showcase + FAQ finale ===== */}
+      {/* ===== 4 · Close, the patient-outcome showcase + FAQ finale ===== */}
       <ClosingShowcase />
     </div>
   );

@@ -1,7 +1,7 @@
 import { Mic, Inbox, FileText, Workflow } from 'lucide-react';
 
 /*
- * AtlasSidebar — the left rail of the Solace Atlas clinician terminal
+ * AtlasSidebar, the left rail of the Solace Atlas clinician terminal
  * (solaceaidemo.vercel.app/demo/clinician, recon 2026-06-11), shared by the
  * QueueScreen and EhrScreen laptop recreations. All sizes in cqw so it
  * scales vector-crisp inside the LaptopRig; decorative only.
@@ -25,7 +25,7 @@ const ADMIN_ITEMS = [
 ] as const;
 
 // A deterministic QR-looking module grid for the "patients scan to check in"
-// card — three finder squares plus a fixed scatter, drawn once as SVG.
+// card, three finder squares plus a fixed scatter, drawn once as SVG.
 const QR_MODULES = [
   [4, 0], [5, 0], [8, 0], [4, 2], [6, 2], [5, 3], [7, 3], [8, 4], [4, 4],
   [0, 4], [2, 4], [1, 5], [3, 5], [9, 5], [10, 4], [5, 5], [7, 5], [4, 6],

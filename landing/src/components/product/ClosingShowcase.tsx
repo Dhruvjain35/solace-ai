@@ -14,7 +14,7 @@ import useIsWide from '../../lib/useIsWide';
 import PhoneRig from './PhoneRig';
 
 /*
- * ClosingShowcase — the Product page's closing act, a structural clone of the
+ * ClosingShowcase, the Product page's closing act, a structural clone of the
  * end of app.forhims.com: the pale-gradient hand+phone farewell card, the
  * teal-gradient mega paragraph scrubbed word-by-word on scroll, and the
  * minimal right-aligned FAQ rows. Remapped onto the Solace brand; the rig,
@@ -180,7 +180,7 @@ export default function ClosingShowcase() {
 
   return (
     <>
-      {/* ===== 1 · Showcase band — a clean mint farewell card, inset with even
+      {/* ===== 1 · Showcase band, a clean mint farewell card, inset with even
           margins on the page's white. ===== */}
       <section
         ref={bandRef}
@@ -193,7 +193,7 @@ export default function ClosingShowcase() {
       >
         {/* Below lg the phone is position:absolute at the band's bottom, so
             the copy block reserves the phone's visible height (width × the
-            1728:2304 rig ratio, minus the 10% bottom tuck) plus a gap —
+            1728:2304 rig ratio, minus the 10% bottom tuck) plus a gap, so
             the CTA pills can never collide with the rising bezel. */}
         <div className="relative z-30 flex flex-col items-center px-6 pb-[calc(min(80vw,440px)*1.2+32px)] pt-[12vh] text-center lg:pb-0">
           <motion.h2
@@ -243,7 +243,7 @@ export default function ClosingShowcase() {
             the scroll-linked rise so framer can't clobber the centering. */}
         <div className="absolute bottom-0 left-1/2 z-10 w-[min(80vw,440px)] -translate-x-[53%] translate-y-[10%] lg:w-[clamp(440px,36vw,540px)]">
           <motion.div style={{ y: phoneY, willChange: 'transform' }}>
-            {/* Decorative — the band's heading and copy carry the message.
+            {/* Decorative, the band's heading and copy carry the message.
                 Shows the explained plan, a different moment from the other
                 rigs on the page. */}
             <PhoneRig
@@ -281,7 +281,7 @@ export default function ClosingShowcase() {
         </div>
       </section>
 
-      {/* ===== 3 · FAQ — left label, right-aligned accordion column ===== */}
+      {/* ===== 3 · FAQ: left label, right-aligned accordion column ===== */}
       <section
         aria-labelledby="faq-heading"
         className="bg-white pb-[14vh] pt-[6vh]"

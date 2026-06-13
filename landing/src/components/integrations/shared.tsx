@@ -76,7 +76,7 @@ export function Kicker({
   );
 }
 
-// The platform logo with the brand-wordmark fallback — the LogoCard image+
+// The platform logo with the brand-wordmark fallback, the LogoCard image+
 // fallback idiom from IntegrationMarquee, sized by `size`.
 const LOGO_SIZE = {
   sm: 'max-h-[40px] max-w-[148px]',
@@ -104,7 +104,7 @@ export function Logo({
 }
 
 // The tier chip: native adapters and the SMART standard read visibly distinct
-// but consistent — a filled mint chip for native, an outline chip for SMART.
+// but consistent, a filled mint chip for native, an outline chip for SMART.
 export function TierChip({ tier }: { tier: Integration['tier'] }) {
   if (tier === 'native') {
     return (
@@ -120,7 +120,7 @@ export function TierChip({ tier }: { tier: Integration['tier'] }) {
   );
 }
 
-// A real product screenshot framed in a clean rounded shadow-card — the
+// A real product screenshot framed in a clean rounded shadow-card, the
 // BrowserCard idiom. `caption` labels what the shot shows.
 export function ShotCard({
   src,

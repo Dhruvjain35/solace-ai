@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-// Tailwind's lg breakpoint — the line between the full scroll choreography
+// Tailwind's lg breakpoint, the line between the full scroll choreography
 // and the simplified stacked layouts across the Product page sections.
 const QUERY = '(min-width: 1024px)';
 

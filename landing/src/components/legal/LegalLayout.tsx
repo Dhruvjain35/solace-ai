@@ -6,14 +6,14 @@ import { himsFade, himsMove } from '../../lib/hims';
 import { ReadingProgress, ScrollSpyToc, MobileToc, BackToTop } from './Reading';
 
 /*
- * LegalLayout — the shared shell for Solace's long-form legal pages
+ * LegalLayout, the shared shell for Solace's long-form legal pages
  * (Privacy, Terms, and the prose half of HIPAA). It mirrors the Product /
  * Company design system: the same two-curve reveal, font-sofia display type,
  * tracking-hims, and the mint wash band rhythm. A centered hero carries an
  * eyebrow, a mega title, a sub-line and a "Last updated" stamp; the body is a
  * single max-w prose column with an optional sticky table-of-contents on the
  * right at ≥lg. Section / prose primitives live here so every legal page reads
- * the same. No backend, no external state — content is passed as children.
+ * the same. No backend, no external state, content is passed as children.
  */
 
 // Barely-there mint wash, matched to the hims band rhythm used across the site.
@@ -60,7 +60,7 @@ export type LegalSection = { id: string; title: string };
 
 // One titled prose block. The id lets the table of contents link to it; the
 // heading carries scroll-margin so the floating nav never clips it. `number`
-// is injected by LegalLayout from document order — a document-grade 01, 02 … .
+// is injected by LegalLayout from document order, a document-grade 01, 02 … .
 export function Section({
   title,
   reduce,
@@ -147,7 +147,7 @@ export function LI({ children }: { children: ReactNode }) {
   );
 }
 
-// A quiet callout for the counsel-review notices and similar asides — a mint
+// A quiet callout for the counsel-review notices and similar asides, a mint
 // rule on the left, a soft wash, calm type.
 export function Callout({ children }: { children: ReactNode }) {
   return (
@@ -194,7 +194,7 @@ export default function LegalLayout({
     <div className="bg-white">
       <ReadingProgress />
 
-      {/* ===== Hero — centered, mint wash, mega Sofia title ===== */}
+      {/* ===== Hero, centered, mint wash, mega Sofia title ===== */}
       <section
         aria-labelledby="legal-heading"
         className="bg-white px-6 pb-[8vh] pt-[16vh] text-center md:pt-[24vh]"
@@ -225,7 +225,7 @@ export default function LegalLayout({
         </Reveal>
       </section>
 
-      {/* ===== Body — prose column with optional scroll-spy table of contents ===== */}
+      {/* ===== Body, prose column with optional scroll-spy table of contents ===== */}
       <section className="bg-white px-6 pb-[10vh] pt-[2vh] md:pb-[16vh]">
         <div
           className={`mx-auto grid max-w-[1100px] gap-12 lg:gap-16 ${

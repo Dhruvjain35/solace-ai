@@ -10,14 +10,14 @@ import {
 import { HIMS_OUT } from '../../lib/hims';
 
 /*
- * BigStatement — the giant scroll-revealed paragraph that app.forhims.com uses
+ * BigStatement, the giant scroll-revealed paragraph that app.forhims.com uses
  * as connective tissue between scenes (the solid-blue "All in the app." block,
  * the mint→blue gradient manifesto, the teal gradient under the mega-card).
  * Remapped to Solace: caller colors the text via `className`, e.g.
  * "text-solace-green-600", "text-grad-solace" or "text-grad-dark".
  *
  * Mechanic: the text splits into words; each word is an inline-block span whose
- * opacity scrubs 0.16 → 1 as the section crosses the viewport (no sticky track —
+ * opacity scrubs 0.16 → 1 as the section crosses the viewport (no sticky track,
  * it reveals in normal flow). Word i's band is [i/n, (i+0.8)/n] of the section's
  * scrollYProgress between 'start 0.85' and 'end 0.45'.
  *

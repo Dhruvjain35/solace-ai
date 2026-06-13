@@ -9,7 +9,7 @@ import LegalLayout, {
 } from '../components/legal/LegalLayout';
 
 /*
- * Privacy — Solace's long-form privacy policy. Original content (not copied
+ * Privacy, Solace's long-form privacy policy. Original content (not copied
  * from any company's policy) covering what is collected, how it is used, the
  * Business Associate relationship for patient PHI, subprocessor sharing,
  * retention/TTL, security, rights, children, international transfers, changes

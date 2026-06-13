@@ -13,7 +13,7 @@ import BigStatement from '../components/product/BigStatement';
 import PhoneRig from '../components/product/PhoneRig';
 
 /*
- * Company — the "who we are" page, built on the Product page's design system
+ * Company, the "who we are" page, built on the Product page's design system
  * (the app.forhims.com clone): same two-curve reveals, same tile palette,
  * same pill CTAs. Scene order: white mega opening, gradient mission scrub
  * (BigStatement), the welcome screen on a phone beside the promise copy,
@@ -62,7 +62,7 @@ const VALUES = [
 
 // The numbers band: three typographic mega-tiles, each backed by a real
 // shipped capability (20-language intake, ~7s spoken guidance, 15s wait
-// refresh) — the same facts TileGrid's wall is built from.
+// refresh), the same facts TileGrid's wall is built from.
 const NUMBERS = [
   {
     kicker: 'Languages',
@@ -181,7 +181,7 @@ export default function Company() {
 
   return (
     <div className="bg-white">
-      {/* ===== 1 · Opening — white, centered mega type ===== */}
+      {/* ===== 1 · Opening, white, centered mega type ===== */}
       <section
         aria-labelledby="company-heading"
         className="flex flex-col items-center px-6 pb-[8vh] pt-[26vh] text-center"
@@ -203,10 +203,10 @@ export default function Company() {
         </Reveal>
       </section>
 
-      {/* ===== 2 · Mission — per-word gradient scrub ===== */}
+      {/* ===== 2 · Mission, per-word gradient scrub ===== */}
       <BigStatement className="text-grad-solace" text={MISSION} />
 
-      {/* ===== 3 · The promise — welcome screen on a phone, copy beside ===== */}
+      {/* ===== 3 · The promise, welcome screen on a phone, copy beside ===== */}
       <section
         ref={promiseRef}
         aria-labelledby="promise-heading"
@@ -259,7 +259,7 @@ export default function Company() {
                 aspectRatio: '1728 / 1910',
               }}
             >
-              {/* Decorative — the copy column carries the message. */}
+              {/* Decorative, the copy column carries the message. */}
               <PhoneRig
                 alt=""
                 screen={
@@ -275,7 +275,7 @@ export default function Company() {
         </div>
       </section>
 
-      {/* ===== 4 · What we believe — three drifting value tiles ===== */}
+      {/* ===== 4 · What we believe, three drifting value tiles ===== */}
       <section
         ref={beliefsRef}
         aria-labelledby="beliefs-heading"
@@ -329,7 +329,7 @@ export default function Company() {
         </div>
       </section>
 
-      {/* ===== 5 · The numbers — three mega-type fact tiles ===== */}
+      {/* ===== 5 · The numbers, three mega-type fact tiles ===== */}
       <section
         ref={numbersRef}
         aria-labelledby="numbers-heading"
@@ -388,7 +388,7 @@ export default function Company() {
         </div>
       </section>
 
-      {/* ===== 6 · Founder note — paper card, signed by the team ===== */}
+      {/* ===== 6 · Founder note, paper card, signed by the team ===== */}
       <section
         aria-labelledby="note-heading"
         className="bg-white pb-[14vh] pt-[4vh]"
@@ -419,7 +419,7 @@ export default function Company() {
         </div>
       </section>
 
-      {/* ===== 7 · Close — centered CTA with pill buttons ===== */}
+      {/* ===== 7 · Close, centered CTA with pill buttons ===== */}
       <section
         aria-labelledby="cta-heading"
         className="bg-white pb-[18vh] pt-[6vh]"

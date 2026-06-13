@@ -14,7 +14,7 @@ import useIsWide from '../../lib/useIsWide';
 import PhoneRig from './PhoneRig';
 
 /*
- * SideBySide — the signature app.forhims.com scene: white stage, photographed
+ * SideBySide, the signature app.forhims.com scene: white stage, photographed
  * hand+iPhone pinned on the RIGHT, the real Solace intake recording on its
  * screen, and quiet gray copy on the LEFT that swaps as you scroll the 420vh
  * track. The composite keeps its natural orientation (hand from bottom-left);
@@ -38,7 +38,7 @@ const SCENES: Scene[] = [
   {
     lead: 'Patients check in',
     rest: ' like they talk. Speak or tap, in 20 languages. Every answer is saved for your care team, and the next question always fits your story.',
-    // On stage from the moment the section pins — the reference never shows
+    // On stage from the moment the section pins, the reference never shows
     // an empty stage.
     range: [0, 0.06, 0.32, 0.4],
   },
@@ -101,13 +101,13 @@ export default function SideBySide() {
   });
   // Smooth the raw scroll position with a spring so every scrubbed transform
   // (copy swaps, phone rise, screen cross-fades, progress bar) eases with
-  // momentum instead of snapping pixel-for-pixel to the wheel — the buttery
+  // momentum instead of snapping pixel-for-pixel to the wheel, the buttery
   // feel the rest of the page's reveals already have.
   const p = useSpring(rawP, { stiffness: 90, damping: 28, restDelta: 0.0004 });
 
   // Phone: a short rise as the section pins (himsMove feel via the expo
   // ease), stays pinned, then drifts up -8vh over the last 5%. The card's
-  // visible rounded edge crops the wrist — the forhims pattern.
+  // visible rounded edge crops the wrist, the forhims pattern.
   const phoneY = useTransform(
     p,
     [0, 0.06, 0.95, 1],
@@ -136,7 +136,7 @@ export default function SideBySide() {
         className="absolute left-0 top-[13.5cqw] h-auto w-full"
         style={{ opacity: screen2 }}
       />
-      {/* plan.png is pre-cropped tight to the priority badge — no lift */}
+      {/* plan.png is pre-cropped tight to the priority badge, no lift */}
       <motion.img
         src={APP_SCREENS.plan}
         alt=""
@@ -165,7 +165,7 @@ export default function SideBySide() {
       {isWide ? (
         /* ===== ≥lg: pinned stage, scroll-scrubbed scenes ===== */
         <div className="sticky top-0 h-screen w-full p-2 md:p-4">
-          {/* The visible rounded card whose curved edges crop the hand —
+          {/* The visible rounded card whose curved edges crop the hand,
               the forhims composite pattern. */}
           <div
             className="relative h-full w-full overflow-hidden rounded-hims"
@@ -200,7 +200,7 @@ export default function SideBySide() {
                 animate={reduce ? undefined : { y: [0, -8, 0] }}
                 transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
               >
-                {/* Decorative here — the copy column carries the content. */}
+                {/* Decorative here, the copy column carries the content. */}
                 <PhoneRig alt="" screen={screenScenes} />
               </motion.div>
             </motion.div>

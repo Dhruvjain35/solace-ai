@@ -8,13 +8,13 @@ import {
 } from 'framer-motion';
 
 /*
- * IntakeShowcase — a 1:1 homage to the hims&hers "Total care. Totally different."
+ * IntakeShowcase, a 1:1 homage to the hims&hers "Total care. Totally different."
  * sticky-scroll hero (app.forhims.com), rebuilt for Solace.
  *
  * Mechanic: a tall scroll track pins a stage to the viewport. As you scroll the
  * track, scrollYProgress (0→1) drives the background gradient, the headline, the
  * side copy panels and the floating UI chips. The real Solace patient-intake
- * recording plays continuously inside the matted hand+phone — the same hand
+ * recording plays continuously inside the matted hand+phone, the same hand
  * photographed in the reference, segmented out and composited with our screen.
  *
  * Tokens (colors, gradients, easing, soft 104px shadow) extracted 1:1 from
@@ -241,8 +241,8 @@ export default function IntakeShowcase() {
             Totally automated.
           </h1>
           <p className="mt-6 max-w-xl text-base text-muted md:text-lg">
-            The front of your ED — from the waiting-room QR code to an explainable
-            acuity score — rebuilt as one calm, AI-native flow.
+            The front of your ED, from the waiting-room QR code to an explainable
+            acuity score, rebuilt as one calm, AI-native flow.
           </p>
         </motion.div>
 
@@ -254,7 +254,7 @@ export default function IntakeShowcase() {
             </h2>
             <p className="mt-5 text-base leading-relaxed opacity-80">
               Voice or tap, in 30+ languages. Whisper transcribes every answer and
-              the adaptive form branches to the next right question — no clipboard,
+              the adaptive form branches to the next right question, no clipboard,
               no front-desk bottleneck.
             </p>
           </motion.div>
@@ -264,8 +264,8 @@ export default function IntakeShowcase() {
               Every symptom, structured.
             </h2>
             <p className="mt-5 text-base leading-relaxed opacity-80">
-              Allergies, medications and conditions captured as clean, coded data —
-              severity and all — so your clinicians inherit a record they can trust,
+              Allergies, medications and conditions captured as clean, coded data,
+              severity and all, so your clinicians inherit a record they can trust,
               not a wall of free text.
             </p>
           </motion.div>
@@ -275,7 +275,7 @@ export default function IntakeShowcase() {
               An ESI level in seconds.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-white/80">
-              Every acuity score arrives with a SHAP explanation — the reasons, ranked —
+              Every acuity score arrives with a SHAP explanation, the reasons, ranked,
               ready before the patient reaches a bed. Triage aid only; clinicians always
               verify.
             </p>
@@ -283,21 +283,21 @@ export default function IntakeShowcase() {
         </div>
 
         {/* --- Floating UI chips (motion graphics) --- */}
-        {/* Segment 2 — languages */}
+        {/* Segment 2, languages */}
         <FloatChip progress={p} range={[0.28, 0.37, 0.46, 0.52]} x="22%" y="13%" drift={13} delay={0.3} reduce={reduce}>🇸🇦 العربية</FloatChip>
         <FloatChip progress={p} range={[0.29, 0.38, 0.46, 0.52]} x="44%" y="11%" drift={15} delay={0.9} reduce={reduce}>Tagalog</FloatChip>
         <FloatChip progress={p} range={[0.28, 0.37, 0.46, 0.52]} x="63%" y="22%" drift={16} reduce={reduce}>🇺🇸 English</FloatChip>
         <FloatChip progress={p} range={[0.29, 0.38, 0.46, 0.52]} x="78%" y="40%" drift={12} delay={0.6} reduce={reduce}>🇪🇸 Español</FloatChip>
         <FloatChip progress={p} range={[0.3, 0.39, 0.46, 0.52]} x="68%" y="60%" drift={18} delay={1.1} reduce={reduce}>🇨🇳 中文</FloatChip>
 
-        {/* Segment 3 — intake pills (mirroring the real Solace form) */}
+        {/* Segment 3, intake pills (mirroring the real Solace form) */}
         <FloatChip progress={p} range={[0.56, 0.65, 0.72, 0.78]} x="20%" y="13%" drift={15} delay={0.4} reduce={reduce}>Sulfa · anaphylaxis</FloatChip>
         <FloatChip progress={p} range={[0.56, 0.66, 0.72, 0.78]} x="46%" y="11%" drift={13} delay={0.8} reduce={reduce}>Steroids</FloatChip>
         <FloatChip progress={p} range={[0.54, 0.63, 0.72, 0.78]} x="63%" y="24%" drift={14} active reduce={reduce}>Peanuts · moderate</FloatChip>
         <FloatChip progress={p} range={[0.55, 0.64, 0.72, 0.78]} x="79%" y="43%" drift={17} delay={0.5} reduce={reduce}>Pain meds</FloatChip>
         <FloatChip progress={p} range={[0.55, 0.64, 0.72, 0.78]} x="66%" y="62%" drift={12} delay={1.0} active reduce={reduce}>Asthma</FloatChip>
 
-        {/* Segment 4 — triage acuity badges */}
+        {/* Segment 4, triage acuity badges */}
         <FloatChip progress={p} range={[0.82, 0.9, 1, 1]} x="22%" y="13%" drift={14} delay={0.3} reduce={reduce}>HR 118 · SpO₂ 94%</FloatChip>
         <FloatChip progress={p} range={[0.83, 0.91, 1, 1]} x="46%" y="11%" drift={15} delay={1.0} reduce={reduce}>Pre-brief ready</FloatChip>
         <FloatChip progress={p} range={[0.82, 0.9, 1, 1]} x="64%" y="26%" drift={16} active reduce={reduce}>ESI 2 · Emergent</FloatChip>
@@ -310,7 +310,7 @@ export default function IntakeShowcase() {
         <motion.div style={{ x: phoneX, y: phoneY, scale: phoneScale, transformOrigin: 'bottom center', willChange: 'transform' }}>
           <div className="relative">
             {/* Solace intake recording, composited into the phone's screen.
-                Decorative — the copy panels carry the message — so it's hidden
+                Decorative, the copy panels carry the message, so it's hidden
                 from assistive tech, and it honors reduced-motion via the effect. */}
             <video
               ref={videoRef}

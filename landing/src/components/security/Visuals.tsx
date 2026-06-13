@@ -3,7 +3,7 @@ import { ArrowRight, ArrowDown, Check } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
 
 /*
- * Security visuals — the demonstrations that make the page's claims concrete:
+ * Security visuals: the demonstrations that make the page's claims concrete:
  *  - PhiScrub: the exact before/after at the PHI-isolation boundary (a real
  *    chart record on the left, the coded metadata the model actually receives
  *    on the right).
@@ -54,7 +54,7 @@ export function PhiScrub() {
   const m = (i: number) => (reduce ? {} : rise(i));
   return (
     <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr]">
-      {/* Left — the real chart record */}
+      {/* Left, the real chart record */}
       <motion.div {...m(0)} className="rounded-hims border border-black/5 bg-white p-6 shadow-soft">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-[#B0472E]" aria-hidden="true" />
@@ -82,7 +82,7 @@ export function PhiScrub() {
         </span>
       </motion.div>
 
-      {/* Right — what the model receives */}
+      {/* Right, what the model receives */}
       <motion.div {...m(2)} className="rounded-hims border border-solace-green-500/20 bg-solace-soft/40 p-6 shadow-soft">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-solace-green-600" aria-hidden="true" />
@@ -102,8 +102,8 @@ export function PhiScrub() {
   );
 }
 
-// Each step shows the actual artifact it emits — the real payload the model or
-// runtime hands to the next stage — so the flow reads as a data pipeline, not a
+// Each step shows the actual artifact it emits, the real payload the model or
+// runtime hands to the next stage, so the flow reads as a data pipeline, not a
 // decorated three-icon row. The coded/slot tokens carry the meaning.
 const STEPS = [
   {
@@ -127,7 +127,7 @@ const STEPS = [
     io: 'in: slot tokens → out: narration',
     phi: false,
     title: 'Narrate',
-    body: 'The model writes the answer over slot tokens — never the raw values — so re-identification only happens in your runtime.',
+    body: 'The model writes the answer over slot tokens, never the raw values, so re-identification only happens in your runtime.',
     artifact: '"{S1} presents with angina,\n HR {S1.hr}, consider ECG…"',
   },
 ];
@@ -195,7 +195,7 @@ export function LeakGate() {
         <span className="ml-3 font-mono text-[11px] text-white/45">phi-isolation.test.ts</span>
       </div>
       <pre className="overflow-x-auto px-5 py-5 font-mono text-[12.5px] leading-relaxed text-white/85">
-        <code>{`// CI gate — the build fails if raw PHI can reach a prompt
+        <code>{`// CI gate: the build fails if raw PHI can reach a prompt
 test('no raw PHI in any model prompt', () => {
   const prompt = buildPrompt(chart, question);
 
