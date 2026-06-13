@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import {
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import ExpandingLogo from './ui/ExpandingLogo';
 import { transitions } from '../lib/motion';
@@ -27,6 +33,30 @@ export default function Nav() {
     const t = setTimeout(() => setLogoIntro(false), 2000);
     return () => clearTimeout(t);
   }, []);
+
+  // Pointer-tracked glow on the logo: a soft mint light that follows the cursor
+  // (spring-smoothed) and fades in/out — interactive, not a static blob.
+  const gx = useMotionValue(50);
+  const gy = useMotionValue(50);
+  const sgx = useSpring(gx, { stiffness: 140, damping: 18, mass: 0.4 });
+  const sgy = useSpring(gy, { stiffness: 140, damping: 18, mass: 0.4 });
+  const glowOpacity = useSpring(0, { stiffness: 180, damping: 26 });
+  const glowBg = useMotionTemplate`radial-gradient(60% 130% at ${sgx}% ${sgy}%, rgba(31,191,143,0.22), rgba(31,191,143,0.06) 52%, rgba(31,191,143,0) 78%)`;
+
+  const onLogoEnter = () => {
+    setLogoHover(true);
+    glowOpacity.set(1);
+  };
+  const onLogoLeave = () => {
+    setLogoHover(false);
+    glowOpacity.set(0);
+  };
+  const onLogoMove = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (reduce) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    gx.set(((e.clientX - r.left) / r.width) * 100);
+    gy.set(((e.clientY - r.top) / r.height) * 100);
+  };
   // Every page now opens on a light stage (the old dark home hero is gone),
   // so the glass-light nav variant is never needed.
   const onDarkHero = false;
@@ -66,18 +96,16 @@ export default function Nav() {
         <Link
           to="/"
           aria-label="Solace home"
-          onMouseEnter={() => setLogoHover(true)}
-          onMouseLeave={() => setLogoHover(false)}
-          className="group relative flex items-center rounded-pill px-3.5 py-2 transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
+          onMouseEnter={onLogoEnter}
+          onMouseLeave={onLogoLeave}
+          onMouseMove={onLogoMove}
+          className="relative flex items-center rounded-pill px-3.5 py-2 transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
         >
-          {/* Soft mint halo on hover instead of a hard pill — blends into the bar. */}
-          <span
+          {/* Cursor-tracked mint glow — interactive, spring-smoothed, logo only. */}
+          <motion.span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-pill opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            style={{
-              background:
-                'radial-gradient(120% 120% at 30% 50%, rgba(31,191,143,0.14), rgba(31,191,143,0) 70%)',
-            }}
+            className="pointer-events-none absolute inset-0 rounded-pill"
+            style={{ background: glowBg, opacity: glowOpacity }}
           />
           <span className="relative">
             <ExpandingLogo expanded={logoHover || logoIntro} reduce={reduce} light={light} />
