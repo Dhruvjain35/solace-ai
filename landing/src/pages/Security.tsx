@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { himsFade, himsMove } from '../lib/hims';
 import { Reveal } from '../components/legal/LegalLayout';
+import { PhiScrub, PipelineFlow, LeakGate } from '../components/security/Visuals';
 
 /*
  * Security — the marketing-grade trust page (not a legal document). It runs on
@@ -221,7 +222,98 @@ export default function Security() {
         </Reveal>
       </section>
 
-      {/* ===== 2 · Trust-signal stat row ===== */}
+      {/* ===== 2 · PHI isolation — the before/after demonstration ===== */}
+      <section
+        aria-labelledby="phiscrub-heading"
+        className="bg-white px-6 py-[8vh] md:py-[12vh]"
+        style={{ backgroundImage: WASH_MINT_TO_WHITE }}
+      >
+        <div className="mx-auto max-w-[1100px]">
+          <Reveal index={0} reduce={reduce}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-solace-green-600">
+              PHI isolation, shown
+            </p>
+          </Reveal>
+          <Reveal index={1} reduce={reduce}>
+            <h2
+              id="phiscrub-heading"
+              className="mt-4 max-w-[20ch] font-sofia text-[clamp(28px,3.2vw,48px)] font-medium leading-[1.08] tracking-hims text-ink"
+            >
+              See exactly what the model receives.
+            </h2>
+          </Reveal>
+          <Reveal index={2} reduce={reduce}>
+            <p className="mt-4 max-w-2xl text-base text-muted md:text-lg">
+              The same patient, on both sides of the boundary. Names, MRNs, dates
+              of birth and free text never cross it; the model reasons over coded
+              metadata and a single slot token.
+            </p>
+          </Reveal>
+          <Reveal index={3} reduce={reduce} className="mt-10">
+            <PhiScrub />
+          </Reveal>
+          <Reveal index={4} reduce={reduce}>
+            <p className="mt-6 text-center text-[13px] text-muted/80">
+              Re-identification happens only in your trusted runtime — never in a model call.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== 2b · Plan / Execute / Narrate pipeline ===== */}
+      <section aria-labelledby="pipeline-heading" className="bg-white px-6 py-[8vh] md:py-[11vh]">
+        <div className="mx-auto max-w-[1100px]">
+          <Reveal index={0} reduce={reduce}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-solace-green-600">
+              How a request flows
+            </p>
+          </Reveal>
+          <Reveal index={1} reduce={reduce}>
+            <h2
+              id="pipeline-heading"
+              className="mt-4 max-w-[22ch] font-sofia text-[clamp(28px,3.2vw,48px)] font-medium leading-[1.08] tracking-hims text-ink"
+            >
+              The model halves never touch raw data.
+            </h2>
+          </Reveal>
+          <Reveal index={2} reduce={reduce} className="mt-10">
+            <PipelineFlow />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== 2c · The leak-gate test ===== */}
+      <section aria-labelledby="leakgate-heading" className="bg-white px-6 pb-[10vh]">
+        <div className="mx-auto grid max-w-[1100px] items-center gap-10 lg:grid-cols-2">
+          <div>
+            <Reveal index={0} reduce={reduce}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-solace-green-600">
+                Enforced, not promised
+              </p>
+            </Reveal>
+            <Reveal index={1} reduce={reduce}>
+              <h2
+                id="leakgate-heading"
+                className="mt-4 font-sofia text-[clamp(26px,2.8vw,42px)] font-medium leading-[1.1] tracking-hims text-ink"
+              >
+                If PHI could reach a prompt, the build stops.
+              </h2>
+            </Reveal>
+            <Reveal index={2} reduce={reduce}>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-muted">
+                The isolation boundary is a test, not a guideline. It runs on
+                every commit and fails the release if a single raw identifier can
+                make it into a model prompt.
+              </p>
+            </Reveal>
+          </div>
+          <Reveal index={3} reduce={reduce}>
+            <LeakGate />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== 3 · Trust-signal stat row ===== */}
       <section
         aria-label="Security at a glance"
         className="bg-white px-6 py-[8vh]"
