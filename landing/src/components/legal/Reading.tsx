@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion, useScroll, useSpring } from 'framer-motion';
-import { ArrowUp } from 'lucide-react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+} from 'framer-motion';
+import { ArrowUp, ChevronDown } from 'lucide-react';
 import type { LegalSection } from './LegalLayout';
 
 /*
@@ -115,6 +121,81 @@ export function ScrollSpyToc({ sections }: { sections: LegalSection[] }) {
         </nav>
       </div>
     </aside>
+  );
+}
+
+// Mobile section nav (<lg): a sticky pill that names the section you're in and
+// drops down the full numbered list to jump. Mirrors the desktop scroll-spy so
+// long legal docs are navigable on a phone, where the sidebar TOC is hidden.
+export function MobileToc({ sections }: { sections: LegalSection[] }) {
+  const ids = sections.map((s) => s.id);
+  const active = useScrollSpy(ids);
+  const [open, setOpen] = useState(false);
+  const activeIdx = Math.max(
+    0,
+    sections.findIndex((s) => s.id === active),
+  );
+  const activeTitle = sections[activeIdx]?.title ?? 'On this page';
+
+  return (
+    <div className="sticky top-[72px] z-30 -mx-6 mb-8 px-6 lg:hidden">
+      <div className="overflow-hidden rounded-pill border border-black/10 bg-white/90 shadow-soft backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left"
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="font-mono text-[10.5px] tabular-nums text-solace-green-500">
+              {String(activeIdx + 1).padStart(2, '0')}
+            </span>
+            <span className="truncate text-[13.5px] font-medium text-ink">{activeTitle}</span>
+          </span>
+          <ChevronDown
+            size={16}
+            aria-hidden="true"
+            className={`shrink-0 text-muted transition-transform duration-300 ease-hims-expo ${
+              open ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+      </div>
+      <AnimatePresence>
+        {open ? (
+          <motion.nav
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            aria-label="On this page"
+            className="mt-2 overflow-hidden rounded-hims border border-black/10 bg-white shadow-lift"
+          >
+            <ul className="max-h-[58vh] overflow-y-auto py-2">
+              {sections.map((s, i) => (
+                <li key={s.id}>
+                  <a
+                    href={`#${s.id}`}
+                    onClick={() => setOpen(false)}
+                    aria-current={s.id === active ? 'true' : undefined}
+                    className={`flex items-center gap-2.5 px-5 py-2.5 text-[13.5px] transition-colors ${
+                      s.id === active
+                        ? 'font-medium text-solace-green-700'
+                        : 'text-muted hover:text-solace-green-700'
+                    }`}
+                  >
+                    <span className="font-mono text-[10.5px] tabular-nums text-solace-green-500/70">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    {s.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </motion.nav>
+        ) : null}
+      </AnimatePresence>
+    </div>
   );
 }
 

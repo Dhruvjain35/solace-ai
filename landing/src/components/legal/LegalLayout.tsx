@@ -2,7 +2,7 @@ import { Children, isValidElement, cloneElement, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ReactElement, ReactNode } from 'react';
 import { himsFade, himsMove } from '../../lib/hims';
-import { ReadingProgress, ScrollSpyToc, BackToTop } from './Reading';
+import { ReadingProgress, ScrollSpyToc, MobileToc, BackToTop } from './Reading';
 
 /*
  * LegalLayout — the shared shell for Solace's long-form legal pages
@@ -224,8 +224,9 @@ export default function LegalLayout({
             hasToc ? 'lg:grid-cols-[minmax(0,1fr)_240px]' : 'max-w-[760px]'
           }`}
         >
-          <div className="min-w-0 divide-y divide-black/[0.06]">
-            {numbered}
+          <div className="min-w-0">
+            {hasToc ? <MobileToc sections={toc} /> : null}
+            <div className="divide-y divide-black/[0.06]">{numbered}</div>
             <div className="pt-10">
               <BackToTop />
             </div>
