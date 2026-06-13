@@ -30,7 +30,7 @@ function PlatformCard({ item, index }: { item: Integration; index: number }) {
       <Link
         to={`/integrations/${item.slug}`}
         aria-label={`${item.name} integration guide`}
-        className="group flex h-full flex-col rounded-tile bg-white p-6 shadow-card ring-1 ring-black/[0.06] transition-shadow duration-300 hover:shadow-pop hover:ring-black/10"
+        className="group flex h-full flex-col rounded-tile bg-white p-6 shadow-card ring-1 ring-black/[0.06] transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:shadow-lift hover:ring-solace-green-300/60"
       >
         <div className="flex h-[52px] items-center">
           <Logo item={item} />
@@ -41,9 +41,9 @@ function PlatformCard({ item, index }: { item: Integration; index: number }) {
         <p className="mt-2 flex-1 text-[14px] leading-relaxed text-muted">
           {item.blurb}
         </p>
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex items-center justify-between gap-3 border-t border-black/[0.05] pt-5">
           <TierChip tier={item.tier} />
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-solace-soft text-solace-green-700 transition-transform duration-300 ease-hims-expo group-hover:translate-x-0.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-solace-soft text-solace-green-700 transition-all duration-[400ms] ease-hims-expo group-hover:bg-solace-green-700 group-hover:text-white group-hover:translate-x-0.5">
             <ArrowRight size={16} aria-hidden="true" />
           </span>
         </div>
@@ -92,10 +92,20 @@ export default function Integrations() {
         style={{ backgroundImage: WASH_MINT_TO_WHITE }}
       >
         <div className="mx-auto max-w-[1200px] px-6">
-          <h2 id="directory-heading" className="sr-only">
-            Every platform Solace connects to
-          </h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <Reveal index={0} reduce={reduce}>
+            <div className="flex items-baseline justify-between gap-4 border-b border-black/[0.06] pb-5">
+              <h2
+                id="directory-heading"
+                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted"
+              >
+                The directory
+              </h2>
+              <span className="font-mono text-[12px] tabular-nums text-muted/60">
+                {String(INTEGRATIONS.length).padStart(2, '0')} platforms
+              </span>
+            </div>
+          </Reveal>
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {INTEGRATIONS.map((item, i) => (
               <PlatformCard key={item.slug} item={item} index={i} />
             ))}

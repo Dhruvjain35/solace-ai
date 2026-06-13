@@ -104,8 +104,16 @@ export function ConnectionFlow({
           >
             <Rise reduce={reduce} index={i} className="md:flex-1">
               <div
-                className={`flex h-full items-start gap-3.5 rounded-tile p-4 ring-1 md:flex-col md:items-center md:gap-3 md:p-5 md:text-center ${cardCls}`}
+                className={`relative flex h-full items-start gap-3.5 rounded-tile p-4 ring-1 transition-shadow duration-[400ms] ease-hims-expo md:flex-col md:items-center md:gap-3 md:p-5 md:text-center ${cardCls}`}
               >
+                <span
+                  aria-hidden="true"
+                  className={`absolute right-3 top-3 font-mono text-[10.5px] tabular-nums ${
+                    dark ? 'text-white/30' : 'text-muted/40'
+                  }`}
+                >
+                  {String(i + 1).padStart(2, '0')}
+                </span>
                 <span
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1 ${chipCls}`}
                 >

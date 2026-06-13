@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { Children, isValidElement, cloneElement, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { himsFade, himsMove } from '../../lib/hims';
+import { ReadingProgress, ScrollSpyToc, BackToTop } from './Reading';
 
 /*
  * LegalLayout — the shared shell for Solace's long-form legal pages
@@ -57,29 +58,50 @@ function slugify(label: string): string {
 export type LegalSection = { id: string; title: string };
 
 // One titled prose block. The id lets the table of contents link to it; the
-// heading carries scroll-margin so the floating nav never clips it.
+// heading carries scroll-margin so the floating nav never clips it. `number`
+// is injected by LegalLayout from document order — a document-grade 01, 02 … .
 export function Section({
   title,
   reduce,
   index = 0,
+  number,
   children,
 }: {
   title: string;
   reduce: boolean | null;
   index?: number;
+  number?: number;
   children: ReactNode;
 }) {
   const id = slugify(title);
   return (
     <Reveal index={index} reduce={reduce} className="scroll-mt-32">
-      <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-32 pt-12 first:pt-0">
-        <h2
-          id={`${id}-h`}
-          className="font-sofia text-[clamp(22px,2.4vw,32px)] font-medium leading-[1.14] tracking-[-0.02em] text-ink"
+      <section
+        id={id}
+        aria-labelledby={`${id}-h`}
+        className="scroll-mt-32 py-12 first:pt-0"
+      >
+        <div className="flex items-baseline gap-4">
+          {number ? (
+            <span
+              aria-hidden="true"
+              className="select-none font-mono text-[13px] font-medium tabular-nums tracking-tight text-solace-green-500"
+            >
+              {String(number).padStart(2, '0')}
+            </span>
+          ) : null}
+          <h2
+            id={`${id}-h`}
+            className="font-sofia text-[clamp(22px,2.4vw,32px)] font-medium leading-[1.14] tracking-[-0.02em] text-ink"
+          >
+            {title}
+          </h2>
+        </div>
+        <div
+          className={`prose-legal mt-5 space-y-4 text-[15px] leading-relaxed text-muted md:text-base ${
+            number ? 'md:pl-[2.4rem]' : ''
+          }`}
         >
-          {title}
-        </h2>
-        <div className="prose-legal mt-5 space-y-4 text-[15px] leading-relaxed text-muted md:text-base">
           {children}
         </div>
       </section>
@@ -88,8 +110,9 @@ export function Section({
 }
 
 // Reusable prose primitives so page files stay declarative and under budget.
+// Measure is held to a comfortable ~68ch for calm, readable lines.
 export function P({ children }: { children: ReactNode }) {
-  return <p className="max-w-[68ch]">{children}</p>;
+  return <p className="max-w-[68ch] text-ink/75">{children}</p>;
 }
 
 export function Strong({ children }: { children: ReactNode }) {
@@ -98,20 +121,29 @@ export function Strong({ children }: { children: ReactNode }) {
 
 export function UL({ children }: { children: ReactNode }) {
   return (
-    <ul className="max-w-[68ch] list-disc space-y-2 pl-5 marker:text-solace-green-500">
-      {children}
-    </ul>
+    <ul className="max-w-[68ch] space-y-3 text-ink/75">{children}</ul>
   );
 }
 
+// Custom list marker: a small mint tick-rule instead of a bullet glyph, for a
+// crisper, document-grade list.
 export function LI({ children }: { children: ReactNode }) {
-  return <li className="pl-1">{children}</li>;
+  return (
+    <li className="relative pl-6">
+      <span
+        aria-hidden="true"
+        className="absolute left-0 top-[0.6em] h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-solace-green-500"
+      />
+      {children}
+    </li>
+  );
 }
 
-// A quiet callout for the counsel-review notices and similar asides.
+// A quiet callout for the counsel-review notices and similar asides — a mint
+// rule on the left, a soft wash, calm type.
 export function Callout({ children }: { children: ReactNode }) {
   return (
-    <div className="max-w-[68ch] rounded-tile border border-solace-green-500/20 bg-solace-soft/60 p-5 text-[14px] leading-relaxed text-ink md:text-[15px]">
+    <div className="max-w-[68ch] rounded-tile border border-solace-green-500/15 border-l-[3px] border-l-solace-green-500 bg-solace-soft/50 px-5 py-4 text-[14px] leading-relaxed text-ink/80 md:text-[15px]">
       {children}
     </div>
   );
@@ -137,8 +169,23 @@ export default function LegalLayout({
   const toc = useMemo(() => sections ?? [], [sections]);
   const hasToc = toc.length > 0;
 
+  // Inject a sequential document number into each <Section> child from its
+  // position in the body, so the page files stay declarative.
+  const numbered = useMemo(() => {
+    let n = 0;
+    return Children.map(children, (child) => {
+      if (!isValidElement(child) || child.type !== Section) return child;
+      n += 1;
+      return cloneElement(child as ReactElement<{ number?: number }>, {
+        number: n,
+      });
+    });
+  }, [children]);
+
   return (
     <div className="bg-white">
+      <ReadingProgress />
+
       {/* ===== Hero — centered, mint wash, mega Sofia title ===== */}
       <section
         aria-labelledby="legal-heading"
@@ -170,38 +217,21 @@ export default function LegalLayout({
         </Reveal>
       </section>
 
-      {/* ===== Body — prose column with optional sticky table of contents ===== */}
+      {/* ===== Body — prose column with optional scroll-spy table of contents ===== */}
       <section className="bg-white px-6 pb-[10vh] pt-[2vh] md:pb-[16vh]">
         <div
-          className={`mx-auto grid max-w-[1100px] gap-12 ${
+          className={`mx-auto grid max-w-[1100px] gap-12 lg:gap-16 ${
             hasToc ? 'lg:grid-cols-[minmax(0,1fr)_240px]' : 'max-w-[760px]'
           }`}
         >
-          <div className="min-w-0 divide-y divide-black/5">{children}</div>
+          <div className="min-w-0 divide-y divide-black/[0.06]">
+            {numbered}
+            <div className="pt-10">
+              <BackToTop />
+            </div>
+          </div>
 
-          {hasToc ? (
-            <aside className="hidden lg:block">
-              <div className="sticky top-32">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  On this page
-                </p>
-                <nav aria-label="On this page" className="mt-4">
-                  <ul className="space-y-2.5 border-l border-black/8 pl-4">
-                    {toc.map((s) => (
-                      <li key={s.id}>
-                        <a
-                          href={`#${s.id}`}
-                          className="block text-[13.5px] leading-snug text-muted transition-colors hover:text-solace-green-700"
-                        >
-                          {s.title}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              </div>
-            </aside>
-          ) : null}
+          {hasToc ? <ScrollSpyToc sections={toc} /> : null}
         </div>
       </section>
     </div>
