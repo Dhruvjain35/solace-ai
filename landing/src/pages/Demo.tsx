@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { himsFade, himsMove } from '../lib/hims';
+import { submitLead, mailtoLead } from '../lib/lead';
 
 /*
  * Demo — the booking page, rebuilt in the light house style of the Product
@@ -23,10 +24,6 @@ const FIELDS = [
   { name: 'org', label: 'Organization', type: 'text', placeholder: 'North Texas ED', autoComplete: 'organization' },
 ] as const;
 
-// No backend on the landing, so the booking request is delivered as a
-// prefilled email (same pattern as the Contact page) — it actually reaches us
-// instead of vanishing into a fake success state.
-const DEMO_EMAIL = 'hello@solace.health';
 
 const INPUT_CLASS =
   'mt-2 w-full rounded-pill border border-black/10 bg-white px-5 py-3.5 text-base text-ink placeholder:text-muted/60 outline-none transition-colors duration-200 focus:border-solace-green-500';
@@ -109,27 +106,30 @@ export default function Demo() {
                 className="text-ink"
               />
               <p className="mt-5 font-sofia text-2xl font-medium tracking-[-0.02em] text-ink">
-                Almost there.
+                Request sent.
               </p>
               <p className="mt-2 max-w-xs text-[15px] text-muted">
-                Your email is open with the request ready to send. Hit send and
-                we will reach out within one business day.
+                We will reach out within one business day. If your email client
+                opened, just hit send to finish.
               </p>
             </div>
           ) : (
             <form
               className="space-y-5"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const data = new FormData(e.currentTarget);
-                const name = String(data.get('name') ?? '');
-                const email = String(data.get('email') ?? '');
-                const org = String(data.get('org') ?? '');
-                const body = `Name: ${name}\nWork email: ${email}\nOrganization: ${org}\n\nI'd like to book a Solace demo.`;
-                window.location.href = `mailto:${DEMO_EMAIL}?subject=${encodeURIComponent(
-                  'Demo request',
-                )}&body=${encodeURIComponent(body)}`;
+                const lead = {
+                  name: String(data.get('name') ?? ''),
+                  email: String(data.get('email') ?? ''),
+                  org: String(data.get('org') ?? ''),
+                  source: 'demo' as const,
+                };
                 setSent(true);
+                // Try the backend; fall back to a mailto compose if it's not
+                // configured or the network fails, so the lead is never lost.
+                const ok = await submitLead(lead);
+                if (!ok) mailtoLead(lead);
               }}
             >
               {FIELDS.map((f) => (

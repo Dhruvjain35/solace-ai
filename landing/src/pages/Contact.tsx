@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { himsFade, himsMove } from '../lib/hims';
+import { submitLead, mailtoLead } from '../lib/lead';
 
 /*
  * Contact — a premium contact page on the Product / Company design system.
@@ -91,31 +92,23 @@ export default function Contact() {
   const [sent, setSent] = useState(false);
   const [topic, setTopic] = useState(TOPICS[0]);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = e.currentTarget;
-    const data = new FormData(form);
-    const name = String(data.get('name') ?? '').trim();
-    const email = String(data.get('email') ?? '').trim();
-    const org = String(data.get('org') ?? '').trim();
-    const message = String(data.get('message') ?? '').trim();
-
-    const subject = `[${topic}] from ${name || 'a Solace visitor'}`;
-    const bodyLines = [
-      `Name: ${name}`,
-      `Work email: ${email}`,
-      `Organization: ${org}`,
-      `Topic: ${topic}`,
-      '',
-      message,
-    ];
-    const href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
-
-    // Open the visitor's mail client with everything prefilled, then confirm.
-    window.location.href = href;
+    const data = new FormData(e.currentTarget);
+    const lead = {
+      name: String(data.get('name') ?? '').trim(),
+      email: String(data.get('email') ?? '').trim(),
+      org: String(data.get('org') ?? '').trim(),
+      message: String(data.get('message') ?? '').trim(),
+      website: String(data.get('website') ?? ''), // honeypot
+      topic,
+      source: 'contact' as const,
+    };
     setSent(true);
+    // Try the /api/lead backend; fall back to a prefilled mailto compose if it
+    // isn't configured or the network fails, so a lead is never lost.
+    const ok = await submitLead(lead);
+    if (!ok) mailtoLead(lead);
   }
 
   return (
