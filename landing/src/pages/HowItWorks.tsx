@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import { Link } from 'react-router-dom';
 import {
   motion,
   useReducedMotion,
@@ -15,6 +14,7 @@ import LaptopRig from '../components/product/LaptopRig';
 import EhrScreen from '../components/product/EhrScreen';
 import LettersScreen from '../components/product/LettersScreen';
 import PhoneRig from '../components/product/PhoneRig';
+import ClosingShowcase from '../components/product/ClosingShowcase';
 
 /*
  * How it works — the complete start-to-finish journey on the Product page's
@@ -40,7 +40,6 @@ const DEEP_GRADIENT =
 // gradient statement stay untouched.
 const WASH_WHITE_TO_MINT = 'linear-gradient(180deg, #ffffff 0%, #f2f9f6 100%)';
 const WASH_MINT_TO_WHITE = 'linear-gradient(180deg, #f2f9f6 0%, #ffffff 100%)';
-const WASH_PAPER = 'linear-gradient(180deg, #fafaf8 0%, #fafaf8 100%)';
 
 type Step = { num: string; title: string; sub: string };
 
@@ -319,11 +318,6 @@ function ScrubWord({
   );
 }
 
-const PILL_DARK =
-  'inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-sm font-medium text-white transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]';
-const PILL_LIGHT =
-  'inline-flex items-center justify-center rounded-pill border border-ink/10 bg-white px-7 py-3.5 text-sm font-medium text-ink shadow-soft transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]';
-
 export default function HowItWorks() {
   const reduce = useReducedMotion();
   const gradRef = useRef<HTMLDivElement>(null);
@@ -533,43 +527,8 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      {/* ===== 4 · Close — centered CTA with pill buttons ===== */}
-      <section
-        aria-labelledby="hiw-close-heading"
-        className="bg-white px-6 py-[16vh] text-center"
-        style={{ backgroundImage: WASH_PAPER }}
-      >
-        <Reveal index={0} reduce={reduce}>
-          <h2
-            id="hiw-close-heading"
-            className="mx-auto max-w-[16ch] font-sofia text-[clamp(38px,4.8vw,76px)] font-medium leading-[1.06] tracking-hims text-ink"
-          >
-            See the whole flow live.
-          </h2>
-        </Reveal>
-        <Reveal index={1} reduce={reduce}>
-          <p className="mx-auto mt-6 max-w-md text-base text-muted md:text-lg">
-            twenty minutes, on a workflow that looks like yours.
-          </p>
-        </Reveal>
-        <Reveal
-          index={2}
-          reduce={reduce}
-          className="mt-9 flex flex-wrap items-center justify-center gap-3"
-        >
-          <Link to="/demo" className={PILL_DARK}>
-            Book a Demo
-          </Link>
-          <a
-            href="https://solaceaidemo.vercel.app"
-            target="_blank"
-            rel="noreferrer"
-            className={PILL_LIGHT}
-          >
-            Try the Patient Flow
-          </a>
-        </Reveal>
-      </section>
+      {/* ===== 4 · Close — the patient-outcome showcase + FAQ finale ===== */}
+      <ClosingShowcase />
     </div>
   );
 }

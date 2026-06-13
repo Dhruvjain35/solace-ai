@@ -178,7 +178,7 @@ export default function AppHero() {
         {/* --- Headline (the page h1) --- */}
         <motion.div
           style={{ opacity: headOpacity, y: headY }}
-          className="absolute inset-x-0 top-[16vh] z-30 px-6 text-center"
+          className="absolute inset-x-0 top-[10vh] z-30 px-6 text-center"
         >
           <motion.h1
             id="app-hero-heading"
