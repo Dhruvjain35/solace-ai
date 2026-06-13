@@ -4,8 +4,8 @@ import Logo from './ui/Logo';
 const COLS = [
   { title: 'Product', links: [['Voice Intake', '/product'], ['Triage Engine', '/product'], ['Pre-Brief & Scribe', '/product'], ['Phone Agent', '/product']] },
   { title: 'Use cases', links: [['Emergency Departments', '/clinicians'], ['Urgent Care', '/clinicians'], ['Triage Nurses', '/clinicians'], ['Patients (LEP)', '/clinicians']] },
-  { title: 'Company', links: [['About', '/company'], ['Careers', '/company'], ['How it works', '/how-it-works'], ['Pricing', '/pricing'], ['Contact', '/demo']] },
-  { title: 'Legal', links: [['Privacy', '/company'], ['HIPAA', '/company'], ['Security', '/company'], ['Terms', '/company']] },
+  { title: 'Company', links: [['About', '/company'], ['How it works', '/how-it-works'], ['Integrations', '/integrations'], ['Pricing', '/pricing'], ['Contact', '/contact']] },
+  { title: 'Legal', links: [['Security', '/security'], ['HIPAA', '/hipaa'], ['Privacy', '/privacy'], ['Terms', '/terms']] },
 ] as const;
 
 

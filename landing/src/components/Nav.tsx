@@ -13,6 +13,7 @@ import { transitions } from '../lib/motion';
 const LINKS = [
   { label: 'How it Works', to: '/how-it-works' },
   { label: 'For Clinicians', to: '/clinicians' },
+  { label: 'Integrations', to: '/integrations' },
   { label: 'Company', to: '/company' },
   { label: 'Pricing', to: '/pricing' },
 ];
