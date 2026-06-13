@@ -5,10 +5,16 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Guard against horizontal scroll from the full-bleed phone composites and
+       off-center transforms. `clip` (not `hidden`) hides the overflow WITHOUT
+       turning html into a scroll container, so `position: sticky` sections
+       (AppHero, SideBySide pinned stages) keep working. */
+    overflow-x: clip;
   }
   body {
     @apply bg-white text-ink font-sans antialiased;
     -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
   }
   ::selection {
     @apply bg-solace-mint/30;

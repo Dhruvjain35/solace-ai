@@ -44,7 +44,7 @@ export default function FeatureIntro() {
         <ProductWord
           word="Intake"
           from="right"
-          className="text-center text-[clamp(140px,28vw,430px)] text-ink"
+          className="text-center text-[clamp(64px,22vw,430px)] text-ink"
         />
       </div>
     </section>
