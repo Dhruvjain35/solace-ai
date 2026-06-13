@@ -4,6 +4,7 @@ import FeatureIntro from '../components/product/FeatureIntro';
 import TileGrid from '../components/product/TileGrid';
 import SideBySide from '../components/product/SideBySide';
 import DarkTriage from '../components/product/DarkTriage';
+import IntegrationMarquee from '../components/product/IntegrationMarquee';
 
 // The Product page is a structural clone of app.forhims.com (see
 // design-extract-output/app-forhims-com-*), remapped onto the Solace brand.
@@ -27,6 +28,7 @@ export default function Product() {
         text="Emergency care should feel calm, not scary. That's why we built Solace. Care starts the moment you speak, and your care team always knows why."
       />
       <DarkTriage />
+      <IntegrationMarquee />
     </div>
   );
 }
