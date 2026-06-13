@@ -38,7 +38,7 @@ export default function Hipaa() {
       eyebrow="HIPAA compliance"
       title="HIPAA, handled as a Business Associate."
       sub="How Solace meets the Privacy, Security and Breach Notification Rules, and exactly what your organization gets when you bring us in."
-      lastUpdated="[DATE]"
+      lastUpdated="June 2026"
       sections={SECTIONS}
     >
       <Section title="Our role: Business Associate" reduce={null} index={0}>

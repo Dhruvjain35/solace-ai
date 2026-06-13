@@ -40,7 +40,7 @@ export default function Privacy() {
       eyebrow="Privacy policy"
       title="Your data, treated like it matters."
       sub="How Solace collects, uses, shares and protects information, including the protected health information we process on behalf of covered entities."
-      lastUpdated="[DATE]"
+      lastUpdated="June 2026"
       sections={SECTIONS}
     >
       <Section title="Overview" reduce={null} index={0}>
