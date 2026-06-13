@@ -1,6 +1,6 @@
 import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, AppWindow, Link2, LogIn, FlaskConical } from 'lucide-react';
+import { ArrowRight, FlaskConical } from 'lucide-react';
 import { INTEGRATIONS, type Integration } from '../lib/integrations';
 import {
   Reveal,
@@ -11,6 +11,7 @@ import {
   WASH_MINT_TO_WHITE,
   PALE_GRADIENT,
 } from '../components/integrations/shared';
+import { ConnectionFlow } from '../components/integrations/GuideVisuals';
 
 /*
  * Integrations hub: the directory of every EHR Solace talks to. A white opening
@@ -50,24 +51,6 @@ function PlatformCard({ item, index }: { item: Integration; index: number }) {
     </Reveal>
   );
 }
-
-const CONNECT_STEPS = [
-  {
-    Icon: AppWindow,
-    title: 'Register the SMART app',
-    body: 'Add Solace as a SMART on FHIR app in your vendor’s developer console, App Orchard or Marketplace.',
-  },
-  {
-    Icon: Link2,
-    title: 'Bind it to a workspace',
-    body: 'Paste the FHIR base URL and client ID into Tools → EHR connections. Secrets go straight into the vault.',
-  },
-  {
-    Icon: LogIn,
-    title: 'Sign in and write back',
-    body: 'A clinician signs in with vendor SSO. Solace reads the chart and writes the visit back as coded FHIR.',
-  },
-];
 
 export default function Integrations() {
   const reduce = useReducedMotion();
@@ -134,31 +117,12 @@ export default function Integrations() {
               id="how-connect-heading"
               className="mx-auto mt-4 max-w-[18ch] font-sofia text-[clamp(28px,3vw,46px)] font-medium leading-[1.1] tracking-[-0.02em] text-white"
             >
-              Three steps, then it just runs.
+              One SMART launch, then it just runs.
             </h2>
           </Reveal>
 
-          <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {CONNECT_STEPS.map(({ Icon, title, body }, i) => (
-              <Reveal key={title} index={i} reduce={reduce}>
-                <div className="flex h-full flex-col rounded-hims bg-white/[0.05] p-7 ring-1 ring-white/10">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-solace-mint/15 text-solace-mint ring-1 ring-solace-mint/25">
-                      <Icon size={19} strokeWidth={1.9} aria-hidden="true" />
-                    </span>
-                    <span className="font-sofia text-[15px] font-semibold text-white/55">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-                  <h3 className="mt-5 font-sofia text-[20px] font-medium leading-tight tracking-[-0.01em] text-white">
-                    {title}
-                  </h3>
-                  <p className="mt-2 text-[14px] leading-relaxed text-white/65">
-                    {body}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
+          <div className="mt-14">
+            <ConnectionFlow vendor="your EHR" reduce={reduce} tone="dark" />
           </div>
         </div>
       </section>

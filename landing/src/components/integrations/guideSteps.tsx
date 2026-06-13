@@ -99,48 +99,9 @@ export function getGuideSteps(item: Integration): GuideStep[] {
   ];
 }
 
-// "What you can do once connected" — four capabilities, each paired with a real
-// product or patient-app screenshot framed in a rounded card on the guide page.
-export type Capability = {
-  title: string;
-  body: string;
-  Icon: LucideIcon;
-  shot: string;
-  shotAlt: string;
-  caption: string;
-};
-
-export const CAPABILITIES: Capability[] = [
-  {
-    title: 'Patient match & chart read',
-    body: 'Solace matches the patient on launch and reads demographics, problems, medications and allergies over USCDI — the chart is open before the clinician walks in.',
-    Icon: Search,
-    shot: '/assets/shots/ehr-clean.png',
-    shotAlt: 'The Solace clinician view with the patient chart read in',
-    caption: 'The chart, read and summarized on launch.',
-  },
-  {
-    title: 'Ambient scribe write-back',
-    body: 'The visit note drafts as the clinician talks, then posts back as a coded FHIR DocumentReference for review and sign-off in the chart you already keep.',
-    Icon: PenLine,
-    shot: '/assets/shots/working.png',
-    shotAlt: 'The ambient scribe drafting a note during the visit',
-    caption: 'The note drafts live, then writes back coded.',
-  },
-  {
-    title: 'Coded problems, observations & orders',
-    body: 'Problems, observations and suggested orders are written as standard FHIR resources in real codes — not free text — so they flow straight into your downstream systems.',
-    Icon: CheckCircle2,
-    shot: '/assets/shots/ehr.png',
-    shotAlt: 'Coded problems and observations in the Solace clinician view',
-    caption: 'Coded resources, ready for the record.',
-  },
-  {
-    title: 'Patient-reported intake, structured',
-    body: 'Everything the patient tells Solace on their own phone — symptoms, history, insurance — lands as a clean structured record that maps to the chart, no clipboard.',
-    Icon: AppWindow,
-    shot: '/assets/screens/symptoms.png',
-    shotAlt: 'The Solace patient intake app capturing symptoms',
-    caption: 'Patient-reported intake, captured in their words.',
-  },
-];
+/*
+ * The "what you get once connected" band no longer reuses static screenshots:
+ * IntegrationGuide.tsx now renders the live Atlas EhrScreen (the chart Solace
+ * reads/writes) plus the ScopeCard and WriteBackCard from GuideVisuals.tsx,
+ * each a specific, in-DOM visual. The old CAPABILITIES array is gone.
+ */
