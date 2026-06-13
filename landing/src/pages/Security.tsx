@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ShieldCheck, TestTube2, ArrowRight, Check } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Check } from 'lucide-react';
 import { himsFade, himsMove } from '../lib/hims';
 import { Reveal } from '../components/legal/LegalLayout';
 import { PhiScrub, PipelineFlow, LeakGate } from '../components/security/Visuals';
@@ -25,8 +25,6 @@ import {
 
 const WASH_WHITE_TO_MINT = 'linear-gradient(180deg, #ffffff 0%, #f2f9f6 100%)';
 const WASH_MINT_TO_WHITE = 'linear-gradient(180deg, #f2f9f6 0%, #ffffff 100%)';
-const PALE_GRADIENT =
-  'linear-gradient(166.14deg, rgb(232,244,247) 0%, rgb(199,229,221) 100%)';
 
 const PILL_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-pill bg-ink px-7 py-3.5 text-sm font-medium text-white transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]';
@@ -182,21 +180,18 @@ export default function Security() {
               key={s.label}
               index={i}
               reduce={reduce}
-              className="group relative overflow-hidden rounded-tile p-6 text-center ring-1 ring-solace-green-300/30 transition-transform duration-[400ms] ease-hims-expo hover:-translate-y-1"
+              className="group flex flex-col rounded-tile border border-black/[0.06] bg-white p-6 shadow-soft transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:border-solace-green-300/50 hover:shadow-lift"
             >
-              <div
-                aria-hidden="true"
-                className="absolute inset-0"
-                style={{ backgroundImage: PALE_GRADIENT }}
-              />
-              <div className="relative">
-                <p className="font-sofia text-[clamp(40px,5vw,64px)] font-medium leading-none tracking-hims text-ink">
-                  {s.big}
-                </p>
-                <p className="mx-auto mt-3 max-w-[18ch] text-[13px] leading-snug text-muted">
-                  {s.label}
-                </p>
-              </div>
+              <span aria-hidden="true" className="h-[3px] w-9 rounded-full bg-solace-green-500" />
+              <p className="mt-5 font-sofia text-[clamp(40px,5vw,64px)] font-medium leading-none tracking-hims text-ink">
+                {s.big}
+              </p>
+              <p className="mt-3 max-w-[20ch] text-[13px] leading-snug text-muted">
+                {s.label}
+              </p>
+              <p className="mt-4 border-t border-black/5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-solace-green-600">
+                {s.note}
+              </p>
             </Reveal>
           ))}
         </div>
@@ -236,7 +231,6 @@ export default function Security() {
 
           <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {CONTROLS.map((c, i) => {
-              const Icon = c.icon;
               return (
                 <motion.div
                   key={c.title}
@@ -249,18 +243,15 @@ export default function Security() {
                   }}
                   className="group flex h-full flex-col rounded-hims border border-black/[0.06] bg-white p-7 shadow-soft transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:border-solace-green-300/50 hover:shadow-lift"
                 >
-                  <div className="flex items-start justify-between">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-tile bg-solace-soft text-solace-green-700 ring-1 ring-solace-green-300/30 transition-colors duration-[400ms] ease-hims-expo group-hover:bg-solace-green-700 group-hover:text-white group-hover:ring-transparent">
-                      <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
+                  <div className="flex items-baseline justify-between gap-3 border-b border-black/[0.07] pb-4">
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-solace-green-600">
+                      {c.kicker}
                     </span>
-                    <span className="font-mono text-[12px] font-medium tabular-nums text-muted/40">
+                    <span className="font-mono text-[26px] font-medium leading-none tabular-nums tracking-[-0.04em] text-solace-green-300 transition-colors duration-[400ms] ease-hims-expo group-hover:text-solace-green-600">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                   </div>
-                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-solace-green-600">
-                    {c.kicker}
-                  </p>
-                  <h3 className="mt-2 font-sofia text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink">
+                  <h3 className="mt-5 font-sofia text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink">
                     {c.title}
                   </h3>
                   <p className="mt-3 text-[14.5px] leading-relaxed text-muted">
@@ -304,8 +295,9 @@ export default function Security() {
             </p>
           </Reveal>
           <Reveal index={1} reduce={reduce}>
-            <span className="mt-5 inline-flex h-11 w-11 items-center justify-center rounded-tile bg-white/10 text-solace-mint ring-1 ring-white/15">
-              <TestTube2 size={22} strokeWidth={1.75} aria-hidden="true" />
+            <span className="mt-5 inline-flex items-center gap-2 rounded-pill bg-white/10 px-3.5 py-1.5 font-mono text-[12px] text-solace-mint ring-1 ring-white/15">
+              <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+              749 tests · 749 pass
             </span>
           </Reveal>
           <Reveal index={2} reduce={reduce}>
