@@ -77,7 +77,7 @@ export default function Integrations() {
       {/* ===== 1 · Opening statement ===== */}
       <section
         aria-labelledby="integrations-heading"
-        className="bg-white px-6 pb-[8vh] pt-[18vh] text-center"
+        className="bg-white px-6 pb-[8vh] pt-[14vh] text-center md:pt-[18vh]"
         style={{ backgroundImage: WASH_WHITE_TO_MINT }}
       >
         <Reveal index={0} reduce={reduce}>
@@ -123,7 +123,7 @@ export default function Integrations() {
       {/* ===== 3 · How connection works — three-step strip ===== */}
       <section
         aria-labelledby="how-connect-heading"
-        className="bg-ink px-6 py-[12vh]"
+        className="bg-ink px-6 py-[9vh] md:py-[12vh]"
       >
         <div className="mx-auto max-w-[1100px]">
           <Reveal index={0} reduce={reduce} className="text-center">
@@ -164,7 +164,7 @@ export default function Integrations() {
       </section>
 
       {/* ===== 4 · Sandbox CTA card ===== */}
-      <section className="bg-white px-6 py-[12vh]">
+      <section className="bg-white px-6 py-[9vh] md:py-[12vh]">
         <Reveal index={0} reduce={reduce} className="mx-auto max-w-[1100px]">
           <div
             className="flex flex-col items-start gap-6 overflow-hidden rounded-hims p-10 md:flex-row md:items-center md:justify-between md:p-14"

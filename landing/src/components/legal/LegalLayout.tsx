@@ -142,7 +142,7 @@ export default function LegalLayout({
       {/* ===== Hero — centered, mint wash, mega Sofia title ===== */}
       <section
         aria-labelledby="legal-heading"
-        className="bg-white px-6 pb-[8vh] pt-[24vh] text-center"
+        className="bg-white px-6 pb-[8vh] pt-[16vh] text-center md:pt-[24vh]"
         style={{ backgroundImage: WASH_MINT_TO_WHITE }}
       >
         <Reveal index={0} reduce={reduce}>
@@ -171,7 +171,7 @@ export default function LegalLayout({
       </section>
 
       {/* ===== Body — prose column with optional sticky table of contents ===== */}
-      <section className="bg-white px-6 pb-[16vh] pt-[2vh]">
+      <section className="bg-white px-6 pb-[10vh] pt-[2vh] md:pb-[16vh]">
         <div
           className={`mx-auto grid max-w-[1100px] gap-12 ${
             hasToc ? 'lg:grid-cols-[minmax(0,1fr)_240px]' : 'max-w-[760px]'

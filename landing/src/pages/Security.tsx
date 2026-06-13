@@ -183,7 +183,7 @@ export default function Security() {
       {/* ===== 1 · Hero ===== */}
       <section
         aria-labelledby="security-heading"
-        className="bg-white px-6 pb-[8vh] pt-[24vh] text-center"
+        className="bg-white px-6 pb-[8vh] pt-[16vh] text-center md:pt-[24vh]"
         style={{ backgroundImage: WASH_WHITE_TO_MINT }}
       >
         <Reveal index={0} reduce={reduce}>

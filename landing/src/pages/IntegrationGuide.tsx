@@ -222,7 +222,7 @@ export default function IntegrationGuide() {
       {/* ===== 3 · What you can do once connected ===== */}
       <section
         aria-labelledby="capabilities-heading"
-        className="bg-ink px-6 py-[14vh]"
+        className="bg-ink px-6 py-[9vh] md:py-[14vh]"
       >
         <div className="mx-auto max-w-[1100px]">
           <Reveal index={0} reduce={reduce}>
@@ -237,7 +237,7 @@ export default function IntegrationGuide() {
             </h2>
           </Reveal>
 
-          <div className="mt-14 grid grid-cols-1 gap-14 md:gap-20">
+          <div className="mt-14 grid grid-cols-1 gap-12 md:gap-20">
             {CAPABILITIES.map((cap, i) => {
               const flip = i % 2 === 1;
               return (
@@ -281,7 +281,7 @@ export default function IntegrationGuide() {
       {/* ===== 4 · Security note strip ===== */}
       <section
         aria-labelledby="security-heading"
-        className="bg-white px-6 py-[12vh]"
+        className="bg-white px-6 py-[9vh] md:py-[12vh]"
         style={{ backgroundImage: WASH_PAPER }}
       >
         <div className="mx-auto max-w-[1100px]">
@@ -330,7 +330,7 @@ export default function IntegrationGuide() {
       {/* ===== 5 · Closing CTA ===== */}
       <section
         aria-labelledby="guide-close-heading"
-        className="bg-white px-6 py-[16vh] text-center"
+        className="bg-white px-6 py-[11vh] text-center md:py-[16vh]"
         style={{ backgroundImage: WASH_WHITE_TO_MINT }}
       >
         <Reveal index={0} reduce={reduce}>
