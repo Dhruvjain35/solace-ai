@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import Logo from './ui/Logo';
+import ExpandingLogo from './ui/ExpandingLogo';
 import { transitions } from '../lib/motion';
 
 const LINKS = [
@@ -15,8 +15,18 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
+  const [logoHover, setLogoHover] = useState(false);
+  const [logoIntro, setLogoIntro] = useState(true);
   const lastY = useRef(0);
+  const reduce = useReducedMotion();
   useLocation(); // keep router context subscription for active states below
+
+  // First-load intro: the wordmark unfurls once, holds, then settles back to
+  // the standalone "S". After that it's hover-driven.
+  useEffect(() => {
+    const t = setTimeout(() => setLogoIntro(false), 2000);
+    return () => clearTimeout(t);
+  }, []);
   // Every page now opens on a light stage (the old dark home hero is gone),
   // so the glass-light nav variant is never needed.
   const onDarkHero = false;
@@ -56,9 +66,11 @@ export default function Nav() {
         <Link
           to="/"
           aria-label="Solace home"
-          className="flex items-center rounded-pill bg-white px-4 py-2 shadow-soft ring-1 ring-black/[0.06] transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03] md:px-5"
+          onMouseEnter={() => setLogoHover(true)}
+          onMouseLeave={() => setLogoHover(false)}
+          className="flex items-center rounded-pill bg-white px-4 py-2.5 shadow-soft ring-1 ring-black/[0.06] transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
         >
-          <Logo light={light} className="!h-10 md:!h-12" />
+          <ExpandingLogo expanded={logoHover || logoIntro} reduce={reduce} light={light} />
         </Link>
 
         <div className="hidden items-center md:flex">
