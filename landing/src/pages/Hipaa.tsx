@@ -7,6 +7,7 @@ import LegalLayout, {
   Callout,
   type LegalSection,
 } from '../components/legal/LegalLayout';
+import { SafeguardsMatrix, TrustChain } from '../components/legal/HipaaVisuals';
 
 /*
  * HIPAA — Solace's compliance page, framed honestly: Solace is a Business
@@ -62,6 +63,9 @@ export default function Hipaa() {
           honest description of what we do, and it shapes every commitment on this
           page.
         </Callout>
+        <div className="pt-2">
+          <TrustChain />
+        </div>
       </Section>
 
       <Section title="The Privacy Rule" reduce={null} index={0}>
@@ -82,10 +86,12 @@ export default function Hipaa() {
       <Section title="The Security Rule" reduce={null} index={0}>
         <P>
           The Security Rule requires administrative, technical and physical
-          safeguards for electronic PHI. Solace implements all three. The
-          sections below map each safeguard category to the specific controls we
-          ship, rather than describing them in the abstract.
+          safeguards for electronic PHI. Solace implements all three. Here is the
+          map at a glance; the sections below give the detail.
         </P>
+        <div className="pt-3">
+          <SafeguardsMatrix />
+        </div>
       </Section>
 
       <Section title="Administrative safeguards" reduce={null} index={0}>
