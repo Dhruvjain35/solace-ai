@@ -123,7 +123,7 @@ export default function Contact() {
       {/* ===== 1 · Hero ===== */}
       <section
         aria-labelledby="contact-heading"
-        className="bg-white px-6 pb-[6vh] pt-[24vh] text-center"
+        className="bg-white px-6 pb-[6vh] pt-[16vh] text-center md:pt-[24vh]"
         style={{ backgroundImage: WASH_WHITE_TO_MINT }}
       >
         <motion.p
@@ -170,7 +170,7 @@ export default function Contact() {
       {/* ===== 2 · Reasons grid + form ===== */}
       <section
         aria-label="Ways to reach us"
-        className="bg-white px-6 pb-[14vh] pt-[6vh]"
+        className="bg-white px-6 pb-[10vh] pt-[6vh] md:pb-[14vh]"
         style={{ backgroundImage: WASH_MINT_TO_WHITE }}
       >
         <div className="mx-auto grid max-w-[1100px] gap-12 lg:grid-cols-[1fr_minmax(0,480px)] lg:gap-16">
