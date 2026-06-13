@@ -40,7 +40,7 @@ export default function Terms() {
       eyebrow="Terms of service"
       title="The terms behind the trust."
       sub="The agreement that governs your use of Solace, written for the clinicians and organizations who depend on it."
-      lastUpdated="[DATE]"
+      lastUpdated="June 2026"
       sections={SECTIONS}
     >
       <Section title="Acceptance of terms" reduce={null} index={0}>
