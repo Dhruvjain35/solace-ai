@@ -9,6 +9,7 @@ import {
   ScrollText,
   KeyRound,
   FlaskConical,
+  BookOpen,
 } from 'lucide-react';
 import { getIntegration } from '../lib/integrations';
 import {
@@ -16,17 +17,19 @@ import {
   Kicker,
   Logo,
   TierChip,
-  ShotCard,
   PILL_DARK,
   PILL_LIGHT,
   WASH_WHITE_TO_MINT,
   WASH_MINT_TO_WHITE,
   WASH_PAPER,
 } from '../components/integrations/shared';
+import { getGuideSteps } from '../components/integrations/guideSteps';
 import {
-  getGuideSteps,
-  CAPABILITIES,
-} from '../components/integrations/guideSteps';
+  ConnectionFlow,
+  ScopeCard,
+  WriteBackCard,
+  ChartFrame,
+} from '../components/integrations/GuideVisuals';
 
 /*
  * Per-platform integration guide. Reads the platform from the route slug. If
@@ -158,6 +161,32 @@ export default function IntegrationGuide() {
         </div>
       </section>
 
+      {/* ===== 1.5 · The connection at a glance — SMART flow diagram ===== */}
+      <section
+        aria-labelledby="flow-heading"
+        className="bg-white px-6 pb-[8vh] pt-[2vh]"
+        style={{ backgroundImage: WASH_WHITE_TO_MINT }}
+      >
+        <div className="mx-auto max-w-[1000px]">
+          <Reveal index={0} reduce={reduce}>
+            <Kicker tone="light">The connection at a glance</Kicker>
+          </Reveal>
+          <Reveal index={1} reduce={reduce}>
+            <h2
+              id="flow-heading"
+              className="mt-4 max-w-[24ch] font-sofia text-[clamp(24px,2.6vw,38px)] font-medium leading-[1.12] tracking-[-0.02em] text-ink"
+            >
+              {native
+                ? `One SMART launch, inside your ${item.name} tenant.`
+                : `One SMART launch over standard FHIR R4.`}
+            </h2>
+          </Reveal>
+          <div className="mt-10">
+            <ConnectionFlow vendor={item.name} reduce={reduce} />
+          </div>
+        </div>
+      </section>
+
       {/* ===== 2 · The connect guide — numbered steps ===== */}
       <section
         aria-labelledby="connect-heading"
@@ -237,43 +266,47 @@ export default function IntegrationGuide() {
             </h2>
           </Reveal>
 
-          <div className="mt-14 grid grid-cols-1 gap-12 md:gap-20">
-            {CAPABILITIES.map((cap, i) => {
-              const flip = i % 2 === 1;
-              return (
-                <div
-                  key={cap.title}
-                  className="grid items-center gap-8 md:grid-cols-2 md:gap-14"
-                >
-                  <Reveal
-                    index={0}
-                    reduce={reduce}
-                    className={flip ? 'md:order-2' : ''}
-                  >
-                    <div>
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-solace-mint/15 text-solace-mint ring-1 ring-solace-mint/25">
-                        <cap.Icon size={20} strokeWidth={1.9} aria-hidden="true" />
-                      </span>
-                      <h3 className="mt-5 font-sofia text-[clamp(24px,2.4vw,34px)] font-medium leading-tight tracking-[-0.02em] text-white">
-                        {cap.title}
-                      </h3>
-                      <p className="mt-4 max-w-md text-base leading-relaxed text-white/65 md:text-lg">
-                        {cap.body}
-                      </p>
-                    </div>
-                  </Reveal>
-                  <div className={flip ? 'md:order-1' : ''}>
-                    <ShotCard
-                      src={cap.shot}
-                      alt={cap.shotAlt}
-                      caption={cap.caption}
-                      reduce={reduce}
-                      index={i}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+          {/* Hero: the live chart Solace reads from and writes back to */}
+          <div className="mt-14 grid items-center gap-10 md:grid-cols-12 md:gap-14">
+            <Reveal index={0} reduce={reduce} className="md:col-span-5">
+              <div>
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-solace-mint/15 text-solace-mint ring-1 ring-solace-mint/25">
+                  <BookOpen size={20} strokeWidth={1.9} aria-hidden="true" />
+                </span>
+                <h3 className="mt-5 font-sofia text-[clamp(24px,2.4vw,34px)] font-medium leading-tight tracking-[-0.02em] text-white">
+                  The chart, read and reasoned on launch.
+                </h3>
+                <p className="mt-4 max-w-md text-base leading-relaxed text-white/65 md:text-lg">
+                  Solace matches the patient and reads demographics, problems,
+                  medications and allergies over USCDI — then drafts acuity, a
+                  differential and a coded workup before the clinician walks in.
+                  This is the Atlas snapshot, live from {item.name}.
+                </p>
+              </div>
+            </Reveal>
+            <div className="md:col-span-7">
+              <ChartFrame vendor={item.name} reduce={reduce} />
+            </div>
+          </div>
+
+          {/* Supporting capability visuals: scopes + coded write-back */}
+          <div className="mt-12 grid grid-cols-1 gap-6 md:mt-16 md:grid-cols-2">
+            <div>
+              <Reveal index={0} reduce={reduce}>
+                <h3 className="mb-5 font-sofia text-[20px] font-medium leading-tight tracking-[-0.01em] text-white">
+                  Only what the workflow needs.
+                </h3>
+              </Reveal>
+              <ScopeCard reduce={reduce} />
+            </div>
+            <div>
+              <Reveal index={1} reduce={reduce}>
+                <h3 className="mb-5 font-sofia text-[20px] font-medium leading-tight tracking-[-0.01em] text-white">
+                  The visit, written back coded.
+                </h3>
+              </Reveal>
+              <WriteBackCard vendor={item.name} reduce={reduce} />
+            </div>
           </div>
         </div>
       </section>
