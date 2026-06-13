@@ -1,22 +1,15 @@
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import type { LucideIcon } from 'lucide-react';
-import {
-  ShieldCheck,
-  EyeOff,
-  FileCheck2,
-  Lock,
-  KeyRound,
-  Network,
-  ScrollText,
-  Workflow,
-  TestTube2,
-  Timer,
-  ArrowRight,
-} from 'lucide-react';
+import { ShieldCheck, TestTube2, ArrowRight, Check } from 'lucide-react';
 import { himsFade, himsMove } from '../lib/hims';
 import { Reveal } from '../components/legal/LegalLayout';
 import { PhiScrub, PipelineFlow, LeakGate } from '../components/security/Visuals';
+import {
+  CONTROLS,
+  CONTROL_CATEGORIES,
+  STATS,
+  POSTURE,
+} from '../components/security/data';
 
 /*
  * Security — the marketing-grade trust page (not a legal document). It runs on
@@ -34,142 +27,6 @@ const WASH_WHITE_TO_MINT = 'linear-gradient(180deg, #ffffff 0%, #f2f9f6 100%)';
 const WASH_MINT_TO_WHITE = 'linear-gradient(180deg, #f2f9f6 0%, #ffffff 100%)';
 const PALE_GRADIENT =
   'linear-gradient(166.14deg, rgb(232,244,247) 0%, rgb(199,229,221) 100%)';
-
-type Control = {
-  icon: LucideIcon;
-  kicker: string;
-  title: string;
-  body: string;
-  points: string[];
-};
-
-const CONTROLS: Control[] = [
-  {
-    icon: EyeOff,
-    kicker: 'PHI isolation',
-    title: 'The model never sees raw PHI.',
-    body: 'Our AI plans and narrates over coded, de-identified metadata and {slot} tokens. Names, MRNs, dates of birth and free-text notes are stripped before any prompt is built.',
-    points: [
-      'Raw identifiers replaced with slot tokens at the boundary',
-      'An automated leak-gate test fails the build if real PHI reaches a prompt',
-      'Re-identification happens only in your trusted runtime, never in a model call',
-    ],
-  },
-  {
-    icon: ShieldCheck,
-    kicker: 'Consent gate',
-    title: 'No consent, no AI. Enforced at the boundary.',
-    body: 'A recorded-consent chokepoint sits in front of every AI request. With no consent on file the request is refused before it leaves your environment, and the refusal is logged.',
-    points: [
-      'Consent state checked on every AI invocation',
-      'Refusals are explicit and recorded, not silent',
-      'Patient can decline; the visit still works without the AI',
-    ],
-  },
-  {
-    icon: FileCheck2,
-    kicker: 'Confirm-gated writes',
-    title: 'Nothing reaches the chart without a click.',
-    body: 'Solace runs a Plan to Execute to Narrate pipeline. The model proposes; it never executes tools directly. Every write-back is staged for a clinician to review and approve.',
-    points: [
-      'The model plans actions; your runtime executes them',
-      'Write-backs are confirm-gated, never automatic',
-      'The clinician always makes the final call',
-    ],
-  },
-  {
-    icon: Lock,
-    kicker: 'Encryption',
-    title: 'Encrypted in transit and at rest.',
-    body: 'Data is encrypted everywhere with customer-managed AWS KMS keys. Application secrets live in AWS Secrets Manager and are never inlined into code or configuration.',
-    points: [
-      'Customer-managed KMS keys, in transit and at rest',
-      'TLS-only storage; no plaintext object access',
-      'Secrets in AWS Secrets Manager, rotated, never hardcoded',
-    ],
-  },
-  {
-    icon: KeyRound,
-    kicker: 'Access control',
-    title: 'Passwordless, role-scoped, tenant-isolated.',
-    body: 'Sign-in is a single-use magic link, sessions are short-lived JWTs, and admin powers are role-scoped. Every workspace query carries a tenant-isolation check.',
-    points: [
-      'Passwordless magic-link sign-in, JWT sessions',
-      'Role-scoped admin, least-privilege by default',
-      'Tenant-isolation check enforced on every workspace query',
-    ],
-  },
-  {
-    icon: Network,
-    kicker: 'Network & edge',
-    title: 'Hardened at the edge with CloudFront + WAF.',
-    body: 'Traffic enters through CloudFront and a WAF tuned with IP-reputation filters, OWASP managed rules and rate limiting. Outbound EHR calls are guarded against SSRF.',
-    points: [
-      'WAF: IP reputation, OWASP managed rules, rate limiting',
-      'SSRF guards on every outbound EHR request',
-      'TLS-only transport end to end',
-    ],
-  },
-  {
-    icon: ScrollText,
-    kicker: 'Audit trail',
-    title: 'Append-only, on every sensitive action.',
-    body: 'Chart reads, AI requests, write-backs, sign-ins and admin changes all land in an append-only audit log, so a covered entity can reconstruct exactly what happened and when.',
-    points: [
-      'Append-only log of reads, AI calls and write-backs',
-      'Sign-ins and admin changes recorded',
-      'Available to covered entities for review under the BAA',
-    ],
-  },
-  {
-    icon: Workflow,
-    kicker: 'Interoperability',
-    title: 'SMART on FHIR v2, minimum-necessary scopes.',
-    body: 'We connect over SMART on FHIR v2 and request only the minimum-necessary scopes for the task, in line with HIPAA section 164.502(b). We never ask for access we do not use.',
-    points: [
-      'SMART on FHIR v2 authorization',
-      'Minimum-necessary scopes (HIPAA 164.502(b))',
-      'No standing access beyond the active workflow',
-    ],
-  },
-  {
-    icon: Timer,
-    kicker: 'Data minimization',
-    title: 'Short-lived sessions, automatic expiry.',
-    body: 'Intake sessions are short-lived and patient records and media carry an automatic TTL. Magic-link tokens are single-use and stored only as hashes, never in the clear.',
-    points: [
-      'Automatic TTL expiry on patient records and media',
-      'Short-lived intake sessions',
-      'Single-use magic-link tokens stored as hashes only',
-    ],
-  },
-];
-
-type Stat = { big: string; label: string };
-const STATS: Stat[] = [
-  { big: '749', label: 'automated tests every release' },
-  { big: '0', label: 'raw PHI tokens allowed in any prompt' },
-  { big: '100%', label: 'AI write-backs confirm-gated by a clinician' },
-  { big: '1', label: 'tenant-isolation check on every query' },
-];
-
-const POSTURE = [
-  {
-    title: 'HIPAA Business Associate',
-    status: 'In place',
-    body: 'Solace operates as a Business Associate and will sign a BAA before any PHI is processed. Infrastructure runs on HIPAA-eligible AWS under a BAA; model inference runs via AWS Bedrock in covered regions.',
-  },
-  {
-    title: 'SOC 2 Type II',
-    status: 'In progress',
-    body: 'Our SOC 2 program is underway. Current status, scope and the most recent observation period are available on request under NDA.',
-  },
-  {
-    title: 'Penetration testing',
-    status: 'On request',
-    body: 'Independent testing summaries, our security questionnaire responses and architecture diagrams are available to qualified buyers during review.',
-  },
-] as const;
 
 const PILL_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-pill bg-ink px-7 py-3.5 text-sm font-medium text-white transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]';
@@ -325,7 +182,7 @@ export default function Security() {
               key={s.label}
               index={i}
               reduce={reduce}
-              className="relative overflow-hidden rounded-tile p-6 text-center"
+              className="group relative overflow-hidden rounded-tile p-6 text-center ring-1 ring-solace-green-300/30 transition-transform duration-[400ms] ease-hims-expo hover:-translate-y-1"
             >
               <div
                 aria-hidden="true"
@@ -336,7 +193,7 @@ export default function Security() {
                 <p className="font-sofia text-[clamp(40px,5vw,64px)] font-medium leading-none tracking-hims text-ink">
                   {s.big}
                 </p>
-                <p className="mt-3 text-[13px] leading-snug text-muted">
+                <p className="mx-auto mt-3 max-w-[18ch] text-[13px] leading-snug text-muted">
                   {s.label}
                 </p>
               </div>
@@ -364,8 +221,20 @@ export default function Security() {
               Nine layers, every one of them load-bearing.
             </h2>
           </Reveal>
+          <Reveal index={2} reduce={reduce}>
+            <div className="mt-6 flex flex-wrap items-center gap-2.5">
+              {CONTROL_CATEGORIES.map((g) => (
+                <span
+                  key={g}
+                  className="inline-flex items-center gap-1.5 rounded-pill bg-solace-soft px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-solace-green-700 ring-1 ring-solace-green-300/40"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
+          </Reveal>
 
-          <div className="mt-12 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {CONTROLS.map((c, i) => {
               const Icon = c.icon;
               return (
@@ -378,11 +247,16 @@ export default function Security() {
                     opacity: { ...himsFade, delay: (i % 3) * 0.04 },
                     y: { ...himsMove, delay: (i % 3) * 0.04 },
                   }}
-                  className="flex h-full flex-col rounded-hims border border-black/5 bg-white p-7 shadow-soft"
+                  className="group flex h-full flex-col rounded-hims border border-black/[0.06] bg-white p-7 shadow-soft transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:border-solace-green-300/50 hover:shadow-lift"
                 >
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-tile bg-solace-soft text-solace-green-700">
-                    <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
-                  </span>
+                  <div className="flex items-start justify-between">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-tile bg-solace-soft text-solace-green-700 ring-1 ring-solace-green-300/30 transition-colors duration-[400ms] ease-hims-expo group-hover:bg-solace-green-700 group-hover:text-white group-hover:ring-transparent">
+                      <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <span className="font-mono text-[12px] font-medium tabular-nums text-muted/40">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                  </div>
                   <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-solace-green-600">
                     {c.kicker}
                   </p>
@@ -408,6 +282,9 @@ export default function Security() {
                       </li>
                     ))}
                   </ul>
+                  <p className="mt-5 pt-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted/50">
+                    {c.cat}
+                  </p>
                 </motion.div>
               );
             })}
@@ -422,11 +299,16 @@ export default function Security() {
       >
         <div className="mx-auto max-w-[1100px]">
           <Reveal index={0} reduce={reduce}>
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-tile bg-white/10 text-solace-mint ring-1 ring-white/15">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-solace-mint/70">
+              Verified every release
+            </p>
+          </Reveal>
+          <Reveal index={1} reduce={reduce}>
+            <span className="mt-5 inline-flex h-11 w-11 items-center justify-center rounded-tile bg-white/10 text-solace-mint ring-1 ring-white/15">
               <TestTube2 size={22} strokeWidth={1.75} aria-hidden="true" />
             </span>
           </Reveal>
-          <Reveal index={1} reduce={reduce}>
+          <Reveal index={2} reduce={reduce}>
             <h2
               id="process-heading"
               className="mt-6 max-w-[20ch] font-sofia text-[clamp(28px,3.2vw,52px)] font-medium leading-[1.06] tracking-hims text-white"
@@ -434,7 +316,7 @@ export default function Security() {
               Tested like the safety control it is.
             </h2>
           </Reveal>
-          <Reveal index={2} reduce={reduce}>
+          <Reveal index={3} reduce={reduce}>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/65 md:text-lg">
               Every release runs 749 automated tests, including dedicated suites
               for PHI isolation, tenant isolation and the consent gate. If raw
@@ -443,7 +325,7 @@ export default function Security() {
               ship.
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-3 sm:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
             {[
               ['PHI-isolation suite', 'Proves no raw identifier reaches a model prompt.'],
               ['Tenant-isolation suite', 'Proves one workspace can never read another.'],
@@ -451,11 +333,17 @@ export default function Security() {
             ].map(([title, body], i) => (
               <Reveal
                 key={title}
-                index={i + 3}
+                index={i + 4}
                 reduce={reduce}
-                className="rounded-hims bg-white/[0.04] p-6 ring-1 ring-white/10"
+                className="group rounded-hims bg-white/[0.04] p-6 ring-1 ring-white/10 transition-colors duration-[400ms] ease-hims-expo hover:bg-white/[0.07] hover:ring-solace-mint/30"
               >
-                <p className="font-sofia text-[18px] font-medium tracking-[-0.02em] text-white">
+                <span className="flex items-center gap-2 text-solace-mint">
+                  <Check size={15} strokeWidth={2.5} aria-hidden="true" />
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-solace-mint/70">
+                    Pass
+                  </span>
+                </span>
+                <p className="mt-3 font-sofia text-[18px] font-medium tracking-[-0.02em] text-white">
                   {title}
                 </p>
                 <p className="mt-2 text-[14px] leading-relaxed text-white/55">
@@ -475,40 +363,59 @@ export default function Security() {
       >
         <div className="mx-auto max-w-[1100px]">
           <Reveal index={0} reduce={reduce}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              Attestations
+            </p>
+          </Reveal>
+          <Reveal index={1} reduce={reduce}>
             <h2
               id="posture-heading"
-              className="max-w-[24ch] font-sofia text-[clamp(26px,2.6vw,40px)] font-medium leading-[1.1] tracking-hims text-ink"
+              className="mt-4 max-w-[24ch] font-sofia text-[clamp(26px,2.6vw,40px)] font-medium leading-[1.1] tracking-hims text-ink"
             >
               Where our attestations stand today.
             </h2>
           </Reveal>
-          <Reveal index={1} reduce={reduce}>
+          <Reveal index={2} reduce={reduce}>
             <p className="mt-4 max-w-2xl text-base text-muted">
               We would rather be precise than impressive. Here is the honest
               status, and what you can ask us for during a review.
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-3 md:grid-cols-3">
-            {POSTURE.map((p, i) => (
-              <Reveal
-                key={p.title}
-                index={i + 2}
-                reduce={reduce}
-                className="rounded-hims border border-black/5 bg-white p-7 shadow-soft"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-sofia text-[18px] font-medium tracking-[-0.02em] text-ink">
-                    {p.title}
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {POSTURE.map((p, i) => {
+              const live = p.status === 'In place';
+              const chip = live
+                ? 'bg-solace-green-700 text-white ring-solace-green-700'
+                : 'bg-solace-soft text-solace-green-700 ring-solace-green-300/50';
+              return (
+                <Reveal
+                  key={p.title}
+                  index={i + 3}
+                  reduce={reduce}
+                  className="group flex h-full flex-col rounded-hims border border-black/[0.06] bg-white p-7 shadow-soft transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:shadow-lift"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-sofia text-[18px] font-medium tracking-[-0.02em] text-ink">
+                      {p.title}
+                    </p>
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-pill px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ${chip}`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          live ? 'bg-solace-mint' : 'bg-solace-green-500'
+                        }`}
+                      />
+                      {p.status}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-[14px] leading-relaxed text-muted">
+                    {p.body}
                   </p>
-                  <span className="shrink-0 rounded-pill bg-solace-soft px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-solace-green-700">
-                    {p.status}
-                  </span>
-                </div>
-                <p className="mt-4 text-[14px] leading-relaxed text-muted">
-                  {p.body}
-                </p>
-              </Reveal>
-            ))}
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -213,19 +213,25 @@ export default function IntegrationGuide() {
           <ol className="mt-12 space-y-4">
             {steps.map(({ title, body, Icon }, i) => (
               <Reveal key={title} index={i} reduce={reduce}>
-                <li className="flex gap-5 rounded-hims bg-white p-6 shadow-card ring-1 ring-black/[0.06] md:p-7">
+                <li className="group flex gap-5 rounded-hims bg-white p-6 shadow-card ring-1 ring-black/[0.06] transition-all duration-[400ms] ease-hims-expo hover:shadow-lift hover:ring-solace-green-300/50 md:p-7">
                   <div className="flex shrink-0 flex-col items-center gap-3">
                     <span
-                      className={`flex h-11 w-11 items-center justify-center rounded-full font-sofia text-[16px] font-semibold ${
+                      className={`flex h-11 w-11 items-center justify-center rounded-full font-sofia text-[16px] font-semibold tabular-nums transition-transform duration-[400ms] ease-hims-expo group-hover:scale-105 ${
                         native
                           ? 'bg-solace-green-700 text-white'
                           : 'bg-solace-soft text-solace-green-700 ring-1 ring-solace-green-300/50'
                       }`}
                     >
-                      {i + 1}
+                      {String(i + 1).padStart(2, '0')}
                     </span>
+                    {i < steps.length - 1 ? (
+                      <span
+                        aria-hidden="true"
+                        className="hidden w-px flex-1 bg-gradient-to-b from-solace-green-300/50 to-transparent md:block"
+                      />
+                    ) : null}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 pb-1">
                     <div className="flex items-center gap-2.5">
                       <Icon
                         size={18}
@@ -333,8 +339,8 @@ export default function IntegrationGuide() {
           <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {SECURITY_NOTES.map(({ Icon, title, body }, i) => (
               <Reveal key={title} index={i} reduce={reduce}>
-                <div className="flex h-full flex-col rounded-tile bg-white p-6 shadow-card ring-1 ring-black/[0.06]">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-solace-soft text-solace-green-700">
+                <div className="group flex h-full flex-col rounded-tile bg-white p-6 shadow-card ring-1 ring-black/[0.06] transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:shadow-lift hover:ring-solace-green-300/50">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-solace-soft text-solace-green-700 transition-colors duration-[400ms] ease-hims-expo group-hover:bg-solace-green-700 group-hover:text-white">
                     <Icon size={19} strokeWidth={1.9} aria-hidden="true" />
                   </span>
                   <h3 className="mt-4 font-sofia text-[17px] font-medium leading-tight tracking-[-0.01em] text-ink">
