@@ -34,7 +34,7 @@ export default function FeatureIntro() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.5 }}
         transition={rise}
-        className="mx-auto max-w-[14ch] px-4 pt-[14vh] text-center font-sofia text-[clamp(48px,7.2vw,110px)] font-medium leading-[1.02] tracking-hims text-ink lg:pt-[20vh]"
+        className="mx-auto max-w-[14ch] px-4 pt-[10vh] text-center font-sofia text-[clamp(40px,7.2vw,110px)] font-medium leading-[1.02] tracking-hims text-ink lg:pt-[20vh]"
       >
         Everything you need to run a calmer ED.
       </motion.h2>

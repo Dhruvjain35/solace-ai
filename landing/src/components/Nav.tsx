@@ -140,7 +140,7 @@ export default function Nav() {
         </Link>
 
         <button
-          className="flex h-11 w-11 items-center justify-center md:hidden"
+          className="flex h-12 w-12 items-center justify-center md:hidden"
           aria-label="Menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}

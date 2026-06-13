@@ -185,7 +185,7 @@ export default function ClosingShowcase() {
       <section
         ref={bandRef}
         aria-labelledby="closing-heading"
-        className="relative mx-2 min-h-[90vh] lg:min-h-[120vh] overflow-hidden rounded-hims md:mx-4"
+        className="relative mx-2 min-h-[76vh] overflow-hidden rounded-hims md:mx-4 md:min-h-[90vh] lg:min-h-[120vh]"
         style={{
           backgroundImage:
             'linear-gradient(160deg, #DFF3EC 0%, #BFE5D6 50%, #A0D7C4 100%)',
