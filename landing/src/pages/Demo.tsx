@@ -18,10 +18,15 @@ const REASSURANCES = [
 ] as const;
 
 const FIELDS = [
-  { label: 'Full name', type: 'text', placeholder: 'Dr. Jordan Lee', autoComplete: 'name' },
-  { label: 'Work email', type: 'email', placeholder: 'you@hospital.org', autoComplete: 'email' },
-  { label: 'Organization', type: 'text', placeholder: 'North Texas ED', autoComplete: 'organization' },
+  { name: 'name', label: 'Full name', type: 'text', placeholder: 'Dr. Jordan Lee', autoComplete: 'name' },
+  { name: 'email', label: 'Work email', type: 'email', placeholder: 'you@hospital.org', autoComplete: 'email' },
+  { name: 'org', label: 'Organization', type: 'text', placeholder: 'North Texas ED', autoComplete: 'organization' },
 ] as const;
+
+// No backend on the landing, so the booking request is delivered as a
+// prefilled email (same pattern as the Contact page) — it actually reaches us
+// instead of vanishing into a fake success state.
+const DEMO_EMAIL = 'hello@solace.health';
 
 const INPUT_CLASS =
   'mt-2 w-full rounded-pill border border-black/10 bg-white px-5 py-3.5 text-base text-ink placeholder:text-muted/60 outline-none transition-colors duration-200 focus:border-solace-green-500';
@@ -104,10 +109,11 @@ export default function Demo() {
                 className="text-ink"
               />
               <p className="mt-5 font-sofia text-2xl font-medium tracking-[-0.02em] text-ink">
-                Thanks.
+                Almost there.
               </p>
               <p className="mt-2 max-w-xs text-[15px] text-muted">
-                We will reach out within one business day.
+                Your email is open with the request ready to send. Hit send and
+                we will reach out within one business day.
               </p>
             </div>
           ) : (
@@ -115,19 +121,28 @@ export default function Demo() {
               className="space-y-5"
               onSubmit={(e) => {
                 e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                const name = String(data.get('name') ?? '');
+                const email = String(data.get('email') ?? '');
+                const org = String(data.get('org') ?? '');
+                const body = `Name: ${name}\nWork email: ${email}\nOrganization: ${org}\n\nI'd like to book a Solace demo.`;
+                window.location.href = `mailto:${DEMO_EMAIL}?subject=${encodeURIComponent(
+                  'Demo request',
+                )}&body=${encodeURIComponent(body)}`;
                 setSent(true);
               }}
             >
               {FIELDS.map((f) => (
-                <div key={f.label}>
+                <div key={f.name}>
                   <label
-                    htmlFor={`${uid}-${f.autoComplete}`}
+                    htmlFor={`${uid}-${f.name}`}
                     className="text-sm font-medium text-ink"
                   >
                     {f.label}
                   </label>
                   <input
-                    id={`${uid}-${f.autoComplete}`}
+                    id={`${uid}-${f.name}`}
+                    name={f.name}
                     required
                     type={f.type}
                     placeholder={f.placeholder}
