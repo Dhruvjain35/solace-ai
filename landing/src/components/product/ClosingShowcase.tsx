@@ -180,7 +180,8 @@ export default function ClosingShowcase() {
 
   return (
     <>
-      {/* ===== 1 · Showcase band — pale gradient farewell card ===== */}
+      {/* ===== 1 · Showcase band — a clean mint farewell card, inset with even
+          margins on the page's white. ===== */}
       <section
         ref={bandRef}
         aria-labelledby="closing-heading"

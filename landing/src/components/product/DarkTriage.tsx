@@ -46,8 +46,8 @@ const BRIEF_ROWS = [
     label: 'Vitals',
     Icon: Activity,
     body: (
-      <span className="font-mono text-[13px] tracking-[0.02em] text-white/80">
-        HR 118 · BP 148/92 · SpO₂ 94% · Temp 99.1°F
+      <span className="text-[15px] tabular-nums tracking-[0.01em] text-white/85">
+        HR 118 &nbsp;·&nbsp; BP 148/92 &nbsp;·&nbsp; SpO₂ 94% &nbsp;·&nbsp; Temp 99.1°F
       </span>
     ),
   },
@@ -203,22 +203,14 @@ export default function DarkTriage() {
             {/* The three facets, as real rows */}
             <ul className="divide-y divide-white/[0.07]">
               {BRIEF_ROWS.map(({ label, Icon, body }) => (
-                <motion.li
-                  key={label}
-                  variants={circleItem}
-                  className="flex items-start gap-4 px-6 py-5"
-                >
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-pop">
-                    <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                      {label}
-                    </p>
-                    <p className="mt-1.5 text-[15px] leading-relaxed text-white/90">
-                      {body}
-                    </p>
-                  </div>
+                <motion.li key={label} variants={circleItem} className="px-6 py-5">
+                  <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-solace-green-300/75">
+                    <Icon size={13} strokeWidth={2.2} aria-hidden="true" />
+                    {label}
+                  </p>
+                  <p className="mt-2.5 text-[15px] leading-relaxed text-white/85">
+                    {body}
+                  </p>
                 </motion.li>
               ))}
             </ul>
@@ -237,8 +229,10 @@ export default function DarkTriage() {
         />
       </div>
 
-      {/* ===== 5 · Gradient mega paragraph — the closing beat of the dark act ===== */}
-      <div ref={gradRef} className="mx-auto max-w-5xl px-6 pb-[16vh] pt-[14vh] md:px-12">
+      {/* ===== 5 · Gradient mega paragraph — the closing beat of the dark act.
+          The mint closing band that follows is an inset card floating on this
+          same ink, so the act ends on clean black, not a glow. ===== */}
+      <div ref={gradRef} className="mx-auto max-w-5xl px-6 pb-[14vh] pt-[14vh] md:px-12">
         <p className="font-sofia text-[clamp(38px,5.8vw,84px)] font-medium leading-[1.16] tracking-[-0.02em]">
           {/* Screen readers get one continuous sentence; the word-split scrub
               layer is decorative (same pattern as BigStatement). */}
@@ -258,17 +252,6 @@ export default function DarkTriage() {
           </span>
         </p>
       </div>
-
-      {/* ===== 6 · Transition — warm the base toward the mint closing act so
-          the hand-off reads as a fade, not a hard black-to-mint cut. ===== */}
-      <div
-        aria-hidden="true"
-        className="h-[16vh] w-full"
-        style={{
-          backgroundImage:
-            'radial-gradient(120% 130% at 50% 100%, rgba(31,191,143,0.22), rgba(31,191,143,0) 68%)',
-        }}
-      />
     </section>
   );
 }
