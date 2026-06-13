@@ -1,93 +1,67 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Leaf, Asterisk } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
+import { INTEGRATIONS, type Integration } from '../../lib/integrations';
 
 /*
- * IntegrationMarquee — the "works with your EHR" wall, modelled on
- * app.forhims.com's integration band: an eyebrow + headline over two rows of
- * logo cards scrolling in opposite directions, faded at both edges, then a
- * one-line promise.
- *
- * Each brand shows a real logo from public/assets/integrations/<key>.png when
- * present, and otherwise falls back to a brand-styled wordmark — so dropping a
- * transparent PNG into that folder swaps it in with zero code changes.
+ * IntegrationMarquee — the "works with your EHR" band. Two rows of logo cards
+ * drift in opposite directions on a pure-CSS keyframe loop (.marquee-strip in
+ * index.css): the strip renders twice inside a w-max flex and translates
+ * exactly -50%, so the loop is seamless and immune to re-render hiccups.
+ * Cards pause on hover and click through to /integrations/<slug>.
  */
 
-type Brand = { key: string; alt: string; mark: ReactNode };
+const ROW_A = INTEGRATIONS.slice(0, 7);
+const ROW_B = INTEGRATIONS.slice(7);
 
-const ROW_A: Brand[] = [
-  { key: 'epic', alt: 'Epic', mark: <span className="text-[24px] font-extrabold italic tracking-tight text-[#A4123F]">Epic</span> },
-  { key: 'oracle-health', alt: 'Oracle Health', mark: <span className="text-[20px] font-semibold tracking-tight text-[#C74634]">Oracle Health</span> },
-  { key: 'athenahealth', alt: 'athenahealth', mark: (
-    <span className="flex items-center gap-1.5 text-[19px] font-semibold tracking-tight text-[#582C83]">
-      <Leaf size={17} className="text-[#7AB800]" aria-hidden="true" />athenahealth
-    </span>
-  ) },
-  { key: 'cerner', alt: 'Cerner', mark: <span className="text-[22px] font-semibold tracking-tight text-[#1A9CA6]">Cerner</span> },
-  { key: 'nextgen', alt: 'NextGen Healthcare', mark: <span className="text-[21px] font-bold lowercase tracking-tight text-[#E0531F]">nextgen<span className="text-ink">.</span></span> },
-  { key: 'elation', alt: 'Elation Health', mark: (
-    <span className="flex items-center text-[21px] font-medium tracking-tight text-[#16A3C7]">
-      <Asterisk size={18} strokeWidth={2.5} aria-hidden="true" />Elation
-    </span>
-  ) },
-  { key: 'drchrono', alt: 'DrChrono', mark: <span className="text-[20px] font-semibold tracking-tight text-[#3CAE2B]">dr<span className="text-ink">chrono</span></span> },
-];
-
-const ROW_B: Brand[] = [
-  { key: 'eclinicalworks', alt: 'eClinicalWorks', mark: <span className="text-[18px] font-semibold italic tracking-tight text-[#1C2B4A]">eClinicalWorks</span> },
-  { key: 'advancedmd', alt: 'AdvancedMD', mark: <span className="text-[20px] font-semibold tracking-tight text-[#3C4651]">Advanced<span className="text-[#E8772E]">MD</span></span> },
-  { key: 'veradigm', alt: 'Veradigm', mark: <span className="text-[20px] font-semibold tracking-tight text-[#2A1A57]">veradigm</span> },
-  { key: 'meditech', alt: 'MEDITECH', mark: <span className="text-[18px] font-bold tracking-[0.04em] text-[#3FAE6B]">MEDITECH</span> },
-  { key: 'practice-fusion', alt: 'Practice Fusion', mark: <span className="text-[18px] font-semibold tracking-tight text-[#1C3D6E]">practice<span className="text-[#3AA6E0]">fusion</span></span> },
-  { key: 'greenway', alt: 'Greenway Health', mark: <span className="text-[19px] font-bold tracking-tight text-[#3C4651]">Greenway <span className="text-[#2BB673]">Health</span></span> },
-  { key: 'smart-on-fhir', alt: 'SMART on FHIR', mark: <span className="text-[19px] font-semibold tracking-tight text-ink">SMART <span className="text-solace-green-600">on FHIR</span></span> },
-];
-
-function LogoSlot({ brand }: { brand: Brand }) {
+function LogoCard({ item }: { item: Integration }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="mx-2 flex h-[88px] w-[200px] shrink-0 items-center justify-center rounded-2xl bg-white px-6 shadow-soft ring-1 ring-black/[0.05]">
-      {failed ? (
-        brand.mark
-      ) : (
-        <img
-          src={`/assets/integrations/${brand.key}.png`}
-          alt={brand.alt}
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className="max-h-[44px] max-w-[152px] object-contain"
-        />
-      )}
-    </div>
+    <Link
+      to={`/integrations/${item.slug}`}
+      aria-label={`${item.name} integration guide`}
+      className="group/card mx-2 flex h-[88px] w-[200px] shrink-0 items-center justify-center rounded-2xl bg-white px-6 shadow-soft ring-1 ring-black/[0.05] transition-shadow duration-300 hover:shadow-pop hover:ring-black/10"
+    >
+      <span className="whitespace-nowrap transition-transform duration-300 group-hover/card:scale-[1.04]">
+        {failed ? (
+          item.mark
+        ) : (
+          <img
+            src={`/assets/integrations/${item.slug}.png`}
+            alt={item.name}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className="max-h-[44px] max-w-[152px] object-contain"
+          />
+        )}
+      </span>
+    </Link>
   );
 }
 
 const EDGE_MASK =
   '[mask-image:linear-gradient(to_right,transparent,black_7%,black_93%,transparent)]';
 
-function Row({ items, reverse }: { items: Brand[]; reverse?: boolean }) {
+function Row({ items, reverse }: { items: Integration[]; reverse?: boolean }) {
   const reduce = useReducedMotion();
   const strip = (
-    <div className="flex shrink-0">
-      {items.map((b) => (
-        <LogoSlot key={b.key} brand={b} />
+    <div className="flex shrink-0 items-center">
+      {items.map((item) => (
+        <LogoCard key={item.slug} item={item} />
       ))}
     </div>
   );
   if (reduce) {
-    return <div className={`overflow-x-auto ${EDGE_MASK}`}>{strip}</div>;
+    return <div className={`marquee-row overflow-x-auto ${EDGE_MASK}`}>{strip}</div>;
   }
   return (
-    <div className={`overflow-hidden ${EDGE_MASK}`}>
-      <motion.div
-        className="flex w-max"
-        animate={{ x: reverse ? ['-50%', '0%'] : ['0%', '-50%'] }}
-        transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-      >
+    <div className={`marquee-row overflow-hidden ${EDGE_MASK}`}>
+      <div className={`marquee-strip flex w-max ${reverse ? 'marquee-strip--reverse' : ''}`}>
         {strip}
         {strip}
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -128,16 +102,25 @@ export default function IntegrationMarquee() {
         <Row items={ROW_B} reverse />
       </div>
 
-      <motion.p
+      <motion.div
         initial={{ opacity: 0, y: reduce ? 0 : 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.6 }}
         transition={rise}
-        className="mx-auto mt-12 max-w-md px-6 text-center text-base text-muted md:mt-14 md:text-lg"
+        className="mx-auto mt-12 flex max-w-xl flex-col items-center gap-5 px-6 text-center md:mt-14"
       >
-        Built on SMART on FHIR, so Solace connects to the chart you already keep,
-        no rip-and-replace.
-      </motion.p>
+        <p className="text-base text-muted md:text-lg">
+          Built on SMART on FHIR, so Solace connects to the chart you already
+          keep, no rip-and-replace.
+        </p>
+        <Link
+          to="/integrations"
+          className="inline-flex items-center gap-2 rounded-pill border border-ink/10 bg-white px-6 py-3 text-sm font-medium text-ink shadow-soft transition-transform duration-[600ms] ease-hims-expo hover:scale-[1.03]"
+        >
+          Explore every integration
+          <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </motion.div>
     </section>
   );
 }

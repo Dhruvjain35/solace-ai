@@ -56,6 +56,24 @@
   }
 }
 
+/* Seamless infinite marquee: the strip is rendered twice inside a w-max flex,
+   so translating exactly -50% loops with no visible seam. CSS animation (not
+   JS) keeps it butter-smooth and immune to re-render hiccups. */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-strip {
+  animation: marquee-x var(--marquee-duration, 42s) linear infinite;
+  will-change: transform;
+}
+.marquee-strip--reverse {
+  animation-direction: reverse;
+}
+.marquee-row:hover .marquee-strip {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
