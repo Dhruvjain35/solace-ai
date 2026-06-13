@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Leaf, Asterisk } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
@@ -6,42 +6,59 @@ import { himsFade, himsMove } from '../../lib/hims';
 /*
  * IntegrationMarquee — the "works with your EHR" wall, modelled on
  * app.forhims.com's integration band: an eyebrow + headline over two rows of
- * logo cards that scroll in opposite directions, fading at both edges, then a
- * one-line promise. Logos are brand-styled wordmarks (crisp at any size, no
- * broken images); drop real SVGs into public/assets/integrations to swap them.
+ * logo cards scrolling in opposite directions, faded at both edges, then a
+ * one-line promise.
+ *
+ * Each brand shows a real logo from public/assets/integrations/<key>.png when
+ * present, and otherwise falls back to a brand-styled wordmark — so dropping a
+ * transparent PNG into that folder swaps it in with zero code changes.
  */
 
-// Each brand rendered as an approximate wordmark in its signature colour.
-const brand = (node: ReactNode) => node;
+type Brand = { key: string; alt: string; mark: ReactNode };
 
-const ROW_A: ReactNode[] = [
-  <span key="epic" className="text-[24px] font-extrabold italic tracking-tight text-[#A4123F]">Epic</span>,
-  <span key="oracle" className="text-[20px] font-semibold tracking-tight text-[#C74634]">Oracle Health</span>,
-  <span key="athena" className="flex items-center gap-1.5 text-[19px] font-semibold tracking-tight text-ink">
-    <Leaf size={17} className="text-[#7AB800]" aria-hidden="true" />athenahealth
-  </span>,
-  <span key="cerner" className="text-[22px] font-semibold tracking-tight text-[#1A9CA6]">Cerner</span>,
-  <span key="nextgen" className="text-[21px] font-bold lowercase tracking-tight text-[#E0531F]">nextgen<span className="text-ink">.</span></span>,
-  <span key="elation" className="flex items-center text-[21px] font-medium tracking-tight text-[#16A3C7]">
-    <Asterisk size={18} strokeWidth={2.5} aria-hidden="true" />Elation
-  </span>,
-  <span key="drchrono" className="text-[20px] font-semibold tracking-tight text-[#3CAE2B]">dr<span className="text-ink">chrono</span></span>,
+const ROW_A: Brand[] = [
+  { key: 'epic', alt: 'Epic', mark: <span className="text-[24px] font-extrabold italic tracking-tight text-[#A4123F]">Epic</span> },
+  { key: 'oracle-health', alt: 'Oracle Health', mark: <span className="text-[20px] font-semibold tracking-tight text-[#C74634]">Oracle Health</span> },
+  { key: 'athenahealth', alt: 'athenahealth', mark: (
+    <span className="flex items-center gap-1.5 text-[19px] font-semibold tracking-tight text-[#582C83]">
+      <Leaf size={17} className="text-[#7AB800]" aria-hidden="true" />athenahealth
+    </span>
+  ) },
+  { key: 'cerner', alt: 'Cerner', mark: <span className="text-[22px] font-semibold tracking-tight text-[#1A9CA6]">Cerner</span> },
+  { key: 'nextgen', alt: 'NextGen Healthcare', mark: <span className="text-[21px] font-bold lowercase tracking-tight text-[#E0531F]">nextgen<span className="text-ink">.</span></span> },
+  { key: 'elation', alt: 'Elation Health', mark: (
+    <span className="flex items-center text-[21px] font-medium tracking-tight text-[#16A3C7]">
+      <Asterisk size={18} strokeWidth={2.5} aria-hidden="true" />Elation
+    </span>
+  ) },
+  { key: 'drchrono', alt: 'DrChrono', mark: <span className="text-[20px] font-semibold tracking-tight text-[#3CAE2B]">dr<span className="text-ink">chrono</span></span> },
 ];
 
-const ROW_B: ReactNode[] = [
-  <span key="eclinical" className="text-[18px] font-semibold tracking-tight text-[#1C2B4A]">eClinicalWorks</span>,
-  <span key="advancedmd" className="text-[20px] font-semibold tracking-tight text-[#E8772E]">Advanced<span className="text-ink">MD</span></span>,
-  <span key="veradigm" className="text-[20px] font-semibold tracking-tight text-[#5B2D8E]">Veradigm</span>,
-  <span key="meditech" className="text-[18px] font-bold tracking-[0.04em] text-[#0B5FA5]">MEDITECH</span>,
-  <span key="practicefusion" className="text-[18px] font-semibold tracking-tight text-[#2E7D5B]">Practice Fusion</span>,
-  <span key="smart" className="text-[19px] font-semibold tracking-tight text-ink">SMART <span className="text-solace-green-600">on FHIR</span></span>,
-  <span key="onc" className="text-[20px] font-semibold tracking-tight text-[#1A6BB0]">Greenway</span>,
+const ROW_B: Brand[] = [
+  { key: 'eclinicalworks', alt: 'eClinicalWorks', mark: <span className="text-[18px] font-semibold italic tracking-tight text-[#1C2B4A]">eClinicalWorks</span> },
+  { key: 'advancedmd', alt: 'AdvancedMD', mark: <span className="text-[20px] font-semibold tracking-tight text-[#3C4651]">Advanced<span className="text-[#E8772E]">MD</span></span> },
+  { key: 'veradigm', alt: 'Veradigm', mark: <span className="text-[20px] font-semibold tracking-tight text-[#2A1A57]">veradigm</span> },
+  { key: 'meditech', alt: 'MEDITECH', mark: <span className="text-[18px] font-bold tracking-[0.04em] text-[#3FAE6B]">MEDITECH</span> },
+  { key: 'practice-fusion', alt: 'Practice Fusion', mark: <span className="text-[18px] font-semibold tracking-tight text-[#1C3D6E]">practice<span className="text-[#3AA6E0]">fusion</span></span> },
+  { key: 'greenway', alt: 'Greenway Health', mark: <span className="text-[19px] font-bold tracking-tight text-[#3C4651]">Greenway <span className="text-[#2BB673]">Health</span></span> },
+  { key: 'smart-on-fhir', alt: 'SMART on FHIR', mark: <span className="text-[19px] font-semibold tracking-tight text-ink">SMART <span className="text-solace-green-600">on FHIR</span></span> },
 ];
 
-function LogoCard({ children }: { children: ReactNode }) {
+function LogoSlot({ brand }: { brand: Brand }) {
+  const [failed, setFailed] = useState(false);
   return (
-    <div className="mx-2 flex h-[88px] w-[200px] shrink-0 items-center justify-center rounded-2xl bg-white shadow-soft ring-1 ring-black/[0.05]">
-      {children}
+    <div className="mx-2 flex h-[88px] w-[200px] shrink-0 items-center justify-center rounded-2xl bg-white px-6 shadow-soft ring-1 ring-black/[0.05]">
+      {failed ? (
+        brand.mark
+      ) : (
+        <img
+          src={`/assets/integrations/${brand.key}.png`}
+          alt={brand.alt}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="max-h-[44px] max-w-[152px] object-contain"
+        />
+      )}
     </div>
   );
 }
@@ -49,12 +66,12 @@ function LogoCard({ children }: { children: ReactNode }) {
 const EDGE_MASK =
   '[mask-image:linear-gradient(to_right,transparent,black_7%,black_93%,transparent)]';
 
-function Row({ items, reverse }: { items: ReactNode[]; reverse?: boolean }) {
+function Row({ items, reverse }: { items: Brand[]; reverse?: boolean }) {
   const reduce = useReducedMotion();
   const strip = (
     <div className="flex shrink-0">
-      {items.map((node, i) => (
-        <LogoCard key={i}>{brand(node)}</LogoCard>
+      {items.map((b) => (
+        <LogoSlot key={b.key} brand={b} />
       ))}
     </div>
   );
@@ -81,7 +98,7 @@ export default function IntegrationMarquee() {
   return (
     <section
       aria-labelledby="integrations-heading"
-      className="overflow-hidden py-[14vh]"
+      className="overflow-hidden py-[10vh] md:py-[14vh]"
       style={{ backgroundImage: 'linear-gradient(180deg, #ffffff 0%, #f3f5f4 100%)' }}
     >
       <div className="mx-auto max-w-4xl px-6 text-center">
@@ -100,13 +117,13 @@ export default function IntegrationMarquee() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.5 }}
           transition={{ ...rise, delay: 0.05 }}
-          className="mx-auto mt-5 max-w-[15ch] font-sofia text-[clamp(34px,5vw,72px)] font-medium leading-[1.04] tracking-hims text-ink"
+          className="mx-auto mt-5 max-w-[15ch] font-sofia text-[clamp(30px,5vw,72px)] font-medium leading-[1.04] tracking-hims text-ink"
         >
           Works with the EHR you already run.
         </motion.h2>
       </div>
 
-      <div className="mt-14 space-y-4">
+      <div className="mt-12 space-y-4 md:mt-14">
         <Row items={ROW_A} />
         <Row items={ROW_B} reverse />
       </div>
@@ -116,7 +133,7 @@ export default function IntegrationMarquee() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.6 }}
         transition={rise}
-        className="mx-auto mt-14 max-w-md px-6 text-center text-base text-muted md:text-lg"
+        className="mx-auto mt-12 max-w-md px-6 text-center text-base text-muted md:mt-14 md:text-lg"
       >
         Built on SMART on FHIR, so Solace connects to the chart you already keep,
         no rip-and-replace.

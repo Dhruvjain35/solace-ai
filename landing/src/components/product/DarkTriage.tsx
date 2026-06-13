@@ -232,7 +232,7 @@ export default function DarkTriage() {
       {/* ===== 5 · Gradient mega paragraph — the closing beat of the dark act.
           The mint closing band that follows is an inset card floating on this
           same ink, so the act ends on clean black, not a glow. ===== */}
-      <div ref={gradRef} className="mx-auto max-w-5xl px-6 pb-[14vh] pt-[14vh] md:px-12">
+      <div ref={gradRef} className="mx-auto max-w-5xl px-6 pb-[9vh] pt-[10vh] md:px-12 md:pb-[14vh] md:pt-[14vh]">
         <p className="font-sofia text-[clamp(38px,5.8vw,84px)] font-medium leading-[1.16] tracking-[-0.02em]">
           {/* Screen readers get one continuous sentence; the word-split scrub
               layer is decorative (same pattern as BigStatement). */}
