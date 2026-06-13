@@ -121,7 +121,7 @@ export default function DarkTriage() {
           id="triage-heading"
           word="Triage."
           from="left"
-          className="text-[clamp(110px,16vw,240px)] text-white"
+          className="text-[clamp(52px,14vw,240px)] text-white"
         />
       </div>
 
