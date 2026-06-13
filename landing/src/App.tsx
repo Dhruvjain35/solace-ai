@@ -6,6 +6,8 @@ import Company from './pages/Company';
 import HowItWorks from './pages/HowItWorks';
 import Pricing from './pages/Pricing';
 import Demo from './pages/Demo';
+import Integrations from './pages/Integrations';
+import IntegrationGuide from './pages/IntegrationGuide';
 export default function App() {
   return (
     <BrowserRouter>
@@ -16,6 +18,8 @@ export default function App() {
           <Route path="/clinicians" element={<Clinicians />} />
           <Route path="/company" element={<Company />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/integrations/:slug" element={<IntegrationGuide />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/blog" element={<Navigate to="/how-it-works" replace />} />
           <Route path="/demo" element={<Demo />} />
