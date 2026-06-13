@@ -271,32 +271,13 @@ export default function TileGrid() {
         {/* ---- Column 3 (drifts up) ---- */}
         <motion.div style={{ y: yOdd }} className={`${col} hidden pt-4 md:flex`}>
           <Tile index={5} reduce={reduce} className="h-[280px] bg-ink">
-            <div className="flex h-full flex-col justify-between p-6 text-white">
-              {/* Live pulse — the wait time is updating right now. */}
-              <div className="flex items-center gap-2">
-                <motion.span
-                  className="h-2 w-2 rounded-full bg-solace-green-500"
-                  animate={
-                    still || !onStage ? { opacity: 1 } : { opacity: [1, 0.3, 1] }
-                  }
-                  transition={
-                    still || !onStage
-                      ? { duration: 0 }
-                      : { duration: 1.6, ease: 'easeInOut', repeat: Infinity }
-                  }
-                />
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/50">
-                  Live
-                </span>
-              </div>
-              <div>
-                <p className="font-sofia text-[40px] font-medium leading-none tracking-[-0.02em]">
-                  35–45 min
-                </p>
-                <p className="mt-2.5 text-sm text-white/70">
-                  your real wait time, updated every 15 seconds
-                </p>
-              </div>
+            <div className="flex h-full flex-col justify-center p-6 text-white">
+              <p className="font-sofia text-[40px] font-medium leading-none tracking-[-0.02em]">
+                35–45 min
+              </p>
+              <p className="mt-2.5 text-sm text-white/70">
+                your real wait time, updated every 15 seconds
+              </p>
             </div>
           </Tile>
 
