@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, ArrowDown, Brain, Cpu, Check } from 'lucide-react';
+import { ArrowRight, ArrowDown, Check } from 'lucide-react';
 import { himsFade, himsMove } from '../../lib/hims';
 
 /*
@@ -102,10 +102,34 @@ export function PhiScrub() {
   );
 }
 
+// Each step shows the actual artifact it emits — the real payload the model or
+// runtime hands to the next stage — so the flow reads as a data pipeline, not a
+// decorated three-icon row. The coded/slot tokens carry the meaning.
 const STEPS = [
-  { Icon: Brain, who: 'Model', phi: false, title: 'Plan', body: 'The model reads the coded catalog and the question, then emits a structured query plan. No PHI is in scope.' },
-  { Icon: Cpu, who: 'Your runtime', phi: true, title: 'Execute', body: 'Your trusted runtime runs the plan against the real chart, fills the slots, and keeps every identifier inside your environment.' },
-  { Icon: Brain, who: 'Model', phi: false, title: 'Narrate', body: 'The model writes the answer over slot tokens — never the raw values — so re-identification only happens in your runtime.' },
+  {
+    who: 'Model',
+    io: 'in: coded catalog → out: plan',
+    phi: false,
+    title: 'Plan',
+    body: 'The model reads the coded catalog and the question, then emits a structured query plan. No PHI is in scope.',
+    artifact: 'fetch(problem) where code = I20.9\nfill {S1} from vitals.HR',
+  },
+  {
+    who: 'Your runtime',
+    io: 'in: plan + chart → out: filled slots',
+    phi: true,
+    title: 'Execute',
+    body: 'Your trusted runtime runs the plan against the real chart, fills the slots, and keeps every identifier inside your environment.',
+    artifact: 'S1 = "Marcus Reyes"   // never leaves\nHR = 118              your runtime',
+  },
+  {
+    who: 'Model',
+    io: 'in: slot tokens → out: narration',
+    phi: false,
+    title: 'Narrate',
+    body: 'The model writes the answer over slot tokens — never the raw values — so re-identification only happens in your runtime.',
+    artifact: '"{S1} presents with angina,\n HR {S1.hr}, consider ECG…"',
+  },
 ];
 
 export function PipelineFlow() {
@@ -124,15 +148,15 @@ export function PipelineFlow() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`inline-flex h-10 w-10 items-center justify-center rounded-tile ${s.phi ? 'bg-white/15 text-white' : 'bg-solace-soft text-solace-green-700'}`}>
-              <s.Icon size={19} strokeWidth={1.75} aria-hidden="true" />
+            <span className={`font-mono text-[28px] font-medium leading-none tabular-nums tracking-[-0.04em] ${s.phi ? 'text-white/40' : 'text-solace-green-300'}`}>
+              {String(i + 1).padStart(2, '0')}
             </span>
             <span className={`rounded-pill px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${s.phi ? 'bg-white/15 text-white' : 'bg-solace-soft text-solace-green-700'}`}>
               {s.who}
             </span>
           </div>
           <p className={`mt-5 font-mono text-[10px] uppercase tracking-[0.16em] ${s.phi ? 'text-white/60' : 'text-muted'}`}>
-            {`Step ${i + 1}`} · {s.phi ? 'PHI stays here' : 'No PHI'}
+            {s.phi ? 'PHI stays here' : 'No PHI'}
           </p>
           <h3 className={`mt-1 font-sofia text-[22px] font-medium tracking-[-0.02em] ${s.phi ? 'text-white' : 'text-ink'}`}>
             {s.title}
@@ -140,6 +164,19 @@ export function PipelineFlow() {
           <p className={`mt-2 text-[14px] leading-relaxed ${s.phi ? 'text-white/75' : 'text-muted'}`}>
             {s.body}
           </p>
+          <pre
+            aria-hidden="true"
+            className={`mt-5 overflow-hidden whitespace-pre-wrap break-words rounded-tile px-3.5 py-3 font-mono text-[10.5px] leading-relaxed ${
+              s.phi
+                ? 'bg-black/15 text-white/70 ring-1 ring-white/10'
+                : 'bg-solace-soft/60 text-solace-green-700 ring-1 ring-solace-green-300/30'
+            }`}
+          >
+            <span className={`mb-1.5 block text-[9px] uppercase tracking-[0.12em] ${s.phi ? 'text-white/40' : 'text-muted/60'}`}>
+              {s.io}
+            </span>
+            {s.artifact}
+          </pre>
         </motion.div>
       ))}
     </div>

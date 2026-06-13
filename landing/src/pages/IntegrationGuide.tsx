@@ -4,10 +4,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronRight,
-  ShieldCheck,
-  Lock,
-  ScrollText,
-  KeyRound,
   FlaskConical,
   BookOpen,
 } from 'lucide-react';
@@ -43,22 +39,22 @@ import {
 
 const SECURITY_NOTES = [
   {
-    Icon: ShieldCheck,
+    tag: 'phi-isolation',
     title: 'PHI isolation in code',
     body: 'The AI plans and narrates over coded metadata. Raw PHI never reaches the model — and a leak test gates every release.',
   },
   {
-    Icon: KeyRound,
+    tag: 'smart-v2-scopes',
     title: 'Minimum-necessary scopes',
     body: 'Solace requests only the SMART v2 scopes a workflow needs. Nothing broad, nothing unused.',
   },
   {
-    Icon: Lock,
+    tag: 'kms-vault',
     title: 'Secrets in a vault',
     body: 'Client secrets and tokens live in a managed vault, never in the browser or a config file.',
   },
   {
-    Icon: ScrollText,
+    tag: 'append-only-log',
     title: 'Every write audited',
     body: 'Every read and write the AI performs is saved to the record, with a clinician on the final call.',
   },
@@ -337,12 +333,17 @@ export default function IntegrationGuide() {
           </Reveal>
 
           <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {SECURITY_NOTES.map(({ Icon, title, body }, i) => (
+            {SECURITY_NOTES.map(({ tag, title, body }, i) => (
               <Reveal key={title} index={i} reduce={reduce}>
                 <div className="group flex h-full flex-col rounded-tile bg-white p-6 shadow-card ring-1 ring-black/[0.06] transition-all duration-[400ms] ease-hims-expo hover:-translate-y-1 hover:shadow-lift hover:ring-solace-green-300/50">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-solace-soft text-solace-green-700 transition-colors duration-[400ms] ease-hims-expo group-hover:bg-solace-green-700 group-hover:text-white">
-                    <Icon size={19} strokeWidth={1.9} aria-hidden="true" />
-                  </span>
+                  <div className="flex items-baseline justify-between gap-2 border-b border-black/[0.07] pb-3">
+                    <span className="font-mono text-[20px] font-medium leading-none tabular-nums tracking-[-0.04em] text-solace-green-300 transition-colors duration-[400ms] ease-hims-expo group-hover:text-solace-green-600">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span className="font-mono text-[10px] tracking-[0.04em] text-muted/60">
+                      {tag}
+                    </span>
+                  </div>
                   <h3 className="mt-4 font-sofia text-[17px] font-medium leading-tight tracking-[-0.01em] text-ink">
                     {title}
                   </h3>

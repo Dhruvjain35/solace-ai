@@ -1,26 +1,13 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-  ShieldCheck,
-  EyeOff,
-  FileCheck2,
-  Lock,
-  KeyRound,
-  Network,
-  ScrollText,
-  Workflow,
-  Timer,
-} from 'lucide-react';
-
 /*
  * Security page content. The nine controls map 1:1 to Solace's real
  * architecture, grouped into three categories (AI safety, Infrastructure,
- * Governance) so the grid reads as a deliberate, structured set rather than a
- * generic 3-col. The stat row and the attestation posture cards live here too,
- * so the page file stays focused on layout and under budget.
+ * Governance) so the grid reads as a deliberate, numbered control catalog
+ * rather than a generic icon-card 3-col. The stat row and the attestation
+ * posture cards live here too, so the page file stays focused on layout and
+ * under budget.
  */
 
 export type Control = {
-  icon: LucideIcon;
   kicker: string;
   cat: string;
   title: string;
@@ -36,7 +23,6 @@ export const CONTROL_CATEGORIES = [
 
 export const CONTROLS: Control[] = [
   {
-    icon: EyeOff,
     kicker: 'PHI isolation',
     cat: 'AI safety',
     title: 'The model never sees raw PHI.',
@@ -48,7 +34,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: ShieldCheck,
     kicker: 'Consent gate',
     cat: 'AI safety',
     title: 'No consent, no AI. Enforced at the boundary.',
@@ -60,7 +45,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: FileCheck2,
     kicker: 'Confirm-gated writes',
     cat: 'AI safety',
     title: 'Nothing reaches the chart without a click.',
@@ -72,7 +56,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: Lock,
     kicker: 'Encryption',
     cat: 'Infrastructure',
     title: 'Encrypted in transit and at rest.',
@@ -84,7 +67,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: KeyRound,
     kicker: 'Access control',
     cat: 'Infrastructure',
     title: 'Passwordless, role-scoped, tenant-isolated.',
@@ -96,7 +78,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: Network,
     kicker: 'Network & edge',
     cat: 'Infrastructure',
     title: 'Hardened at the edge with CloudFront + WAF.',
@@ -108,7 +89,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: ScrollText,
     kicker: 'Audit trail',
     cat: 'Governance',
     title: 'Append-only, on every sensitive action.',
@@ -120,7 +100,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: Workflow,
     kicker: 'Interoperability',
     cat: 'Governance',
     title: 'SMART on FHIR v2, minimum-necessary scopes.',
@@ -132,7 +111,6 @@ export const CONTROLS: Control[] = [
     ],
   },
   {
-    icon: Timer,
     kicker: 'Data minimization',
     cat: 'Governance',
     title: 'Short-lived sessions, automatic expiry.',
@@ -145,12 +123,12 @@ export const CONTROLS: Control[] = [
   },
 ];
 
-export type Stat = { big: string; label: string };
+export type Stat = { big: string; label: string; note: string };
 export const STATS: Stat[] = [
-  { big: '749', label: 'automated tests every release' },
-  { big: '0', label: 'raw PHI tokens allowed in any prompt' },
-  { big: '100%', label: 'AI write-backs confirm-gated by a clinician' },
-  { big: '1', label: 'tenant-isolation check on every query' },
+  { big: '749', label: 'automated tests every release', note: 'PASS · gates the build' },
+  { big: '0', label: 'raw PHI tokens allowed in any prompt', note: 'enforced at the boundary' },
+  { big: '100%', label: 'AI write-backs confirm-gated by a clinician', note: 'no automatic chart writes' },
+  { big: '1', label: 'tenant-isolation check on every query', note: 'every workspace, every read' },
 ];
 
 export const POSTURE = [
