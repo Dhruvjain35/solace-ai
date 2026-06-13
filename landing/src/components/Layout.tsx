@@ -1,36 +1,37 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Nav from './Nav';
 import Footer from './Footer';
+import { applyMeta } from '../lib/seo';
 
 export default function Layout() {
   const { pathname } = useLocation();
 
-  // Scroll to top on route change.
+  // Scroll to top + update the page's title/description/social tags on nav.
   useEffect(() => {
     window.scrollTo(0, 0);
+    applyMeta(pathname);
   }, [pathname]);
 
   return (
     <>
       <Nav />
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={pathname}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          // Per-property split on the forhims curves so the route fade never
-          // fights section entrances running on the same two curves.
-          transition={{
-            opacity: { duration: 0.2, ease: [0.215, 0.61, 0.355, 1] },
-            y: { duration: 0.6, ease: [0.19, 1, 0.22, 1] },
-          }}
-        >
-          <Outlet />
-        </motion.main>
-      </AnimatePresence>
+      {/*
+       * The new page mounts immediately on navigation with a quick opacity-only
+       * fade. We intentionally do NOT use AnimatePresence mode="wait" or a
+       * y-translate exit here — that made every route change wait ~0.6s for the
+       * old page to animate out before the new one appeared, which read as a
+       * slow reload (the integrations "back" complaint). Instant + a soft fade.
+       */}
+      <motion.main
+        key={pathname}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.18, ease: [0.215, 0.61, 0.355, 1] }}
+      >
+        <Outlet />
+      </motion.main>
       <Footer />
     </>
   );
