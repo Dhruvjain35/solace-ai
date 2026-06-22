@@ -1,9 +1,10 @@
-# Triage.ai — Clinical Decision Support System
-# Copyright (c) 2026 Dhruv Jain & Sriyan Bodla. All rights reserved.
+# Solace — Clinical Decision Support System
+# Copyright (c) 2026 Dhruv Jain & Sriyan Bodla. Licensed under the MIT License (see LICENSE).
 #
-# Ported from triagegeist-live-demo/model.py into Solace. Same clinically-validated
-# simulation heuristics that match the thresholds and feature engineering from the
-# Triage.ai training notebook. Swap MODEL_MODE to "trained" once pickles are exported.
+# Provenance: the simulation heuristics in this module were authored by the same team
+# for our earlier Triage.ai / triagegeist project and ported into Solace. They mirror
+# the thresholds and feature engineering from the Triage.ai training notebook.
+# Swap MODEL_MODE to "trained" once the ensemble pickles are exported (see triage_ml.py).
 
 """Clinical triage prediction engine for ESI level estimation."""
 from __future__ import annotations

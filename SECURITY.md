@@ -1,6 +1,6 @@
 # Solace — Security Architecture
 
-**Prepared for HackFW 2026 judges.**
+**Prepared for UOE Summer of Code 2026 judges.**
 
 Solace handles real patient health information. This document details every security control in the system — from the network edge to the database row — and maps each one to the relevant HIPAA technical safeguard.
 
@@ -327,4 +327,4 @@ All scripts resolve the CMK by alias (`alias/solace`) — no hardcoded key UUIDs
 
 ---
 
-*Solace — HackFW 2026 | Dhruv Jain & Sriyan Bodla*
+*Solace — UOE Summer of Code 2026 | Dhruv Jain & Sriyan Bodla*
