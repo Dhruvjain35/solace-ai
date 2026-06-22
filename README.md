@@ -327,25 +327,6 @@ python scripts/deploy_amplify.py     # zip → Amplify deployment job
 
 ---
 
-## Provenance & what's new for UOE Summer of Code 2026
-
-We believe in being upfront with judges. **Solace is an ongoing project** that we (Dhruv & Sriyan) have been building since April 2026; it is not a from-scratch hackathon build. In the spirit of the rule that pre-existing projects must be *significantly improved during the event period*, here is the honest accounting:
-
-**Carried over (built before the event):**
-- The core triage heuristics in `backend/services/triage_engine.py` were authored by our team for our earlier **Triage.ai / triagegeist** project and ported into Solace.
-- The base FastAPI backend, React frontend, and the trained ML pipeline (`scripts/train_triage_model.py`) predate the event.
-
-**Improved during June 2026 (the event window):**
-- Full marketing site + Pricing page, SPA deep-link routing, and Vercel auto-deploy (June 12).
-- Live-demo reliability: re-seeded and verified the production triage board.
-- Submission hardening (June 21–22): licensing/consistency fixes (MIT `LICENSE`), accurate ML-architecture docs, demo-vs-production and synthetic-data disclosures, a landing-page overflow fix, a README restructure around the live demo, the [`CHANGELOG.md`](CHANGELOG.md), and a recorded walkthrough video.
-
-> The bulk of Solace — the FastAPI backend, the trained ML pipeline, the clinician workspace, and the voice agent — was built April–May 2026 and is pre-existing. We disclose this openly rather than present it as new.
-
-See [`CHANGELOG.md`](CHANGELOG.md) for the dated change log. We have **not** squashed or rewritten history to disguise the project's age — `git log` reflects the real timeline.
-
----
-
 ## Team
 
 | | |
