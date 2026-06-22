@@ -2,12 +2,14 @@
 
 **AI-native patient intake and clinical triage for emergency departments.**
 
+[![Watch the Solace demo](https://img.youtube.com/vi/hXsBIY23V2c/hqdefault.jpg)](https://youtu.be/hXsBIY23V2c)
+
 ### ▶️ See it live
 
 | | |
 |---|---|
 | 🏥 **Product app — judges start here** | **[solaceaidemo.vercel.app/showcase](https://solaceaidemo.vercel.app/showcase)** — auto-signs in, split-screen patient + clinician view |
-| 📹 **2-min walkthrough** | **▶️ _ADD YOUR YOUTUBE/LOOM LINK HERE BEFORE SUBMITTING_** |
+| 📹 **2-min walkthrough** | **[▶️ Watch the demo on YouTube](https://youtu.be/hXsBIY23V2c)** |
 | 🌐 **Marketing site** | **[solacehealth-eight.vercel.app](https://solacehealth-eight.vercel.app)** |
 | 🔌 **Live API health** | [`/health`](https://7ew5f2x01d.execute-api.us-east-1.amazonaws.com/health) → `{"status":"ok","mode":"aws","triage":"trained_ensemble"}` — the real 4-model ML ensemble is running in production, not a stub |
 
@@ -333,9 +335,12 @@ We believe in being upfront with judges. **Solace is an ongoing project** that w
 - The core triage heuristics in `backend/services/triage_engine.py` were authored by our team for our earlier **Triage.ai / triagegeist** project and ported into Solace.
 - The base FastAPI backend, React frontend, and the trained ML pipeline (`scripts/train_triage_model.py`) predate the event.
 
-**Built / significantly improved for UOE Summer of Code 2026:**
-<!-- TODO(team): edit this list to match exactly what you worked on during the event window, with dates. Judges may check git history — keep it truthful. -->
-- _(add your event-period work here — e.g. clinician workspace polish, voice-agent intents, SMART-on-FHIR PKCE flow, governance/bias-audit suite, deployment hardening, demo reliability, documentation)_
+**Improved during June 2026 (the event window):**
+- Full marketing site + Pricing page, SPA deep-link routing, and Vercel auto-deploy (June 12).
+- Live-demo reliability: re-seeded and verified the production triage board.
+- Submission hardening (June 21–22): licensing/consistency fixes (MIT `LICENSE`), accurate ML-architecture docs, demo-vs-production and synthetic-data disclosures, a landing-page overflow fix, a README restructure around the live demo, the [`CHANGELOG.md`](CHANGELOG.md), and a recorded walkthrough video.
+
+> The bulk of Solace — the FastAPI backend, the trained ML pipeline, the clinician workspace, and the voice agent — was built April–May 2026 and is pre-existing. We disclose this openly rather than present it as new.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for the dated change log. We have **not** squashed or rewritten history to disguise the project's age — `git log` reflects the real timeline.
 

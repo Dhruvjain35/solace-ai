@@ -11,13 +11,13 @@ history to disguise the project's age — this reflects the real `git log`.
 
 ## Event window — UOE Summer of Code 2026 (June 2026)
 
-<!-- TODO(team): replace these bullets with your real event-period work + dates. -->
+- **2026-06-22** — Recorded the [demo walkthrough](https://youtu.be/hXsBIY23V2c); re-seeded
+  and verified the live production triage board; finalized the Devpost submission.
 - **2026-06-21** — Submission hardening: scrubbed stale references, added MIT `LICENSE`,
   reconciled licensing headers, corrected the ML architecture description (4-model stacked
   ensemble), documented the demo-vs-production AI path and synthetic-data caveats, fixed a
   landing-page horizontal-overflow bug, restructured the README for the live demo, and added
   this changelog + a Devpost writeup (`docs/DEVPOST.md`).
-- _(add any features/improvements you build during the event window here, with dates)_
 
 ## June 2026
 - Replaced the landing mockup with the full marketing site + Pricing page; SPA deep-link
