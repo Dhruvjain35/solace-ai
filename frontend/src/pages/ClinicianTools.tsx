@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   BookOpen,
@@ -145,6 +145,8 @@ function pickText(obj: Record<string, unknown>, keys: string[]): string {
 
 export default function ClinicianTools() {
   const { hospitalId = "demo" } = useParams();
+  const location = useLocation();
+  const prefix = location.pathname.startsWith("/h/") ? "/h" : "";
   const [tab, setTab] = useState<Tab>("evidence");
 
   return (
@@ -158,7 +160,7 @@ export default function ClinicianTools() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
               Solace clinical decision support
             </div>
@@ -166,6 +168,13 @@ export default function ClinicianTools() {
               Evidence, early warning, HCC, handoff, loop closure
             </div>
           </div>
+          <Link
+            to={`${prefix}/${hospitalId}/clinician/ehr`}
+            className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-surface-low ring-1 ring-line text-ink text-sm font-semibold transition-all hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+          >
+            <Database className="w-4 h-4 text-text-muted" aria-hidden />
+            EHR connections
+          </Link>
         </div>
         <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
           {[

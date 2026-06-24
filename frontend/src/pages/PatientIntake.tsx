@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Keyboard, Loader2, Mic } from "lucide-react";
 import { MicButton } from "../components/patient/MicButton";
 import { MedicalInfoForm } from "../components/patient/MedicalInfoForm";
@@ -143,6 +143,23 @@ export default function PatientIntake() {
   );
   const currentUserStep = userSteps.indexOf(step as (typeof userSteps)[number]);
 
+  // Directional step transition: derive forward (Next) vs backward (Back) from the
+  // step's position in stepOrder, comparing against the previously-rendered step.
+  // This auto-applies to every navigation path (Next, Back, EHR skips, transcribe →
+  // followups) without threading a direction arg through each setStep call.
+  const reduce = useReducedMotion();
+  const curIdx = stepOrder.indexOf(step);
+  const prevIdxRef = useRef(curIdx);
+  const direction = curIdx >= prevIdxRef.current ? 1 : -1;
+  useEffect(() => {
+    prevIdxRef.current = curIdx;
+  }, [curIdx]);
+  const stepVariants = {
+    enter: (dir: number) => ({ opacity: 0, x: dir >= 0 ? 28 : -28 }),
+    center: { opacity: 1, x: 0 },
+    exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? -28 : 28 }),
+  };
+
   function canAdvance(): boolean {
     if (step === "language") return true;
     if (step === "welcome") return name.trim().length > 0 && consentGranted;
@@ -238,7 +255,9 @@ export default function PatientIntake() {
         } else if (isGatewayTimeout) {
           setError(t("error_network", preferredLanguage));
         } else {
-          setError(detail || e?.message || t("error_generic", preferredLanguage));
+          // USAB-001: never surface raw backend `detail` or JS error text to the
+          // patient — map to a localized, actionable message instead.
+          setError(t("error_generic", preferredLanguage));
         }
       } finally {
         setBusy(false);
@@ -316,7 +335,8 @@ export default function PatientIntake() {
       } else if (!status && /network|fetch|abort|timeout/i.test(e?.message || "")) {
         setError(t("error_network", preferredLanguage));
       } else {
-        setError(e?.response?.data?.detail || e?.message || t("error_generic", preferredLanguage));
+        // USAB-001: localized generic message, not the raw server detail/JS error.
+        setError(t("error_generic", preferredLanguage));
       }
       setStep("followups");
     } finally {
@@ -439,13 +459,15 @@ export default function PatientIntake() {
       )}
 
       <main className="flex-1 px-4 py-6 max-w-lg w-full mx-auto flex flex-col gap-6">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={step}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -12 }}
-            transition={{ duration: 0.2 }}
+            custom={direction}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: reduce ? 0 : 0.28, ease: [0.4, 0, 0.2, 1] }}
             className="flex flex-col gap-6"
           >
             {step === "welcome" && (

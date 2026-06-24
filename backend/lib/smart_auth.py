@@ -31,6 +31,8 @@ from typing import Any
 
 import httpx
 
+from lib import url_guard
+
 log = logging.getLogger(__name__)
 
 # SMART spec bounds: a PKCE verifier is 43-128 chars; a nonce / state need only
@@ -196,7 +198,10 @@ def fetch_smart_configuration(fhir_base_url: str) -> SmartConfiguration | None:
         return None
     url = discovery_url(fhir_base_url)
     try:
-        with httpx.Client(timeout=_DISCOVERY_TIMEOUT, follow_redirects=True) as client:
+        # C3 (SSRF): reject a discovery URL pointed at metadata/internal hosts, and
+        # do NOT follow redirects (a 30x could bounce past the check into the VPC).
+        url_guard.assert_public_https(url, "fhir_base_url")
+        with httpx.Client(timeout=_DISCOVERY_TIMEOUT, follow_redirects=False) as client:
             resp = client.get(url, headers={"Accept": "application/json"})
         if resp.status_code != 200:
             log.info("SMART discovery %s -> %d", url, resp.status_code)
@@ -534,6 +539,10 @@ def decode_jwt_claims(token: str) -> dict[str, Any]:
     Returns ``{}`` on any structural error. Used to read the ``nonce`` /
     ``fhirUser`` claims out of an id_token received over TLS from the token
     endpoint; the TLS channel is the integrity guarantee here.
+
+    For full cryptographic verification against the issuer JWKS, use
+    :func:`verify_id_token` instead — that path adds defense-in-depth on top of
+    the TLS-channel trust this function assumes.
     """
     if not token or token.count(".") != 2:
         return {}
@@ -541,6 +550,246 @@ def decode_jwt_claims(token: str) -> dict[str, Any]:
         return json.loads(b64url_decode(token.split(".")[1]).decode("utf-8"))
     except Exception:  # noqa: BLE001
         return {}
+
+
+def _decode_jwt_header(token: str) -> dict[str, Any]:
+    """Decode the protected header of a compact JWT (``{}`` on error)."""
+    if not token or token.count(".") != 2:
+        return {}
+    try:
+        return json.loads(b64url_decode(token.split(".")[0]).decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+# ----------------------------------------------------------------------------------
+# id_token signature verification against the issuer JWKS (RS256/RS384/RS512).
+#
+# SMART/OIDC id_tokens are signed by the authorization server. We verify them
+# against the public keys published at the issuer's ``jwks_uri`` so a token whose
+# signature does not match a published key is rejected — defense-in-depth beyond
+# the "it arrived over TLS" assumption ``decode_jwt_claims`` relies on. Pure
+# stdlib: RSA public verify is ``pow(sig, e, n)`` + EMSA-PKCS1-v1_5 compare. EC
+# (ES*) keys are not verifiable without ``cryptography``; we treat them as a
+# soft-fail so the existing TLS-trust path still works (honest fallback).
+# ----------------------------------------------------------------------------------
+
+# DigestInfo DER prefixes for the SHA-2 family used by RS256/RS384/RS512.
+_DIGESTINFO_PREFIX: dict[str, bytes] = {
+    "RS256": bytes([
+        0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65,
+        0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
+    ]),
+    "RS384": _SHA384_DIGESTINFO_PREFIX,
+    "RS512": bytes([
+        0x30, 0x51, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65,
+        0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40,
+    ]),
+}
+_ALG_HASH: dict[str, Any] = {
+    "RS256": hashlib.sha256,
+    "RS384": hashlib.sha384,
+    "RS512": hashlib.sha512,
+}
+
+_JWKS_TIMEOUT = 8.0
+
+
+class IdTokenVerificationError(Exception):
+    """Raised when an id_token fails cryptographic / claim verification."""
+
+
+@dataclass
+class IdTokenResult:
+    """Outcome of :func:`verify_id_token`.
+
+    ``verified`` is True only when an RSA signature matched a published JWKS key.
+    ``fallback`` is True when verification could not be performed (no JWKS, EC
+    key, network failure) and the caller should fall back to TLS-channel trust.
+    ``claims`` are the decoded payload claims either way (so existing nonce /
+    fhirUser extraction keeps working in the fallback path).
+    """
+
+    verified: bool
+    claims: dict[str, Any] = field(default_factory=dict)
+    fallback: bool = False
+    reason: str = ""
+
+
+def _b64url_uint(data: str) -> int:
+    """Decode a base64url JWK integer parameter (n / e) to a Python int."""
+    return int.from_bytes(b64url_decode(data), "big")
+
+
+def _jwk_to_rsa(jwk: dict[str, Any]) -> tuple[int, int] | None:
+    """Extract ``(n, e)`` from an RSA JWK, or None if it is not an RSA key."""
+    if (jwk or {}).get("kty") != "RSA" or not jwk.get("n") or not jwk.get("e"):
+        return None
+    try:
+        return _b64url_uint(jwk["n"]), _b64url_uint(jwk["e"])
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _rsa_verify(signing_input: bytes, signature: bytes, alg: str,
+                n: int, e: int) -> bool:
+    """RSASSA-PKCS1-v1_5 verify (RFC 8017 §8.2.2) using only ``pow``."""
+    prefix = _DIGESTINFO_PREFIX.get(alg)
+    hasher = _ALG_HASH.get(alg)
+    if prefix is None or hasher is None:
+        return False
+    k = (n.bit_length() + 7) // 8
+    if len(signature) != k:
+        return False
+    sig_int = int.from_bytes(signature, "big")
+    if sig_int >= n:
+        return False
+    em_int = pow(sig_int, e, n)
+    em = em_int.to_bytes(k, "big")
+    digest = hasher(signing_input).digest()
+    t = prefix + digest
+    if k < len(t) + 11:
+        return False
+    expected = b"\x00\x01" + b"\xff" * (k - len(t) - 3) + b"\x00" + t
+    return secrets.compare_digest(em, expected)
+
+
+def fetch_jwks(jwks_uri: str) -> list[dict[str, Any]]:
+    """Fetch the JWK set from ``jwks_uri``; ``[]`` on any failure."""
+    if not jwks_uri:
+        return []
+    try:
+        # C3 (SSRF): same guard as discovery — public host only, no redirect bounce.
+        url_guard.assert_public_https(jwks_uri, "jwks_uri")
+        with httpx.Client(timeout=_JWKS_TIMEOUT, follow_redirects=False) as client:
+            resp = client.get(jwks_uri, headers={"Accept": "application/json"})
+        if resp.status_code != 200:
+            log.info("JWKS fetch %s -> %d", jwks_uri, resp.status_code)
+            return []
+        keys = resp.json().get("keys")
+        return [k for k in keys if isinstance(k, dict)] if isinstance(keys, list) else []
+    except Exception as e:  # noqa: BLE001
+        log.info("JWKS fetch failed for %s: %s", jwks_uri, e)
+        return []
+
+
+def verify_id_token(
+    token: str,
+    *,
+    jwks: list[dict[str, Any]] | None = None,
+    jwks_uri: str = "",
+    expected_issuer: str = "",
+    expected_audience: str = "",
+    expected_nonce: str = "",
+    leeway_seconds: int = 120,
+    now: int | None = None,
+) -> IdTokenResult:
+    """Verify an OIDC id_token signature against the issuer JWKS, then claims.
+
+    Pass either a pre-fetched ``jwks`` (the keys array) or a ``jwks_uri`` to
+    fetch from. RSA-signed tokens (RS256/384/512) are cryptographically verified;
+    a signature mismatch raises :class:`IdTokenVerificationError`. When the key
+    is EC, or no JWKS is available, the result is a *fallback* (``verified=False,
+    fallback=True``) so the caller keeps the pre-existing TLS-channel trust
+    behavior rather than hard-failing a previously-accepted flow.
+
+    Time-based (``exp`` / ``iat``) and ``iss`` / ``aud`` / ``nonce`` claim checks
+    run whenever the corresponding ``expected_*`` argument is provided, and a
+    failure there is always a hard :class:`IdTokenVerificationError` regardless
+    of signature path (a wrong audience is a security finding even over TLS).
+    """
+    if not token or token.count(".") != 2:
+        raise IdTokenVerificationError("id_token is not a compact JWS")
+
+    header = _decode_jwt_header(token)
+    claims = decode_jwt_claims(token)
+    alg = str(header.get("alg", ""))
+    kid = header.get("kid")
+
+    # --- Claim checks always run (independent of signature path). ----------------
+    _check_id_token_claims(
+        claims,
+        expected_issuer=expected_issuer,
+        expected_audience=expected_audience,
+        expected_nonce=expected_nonce,
+        leeway_seconds=leeway_seconds,
+        now=now,
+    )
+
+    if alg == "none" or not alg:
+        raise IdTokenVerificationError("id_token alg=none is not permitted")
+
+    if jwks is None:
+        jwks = fetch_jwks(jwks_uri) if jwks_uri else []
+
+    if not jwks:
+        return IdTokenResult(False, claims, fallback=True,
+                             reason="no JWKS available; relying on TLS trust")
+
+    if alg not in _DIGESTINFO_PREFIX:
+        # ES256/384/etc. — no EC math without `cryptography`. Honest fallback.
+        return IdTokenResult(False, claims, fallback=True,
+                             reason=f"alg {alg} not RSA; cannot verify offline")
+
+    # Pick the JWK: by kid if present, else the first RSA signing key.
+    candidates = jwks
+    if kid:
+        matched = [k for k in jwks if k.get("kid") == kid]
+        if matched:
+            candidates = matched
+
+    signing_input, sig_b64 = token.rsplit(".", 1)
+    try:
+        signature = b64url_decode(sig_b64)
+    except Exception as exc:  # noqa: BLE001
+        raise IdTokenVerificationError("malformed id_token signature") from exc
+
+    for jwk in candidates:
+        if jwk.get("use") not in (None, "sig"):
+            continue
+        rsa = _jwk_to_rsa(jwk)
+        if rsa is None:
+            continue
+        n, e = rsa
+        if _rsa_verify(signing_input.encode("ascii"), signature, alg, n, e):
+            return IdTokenResult(True, claims, fallback=False, reason="signature verified")
+
+    raise IdTokenVerificationError(
+        "id_token signature did not match any published JWKS key"
+    )
+
+
+def _check_id_token_claims(
+    claims: dict[str, Any],
+    *,
+    expected_issuer: str,
+    expected_audience: str,
+    expected_nonce: str,
+    leeway_seconds: int,
+    now: int | None,
+) -> None:
+    """Validate iss/aud/nonce/exp/iat; raise on any provided-and-failing check."""
+    now = int(time.time()) if now is None else int(now)
+
+    if expected_issuer and str(claims.get("iss", "")) != expected_issuer:
+        raise IdTokenVerificationError("id_token issuer mismatch")
+
+    if expected_audience:
+        aud = claims.get("aud")
+        aud_set = set(aud) if isinstance(aud, list) else {aud}
+        if expected_audience not in {str(a) for a in aud_set}:
+            raise IdTokenVerificationError("id_token audience mismatch")
+
+    if expected_nonce:
+        if not validate_nonce(str(claims.get("nonce", "")), expected_nonce):
+            raise IdTokenVerificationError("id_token nonce mismatch")
+
+    exp = claims.get("exp")
+    if isinstance(exp, (int, float)) and now > exp + leeway_seconds:
+        raise IdTokenVerificationError("id_token is expired")
+    iat = claims.get("iat")
+    if isinstance(iat, (int, float)) and iat - leeway_seconds > now:
+        raise IdTokenVerificationError("id_token iat is in the future")
 
 
 def extract_launch_context(token_payload: dict[str, Any]) -> dict[str, str]:

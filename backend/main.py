@@ -13,10 +13,11 @@ from mangum import Mangum
 from lib.config import hydrate_from_secrets_manager, settings
 from db import storage
 from routers import (
-    admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
-    ehr_copilot, governance, hospitals, identity, insurance, intake, notes, onboarding,
-    pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage,
-    voice, wave4, workflows,
+    admin, appointments, auth, billing, care_ops, cds_hooks_router, clinical_ai, contact,
+    copilot_agent, ehr,
+    ehr_auth, ehr_config, ehr_copilot, ehr_jwks, fhir_bulk, fhir_subscriptions, governance, hospitals,
+    identity, insurance, intake, notes, onboarding, pain_flag, patients, prescriptions, public,
+    sms as sms_router, transcribe, triage, vision, voice, wave4, workflows, workspaces,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -82,6 +83,13 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
+# Per-request observability — emits one PHI-free CloudWatch EMF metric line per
+# request (latency, error, dimensioned by hospital_id + route template). No
+# boto3, no OTel SDK; ships via stdout. See lib/observability.py (SEC-002).
+from lib.observability import ObservabilityMiddleware  # noqa: E402
+
+app.add_middleware(ObservabilityMiddleware)
+
 
 @app.get("/health")
 def health() -> dict:
@@ -130,30 +138,52 @@ app.include_router(patients.router, prefix="/api/{hospital_id}", tags=["patients
 app.include_router(prescriptions.router, prefix="/api/{hospital_id}", tags=["prescriptions"])
 app.include_router(notes.router, prefix="/api/{hospital_id}", tags=["notes"])
 app.include_router(triage.router, prefix="/api/{hospital_id}", tags=["triage"])
+app.include_router(billing.router, prefix="/api/{hospital_id}", tags=["billing"])
 app.include_router(admin.router, prefix="/api/{hospital_id}", tags=["admin"])
 app.include_router(auth.router, prefix="/api/{hospital_id}", tags=["auth"])
 app.include_router(onboarding.router, prefix="/api/{hospital_id}", tags=["onboarding"])
 app.include_router(public.router, prefix="/api/{hospital_id}", tags=["public"])
+# FHIR Bulk Data ($export) + Subscriptions — clinician-scoped surface. Registered
+# BEFORE ehr.router so the specific /ehr/bulk/* and /ehr/subscriptions paths win
+# over ehr.router's greedy single-segment GET /ehr/{mrn} route.
+app.include_router(fhir_bulk.router, prefix="/api/{hospital_id}", tags=["ehr-bulk"])
+app.include_router(fhir_subscriptions.router, prefix="/api/{hospital_id}", tags=["ehr-subscriptions"])
 app.include_router(ehr.router, prefix="/api/{hospital_id}", tags=["ehr"])
 app.include_router(workflows.router, prefix="/api/{hospital_id}", tags=["workflows"])
+app.include_router(workspaces.router, prefix="/api/{hospital_id}", tags=["workspaces"])
+app.include_router(ehr_config.router, prefix="/api/{hospital_id}", tags=["ehr-config"])
 # Wave 1+2 — clinician AI surface (scribe, ddx v2, calculators, screeners,
 # letters, coding, inbox drafts, refills, PA packets, drug check, discharge plan,
 # specialty packs, override audit log).
 app.include_router(clinical_ai.router, prefix="/api/{hospital_id}", tags=["clinical-ai"])
 app.include_router(ehr_copilot.router, prefix="/api/{hospital_id}", tags=["ehr-copilot"])
+# Copilot Agent — bounded tool loop + confirm-gated chart writes.
+app.include_router(copilot_agent.router, prefix="/api/{hospital_id}", tags=["copilot-agent"])
+# Vision OCR (Azure Document Intelligence prebuilt-read).
+app.include_router(vision.router, prefix="/api/{hospital_id}", tags=["vision"])
 # Care operations (eligibility, no-show, HEDIS, SDoH, FHIR write-back).
 app.include_router(care_ops.router, prefix="/api/{hospital_id}", tags=["care-ops"])
 # Wave 4 — HL7 v2 emit, multi-encounter, fax intake, sepsis bundle, cohort export,
 # OCR-to-eligibility chain, MedicationStatement write, style learning, patient
 # portal messages, nurse triage protocols, TEFCA QHIN stub, telehealth helpers.
 app.include_router(wave4.router, prefix="/api/{hospital_id}", tags=["wave4"])
+# Subscription webhook receiver — absolute, EHR-registered path (the EHR server
+# POSTs here; authenticated by a per-subscription shared secret, not a clinician
+# JWT). The clinician-scoped bulk + subscription routers are registered earlier,
+# just before ehr.router, so their specific paths win over /ehr/{mrn}.
+app.include_router(fhir_subscriptions.webhook_router, tags=["ehr-subscriptions"])
 # Public CDS Hooks service — spec-required base path /cds-services.
 app.include_router(cds_hooks_router.router)
 # Public governance / model cards (no auth — for procurement teams + auditors).
 app.include_router(governance.router)
+# Public JWKS for EHR confidential-client auth (no auth — vendors fetch our pubkeys).
+app.include_router(ehr_jwks.router)
 # Hospital workspace provisioning — public onboarding. Mounted at the fixed
 # `/hospitals/...` base (NOT per-hospital) because it CREATES the hospital_id.
 app.include_router(hospitals.router, tags=["hospitals"])
+# Public contact/sales form — fixed two-segment path `/api/contact`, so it can
+# never collide with the three-segment per-hospital `/api/{hospital_id}/...` routes.
+app.include_router(contact.router, tags=["contact"])
 # Voice agent — uses its own /api/voice prefix (NOT per-hospital path) because Twilio
 # webhooks arrive at a fixed URL and route by the dialed number, not a URL path.
 app.include_router(voice.router)
@@ -168,6 +198,26 @@ def handler(event, context):
     so the code path is fully JIT-warmed — first real user gets pure compute time.
     The warmup response reports whether the ML path succeeded, which our deploy smoke
     test checks so broken imports / missing artifacts fail the deploy."""
+    # Deferred clinician-artifact generation — re-entry from the intake fast-path's
+    # async self-invoke (InvocationType='Event'). The patient response has already
+    # been returned; this runs prebrief/scribe/differential/workup/disposition
+    # out-of-band and patches the stored patient record (artifacts_status -> ready).
+    # Failure-safe inside the service: it sets artifacts_status=failed and never
+    # raises, so a bad artifact run can't crash the Lambda or retry-storm.
+    if isinstance(event, dict) and event.get("deferred_artifacts"):
+        hospital_id = event.get("hospital_id")
+        patient_id = event.get("patient_id")
+        import json as _json  # noqa: PLC0415
+
+        if not hospital_id or not patient_id:
+            log.warning("deferred_artifacts event missing hospital_id/patient_id")
+            return {"statusCode": 400, "body": _json.dumps({"deferred": False, "reason": "missing_ids"})}
+        from services import intake_artifacts  # noqa: PLC0415
+
+        result = intake_artifacts.generate_clinician_artifacts(hospital_id, patient_id)
+        status = result.get("artifacts_status", "unknown")
+        return {"statusCode": 200, "body": _json.dumps({"deferred": True, "artifacts_status": status})}
+
     if isinstance(event, dict) and (event.get("warmup") or event.get("source") == "aws.events"):
         ml_ok = False
         ml_error: str | None = None
@@ -178,6 +228,14 @@ def handler(event, context):
             if art is None:
                 ml_error = "artifacts_missing"
             else:
+                # Prime conformal calibration SYNCHRONOUSLY here — the warmup path has
+                # the full 60s budget and is off the patient request path, so paying the
+                # ~7s calibration cost here (every 4-min warmer ping + on cold start)
+                # means real intake/triage requests never trigger it on their hot path.
+                try:
+                    triage_ml._ensure_calibrated(art, block=True)
+                except Exception:  # noqa: BLE001 — never fail warmup on calibration
+                    pass
                 dry_patient = {
                     "patient_id": "warm",
                     "transcript": "chest pain",

@@ -396,6 +396,39 @@ class EpicAdapter:
             }
         return self._post(resource)
 
+    def write_service_request(
+        self,
+        *,
+        patient_ref: str,
+        code: str,
+        display: str,
+        system: str = "http://loinc.org",
+        intent: str = "order",
+        priority: str = "routine",
+        reason_text: str = "",
+        encounter_ref: str | None = None,
+    ) -> dict[str, Any]:
+        """Write a `ServiceRequest` (order) to Epic.
+
+        Epic files external orders as ServiceRequest and indexes them by the
+        order code (`system`+`code`) — LOINC for labs, CPT/SNOMED for
+        procedures/imaging. Epic prefers orders tied to an `Encounter`, so an
+        `encounter_ref` is attached when supplied. The resource shape comes from
+        `fhir_writer.build_service_request` so order construction stays in one
+        place; this adapter only adds Epic-required transport.
+        """
+        resource = fhir_writer.build_service_request(
+            patient_ref=patient_ref,
+            code=code,
+            display=display,
+            system=system,
+            intent=intent,
+            priority=priority,
+            reason_text=reason_text,
+            encounter_ref=encounter_ref,
+        )
+        return self._post(resource)
+
     def write_observation_vital(
         self,
         *,

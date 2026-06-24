@@ -561,3 +561,23 @@ def suggest(note_text: str, *, established_patient: bool = True) -> dict[str, An
         "ncci_validation": ncci,
         "auto_submit": False,
     }
+
+
+# ---------------------------------------------------------------------------
+# QA + audit-defense wrapper (additive — does not change suggest())
+# ---------------------------------------------------------------------------
+
+def suggest_with_qa(note_text: str, *, established_patient: bool = True) -> dict[str, Any]:
+    """``suggest()`` plus the QA / audit-defense layer in one call.
+
+    Returns exactly what ``suggest()`` returns, with one additive field:
+    ``coding_qa`` — the per-code confidence-band / needs-review / downcoding-risk
+    report from ``services.coding_qa.review_codes()``. The original ``suggest()``
+    output is preserved unchanged for backward compatibility; when coding is
+    unavailable the QA block is ``{"available": False}``.
+    """
+    from services import coding_qa  # local import: keep cold-start path light
+
+    result = suggest(note_text, established_patient=established_patient)
+    result["coding_qa"] = coding_qa.review_codes(result)
+    return result

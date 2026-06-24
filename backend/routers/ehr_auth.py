@@ -51,7 +51,8 @@ from fastapi import APIRouter, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
-from lib import ehr_vendors, jwt_auth, smart_auth
+from lib import ehr_vendors, jwt_auth, smart_auth, url_guard
+from services import ehr_config as ehr_config_service
 
 log = logging.getLogger(__name__)
 
@@ -168,19 +169,24 @@ def _confidential_client_kid(vendor_id: str) -> str | None:
     return os.environ.get(f"SOLACE_{vendor_id.upper()}_KID") or None
 
 
-def _resolve_smart_endpoints(vendor: ehr_vendors.EHRVendor) -> tuple[str, str]:
-    """Resolve authorize + token URLs, preferring live SMART discovery.
+def _resolve_smart_endpoints(
+    vendor: ehr_vendors.EHRVendor,
+) -> tuple[str, str, str, str]:
+    """Resolve authorize/token URLs + jwks_uri/issuer, preferring live discovery.
 
     Fetches ``.well-known/smart-configuration`` from the vendor's FHIR base URL.
     On success the discovered endpoints win (they track tenant-specific routing);
     on any failure we fall back to the statically-registered vendor URLs so SMART
-    v1 servers and offline mocks still work.
+    v1 servers and offline mocks still work. Returns
+    ``(authorize_url, token_url, jwks_uri, issuer)``; ``jwks_uri``/``issuer`` are
+    empty strings when discovery is unavailable (the id_token verification then
+    degrades to TLS-channel trust).
     """
     cfg = smart_auth.fetch_smart_configuration(vendor.fhir_base_url)
     if cfg and cfg.authorization_endpoint and cfg.token_endpoint:
         log.info("SMART discovery ok for %s", vendor.id)
-        return cfg.authorization_endpoint, cfg.token_endpoint
-    return vendor.authorize_url, vendor.token_url
+        return cfg.authorization_endpoint, cfg.token_endpoint, cfg.jwks_uri, cfg.issuer
+    return vendor.authorize_url, vendor.token_url, "", ""
 
 
 @router.get("/launch")
@@ -188,6 +194,15 @@ def launch(
     vendor: str = Query(..., description="smart | epic | cerner | athena"),
     hospital_id: str = Query("demo"),
     redirect_uri: str = Query(..., description="Frontend URL to return to after success"),
+    workspace_id: str = Query(
+        "",
+        description=(
+            "Active workspace. When set and a per-workspace EHR config exists for "
+            "(hospital_id, workspace_id), the SMART flow uses THAT tenant's vendor "
+            "binding (FHIR base URL, client_id, endpoints, scopes) instead of the "
+            "process-wide env default. SEC-008: config is read only for this hospital."
+        ),
+    ),
     launch: str = Query(
         "",
         description=(
@@ -200,7 +215,17 @@ def launch(
         description="FHIR base URL supplied by the EHR on an EHR-launch.",
     ),
 ) -> RedirectResponse:
-    v = ehr_vendors.get(vendor)
+    # Resolve the vendor binding. Prefer the active workspace's per-tenant EHR config
+    # (production / certification path); fall back to the static env-driven catalog.
+    # resolve_vendor only ever reads config keyed by THIS hospital_id (SEC-008).
+    v = None
+    if workspace_id:
+        try:
+            v = ehr_config_service.resolve_vendor(hospital_id, workspace_id)
+        except Exception as e:  # noqa: BLE001 — config resolution is best-effort
+            log.info("workspace EHR config resolution fell back to static: %s", type(e).__name__)
+    if v is None:
+        v = ehr_vendors.get(vendor)
     if not v:
         raise HTTPException(status_code=404, detail=f"Unknown EHR vendor '{vendor}'")
 
@@ -230,20 +255,41 @@ def launch(
         fhir_base = iss
 
     # SMART v2 discovery: prefer the live .well-known endpoints over static config.
-    authorize_url, token_url = _resolve_smart_endpoints(v)
+    authorize_url, token_url, jwks_uri, issuer = _resolve_smart_endpoints(v)
 
     state = smart_auth.generate_state()
     nonce = smart_auth.generate_nonce()
     code_verifier, code_challenge = _pkce_pair()
+
+    # SMART v2 scope spelling (resource.cruds) by default per the marketplace gap
+    # analysis — current Epic / Oracle Health reject the v1 `.read` spelling. A
+    # workspace config may pin smart_version="v1" to force the legacy fallback.
+    smart_version = "v2"
+    if workspace_id:
+        try:
+            cfg = ehr_config_service.get_config(hospital_id, workspace_id)
+            smart_version = cfg.get("smart_version", "v2")
+        except Exception:  # noqa: BLE001 — no config / not found → default v2
+            smart_version = "v2"
+    scope_string = v.scope_string(smart_version=smart_version)
+
     _store_state(state, {
         "vendor": v.id,
         "hospital_id": hospital_id,
+        "workspace_id": workspace_id,
         "redirect_uri": redirect_uri,
         "code_verifier": code_verifier,
         "nonce": nonce,
         "token_url": token_url,
         "fhir_base_url": fhir_base,
+        # Carry the discovered JWKS endpoint + issuer so the callback can verify
+        # the id_token signature against the issuer's published keys.
+        "jwks_uri": jwks_uri,
+        "issuer": issuer,
+        "client_id": v.client_id,
         "launch_type": "ehr" if is_ehr_launch else "standalone",
+        "smart_version": smart_version,
+        "requested_scope": scope_string,
         "exp": int(time.time()) + _STATE_TTL,
     })
 
@@ -251,7 +297,7 @@ def launch(
         "response_type": "code",
         "client_id": v.client_id,
         "redirect_uri": _solace_callback_url(),
-        "scope": " ".join(v.scopes),
+        "scope": scope_string,
         "state": state,
         "aud": fhir_base,
         "nonce": nonce,
@@ -280,7 +326,9 @@ def callback(
     rec = _pop_state(state)
     if not rec or int(rec.get("exp", 0)) < int(time.time()):
         raise HTTPException(status_code=400, detail="invalid or expired state")
-    vendor = ehr_vendors.get(rec["vendor"])
+    hospital_id = rec["hospital_id"]
+    workspace_id = rec.get("workspace_id", "")
+    vendor = _resolve_vendor_for_state(rec)
     if not vendor:
         raise HTTPException(status_code=400, detail="vendor missing on stored state")
 
@@ -297,13 +345,21 @@ def callback(
         "code_verifier": rec["code_verifier"],
     }
     try:
-        _apply_client_auth(form, vendor, token_url)
+        _apply_client_auth(form, vendor, token_url, hospital_id, workspace_id)
     except smart_auth.PrivateKeyJwtError as e:
         log.warning("private_key_jwt build failed (%s): %s", vendor.id, e)
         return _redirect_with_error(rec["redirect_uri"], "client_auth_failed")
 
     try:
-        with httpx.Client(timeout=15.0) as client:
+        # C3 (SSRF): the token POST carries the OAuth code + (for confidential
+        # clients) a signed private_key_jwt assertion. Refuse to send it anywhere
+        # but a public HTTPS host, and never follow a redirect into the VPC.
+        url_guard.assert_public_https(token_url, "token_url")
+    except url_guard.UnsafeURL as e:
+        log.warning("EHR token exchange blocked unsafe token_url (%s): %s", vendor.id, e)
+        return _redirect_with_error(rec["redirect_uri"], "token_exchange_failed")
+    try:
+        with httpx.Client(timeout=15.0, follow_redirects=False) as client:
             resp = client.post(
                 token_url,
                 data=form,
@@ -322,20 +378,45 @@ def callback(
 
     access_token: str = payload.get("access_token", "")
     if not access_token:
-        log.warning("EHR token response missing access_token: %s", payload)
+        # SEC-002: never log the raw token payload — it can carry refresh_token /
+        # id_token values the CloudWatch redaction filter does not catch. Log only
+        # the non-sensitive key names so we can still diagnose a malformed response.
+        log.warning(
+            "EHR token response missing access_token (%s): keys=%s",
+            vendor.id, sorted(payload.keys()) if isinstance(payload, dict) else type(payload).__name__,
+        )
         return _redirect_with_error(rec["redirect_uri"], "token_exchange_failed")
 
-    # OIDC nonce check: the id_token's `nonce` claim MUST equal the nonce we sent
-    # at /launch. A missing or mismatched nonce means a replayed / cross-session
-    # id_token — reject it. Servers that issue no id_token (pure OAuth) are
-    # tolerated; the check only fires when an id_token is actually present.
+    # OIDC id_token verification. SMART id_tokens are signed by the issuer; we
+    # verify the RSA signature against the issuer's published JWKS (discovered at
+    # /launch) AND validate the nonce / issuer / audience / expiry claims. When
+    # the JWKS is unavailable or the key is EC (no offline EC math), we degrade to
+    # the prior TLS-channel trust: still enforce the nonce, but skip the crypto.
+    # Servers that issue no id_token (pure OAuth) are tolerated.
     id_token: str = payload.get("id_token", "")
     expected_nonce = rec.get("nonce", "")
     if id_token and expected_nonce:
-        token_nonce = smart_auth.decode_jwt_claims(id_token).get("nonce", "")
-        if not smart_auth.validate_nonce(token_nonce, expected_nonce):
-            log.warning("EHR id_token nonce mismatch for %s", vendor.id)
-            return _redirect_with_error(rec["redirect_uri"], "nonce_mismatch")
+        try:
+            result = smart_auth.verify_id_token(
+                id_token,
+                jwks_uri=rec.get("jwks_uri", ""),
+                expected_issuer=rec.get("issuer", ""),
+                expected_audience=rec.get("client_id", ""),
+                expected_nonce=expected_nonce,
+            )
+        except smart_auth.IdTokenVerificationError as e:
+            # Signature/claim verification produced a definitive failure — reject.
+            log.warning("EHR id_token verification failed for %s: %s", vendor.id, e)
+            return _redirect_with_error(rec["redirect_uri"], "id_token_invalid")
+        if result.verified:
+            log.info("EHR id_token signature verified for %s", vendor.id)
+        else:
+            # Fallback path (no JWKS / EC key). verify_id_token already enforced
+            # the nonce claim; this log records that we relied on TLS trust.
+            log.info(
+                "EHR id_token unverified (TLS-trust fallback) for %s: %s",
+                vendor.id, result.reason,
+            )
 
     # SMART launch context — patient / encounter the EHR bound to this session.
     launch_context = smart_auth.extract_launch_context(payload)
@@ -368,7 +449,7 @@ def callback(
     ) or "unknown"
     name = practitioner.get("name") or _name_from_id_token(payload.get("id_token", "")) or "EHR Clinician"
     role = practitioner.get("role", "clinician")
-    hospital_id = rec["hospital_id"]
+    # hospital_id / workspace_id were bound at the top of callback() from the state.
 
     clinician = {
         "clinician_id": f"ehr-{vendor.id}-{fhir_user_id}",
@@ -406,7 +487,11 @@ def callback(
         "launch_type": rec.get("launch_type", "standalone"),
         "launch_context": launch_context,
         "granted_scope": payload.get("scope", ""),
-        "access_token_expires_in": int(payload.get("expires_in", 0) or 0),
+        "smart_version": rec.get("smart_version", "v2"),
+        "access_token_expires_in": _expires_in(payload),
+        # Absolute expiry the frontend can compare against now() to schedule a
+        # refresh-before-expiry call instead of waiting for a 401 (token lifecycle).
+        "access_token_expires_at": int(time.time()) + _expires_in(payload),
     }
     handoff_code = secrets.token_urlsafe(32)
     handoff_state: dict[str, Any] = {
@@ -421,6 +506,10 @@ def callback(
         handoff_state["refresh_token"] = refresh_token
         handoff_state["vendor"] = vendor.id
         handoff_state["token_url"] = token_url
+        # Carry tenant identity so /refresh can resolve the per-workspace confidential
+        # client secret and re-build the correct vendor binding.
+        handoff_state["hospital_id"] = hospital_id
+        handoff_state["workspace_id"] = workspace_id
     _store_state(f"handoff-{handoff_code}", handoff_state)
     qp = urlencode({"handoff_code": handoff_code})
     return RedirectResponse(f"{rec['redirect_uri']}?{qp}", status_code=302)
@@ -431,28 +520,75 @@ def callback(
 # ----------------------------------------------------------------------------------
 
 
+def _resolve_vendor_for_state(rec: dict[str, Any]) -> ehr_vendors.EHRVendor | None:
+    """Re-resolve the vendor binding for a stored OAuth state / refresh record.
+
+    Prefers the per-workspace EHR config (so the FHIR base URL, client_id, and
+    endpoints match exactly what /launch used) and falls back to the static catalog.
+    Reads config only for the record's own hospital_id (SEC-008).
+    """
+    hospital_id = rec.get("hospital_id", "")
+    workspace_id = rec.get("workspace_id", "")
+    if hospital_id and workspace_id:
+        try:
+            v = ehr_config_service.resolve_vendor(hospital_id, workspace_id)
+            if v is not None:
+                return v
+        except Exception as e:  # noqa: BLE001 — best-effort; fall back to static
+            log.info("vendor resolution from workspace config fell back: %s", type(e).__name__)
+    return ehr_vendors.get(rec.get("vendor", ""))
+
+
+def _expires_in(payload: dict[str, Any]) -> int:
+    """Parse a token response's ``expires_in`` (seconds), defaulting to 0 when absent."""
+    try:
+        return int(payload.get("expires_in", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _apply_client_auth(
-    form: dict[str, str], vendor: ehr_vendors.EHRVendor, token_url: str
+    form: dict[str, str],
+    vendor: ehr_vendors.EHRVendor,
+    token_url: str,
+    hospital_id: str = "",
+    workspace_id: str = "",
 ) -> None:
     """Mutate ``form`` in place with the right token-endpoint client credentials.
 
-    - Confidential client: when ``SOLACE_<VENDOR>_PRIVATE_KEY`` is set, attach an
-      RS384 ``private_key_jwt`` client assertion (SMART asymmetric auth). The
-      ``client_id`` is *not* sent as a form field — ``iss``/``sub`` in the
-      assertion identify the client.
+    - Confidential client: when a private key is configured for this client,
+      attach an RS384 ``private_key_jwt`` client assertion (SMART asymmetric auth).
+      The ``client_id`` is *not* sent as a form field — ``iss``/``sub`` in the
+      assertion identify the client. The private key is resolved in this order:
+        1. the active workspace's EHR config ``private_key_ref`` → Secrets Manager
+           (per-tenant, the production / certification path), then
+        2. the legacy process-wide ``SOLACE_<VENDOR>_PRIVATE_KEY`` env fallback.
+      The secret VALUE is fetched at call time and never persisted/logged (COMP-007).
     - Public client (default): send ``client_id`` as a plain form field; PKCE is
       the only client proof, exactly as SMART v2 requires for public clients.
 
     Raises :class:`smart_auth.PrivateKeyJwtError` if a key is configured but
     cannot be used (e.g. an EC key, or malformed PEM).
     """
-    private_key = _confidential_client_secret(vendor.id)
+    private_key = ""
+    kid = None
+    if hospital_id and workspace_id:
+        try:
+            private_key, kid = ehr_config_service.resolve_secret(
+                hospital_id, workspace_id, kind="private_key"
+            )
+        except Exception as e:  # noqa: BLE001 — never log the secret; fall through
+            log.info("workspace confidential-secret resolution fell back: %s", type(e).__name__)
+            private_key = ""
+    if not private_key:
+        private_key = _confidential_client_secret(vendor.id)
+        kid = _confidential_client_kid(vendor.id)
     if private_key:
         assertion = smart_auth.build_client_assertion(
             client_id=vendor.client_id,
             token_endpoint=token_url,
             private_key_pem=private_key,
-            kid=_confidential_client_kid(vendor.id),
+            kid=kid,
         )
         form["client_assertion_type"] = smart_auth.CLIENT_ASSERTION_TYPE
         form["client_assertion"] = assertion
@@ -492,14 +628,40 @@ def exchange_handoff(body: ExchangeBody) -> dict:
     refresh_token = rec.get("refresh_token", "")
     if refresh_token:
         refresh_handle = secrets.token_urlsafe(32)
-        _store_state(f"refresh-{refresh_handle}", {
-            "refresh_token": refresh_token,
-            "vendor": rec.get("vendor", ""),
-            "token_url": rec.get("token_url", ""),
-            "exp": int(time.time()) + _STATE_TTL,
-        })
+        _store_state(f"refresh-{refresh_handle}", _refresh_record(
+            refresh_token=refresh_token,
+            vendor_id=rec.get("vendor", ""),
+            token_url=rec.get("token_url", ""),
+            hospital_id=rec.get("hospital_id", ""),
+            workspace_id=rec.get("workspace_id", ""),
+        ))
         payload["refresh_handle"] = refresh_handle
     return payload
+
+
+def _refresh_record(
+    *,
+    refresh_token: str,
+    vendor_id: str,
+    token_url: str,
+    hospital_id: str,
+    workspace_id: str,
+) -> dict[str, Any]:
+    """Build a server-side parked refresh record.
+
+    Carries the tenant identity (hospital_id / workspace_id) so a later /refresh can
+    resolve the per-workspace vendor binding + confidential-client secret, plus a
+    DynamoDB ttl so a leaked handle self-expires (token lifecycle hardening). The raw
+    refresh_token never leaves the server — only the opaque handle is handed out.
+    """
+    return {
+        "refresh_token": refresh_token,
+        "vendor": vendor_id,
+        "token_url": token_url,
+        "hospital_id": hospital_id,
+        "workspace_id": workspace_id,
+        "exp": int(time.time()) + _STATE_TTL,
+    }
 
 
 # ----------------------------------------------------------------------------------
@@ -528,7 +690,9 @@ def refresh_token(body: RefreshBody) -> dict:
     if not rec or not rec.get("refresh_token"):
         raise HTTPException(status_code=400, detail="invalid or expired refresh handle")
 
-    vendor = ehr_vendors.get(rec.get("vendor", ""))
+    hospital_id = rec.get("hospital_id", "")
+    workspace_id = rec.get("workspace_id", "")
+    vendor = _resolve_vendor_for_state(rec)
     if not vendor:
         raise HTTPException(status_code=400, detail="vendor missing on refresh record")
     token_url = rec.get("token_url") or vendor.token_url
@@ -536,10 +700,12 @@ def refresh_token(body: RefreshBody) -> dict:
     form: dict[str, str] = {
         "grant_type": "refresh_token",
         "refresh_token": rec["refresh_token"],
-        "scope": " ".join(vendor.scopes),
+        # Re-request the same minimum-necessary SMART v2 scope set the original
+        # grant used; the AS narrows to whatever was actually granted.
+        "scope": vendor.scope_string(smart_version="v2"),
     }
     try:
-        _apply_client_auth(form, vendor, token_url)
+        _apply_client_auth(form, vendor, token_url, hospital_id, workspace_id)
     except smart_auth.PrivateKeyJwtError as e:
         log.warning("private_key_jwt build failed on refresh (%s): %s", vendor.id, e)
         raise HTTPException(status_code=500, detail="client authentication failed") from e
@@ -566,24 +732,89 @@ def refresh_token(body: RefreshBody) -> dict:
     if not access_token:
         raise HTTPException(status_code=502, detail="EHR refresh response missing access_token")
 
+    expires_in = _expires_in(payload)
     out: dict[str, Any] = {
         "access_token": access_token,
-        "expires_in": int(payload.get("expires_in", 0) or 0),
+        "expires_in": expires_in,
+        # Absolute expiry so the frontend can refresh-before-expiry (token lifecycle).
+        "expires_at": int(time.time()) + expires_in,
         "granted_scope": payload.get("scope", ""),
         "fhir_base_url": vendor.fhir_base_url,
     }
     # The EHR may rotate the refresh_token. Re-park whichever token is current
-    # under a fresh handle so the next refresh keeps working.
+    # under a fresh handle (carrying tenant identity) so the next refresh keeps working.
     new_refresh = payload.get("refresh_token") or rec["refresh_token"]
     new_handle = secrets.token_urlsafe(32)
-    _store_state(f"refresh-{new_handle}", {
-        "refresh_token": new_refresh,
-        "vendor": vendor.id,
-        "token_url": token_url,
-        "exp": int(time.time()) + _STATE_TTL,
-    })
+    _store_state(f"refresh-{new_handle}", _refresh_record(
+        refresh_token=new_refresh,
+        vendor_id=vendor.id,
+        token_url=token_url,
+        hospital_id=hospital_id,
+        workspace_id=workspace_id,
+    ))
     out["refresh_handle"] = new_handle
     return out
+
+
+# ----------------------------------------------------------------------------------
+# Token revocation — RFC 7009 + local handle invalidation
+# ----------------------------------------------------------------------------------
+
+
+class RevokeBody(BaseModel):
+    refresh_handle: str
+
+
+@router.post("/revoke")
+def revoke_token(body: RevokeBody) -> dict:
+    """Revoke a parked SMART refresh_token and invalidate its handle.
+
+    Consumes the handle atomically (so it can never be reused), then best-effort
+    calls the vendor's RFC 7009 revocation endpoint when one is discoverable from
+    the FHIR base URL's ``.well-known/smart-configuration``. Always returns 200 with
+    ``{"revoked": true}`` once the local handle is gone — the server-side parked
+    token is the authoritative thing being invalidated; a remote revocation failure
+    (vendor without a revocation endpoint) must not leave a usable local handle.
+
+    Token lifecycle: this is the explicit logout / disconnect path, complementing the
+    automatic TTL self-expiry of parked records.
+    """
+    rec = _pop_state(f"refresh-{body.refresh_handle}")
+    if not rec or not rec.get("refresh_token"):
+        # Already gone / never existed — idempotent success, reveals nothing.
+        return {"revoked": True}
+
+    vendor = _resolve_vendor_for_state(rec)
+    fhir_base = vendor.fhir_base_url if vendor else ""
+    revocation_endpoint = ""
+    if fhir_base:
+        cfg = smart_auth.fetch_smart_configuration(fhir_base)
+        revocation_endpoint = cfg.revocation_endpoint if cfg else ""
+
+    if revocation_endpoint and vendor:
+        form: dict[str, str] = {
+            "token": rec["refresh_token"],
+            "token_type_hint": "refresh_token",
+        }
+        try:
+            _apply_client_auth(
+                form, vendor, revocation_endpoint,
+                rec.get("hospital_id", ""), rec.get("workspace_id", ""),
+            )
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(
+                    revocation_endpoint, data=form,
+                    headers={"Accept": "application/json"},
+                )
+            # RFC 7009: the AS returns 200 even for an already-invalid token. Any
+            # non-2xx is logged (NON-PHI breadcrumb only) but does not fail us —
+            # the local handle is already consumed.
+            if resp.status_code >= 400:
+                log.info("EHR revoke %s -> %d", vendor.id, resp.status_code)
+        except Exception as e:  # noqa: BLE001 — never log the token; remote best-effort
+            log.info("EHR revoke call failed (%s): %s", vendor.id if vendor else "?", type(e).__name__)
+
+    return {"revoked": True}
 
 
 # ----------------------------------------------------------------------------------

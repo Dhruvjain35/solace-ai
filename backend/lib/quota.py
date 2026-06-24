@@ -59,6 +59,13 @@ LIMITS: dict[str, Limit] = {
     # Request-to-join is public (unauthenticated) — tight ceiling blunts spam
     # against a workspace's admin inbox.
     "onboarding.access_request": Limit("onboarding.access_request", per_hour=10),
+    # Public contact/sales form — same posture as access_request: tight enough
+    # to blunt spam against the notify inbox, roomy enough for a real prospect.
+    "contact.submit": Limit("contact.submit", per_hour=10),
+    # Vision OCR (Azure Document Intelligence) — clinician-authed but each call
+    # costs real money, so cap per identity. 300/hr covers a busy front desk
+    # scanning documents all shift without letting a leaked token run the bill.
+    "vision.ocr": Limit("vision.ocr", per_hour=300),
 }
 
 # Per-upload absolute caps (checked before charging the hourly quota)

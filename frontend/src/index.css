@@ -73,6 +73,41 @@ h1 {
   background: var(--surface-lowest);
 }
 
+/* ---- Marketing "clean" surface kit (teal-tinted, Cruise-inspired) ---- */
+
+/* Soft brand-tinted wash for hero/CTA bands. Whisper-light so serif headlines
+   and teal accents read crisply on top. */
+.hero-surface {
+  background:
+    radial-gradient(120% 90% at 80% -10%, rgba(59, 94, 103, 0.10) 0%, transparent 55%),
+    radial-gradient(90% 80% at 0% 0%, rgba(64, 99, 114, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #ffffff 0%, var(--surface-low) 100%);
+}
+
+/* Decorative gradient orb — our answer to Cruise's blue blob, in brand teal.
+   Purely ornamental; mark aria-hidden and let it sit behind content. */
+.hero-blob {
+  background: conic-gradient(
+    from 200deg at 50% 50%,
+    #cbe3e9 0deg,
+    #3b5e67 110deg,
+    #406372 200deg,
+    #d8ecf0 300deg,
+    #cbe3e9 360deg
+  );
+  filter: blur(46px);
+  opacity: 0.5;
+  border-radius: 9999px;
+}
+
+/* Hairline-soft card used on marketing surfaces (a touch more definition than
+   the shadow-only in-app Card, without heavy borders). */
+.card-clean {
+  background: var(--surface-lowest);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -511,20 +511,43 @@ def write_resource(
     return result
 
 
+# US Core resource types the gateway can read uniformly across vendors (the
+# breadth beyond Patient). Keep in lock-step with
+# fhir_patient_search.USCDI_RESOURCE_TYPES.
+_USCDI_READ_TYPES = {
+    "Condition",
+    "MedicationRequest",
+    "MedicationStatement",
+    "AllergyIntolerance",
+    "Immunization",
+    "Observation",
+    "DocumentReference",
+    "Encounter",
+    "Procedure",
+}
+
+
 def read_resource(
     resource_type: str,
     *,
     ehr_config: dict[str, Any] | None = None,
     resource_id: str | None = None,
+    patient_id: str | None = None,
+    observation_category: str = "",
     audit_hook: _AuditHook | None = None,
 ) -> list[dict[str, Any]]:
     """Read resources of `resource_type` from a hospital's EHR.
 
-    Today the only read-capable back end is the local `fhir_writer` mock
-    store (vendor FHIR search lives in `services.fhir_patient_search` and
-    `routers/ehr.py` owns that path directly). For epic/oracle/athena/hl7v2
-    this returns `[]` until vendor read adapters land — callers should treat
-    an empty list as "no local data" rather than an error.
+    Two back ends:
+      * epic / oracle / athena (any vendor carrying a `base_url`): a US Core
+        read of a USCDI v3 resource type for `patient_id`, routed through
+        `services.fhir_patient_search` so all three vendors share one search +
+        normalization path. Requires `patient_id`; returns normalized flat
+        dicts (PHI-minimal), `[]` on any error or when `patient_id` is absent.
+      * fhir / mock / unset: the local `fhir_writer` mock store, optionally
+        filtered by `resource_id`.
+
+    HL7 v2 has no read surface (it is a one-way MDM feed) and returns `[]`.
     """
     cfg = dict(ehr_config or {})
     vendor = _normalise_vendor(cfg)
@@ -533,11 +556,30 @@ def read_resource(
         {"event": "ehr_read", "vendor": vendor or "mock", "resource_type": resource_type},
     )
 
-    # Vendor live reads are not yet wired through the gateway.
-    if vendor in _FHIR_VENDOR_ADAPTERS or vendor == "hl7v2":
-        log.info("read_resource: vendor=%s has no gateway read adapter yet", vendor)
+    # HL7 v2 is a write-only document feed — no FHIR read.
+    if vendor == "hl7v2":
         return []
 
+    base_url = (cfg.get("base_url") or "").strip()
+    # Vendor FHIR reads (or any configured FHIR base) of a USCDI resource type
+    # for a specific patient go through the shared fhir_patient_search reader.
+    if base_url and resource_type in _USCDI_READ_TYPES and patient_id:
+        search = _try_import("services.fhir_patient_search")
+        if search is None or not hasattr(search, "read_uscdi_resources"):
+            return []
+        try:
+            return search.read_uscdi_resources(
+                patient_id,
+                resource_type,
+                base_url=base_url,
+                access_token=cfg.get("access_token") or "",
+                observation_category=observation_category,
+            )
+        except Exception as e:  # noqa: BLE001 — reads must never crash the caller
+            log.info("gateway read %s failed: %s", resource_type, e)
+            return []
+
+    # Generic / mock / unconfigured -> local mock store.
     mod = _try_import("services.fhir_writer")
     if mod is None:
         return []
@@ -545,3 +587,40 @@ def read_resource(
     if resource_id:
         return [r for r in items if r.get("id") == resource_id]
     return items
+
+
+def read_uscdi_summary(
+    patient_id: str,
+    *,
+    ehr_config: dict[str, Any] | None = None,
+    audit_hook: _AuditHook | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Read the full USCDI v3 clinical picture for `patient_id`, uniformly.
+
+    Routes epic/oracle/athena (any vendor with a `base_url`) through
+    `fhir_patient_search.read_uscdi_summary` — one fan-out read covering
+    problems, medications, allergies, immunizations, labs, vitals, documents,
+    encounters and procedures. Vendors without a `base_url` (mock/unset) get an
+    empty summary; the caller falls back to whatever local data it has.
+    """
+    cfg = dict(ehr_config or {})
+    vendor = _normalise_vendor(cfg)
+    _emit_audit(
+        audit_hook,
+        {"event": "ehr_read_summary", "vendor": vendor or "mock"},
+    )
+    base_url = (cfg.get("base_url") or "").strip()
+    if not base_url or vendor == "hl7v2":
+        return {}
+    search = _try_import("services.fhir_patient_search")
+    if search is None or not hasattr(search, "read_uscdi_summary"):
+        return {}
+    try:
+        return search.read_uscdi_summary(
+            patient_id,
+            base_url=base_url,
+            access_token=cfg.get("access_token") or "",
+        )
+    except Exception as e:  # noqa: BLE001
+        log.info("gateway read_uscdi_summary failed: %s", e)
+        return {}

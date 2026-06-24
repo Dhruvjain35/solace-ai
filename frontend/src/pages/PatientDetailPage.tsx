@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Link2, Link2Off, Loader2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ChevronDown, Info, Link2, Link2Off, Loader2, TriangleAlert } from "lucide-react";
 import { loadSession, type Session } from "../lib/session";
 import { ESI_COLORS } from "../lib/constants";
 import {
@@ -72,6 +72,9 @@ function WorkspaceHeader({
 }) {
   const { patient, loading, error, ehrLinked } = usePatientWorkspace();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  // Secondary identifiers (MRN, EHR-link status) stay tucked behind "More info"
+  // so the header reads clean — clinicians expand only when they need them.
+  const [showMore, setShowMore] = useState(false);
 
   const info = patient?.medical_info;
   const ageSex = [
@@ -100,57 +103,76 @@ function WorkspaceHeader({
       className="border-b border-line bg-surface-lowest sticky top-0 z-30"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
-      <div className="max-w-6xl mx-auto px-6 pt-3">
-        <div className="flex items-start gap-3">
-          <Link
-            to={`/${hospitalId}/clinician`}
-            className="inline-flex items-center gap-1.5 mt-0.5 rounded text-text-muted hover:text-ink text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-          >
-            <ArrowLeft size={16} aria-hidden="true" /> Dashboard
-          </Link>
+      {/* Flush-left back link — sits at the page edge, above the centered identity */}
+      <div className="px-4 sm:px-5 pt-2.5">
+        <Link
+          to={`/${hospitalId}/clinician`}
+          className="inline-flex items-center gap-1.5 rounded text-text-muted hover:text-ink text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+        >
+          <ArrowLeft size={16} aria-hidden="true" /> Dashboard
+        </Link>
+      </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
-              Patient workspace
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-bold tracking-tight truncate">
-                {patient?.name || (loading ? "Loading…" : error ? "Patient" : "—")}
-              </h1>
-              {ageSex && <span className="text-sm text-text-muted">{ageSex}</span>}
-            </div>
+      <div className="max-w-6xl mx-auto px-6 pt-2">
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
+            Patient workspace
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-lg font-bold tracking-tight truncate">
+              {patient?.name || (loading ? "Loading…" : error ? "Patient" : "—")}
+            </h1>
+            {ageSex && <span className="text-sm text-text-muted">{ageSex}</span>}
+          </div>
 
-            <div className="flex items-center gap-2 flex-wrap mt-1.5">
-              {patient && (
-                <>
-                  <EsiPill label="Provisional" level={patient.esi_level} />
-                  <EsiPill label="Refined" level={patient.refined_esi_level} />
-                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-mono bg-surface-low text-text-muted">
-                    MRN {mrn}
+          <div className="flex items-center gap-2 flex-wrap mt-1.5">
+            {patient && (
+              <>
+                <EsiPill label="Provisional" level={patient.esi_level} />
+                <EsiPill label="Refined" level={patient.refined_esi_level} />
+                {patient.pain_flagged && (
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-error/10 text-error">
+                    <TriangleAlert size={11} aria-hidden="true" />
+                    Pain flagged
                   </span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      ehrLinked
-                        ? "bg-primary-fixed/50 text-primary"
-                        : "bg-surface-low text-text-muted"
-                    }`}
-                  >
-                    {ehrLinked ? (
-                      <Link2 size={11} aria-hidden="true" />
-                    ) : (
-                      <Link2Off size={11} aria-hidden="true" />
-                    )}
-                    {ehrLinked ? "EHR linked" : "EHR not linked"}
-                  </span>
-                  {patient.pain_flagged && (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-error/10 text-error">
-                      <TriangleAlert size={11} aria-hidden="true" />
-                      Pain flagged
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowMore((v) => !v)}
+                  aria-expanded={showMore}
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-surface-low text-text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <Info size={11} aria-hidden="true" />
+                  {showMore ? "Less" : "More info"}
+                  <ChevronDown
+                    size={11}
+                    aria-hidden="true"
+                    className={`transition-transform ${showMore ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {showMore && (
+                  <>
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] bg-surface-low text-text-muted">
+                      MRN {mrn}
                     </span>
-                  )}
-                </>
-              )}
-            </div>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        ehrLinked
+                          ? "bg-primary-fixed/50 text-primary"
+                          : "bg-surface-low text-text-muted"
+                      }`}
+                    >
+                      {ehrLinked ? (
+                        <Link2 size={11} aria-hidden="true" />
+                      ) : (
+                        <Link2Off size={11} aria-hidden="true" />
+                      )}
+                      {ehrLinked ? "EHR linked" : "EHR not linked"}
+                    </span>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -196,7 +218,7 @@ function WorkspaceBody({ hospitalId, tablistId }: { hospitalId: string; tablistI
   const [activeTab, setActiveTab] = useState<string>(TABS[0].id);
 
   return (
-    <div className="min-h-screen bg-surface-low">
+    <div className="min-h-screen bg-surface-lowest">
       <WorkspaceHeader
         hospitalId={hospitalId}
         activeTab={activeTab}

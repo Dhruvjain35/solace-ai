@@ -112,7 +112,23 @@ def wait_for_job(app_id: str, job_id: str) -> str:
         time.sleep(4)
 
 
+def plan() -> None:
+    """DRY-RUN: print the Amplify deploy plan. Makes NO AWS mutations."""
+    print("DRY RUN — no AWS mutations, no live Amplify deploy.\n")
+    print("Would (in order):")
+    print(f"  1. zip {DIST} → {ZIP_PATH}")
+    print(f"  2. ensure Amplify app '{APP_NAME}' + branch '{BRANCH}' (PRODUCTION stage)")
+    print(f"  3. create_deployment + upload zip + start_deployment to the live branch")
+    print(f"  4. poll the deploy job to completion")
+    print("\nThis publishes to the live Amplify hosting branch. Re-run with --apply:")
+    print("    python scripts/deploy_amplify.py --apply")
+
+
 def main() -> None:
+    if "--apply" not in set(sys.argv[1:]):
+        plan()
+        return
+
     print("Building zip:")
     build_zip()
     print()

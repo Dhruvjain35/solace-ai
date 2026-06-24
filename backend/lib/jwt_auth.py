@@ -79,6 +79,17 @@ def _table(name: str):
 
 def find_clinician(hospital_id: str, name: str) -> dict | None:
     """Look up a clinician by their display name within a hospital."""
+    if settings.solace_mode != "aws":
+        # Local mode: clinicians live in the in-memory accounts store. Mirror the
+        # accounts.py local/aws split so PIN + MFA flows run on a laptop without
+        # AWS, exactly like the magic-link path already does.
+        from lib import accounts  # noqa: PLC0415 — avoid import cycle at module load
+
+        wanted = name.lower().strip()
+        for rec in accounts._clinicians.values():
+            if rec.get("hospital_id") == hospital_id and rec.get("name_lower") == wanted:
+                return rec
+        return None
     resp = _table("solace-clinicians").query(
         IndexName="hospital_name-index",
         KeyConditionExpression="hospital_id = :h AND name_lower = :n",
@@ -87,6 +98,18 @@ def find_clinician(hospital_id: str, name: str) -> dict | None:
     )
     items = resp.get("Items", [])
     return items[0] if items else None
+
+
+def get_clinician(clinician_id: str) -> dict | None:
+    """Fetch a single clinician record by id (local in-memory or DDB)."""
+    if settings.solace_mode != "aws":
+        from lib import accounts  # noqa: PLC0415
+
+        return accounts._clinicians.get(clinician_id)
+    resp = _table("solace-clinicians").get_item(
+        Key={"clinician_id": clinician_id}, ConsistentRead=True
+    )
+    return resp.get("Item")
 
 
 def verify_pin(plain_pin: str, stored_hash: str) -> bool:
@@ -248,6 +271,118 @@ def verify_token(token: str) -> Session:
         )
     except KeyError as e:
         raise AuthError(f"token missing required claim: {e}") from e
+
+
+# ---- TOTP MFA (RFC 6238 second factor) ---------------------------------------------
+# The TOTP secret is persisted as the `totp_secret` attribute on the clinician
+# record in `solace-clinicians`. That table is encrypted at rest with the single
+# solace CMK (alias/solace), so the secret is CMK-protected at rest exactly like
+# the bcrypt PIN hash — satisfying COMP-003 without any new key handling here.
+# `mfa_enabled` gates enforcement: an enrolled-but-unconfirmed clinician still
+# logs in with PIN only, so the demo path is never broken (backward compatible).
+#
+# SEC-002: none of these helpers log the secret or the code. The secret leaves
+# the system exactly once, as a return value of enroll_mfa(), to be shown in the
+# QR / otpauth URI; it is never written to a log line.
+
+
+def _persist_clinician_fields(clinician_id: str, fields: dict[str, Any]) -> None:
+    """Write the given attributes onto a clinician record (local or DDB).
+
+    Uses an existing-style update path (DDB update_item / in-memory dict) and
+    never touches db/storage.py, which is owned elsewhere this cycle.
+    """
+    if settings.solace_mode != "aws":
+        from lib import accounts  # noqa: PLC0415
+
+        rec = accounts._clinicians.get(clinician_id)
+        if rec is None:
+            raise AuthError("unknown clinician")
+        rec.update(fields)
+        return
+    expr = "SET " + ", ".join(f"{k} = :{k}" for k in fields)
+    values = {f":{k}": v for k, v in fields.items()}
+    _table("solace-clinicians").update_item(
+        Key={"clinician_id": clinician_id},
+        UpdateExpression=expr,
+        ExpressionAttributeValues=values,
+    )
+
+
+def mfa_enabled(clinician: dict) -> bool:
+    """True only when the clinician has confirmed a TOTP enrollment."""
+    return bool(clinician.get("mfa_enabled")) and bool(clinician.get("totp_secret"))
+
+
+def enroll_mfa(clinician_id: str, account: str, *, issuer: str = "Solace") -> dict:
+    """Provision a fresh TOTP secret for a clinician (does NOT enable MFA yet).
+
+    Returns {"secret", "otpauth_uri"} — surfaced to the client exactly once so
+    the user can scan the QR / key it into an authenticator app. MFA only turns
+    on after confirm_mfa() validates a live code, proving the secret was stored.
+    Re-enrolling overwrites any prior unconfirmed secret and resets the flag.
+    """
+    from lib import mfa  # noqa: PLC0415
+
+    secret = mfa.generate_secret()
+    _persist_clinician_fields(
+        clinician_id, {"totp_secret": secret, "mfa_enabled": False}
+    )
+    return {
+        "secret": secret,
+        "otpauth_uri": mfa.provisioning_uri(secret, account=account, issuer=issuer),
+    }
+
+
+def confirm_mfa(clinician_id: str, code: str) -> bool:
+    """Verify a code against the provisioned secret and, on success, enable MFA.
+
+    Returns True and sets mfa_enabled=True iff the code is valid. Returns False
+    (without enabling) if no secret is provisioned or the code is wrong.
+    """
+    from lib import mfa  # noqa: PLC0415
+
+    clinician = get_clinician(clinician_id)
+    if not clinician:
+        return False
+    secret = clinician.get("totp_secret")
+    if not secret or not mfa.verify(secret, code):
+        return False
+    _persist_clinician_fields(clinician_id, {"mfa_enabled": True})
+    return True
+
+
+def verify_mfa_code(clinician: dict, code: str | None) -> bool:
+    """Constant-time check of a login-time TOTP code for an MFA-enabled clinician.
+
+    Returns False when no code is supplied or the secret is missing, so the
+    caller rejects the login with 401 and never issues a JWT without the factor.
+    """
+    from lib import mfa  # noqa: PLC0415
+
+    if not code:
+        return False
+    secret = clinician.get("totp_secret")
+    if not secret:
+        return False
+    return mfa.verify(secret, code)
+
+
+def disable_mfa(clinician_id: str) -> None:
+    """Turn off MFA and drop the stored secret (e.g. admin reset)."""
+    if settings.solace_mode != "aws":
+        from lib import accounts  # noqa: PLC0415
+
+        rec = accounts._clinicians.get(clinician_id)
+        if rec is not None:
+            rec["mfa_enabled"] = False
+            rec.pop("totp_secret", None)
+        return
+    _table("solace-clinicians").update_item(
+        Key={"clinician_id": clinician_id},
+        UpdateExpression="SET mfa_enabled = :f REMOVE totp_secret",
+        ExpressionAttributeValues={":f": False},
+    )
 
 
 def update_last_login(clinician_id: str) -> None:

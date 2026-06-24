@@ -25,6 +25,14 @@ router = APIRouter()
 class LoginBody(BaseModel):
     clinician_name: str
     pin: str
+    # Optional TOTP second factor. Required only for clinicians who have
+    # confirmed MFA enrollment; clinicians without MFA log in as before
+    # (backward compatible — the demo flow is unaffected).
+    mfa_code: str | None = None
+
+
+class MfaVerifyBody(BaseModel):
+    code: str
 
 
 class MagicRequestBody(BaseModel):
@@ -129,6 +137,29 @@ def login(
             extra={"reason": "bad_pin"},
         )
         raise HTTPException(status_code=401, detail="incorrect name or PIN")
+
+    # Second factor (TOTP), enforced only for clinicians who have confirmed
+    # MFA enrollment. A wrong/absent code on an MFA-enabled account is a failed
+    # login: it ticks the same per-account lockout + per-identity abuse counters
+    # as a bad PIN, and NO token is issued. SEC-002: the code is never logged.
+    if jwt_auth.mfa_enabled(clinician):
+        if not jwt_auth.verify_mfa_code(clinician, body.mfa_code):
+            jwt_auth.record_failed_attempt(clinician["clinician_id"])
+            blocklist.record_abuse(identity_hash, "auth.login_bad_mfa")
+            _audit.record(
+                clinician_id=clinician["clinician_id"],
+                clinician_name=clinician["name"],
+                action="auth.login_failed",
+                source_ip=source_ip,
+                status_code=401,
+                extra={"reason": "mfa_required" if not body.mfa_code else "bad_mfa_code"},
+            )
+            # 401 with a distinct detail so the frontend can prompt for a code,
+            # but the audit reason above stays internal.
+            raise HTTPException(
+                status_code=401,
+                detail="A valid authenticator code is required.",
+            )
 
     # Success — clear any failed attempt counter and issue token
     jwt_auth.clear_failed_attempts(clinician["clinician_id"])
@@ -256,6 +287,66 @@ def magic_verify(
         "hospital_id": sess.hospital_id,
         "expires_at": sess.exp,
     }
+
+
+@router.post("/auth/mfa/enroll")
+def mfa_enroll(
+    hospital_id: str = Path(...),
+    request: Request = None,
+    caller: dict = Depends(require_clinician),
+) -> dict:
+    """Provision a TOTP secret for the authenticated clinician.
+
+    Returns the base32 secret + otpauth:// URI ONCE so the client can render a
+    QR code. MFA is not active until POST /auth/mfa/verify confirms a live code.
+    SEC-002: the secret / URI are returned to the caller but never logged; the
+    audit entry records only that enrollment was initiated.
+    """
+    cid = caller["clinician_id"]
+    account = caller.get("name") or cid
+    enrollment = jwt_auth.enroll_mfa(cid, account=account, issuer="Solace")
+    from lib.auth import audit as _audit_call  # noqa: PLC0415
+
+    _audit_call(
+        caller,
+        "auth.mfa_enroll_initiated",
+        request=request,
+        status_code=200,
+    )
+    return {
+        "secret": enrollment["secret"],
+        "otpauth_uri": enrollment["otpauth_uri"],
+        "issuer": "Solace",
+        "account": account,
+    }
+
+
+@router.post("/auth/mfa/verify")
+def mfa_verify(
+    hospital_id: str = Path(...),
+    body: MfaVerifyBody | None = None,
+    request: Request = None,
+    caller: dict = Depends(require_clinician),
+) -> dict:
+    """Confirm a TOTP enrollment by validating a live code; enables MFA on success."""
+    if body is None or not body.code.strip():
+        raise HTTPException(status_code=400, detail="code required")
+
+    cid = caller["clinician_id"]
+    from lib.auth import audit as _audit_call  # noqa: PLC0415
+
+    if not jwt_auth.confirm_mfa(cid, body.code.strip()):
+        _audit_call(
+            caller,
+            "auth.mfa_verify_failed",
+            request=request,
+            status_code=400,
+            extra={"reason": "bad_or_unprovisioned_code"},
+        )
+        raise HTTPException(status_code=400, detail="Incorrect authenticator code. Try again.")
+
+    _audit_call(caller, "auth.mfa_enabled", request=request, status_code=200)
+    return {"mfa_enabled": True}
 
 
 @router.get("/auth/whoami")

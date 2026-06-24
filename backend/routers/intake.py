@@ -12,23 +12,17 @@ from fastapi import APIRouter, File, Form, HTTPException, Path, Request, UploadF
 
 from db import media, storage
 from db.constants import STATUS_WAITING
-from lib import ai_log, blocklist, content_guard, idempotency, quota, uploads
+from lib import ai_log, async_invoke, blocklist, content_guard, idempotency, quota, uploads
 
 CONSENT_VERSION_CURRENT = "1.0"
 from lib.fallbacks import ESI_LABELS, GENERIC_PATIENT_EXPLANATION
 from services import (
     care_routing,
-    comfort_protocol,
-    differential,
-    disposition,
-    prebrief,
-    scribe,
+    intake_artifacts,
     transcription,
     triage,
     triage_rules,
-    tts,
     vision,
-    workup,
 )
 from services.workflows import engine as workflow_engine
 
@@ -204,49 +198,18 @@ async def create_intake(
     esi_label = ESI_LABELS.get(esi_level, str(esi_level))
     patient_explanation = GENERIC_PATIENT_EXPLANATION.get(esi_level, "")
 
-    # 6. Fire the Claude calls in parallel — biggest latency win.
-    # Stage A (text-only): prebrief, scribe, comfort, differential.
-    # We run differential first because workup + disposition depend on its output.
-    prebrief_task = asyncio.to_thread(
-        prebrief.generate,
-        transcript_text, photo_analysis, esi_level,
-        info_dict, qa_list,
-    )
-    scribe_task = asyncio.to_thread(
-        scribe.generate_clinical_note,
-        transcript_text, info_dict, qa_list, photo_analysis,
-    )
-    comfort_task = asyncio.to_thread(
-        comfort_protocol.generate,
-        transcript_text, photo_analysis, esi_level, language,
-        info_dict, qa_list,
-    )
-    differential_task = asyncio.to_thread(
-        differential.generate,
-        transcript_text, esi_level,
-        info_dict, qa_list, photo_analysis, None,
-    )
-    clinician_prebrief, clinical_scribe_note, protocol, ddx_list = await asyncio.gather(
-        prebrief_task, scribe_task, comfort_task, differential_task
-    )
-
-    # Stage B: workup + disposition consume the differential. Both run in parallel,
-    # AND in parallel with TTS — TTS only needs `protocol` + `patient_explanation`,
-    # both already produced by stage A. Overlapping these saves ~600ms-1.2s on the
-    # critical path (TTS is the slowest of the three).
-    workup_task = asyncio.to_thread(
-        workup.generate,
-        transcript_text, esi_level, ddx_list, info_dict, None,
-    )
-    disposition_task = asyncio.to_thread(
-        disposition.generate,
-        transcript_text, esi_level, ddx_list, info_dict, None,
-    )
-    audio_script = tts.compose_script(patient_explanation, protocol, patient_name=patient_name)
-    tts_task = asyncio.to_thread(tts.generate_and_upload, audio_script, language, patient_id)
-    workup_orders, dispo, audio_url = await asyncio.gather(
-        workup_task, disposition_task, tts_task
-    )
+    # 6. NO synchronous Claude/TTS calls remain in this path. Everything the
+    # patient sees IMMEDIATELY (ESI, label, explanation, confidence band, care
+    # routing) is deterministic and computed above. The two slow Bedrock/Polly
+    # calls that used to live here — comfort_protocol.generate (~8s Claude) and
+    # tts.generate_and_upload (~6-14s Polly) — are now DEFERRED alongside the
+    # clinician-only artifacts (see step 8b). Combined with the clinician
+    # artifacts they overflowed API Gateway's 30s hard integration timeout
+    # (reproduced live: text-only intake → HTTP 503 at 30.07s), so the sync path
+    # keeps zero AI round-trips and returns in a few seconds even on a cold start.
+    #
+    # The result screen polls GET /public-patients/{id} for comfort_protocol +
+    # audio_url once the deferred worker has generated them.
 
     # Patient-facing care routing recommendation. Pure deterministic — runs on the
     # ESI we just computed. Surfaced as the primary CTA on the patient result page.
@@ -255,8 +218,6 @@ async def create_intake(
         transcript=transcript_text,
         patient_age=(info_dict or {}).get("age"),
     )
-
-    # 7. TTS already ran in parallel with stage B above — `audio_url` is in scope.
 
     # 8. Persist
     patient: dict[str, Any] = {
@@ -281,15 +242,16 @@ async def create_intake(
         "triage_recommendation": triage_recommendation_override or triage_result.recommendation,
         "triage_shortcut_reason": shortcut.reason if shortcut else None,
         "probabilities": json.dumps(triage_result.probabilities),
-        "clinician_prebrief": clinician_prebrief,
-        "clinical_scribe_note": clinical_scribe_note,
-        "differential": json.dumps(ddx_list),
-        "workup_orders": json.dumps(workup_orders),
-        "disposition": json.dumps(dispo),
+        # Deferred artifacts (clinician-only AND patient comfort/audio) are
+        # generated out-of-band (see step 8b). empty_artifacts() seeds
+        # empty-but-valid placeholders — comfort_protocol=[] and audio_url=None
+        # included — so both the dashboard poll and the patient-result poll that
+        # land before generation finishes render cleanly; artifacts_status drives
+        # the loading→loaded transition on the patient result screen.
+        **intake_artifacts.empty_artifacts(),
+        "artifacts_status": intake_artifacts.STATUS_PENDING,
         "patient_explanation": patient_explanation,
-        "comfort_protocol": json.dumps(protocol),
         "care_recommendation": json.dumps(care_routing.serialize(care_rec)),
-        "audio_url": audio_url,
         "pain_flagged": False,
         "status": STATUS_WAITING,
         # HIPAA consent record — who consented, when, to what version
@@ -305,13 +267,25 @@ async def create_intake(
         patient["ehr_match_source"] = (ehr_match_source or "fhir").strip()
     storage.put_patient(patient)
 
+    # 8b. Defer the slow clinician-only artifact generation. In AWS mode this is an
+    # async Lambda self-invoke (InvocationType='Event') that re-enters via
+    # main.handler()'s deferred-artifacts branch; in local/test mode it runs in a
+    # daemon thread. Fire-and-forget — never blocks or fails the patient response.
+    # Consent (SEC-004) + content_guard (SEC-005) already ran above; the deferred
+    # path operates on the already-scanned, already-consented stored record.
+    async_invoke.dispatch_deferred_artifacts(hospital_id, patient_id)
+
     response = {
         "patient_id": patient_id,
         "esi_level": esi_level,
         "esi_label": esi_label,
         "patient_explanation": patient_explanation,
-        "comfort_protocol": protocol,
-        "audio_url": audio_url,
+        # comfort_protocol + audio are DEFERRED — seed them pending so the result
+        # screen renders ESI/explanation/care routing immediately and polls
+        # GET /public-patients/{id} for these two once the worker fills them in.
+        "comfort_protocol": [],
+        "audio_url": None,
+        "artifacts_status": intake_artifacts.STATUS_PENDING,
         "confidence_band": triage_result.confidence_band,
         "language": language,
         "care_recommendation": care_routing.serialize(care_rec),

@@ -39,7 +39,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
-from services.fhir_writer import build_document_reference
+from services.fhir_writer import build_document_reference, build_service_request
 
 log = logging.getLogger(__name__)
 
@@ -344,6 +344,45 @@ class AthenaWriteClient:
             "ok": True,
             "surface": "fhir",
             "resourceType": "DocumentReference",
+            "id": body.get("id"),
+            "location": _location_of(resp, url),
+            "stored": "athena",
+        }
+
+    def write_service_request(
+        self,
+        *,
+        patient_ref: str,
+        code: str,
+        display: str,
+        system: str = "http://loinc.org",
+        intent: str = "order",
+        priority: str = "routine",
+        reason_text: str = "",
+    ) -> dict[str, Any]:
+        """Write an order as a FHIR R4 ``ServiceRequest`` on athena's FHIR surface.
+
+        athena exposes order create through its FHIR R4 endpoint
+        (``{base}/fhir/r4/ServiceRequest``). Reuses
+        :func:`fhir_writer.build_service_request` so the order shape is defined
+        once; only the dispatch is athena-specific.
+        """
+        resource = build_service_request(
+            patient_ref=patient_ref,
+            code=code,
+            display=display,
+            system=system,
+            intent=intent,
+            priority=priority,
+            reason_text=reason_text,
+        )
+        url = self._fhir_url("ServiceRequest")
+        resp = self._post(url, headers=self._auth_headers(content_type="application/fhir+json"), json=resource)
+        body = resp.json() or {}
+        return {
+            "ok": True,
+            "surface": "fhir",
+            "resourceType": "ServiceRequest",
             "id": body.get("id"),
             "location": _location_of(resp, url),
             "stored": "athena",

@@ -45,6 +45,9 @@ export default {
         sans: ['"DM Sans"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         heading: ['"DM Sans"', "system-ui", "sans-serif"],
         body: ['"DM Sans"', "system-ui", "sans-serif"],
+        // Editorial serif for marketing-surface display headlines only. Keep DM
+        // Sans for all in-app / dense screens.
+        display: ['"Fraunces"', "Georgia", "Cambria", "serif"],
         mono: ['"JetBrains Mono"', "monospace"],
       },
       letterSpacing: {

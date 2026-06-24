@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "framer-motion";
 import { Chip } from "../ui/Chip";
 import { t } from "../../lib/i18n";
 import type { FollowupAnswer, FollowupQuestion } from "../../types";
@@ -39,10 +40,21 @@ export function FollowupQuestions({ questions, answers, onAnswer, language = "en
   const yesLabel = t("form_yes", language);
   const noLabel = t("form_no", language);
   const placeholder = TEXT_PLACEHOLDER[language] || TEXT_PLACEHOLDER.en;
+  const reduce = useReducedMotion();
+  // Stagger the questions in as the screen appears — a calm cascade rather than
+  // every question popping at once. Reduced-motion users get an instant render.
+  const container = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.07, delayChildren: reduce ? 0 : 0.04 } },
+  };
+  const item = {
+    hidden: reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 },
+    show: { opacity: 1, y: 0, transition: { duration: reduce ? 0 : 0.24, ease: [0.4, 0, 0.2, 1] } },
+  };
   return (
-    <div className="flex flex-col gap-6">
+    <motion.div className="flex flex-col gap-6" variants={container} initial="hidden" animate="show">
       {questions.map((q) => (
-        <div key={q.id} className="flex flex-col gap-3">
+        <motion.div key={q.id} variants={item} className="flex flex-col gap-3">
           <div className="font-semibold text-lg leading-snug">{q.question}</div>
           {q.type === "boolean" && (
             <div className="flex gap-2">
@@ -73,9 +85,9 @@ export function FollowupQuestions({ questions, answers, onAnswer, language = "en
               className="w-full h-12 px-4 rounded-md bg-surface-lowest shadow-soft ring-1 ring-line focus:ring-primary focus:ring-2 text-base outline-none transition-all"
             />
           )}
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
