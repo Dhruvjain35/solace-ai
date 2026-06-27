@@ -10,7 +10,7 @@
 |---|---|
 | 🏥 **Product app — judges start here** | **[solaceaidemo.vercel.app/showcase](https://solaceaidemo.vercel.app/showcase)** — auto-signs in, split-screen patient + clinician view |
 | 📹 **2-min walkthrough** | **[▶️ Watch the demo on YouTube](https://youtu.be/hXsBIY23V2c)** |
-| 🌐 **Marketing site** | **[solacehealth-eight.vercel.app](https://solacehealth-eight.vercel.app)** |
+| 🌐 **Marketing site** | **[mysolaceclinic.com](https://mysolaceclinic.com)** |
 | 🔌 **Live API health** | [`/health`](https://7ew5f2x01d.execute-api.us-east-1.amazonaws.com/health) → `{"status":"ok","mode":"aws","triage":"trained_ensemble"}` — the real 4-model ML ensemble is running in production, not a stub |
 
 > Manual clinician sign-in (only if you skip `/showcase`): **Dr. Chen · PIN 224466**.
@@ -30,7 +30,7 @@
 > **Repo layout** — three independent pieces:
 > | Folder | What | Where it runs |
 > |---|---|---|
-> | `landing/` | Marketing site ([live](https://solacehealth-eight.vercel.app)) | Vercel, auto-deploys from `main` (see `landing/README.md`) |
+> | `landing/` | Marketing site ([live](https://mysolaceclinic.com)) | Vercel, auto-deploys from `main` (see `landing/README.md`) |
 > | `frontend/` | The product app (patient intake + Atlas clinician terminal) | solaceaidemo.vercel.app |
 > | `backend/` | FastAPI on AWS Lambda | AWS |
 
