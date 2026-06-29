@@ -2,7 +2,7 @@
 
 **AI-native patient intake and clinical triage for emergency departments.**
 
-[![Watch the Solace demo](https://img.youtube.com/vi/hXsBIY23V2c/hqdefault.jpg)](https://www.youtube.com/watch?v=vFjxtGklkCo)
+[![Watch the 2-min Solace demo on YouTube](https://img.shields.io/badge/Watch_the_2--min_demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=vFjxtGklkCo)
 
 ### ▶️ See it live
 

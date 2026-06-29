@@ -11,7 +11,7 @@ history to disguise the project's age — this reflects the real `git log`.
 
 ## Event window — UOE Summer of Code 2026 (June 2026)
 
-- **2026-06-22** — Recorded the [demo walkthrough](https://youtu.be/hXsBIY23V2c); re-seeded
+- **2026-06-22** — Recorded the [demo walkthrough](https://www.youtube.com/watch?v=vFjxtGklkCo); re-seeded
   and verified the live production triage board; finalized the Devpost submission.
 - **2026-06-21** — Submission hardening: scrubbed stale references, added MIT `LICENSE`,
   reconciled licensing headers, corrected the ML architecture description (4-model stacked

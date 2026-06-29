@@ -1,7 +1,7 @@
 # Solace — Devpost submission copy
 
 > Paste these into the Devpost form. Theme: **Healthcare & HealthTech** (secondary: AI/ML).
-> Demo video: https://youtu.be/hXsBIY23V2c
+> Demo video: https://www.youtube.com/watch?v=vFjxtGklkCo
 
 ---
 
@@ -12,7 +12,7 @@ AI-native patient intake and clinical triage that turns the dead time in an ER w
 - **Live product (start here):** https://solaceaidemo.vercel.app/showcase  (auto-signs in, split-screen patient + clinician)
 - **Marketing site:** https://mysolaceclinic.com
 - **GitHub:** https://github.com/Dhruvjain35/solace-ai
-- **Demo video:** https://youtu.be/hXsBIY23V2c
+- **Demo video:** https://www.youtube.com/watch?v=vFjxtGklkCo
 - **Live API proof:** https://7ew5f2x01d.execute-api.us-east-1.amazonaws.com/health → `{"triage":"trained_ensemble"}`
 - Manual clinician login (if not using /showcase): Dr. Chen · PIN **224466**
 
