@@ -12,8 +12,11 @@
 | 📹 **2-min walkthrough** | **[▶️ Watch the demo on YouTube](https://www.youtube.com/watch?v=vFjxtGklkCo)** |
 | 🌐 **Marketing site** | **[mysolaceclinic.com](https://mysolaceclinic.com)** |
 | 🔌 **Live API health** | [`/health`](https://7ew5f2x01d.execute-api.us-east-1.amazonaws.com/health) → `{"status":"ok","mode":"aws","triage":"trained_ensemble"}` — the real 4-model ML ensemble is running in production, not a stub |
+| 🗄️ **Live Vercel → DynamoDB** | [`mysolaceclinic.com/api/stats`](https://mysolaceclinic.com/api/stats) — a Vercel serverless function that reads our production Amazon DynamoDB tables live on each request. Returns `"source":"dynamodb"` with real counts across the multi-table model. **Click it — this is the Vercel + AWS Database integration, verifiable in one request.** |
 
 > Manual clinician sign-in (only if you skip `/showcase`): **Dr. Chen · PIN 224466**.
+
+> **For judges — populating the live clinician queue.** The clinician queue reads the `solace-patients` table, whose intake records self-expire on a DynamoDB TTL, so it may be empty when you arrive. To see it populated, either open **[/showcase](https://solaceaidemo.vercel.app/showcase)** (auto-signs in, split-screen patient + clinician), or run a 30-second intake at **[/demo](https://solaceaidemo.vercel.app/demo)** (pick a language, describe symptoms) and the patient appears in the live queue at **[/demo/clinician](https://solaceaidemo.vercel.app/demo/clinician)** (PIN 224466). The other tables ([`/api/stats`](https://mysolaceclinic.com/api/stats): clinicians, hospitals, EHR records) are always populated.
 
 ### Screenshots
 
