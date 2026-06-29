@@ -2,14 +2,14 @@
 
 **AI-native patient intake and clinical triage for emergency departments.**
 
-[![Watch the Solace demo](https://img.youtube.com/vi/hXsBIY23V2c/hqdefault.jpg)](https://youtu.be/hXsBIY23V2c)
+[![Watch the Solace demo](https://img.youtube.com/vi/hXsBIY23V2c/hqdefault.jpg)](https://www.youtube.com/watch?v=vFjxtGklkCo)
 
 ### ▶️ See it live
 
 | | |
 |---|---|
 | 🏥 **Product app — judges start here** | **[solaceaidemo.vercel.app/showcase](https://solaceaidemo.vercel.app/showcase)** — auto-signs in, split-screen patient + clinician view |
-| 📹 **2-min walkthrough** | **[▶️ Watch the demo on YouTube](https://youtu.be/hXsBIY23V2c)** |
+| 📹 **2-min walkthrough** | **[▶️ Watch the demo on YouTube](https://www.youtube.com/watch?v=vFjxtGklkCo)** |
 | 🌐 **Marketing site** | **[mysolaceclinic.com](https://mysolaceclinic.com)** |
 | 🔌 **Live API health** | [`/health`](https://7ew5f2x01d.execute-api.us-east-1.amazonaws.com/health) → `{"status":"ok","mode":"aws","triage":"trained_ensemble"}` — the real 4-model ML ensemble is running in production, not a stub |
 
