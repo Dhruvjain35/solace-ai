@@ -1,18 +1,24 @@
 ---
 import CtaPrimary from './CtaPrimary.astro';
 
-/* The background is a real photographed sky, colour-graded to the Solace
-   emerald ramp, not a CSS gradient. The clinician is composited into it with a
-   light wrap and a bottom fade so she belongs to the plate rather than sitting
-   on top of it. See public/assets/hero/CREDITS.md.
+/* Background is three graded sky plates parallaxing at different speeds and
+   directions, so the motion reads as atmosphere with depth rather than one
+   image sliding. The mid and near plates are premultiplied against black and
+   composited with mix-blend-mode: screen — black goes transparent under screen,
+   which reproduces an alpha cutout without storing an alpha channel. That is
+   what keeps all three layers at 107KB combined.
 
-   Motion is a slow ken-burns drift on the sky, which is why the plate is
-   rendered oversized: it can move without ever exposing an edge. */
+   The clinician is a 2000x3000 source, matted, de-branded, graded and light
+   wrapped so she belongs to the plate. See public/assets/hero/CREDITS.md. */
 ---
 
 <section class="hero" data-color-scheme="dark" id="main">
-  <div class="hero__sky" aria-hidden="true"></div>
-  <div class="hero__veil" aria-hidden="true"></div>
+  <div class="hero__bg" aria-hidden="true">
+    <div class="hero__layer hero__layer--far"></div>
+    <div class="hero__layer hero__layer--mid"></div>
+    <div class="hero__layer hero__layer--near"></div>
+    <div class="hero__veil"></div>
+  </div>
 
   <div class="container hero__inner">
     <h1 class="hero__title display-large">Triage that starts at the door</h1>
@@ -26,27 +32,38 @@ import CtaPrimary from './CtaPrimary.astro';
     </div>
 
     <div class="hero__stage">
-      <div class="glass hero__card hero__card--intake">
-        <p class="eyebrow">Voice intake &middot; Tagalog</p>
-        <p class="text-small">&ldquo;Nahihirapan akong huminga simula kaninang umaga.&rdquo;</p>
+      <div class="glass glass--lg hero__card hero__card--intake">
+        <div class="hero__card-head">
+          <span class="hero__pill">Voice intake</span>
+          <span class="mono hero__card-meta">Tagalog</span>
+        </div>
+        <p class="hero__quote">&ldquo;Nahihirapan akong huminga simula kaninang umaga.&rdquo;</p>
+        <div class="hero__wave" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
         <p class="mono hero__card-note">Shortness of breath, onset ~6h</p>
       </div>
 
-      <div class="glass hero__card hero__card--brief">
-        <p class="eyebrow">Clinician pre-brief</p>
-        <div class="hero__brief-head">
-          <strong class="weight-medium">M. Reyes, 47</strong>
+      <div class="glass glass--lg hero__card hero__card--brief">
+        <div class="hero__card-head">
+          <span class="hero__pill">Clinician pre-brief</span>
           <span class="hero__esi">Provisional ESI 2</span>
         </div>
+        <p class="hero__name">M. Reyes, 47</p>
         <dl class="hero__rows">
           <div><dt>Respiratory rate</dt><dd class="mono">24</dd></div>
           <div><dt>SpO&#8322;</dt><dd class="mono">93%</dd></div>
+          <div><dt>Heart rate</dt><dd class="mono">112</dd></div>
           <div><dt>EHR match</dt><dd class="mono">Epic &middot; 2 priors</dd></div>
         </dl>
       </div>
 
-      <div class="glass hero__card hero__card--queue">
-        <p class="eyebrow">Live queue</p>
+      <div class="glass glass--lg hero__card hero__card--queue">
+        <div class="hero__card-head">
+          <span class="hero__pill">Live queue</span>
+          <span class="mono hero__card-meta">4 waiting</span>
+        </div>
         <dl class="hero__rows">
           <div><dt>Reyes, M.</dt><dd class="mono">ESI 2 &middot; 0:41</dd></div>
           <div><dt>Osei, K.</dt><dd class="mono">ESI 3 &middot; 4:12</dd></div>
@@ -56,7 +73,7 @@ import CtaPrimary from './CtaPrimary.astro';
 
       <picture class="hero__figure">
         <source srcset="/assets/hero/clinician.webp 1x, /assets/hero/clinician@2x.webp 2x" type="image/webp" />
-        <img src="/assets/hero/clinician.webp" alt="" width="406" height="660" fetchpriority="high" decoding="async" />
+        <img src="/assets/hero/clinician.webp" alt="" width="505" height="900" fetchpriority="high" decoding="async" />
       </picture>
     </div>
   </div>
@@ -77,109 +94,132 @@ import CtaPrimary from './CtaPrimary.astro';
     background-color: var(--slate-black);
   }
 
-  /* Oversized on purpose so the drift never reveals an edge. */
-  .hero__sky {
-    position: absolute;
-    inset: -6% -6% -6% -6%;
-    z-index: -2;
-    background-image: image-set(
-      url('/assets/hero/sky.webp') 1x,
-      url('/assets/hero/sky@2x.webp') 2x
-    );
-    background-size: cover;
-    background-position: 50% 58%;
-    transform-origin: 58% 60%;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .hero__sky { animation: sky-drift 78s var(--ease-ui) infinite alternate; }
-  }
-  @keyframes sky-drift {
-    from { transform: scale(1) translate3d(0, 0, 0); }
-    to   { transform: scale(1.09) translate3d(-1.6%, -1.1%, 0); }
-  }
+  .hero__bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
 
-  /* Darkens the top so the nav and headline sit on near-black, and seals the
-     bottom edge into the section boundary. */
+  /* Oversized so drift never exposes an edge. */
+  .hero__layer {
+    position: absolute;
+    inset: -10%;
+    background-size: cover;
+    background-position: 50% 55%;
+    will-change: transform;
+  }
+  .hero__layer--far  { background-image: url('/assets/hero/sky-far.webp'); }
+  .hero__layer--mid  { background-image: url('/assets/hero/sky-mid.webp');  mix-blend-mode: screen; opacity: 0.92; }
+  .hero__layer--near { background-image: url('/assets/hero/sky-near.webp'); mix-blend-mode: screen; opacity: 0.55; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__layer--far  { animation: drift-far  92s linear infinite alternate; }
+    .hero__layer--mid  { animation: drift-mid  64s linear infinite alternate; }
+    .hero__layer--near { animation: drift-near 41s linear infinite alternate; }
+  }
+  /* Opposed directions and different scales are what make it read as depth
+     rather than one picture panning. */
+  @keyframes drift-far  { from { transform: translate3d(-1.5%, 0.6%, 0) scale(1.06); }
+                          to   { transform: translate3d( 1.5%,-0.6%, 0) scale(1.12); } }
+  @keyframes drift-mid  { from { transform: translate3d( 3.2%,-1.0%, 0) scale(1.08); }
+                          to   { transform: translate3d(-3.2%, 1.0%, 0) scale(1.15); } }
+  @keyframes drift-near { from { transform: translate3d(-5.5%, 1.6%, 0) scale(1.14); }
+                          to   { transform: translate3d( 5.5%,-1.6%, 0) scale(1.22); } }
+
   .hero__veil {
     position: absolute;
     inset: 0;
-    z-index: -1;
     background:
       linear-gradient(180deg,
-        rgb(from var(--slate-black) r g b / 0.62) 0,
-        rgb(from var(--slate-black) r g b / 0.18) 30%,
+        rgb(from var(--slate-black) r g b / 0.66) 0,
+        rgb(from var(--slate-black) r g b / 0.20) 30%,
         rgb(from var(--slate-black) r g b / 0.02) 52%,
-        rgb(from var(--slate-black) r g b / 0.45) 92%,
-        rgb(from var(--slate-black) r g b / 0.82) 100%),
-      radial-gradient(ellipse 74% 52% at 50% 6%,
-        rgb(from var(--slate-black) r g b / 0.34) 0, transparent 72%);
+        rgb(from var(--slate-black) r g b / 0.42) 90%,
+        rgb(from var(--slate-black) r g b / 0.86) 100%),
+      radial-gradient(ellipse 76% 54% at 50% 6%,
+        rgb(from var(--slate-black) r g b / 0.36) 0, transparent 72%);
   }
 
   .hero__inner { position: relative; z-index: var(--z-raised); }
 
   .hero__title {
-    margin-block-start: var(--space-16x);
+    margin-block-start: var(--space-14x);
     text-align: center;
     max-inline-size: 15ch;
     margin-inline: auto;
-    text-shadow: 0 2px 24px rgb(from var(--slate-black) r g b / 0.45);
+    text-shadow: 0 2px 28px rgb(from var(--slate-black) r g b / 0.5);
   }
-
   .hero__sub {
     margin-block-start: var(--space-5x);
     margin-inline: auto;
     max-inline-size: 46ch;
     text-align: center;
-    color: rgb(from var(--white) r g b / 0.78);
-    text-shadow: 0 1px 16px rgb(from var(--slate-black) r g b / 0.5);
+    color: rgb(from var(--white) r g b / 0.80);
+    text-shadow: 0 1px 18px rgb(from var(--slate-black) r g b / 0.55);
   }
-
   .hero__cta { display: flex; justify-content: center; margin-block-start: var(--space-8x); }
 
   .hero__stage {
     position: relative;
-    margin-block-start: var(--space-9x);
-    block-size: clamp(280px, 60vw, 360px);
+    margin-block-start: var(--space-8x);
+    block-size: clamp(330px, 64vw, 420px);
   }
-  @media (min-width: 640.02px) {
-    .hero__stage { block-size: clamp(340px, 34vw, 500px); }
-  }
+  @media (min-width: 640.02px) { .hero__stage { block-size: clamp(420px, 46vw, 700px); } }
 
+  /* Bigger figure. She is the subject, not set dressing. */
   .hero__figure {
     position: absolute;
     inset-inline-start: 50%;
-    inset-block-end: calc(-1 * var(--space-24x));
+    inset-block-end: calc(-1 * var(--space-40x));
     translate: -50% 0;
     z-index: var(--z-raised);
   }
+  @media (min-width: 640.02px) { .hero__figure { translate: -12% 0; } }
+  .hero__figure img { block-size: clamp(460px, 56vw, 820px); inline-size: auto; }
+
+  .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-3x); }
+
+  .hero__card--intake { inset-inline-start: 0; inset-block-start: var(--space-4x); }
+  .hero__card--brief  { inset-inline-end: 0;   inset-block-start: 0; }
+  .hero__card--queue  { inset-inline-start: var(--space-12x); inset-block-start: 64%; inline-size: 310px; }
+
   @media (min-width: 640.02px) {
-    .hero__figure { translate: -14% 0; }
-  }
-  .hero__figure img { block-size: clamp(420px, 44vw, 620px); inline-size: auto; }
-
-  .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-2x); }
-  .hero__card-note { color: rgb(from var(--white) r g b / 0.70); }
-
-  .hero__card--intake { inset-inline-start: 0; inset-block-start: var(--space-6x); }
-  .hero__card--brief  { inset-inline-end: 0;   inset-block-start: var(--space-2x); }
-  .hero__card--queue  { inset-inline-start: var(--space-20x); inset-block-start: 62%; inline-size: 272px; }
-
-  /* Cards arrive as the row can actually hold them; two cards plus the figure
-     need ~760px, so showing both at 640 put one over her face. */
-  @media (min-width: 640.02px) {
-    .hero__card--intake { display: grid; inline-size: 258px; }
+    .hero__card--intake { display: grid; inline-size: 300px; }
   }
   @media (min-width: 1080.02px) {
-    .hero__card--brief { display: grid; inline-size: 300px; }
-    .hero__card--intake { inline-size: 280px; }
+    .hero__card--brief { display: grid; inline-size: 340px; }
+    .hero__card--intake { inline-size: 320px; }
   }
   @media (min-width: 1280.02px) {
     .hero__card--queue { display: grid; }
-    .hero__card--intake { inline-size: 300px; }
-    .hero__card--brief  { inline-size: 330px; }
+    .hero__card--intake { inline-size: 340px; }
+    .hero__card--brief  { inline-size: 372px; }
   }
 
-  .hero__brief-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3x); }
+  .hero__card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3x); }
+  .hero__card-meta { color: rgb(from var(--white) r g b / 0.55); }
+
+  .hero__pill {
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgb(from var(--white) r g b / 0.70);
+  }
+
+  .hero__quote { font-size: var(--font-size-text-medium); line-height: 1.45; }
+  .hero__name  { font-size: var(--font-size-20); font-weight: var(--font-weight-medium); }
+  .hero__card-note { color: rgb(from var(--white) r g b / 0.65); }
+
+  /* A level meter, not decoration: ten fixed bars showing a captured waveform.
+     Nothing pulses. */
+  .hero__wave { display: flex; align-items: flex-end; gap: 4px; block-size: 26px; }
+  .hero__wave span {
+    inline-size: 3px;
+    border-radius: 1.5px;
+    background-color: rgb(from var(--solace-20) r g b / 0.6);
+  }
+  .hero__wave span:nth-child(1) { block-size: 30% } .hero__wave span:nth-child(2) { block-size: 62% }
+  .hero__wave span:nth-child(3) { block-size: 96% } .hero__wave span:nth-child(4) { block-size: 74% }
+  .hero__wave span:nth-child(5) { block-size: 44% } .hero__wave span:nth-child(6) { block-size: 82% }
+  .hero__wave span:nth-child(7) { block-size: 58% } .hero__wave span:nth-child(8) { block-size: 34% }
+  .hero__wave span:nth-child(9) { block-size: 68% } .hero__wave span:nth-child(10){ block-size: 26% }
 
   .hero__esi {
     display: inline-flex;
@@ -207,12 +247,12 @@ import CtaPrimary from './CtaPrimary.astro';
     display: flex;
     justify-content: space-between;
     gap: var(--space-4x);
-    padding-block: var(--space-1_5x);
+    padding-block: var(--space-2x);
     border-block-end: 1px solid rgb(from var(--white) r g b / 0.10);
   }
   .hero__rows > div:last-child { border-block-end: none; }
   .hero__rows dt { color: rgb(from var(--white) r g b / 0.88); }
-  .hero__rows dd { margin: 0; color: rgb(from var(--white) r g b / 0.70); }
+  .hero__rows dd { margin: 0; color: rgb(from var(--white) r g b / 0.72); }
 
   .hero__disclosure {
     position: relative;
