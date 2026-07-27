@@ -1,0 +1,22 @@
+---
+export interface Props {
+  href: string;
+  label: string;
+}
+const { href, label } = Astro.props;
+---
+
+<a class="cta-primary" href={href}>
+  <span class="cta-primary__label">{label}</span>
+  <span class="cta-primary__chip" aria-hidden="true">
+    <svg class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M2 8h11M9 4l4 4-4 4"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </span>
+</a>

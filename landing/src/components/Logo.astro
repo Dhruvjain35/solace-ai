@@ -1,0 +1,48 @@
+---
+export interface Props {
+  /** Height of the mark in px. The wordmark scales with it. */
+  size?: number;
+  /** Render the mark only, without the wordmark. */
+  markOnly?: boolean;
+}
+const { size = 26, markOnly = false } = Astro.props;
+---
+
+<span class="logo" style={`--mark-size:${size}px`}>
+  <svg class="logo__mark" viewBox="0 0 32 32" role="img" aria-label="Solace">
+    <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#solace-mark-grad)" />
+    <rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="rgb(255 255 255 / 0.18)" />
+    <path
+      d="M20.6 11.2c-1.05-1.24-2.62-1.95-4.42-1.95-2.7 0-4.62 1.45-4.62 3.5 0 1.86 1.28 2.85 3.86 3.42l1.5.33c1.62.35 2.28.83 2.28 1.68 0 1.03-1.05 1.75-2.6 1.75-1.5 0-2.74-.6-3.6-1.7"
+      fill="none" stroke="#06231c" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"
+    />
+  </svg>
+  {!markOnly && <span class="logo__word">solace</span>}
+  <defs is:global>
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+      <linearGradient id="solace-mark-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#98ebcd" />
+        <stop offset="100%" stop-color="#0f8a68" />
+      </linearGradient>
+    </svg>
+  </defs>
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2x);
+  }
+  .logo__mark {
+    inline-size: var(--mark-size);
+    block-size: var(--mark-size);
+    flex: none;
+  }
+  .logo__word {
+    font-size: calc(var(--mark-size) * 0.74);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+</style>

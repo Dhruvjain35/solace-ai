@@ -1,0 +1,334 @@
+/* ============================================================================
+   MATERIALS — the surface vocabulary.
+
+   Two materials, deliberately split by scheme so they never fight:
+     GLASS       lives on dark sections (hero, manifesto, footer) over imagery
+                 and gradient mesh. It needs something behind it to refract.
+     NEUMORPHISM lives on light sections over the warm neutral bed. It needs
+                 a matte surface to extrude from.
+   A surface is never both.
+
+   The five rules that keep neumorphism from looking like 2019 dribbble:
+     1. Warm taupe shade (--neutral-40), never blue-gray, never #d1d9e6.
+     2. Light from directly above. Every offset is Y-only, matching the
+        elevation ladder. No 45° diagonals.
+     3. Contrast 4-18%, never 100% white against 20% dark.
+     4. Blur is 2-3x the offset. offset==blur is what looks inflated.
+     5. Always a real hairline, so the shape survives high-contrast mode,
+        low-DPI screens, and forced-colors. This is the a11y fix.
+   ========================================================================= */
+
+@property --chip-angle { syntax: "<angle>"; initial-value: 0deg; inherits: true; }
+@property --cta-stop-1 { syntax: "<color>"; initial-value: #0d211b; inherits: true; }
+@property --cta-stop-2 { syntax: "<color>"; initial-value: #0d211b; inherits: true; }
+
+@layer components {
+
+  /* ══ LIQUID GLASS ═══════════════════════════════════════════════════════
+     Two stacked gradients: a 210deg specular sweep that dies at 30%, over a
+     vertical tint wash. Then a 12px backdrop blur. The border is drawn as a
+     gradient via mask-composite so it can go tint->white diagonally, which a
+     plain border-color cannot do.                                          */
+  .glass {
+    --_tint: var(--solace-100);
+    position: relative;
+    padding: var(--space-4x);
+    border-radius: var(--radius-4x);
+    color: var(--white);
+    border: 1px solid rgb(from var(--white) r g b / 30%);
+    background:
+      linear-gradient(210deg, rgb(from var(--white) r g b / 15%) 0, transparent 30%),
+      linear-gradient(180deg,
+        rgb(from var(--_tint) r g b / 30%) 0,
+        rgb(from var(--_tint) r g b / 20%) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Gradient border. Replaces the flat border where mask-composite exists. */
+  @supports ((-webkit-mask-composite: source-out) or (mask-composite: subtract)) {
+    .glass { border: none; }
+    .glass::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border: 1px solid transparent;
+      border-radius: inherit;
+      background: linear-gradient(45deg,
+        rgb(from var(--_tint) r g b / 20%),
+        rgb(from var(--white) r g b / 40%)) border-box;
+      -webkit-mask: linear-gradient(#000, #000) border-box, linear-gradient(#000, #000) padding-box;
+              mask: linear-gradient(#000, #000) border-box, linear-gradient(#000, #000) padding-box;
+      -webkit-mask-composite: source-out;
+              mask-composite: subtract;
+    }
+  }
+
+  /* ══ ELEVATION UTILITIES ════════════════════════════════════════════════ */
+  .elev-xsmall   { box-shadow: var(--elevation-xsmall); }
+  .elev-small    { box-shadow: var(--elevation-small); }
+  .elev-medium   { box-shadow: var(--elevation-medium); }
+  .elev-large    { box-shadow: var(--elevation-large); }
+  .elev-emphasis { box-shadow: var(--elevation-emphasis); }
+
+  /* ══ NEUMORPHISM ════════════════════════════════════════════════════════ */
+
+  /* ── RECESSED. Input wells, control tracks, meter troughs. ────────────── */
+  .neu-inset {
+    --_neu-surface: var(--neutral-5);
+    --_neu-shade:   var(--neutral-40);
+    --_neu-light:   var(--white);
+
+    background:
+      linear-gradient(180deg,
+        rgb(from var(--_neu-shade) r g b / 6%) 0,
+        rgb(from var(--_neu-shade) r g b / 0%) 45%),
+      var(--_neu-surface);
+    border-radius: var(--radius-3x);
+    box-shadow:
+      inset 0 1px 2px 0 rgb(from var(--_neu-shade) r g b / 18%),
+      inset 0 2px 6px 0 rgb(from var(--_neu-shade) r g b / 10%),
+      inset 0 -1px 0 0 rgb(from var(--_neu-light) r g b / 90%),
+      inset 0 0 0 1px rgb(from var(--_neu-shade) r g b / 12%),
+      0 1px 0 0 rgb(from var(--_neu-light) r g b / 70%);
+    transition: box-shadow var(--motion-duration-fast) var(--ease-ui);
+  }
+  .neu-inset:focus-within {
+    box-shadow:
+      inset 0 1px 2px 0 rgb(from var(--_neu-shade) r g b / 18%),
+      inset 0 2px 6px 0 rgb(from var(--_neu-shade) r g b / 10%),
+      inset 0 -1px 0 0 rgb(from var(--_neu-light) r g b / 90%),
+      inset 0 0 0 1px rgb(from var(--solace-60) r g b / 45%),
+      0 1px 0 0 rgb(from var(--_neu-light) r g b / 70%);
+  }
+
+  /* ── RAISED. Small controls that lift off the neutral bed. ────────────── */
+  .neu-raised {
+    --_neu-shade: var(--neutral-40);
+    background: linear-gradient(180deg, var(--white) 0, var(--neutral-5) 100%);
+    border-radius: var(--radius-3x);
+    box-shadow:
+      inset 0 1px 0 0 rgb(from var(--white) r g b / 95%),
+      inset 0 0 0 1px rgb(from var(--_neu-shade) r g b / 10%),
+      0 1px 1px -0.5px rgb(from var(--color-shadow) r g b / 5%),
+      0 3px 3px -1.5px rgb(from var(--color-shadow) r g b / 4%),
+      0 6px 6px -3px   rgb(from var(--color-shadow) r g b / 3%);
+    transition: box-shadow var(--motion-duration-base) var(--ease-ui),
+                background var(--motion-duration-base) var(--ease-ui);
+  }
+  .neu-raised:hover {
+    box-shadow:
+      inset 0 1px 0 0 rgb(from var(--white) r g b / 95%),
+      inset 0 0 0 1px rgb(from var(--_neu-shade) r g b / 12%),
+      0 1px 2px -0.5px rgb(from var(--color-shadow) r g b / 6%),
+      0 4px 5px -2px   rgb(from var(--color-shadow) r g b / 5%),
+      0 10px 12px -5px rgb(from var(--color-shadow) r g b / 4%);
+  }
+  .neu-raised:active {
+    background: linear-gradient(180deg, var(--neutral-5) 0, var(--neutral-5) 100%);
+    box-shadow:
+      inset 0 1px 2px 0 rgb(from var(--_neu-shade) r g b / 16%),
+      inset 0 0 0 1px rgb(from var(--_neu-shade) r g b / 12%);
+  }
+
+  /* ── PANEL. The visible signature. Large extruded surface on the warm bed.
+     Same pure-Y ladder as --elevation-medium, plus the two neumorphic lips:
+     a bright catch-light along the top edge and a warm shade underneath. ── */
+  .neu-panel {
+    --_neu-shade: var(--neutral-40);
+    position: relative;
+    background: linear-gradient(180deg, var(--white) 0, var(--neutral-5) 100%);
+    border-radius: var(--radius-5x);
+    box-shadow:
+      inset 0 1px 0 0 rgb(from var(--white) r g b / 95%),
+      inset 0 -1px 0 0 rgb(from var(--_neu-shade) r g b / 8%),
+      inset 0 0 0 1px rgb(from var(--_neu-shade) r g b / 9%),
+      0 1px 2px -1px  rgb(from var(--_neu-shade) r g b / 10%),
+      0 3px 6px -2px  rgb(from var(--_neu-shade) r g b / 10%),
+      0 8px 16px -4px rgb(from var(--_neu-shade) r g b / 9%),
+      0 16px 32px -8px rgb(from var(--_neu-shade) r g b / 8%),
+      0 32px 56px -16px rgb(from var(--_neu-shade) r g b / 7%);
+  }
+
+  /* ── WELL. A recessed region carved INTO a section. Pairs with .neu-panel. */
+  .neu-well {
+    --_neu-shade: var(--neutral-40);
+    background:
+      linear-gradient(180deg,
+        rgb(from var(--_neu-shade) r g b / 7%) 0,
+        rgb(from var(--_neu-shade) r g b / 0%) 40%),
+      var(--neutral-10);
+    border-radius: var(--radius-5x);
+    box-shadow:
+      inset 0 2px 4px 0  rgb(from var(--_neu-shade) r g b / 14%),
+      inset 0 4px 12px 0 rgb(from var(--_neu-shade) r g b / 8%),
+      inset 0 -1px 0 0   rgb(from var(--white) r g b / 80%),
+      inset 0 0 0 1px    rgb(from var(--_neu-shade) r g b / 10%);
+  }
+
+  /* ── DARK-SCHEME PAIR. Shade goes black; the light becomes brand-tinted. ─ */
+  [data-color-scheme="dark"] .neu-inset {
+    --_neu-surface: var(--slate-90);
+    --_neu-shade: #000;
+    --_neu-light: var(--solace-30);
+    box-shadow:
+      inset 0 1px 3px 0 rgb(from var(--_neu-shade) r g b / 40%),
+      inset 0 2px 8px 0 rgb(from var(--_neu-shade) r g b / 24%),
+      inset 0 -1px 0 0 rgb(from var(--_neu-light) r g b / 10%),
+      inset 0 0 0 1px rgb(from var(--white) r g b / 6%),
+      0 1px 0 0 rgb(from var(--white) r g b / 5%);
+  }
+  [data-color-scheme="dark"] .neu-panel {
+    background: linear-gradient(180deg, var(--slate-80) 0, var(--slate-90) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(from var(--white) r g b / 8%),
+      inset 0 0 0 1px rgb(from var(--white) r g b / 6%),
+      0 2px 4px -1px rgb(0 0 0 / 30%),
+      0 8px 16px -4px rgb(0 0 0 / 28%),
+      0 24px 40px -12px rgb(0 0 0 / 26%);
+  }
+  [data-color-scheme="dark"] .neu-well {
+    background: var(--slate-black);
+    box-shadow:
+      inset 0 2px 6px 0 rgb(0 0 0 / 45%),
+      inset 0 0 0 1px rgb(from var(--white) r g b / 5%);
+  }
+
+  /* ══ PRIMARY CTA ════════════════════════════════════════════════════════
+     Geometry: 36px chip + 6px x2 padding + 1px x2 border = 50px, radius 12px.
+     No transition declaration: the stops are registered <color>s, so they
+     interpolate for free. Hover moves ONLY stop 2, so the fill washes upward.
+     The chip runs four radial gradients orbiting a shared angle, paused until
+     hover.                                                                  */
+  .cta-primary {
+    --_bg-default: #0d211b;
+    --_bg-hover:   #133a2e;
+    --_bg-active:  #081712;
+    --_ring:       #1c5c48;
+
+    --cta-stop-1: var(--_bg-default);
+    --cta-stop-2: var(--_bg-default);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4x);
+    padding: var(--space-1_5x);
+    padding-inline-start: var(--space-4x);
+    border-radius: var(--radius-3x);
+    color: var(--white);
+    letter-spacing: normal;
+    text-decoration: none;
+    outline-offset: 2px;
+    background: linear-gradient(180deg, var(--cta-stop-1) 0, var(--cta-stop-2) 100%);
+    border: 1px solid rgb(from var(--white) r g b / 12%);
+    box-shadow:
+      0 1px 2px 0 rgb(from var(--slate-black) r g b / 24%),
+      0 0 0 1px var(--_ring);
+  }
+  .cta-primary:hover  { --cta-stop-2: var(--_bg-hover); }
+  .cta-primary:active { --cta-stop-1: var(--_bg-active); --cta-stop-2: var(--_bg-active); }
+
+  .cta-primary__label {
+    font-size: var(--font-size-16);
+    line-height: 1;
+    font-weight: var(--font-weight-bold);
+    text-shadow: 0 1px 0 rgb(from var(--slate-black) r g b / 18%);
+  }
+
+  .cta-primary__chip {
+    position: relative;
+    height: calc(36 / var(--rem) * 1rem);
+    width: calc(48 / var(--rem) * 1rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-2x);
+    border: 1px solid transparent;
+    box-shadow: 0 1px 2px rgb(from var(--slate-black) r g b / 8%);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 12%) 0, rgb(255 255 255 / 0) 100%) border-box,
+      radial-gradient(circle at calc(50% + 18% * cos(var(--chip-angle)))          calc(50% + 48% * sin(var(--chip-angle))),          rgb(152 235 205 / 60%) 0, transparent 50%) padding-box,
+      radial-gradient(circle at calc(50% +  7% * cos(var(--chip-angle) +  90deg)) calc(50% + 48% * sin(var(--chip-angle) +  90deg)), rgb( 58 199 161 / 60%) 0, transparent 50%) padding-box,
+      radial-gradient(circle at calc(50% - 43% * cos(var(--chip-angle) + 180deg)) calc(50% + 14% * sin(var(--chip-angle) + 180deg)), rgb( 45 212 191 / 50%) 0, transparent 50%) padding-box,
+      radial-gradient(circle at calc(50% + 41% * cos(var(--chip-angle) + 270deg)) calc(50% - 25% * sin(var(--chip-angle) + 270deg)), rgb(104 255 226 / 45%) 0, transparent 50%) padding-box,
+      linear-gradient(180deg, #127d61 0, #0b6b53 100%) border-box;
+    animation: chip-orbit 10s linear infinite;
+    animation-play-state: paused;
+  }
+  .cta-primary:hover .cta-primary__chip { animation-play-state: running; }
+
+  .cta-primary__icon {
+    width: calc(16 / var(--rem) * 1rem);
+    transition: translate var(--motion-duration-slow) var(--ease-ui);
+  }
+  .cta-primary:hover .cta-primary__icon { translate: 4px; }
+
+  @keyframes chip-orbit { to { --chip-angle: 1turn; } }
+
+  /* ── SECONDARY CTA. Outlined pill, brand border. ──────────────────────── */
+  .cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2x);
+    padding: var(--space-3x) var(--space-5x);
+    border-radius: var(--radius-3x);
+    border: 1px solid var(--color-action-primary);
+    color: var(--color-action-primary);
+    font-size: var(--font-size-16);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    background-color: transparent;
+    transition: background-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .cta-secondary:hover { background-color: var(--color-transparent-hover); }
+
+  /* ── ARROW LINK. Underlined label with a nudging arrow. ───────────────── */
+  .arrow-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2x);
+    color: var(--color-action-primary);
+    font-weight: var(--font-weight-medium);
+  }
+  .arrow-link span { text-decoration: underline; text-underline-offset: 3px; }
+  .arrow-link svg { width: 16px; transition: translate var(--motion-duration-slow) var(--ease-ui); }
+  .arrow-link:hover svg { translate: 4px; }
+}
+
+@layer utilities {
+  /* ── DIAGONAL HATCH. Page gutters and section dividers. ───────────────── */
+  .hatch { background-image: repeating-linear-gradient(-45deg, var(--gradient-diagonal-line)); }
+
+  /* Vertical hatched gutters flanking the content column. */
+  .with-vertical-bars {
+    padding-inline: var(--space-0x);
+  }
+  @media (min-width: 640.02px) {
+    .with-vertical-bars {
+      position: relative;
+      padding-inline: var(--viewport-padding);
+    }
+    .with-vertical-bars::before,
+    .with-vertical-bars::after {
+      content: "";
+      position: absolute;
+      inset-block-start: 0;
+      width: var(--viewport-padding);
+      height: 100%;
+      background-image: repeating-linear-gradient(-45deg, var(--gradient-diagonal-line));
+      border-inline: 1px solid var(--color-border-sub);
+      pointer-events: none;
+    }
+    .with-vertical-bars::before { inset-inline-start: 0; }
+    .with-vertical-bars::after  { inset-inline-end: 0; }
+  }
+
+  /* Horizontal hatched band used between stacked panels. */
+  .hatch-rule {
+    height: var(--space-6x);
+    background-image: repeating-linear-gradient(-45deg, var(--gradient-diagonal-line));
+    border-block: 1px solid var(--color-border-sub);
+  }
+}

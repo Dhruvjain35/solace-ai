@@ -1,0 +1,308 @@
+/* ============================================================================
+   SOLACE DESIGN TOKENS
+   Structure ported verbatim from superhuman.com; hue family remapped to Solace.
+   Rules that are NOT negotiable:
+     - neutrals stay WARM (#fcfaf7 … #141413). Never substitute cool grays.
+     - every hover/active/disabled state derives from a token via rgb(from …).
+       No hardcoded state colours anywhere in this codebase.
+     - --color-action-primary binds to --solace-80, NOT --solace-60.
+       #0f8a68 is 4.32:1 on white and fails AA for text. #0b6b53 is 6.54:1.
+   ========================================================================= */
+
+@layer theme, base, layout, components, utilities;
+
+@layer theme {
+  :root {
+    --rem: 16;
+    --ON: initial;
+    --OFF: ;
+
+    /* ── WARM NEUTRALS — verbatim from Superhuman ───────────────────────── */
+    --neutral-0:   #fcfaf7;
+    --neutral-5:   #f7f5f2;
+    --neutral-10:  #f2f0eb;
+    --neutral-20:  #dedbd5;
+    --neutral-30:  #bfbcb6;
+    --neutral-40:  #8d8a86;
+    --neutral-60:  #73716d;
+    --neutral-80:  #474543;
+    --neutral-90:  #292827;
+    --neutral-95:  #1f1e1d;
+    --neutral-100: #141413;
+    --white:       #ffffff;
+
+    /* ── SOLACE BRAND — replaces --purple-*. ✓ = existing brand hex ─────── */
+    --solace-0:   #f3faf7;
+    --solace-10:  #e7f4ef;  /* ✓ */
+    --solace-20:  #cde9df;  /* ✓ */
+    --solace-30:  #7ccbb2;  /* ✓ */
+    --solace-40:  #4dc9a4;
+    --solace-50:  #1fbf8f;  /* ✓ */
+    --solace-60:  #0f8a68;  /* ✓ decorative fill ONLY — never text on white */
+    --solace-80:  #0b6b53;  /* ✓ the real action colour */
+    --solace-90:  #085442;
+    --solace-100: #063b2e;  /* ✓ glass-card tint */
+
+    /* ── SLATE — replaces --mulberry-*. The dark chrome family ──────────── */
+    --slate-0:     #eef3f5;
+    --slate-10:    #dbe5e9;
+    --slate-20:    #b9cbd2;
+    --slate-30:    #8ba3ad;
+    --slate-40:    #667f8a;
+    --slate-60:    #3c5560;  /* ✓ */
+    --slate-80:    #2a3e47;
+    --slate-90:    #1c2b32;  /* manifesto section */
+    --slate-100:   #16242a;  /* header / footer */
+    --slate-black: #0a0f0d;  /* ✓ ink */
+
+    /* ── FOCUS. Blue, used for focus and nothing else ───────────────────── */
+    --sky-30: #b2cffe;  --sky-40: #62abff;  --sky-60: #3b96ff;
+
+    /* ── STATUS — verbatim, all warm-leaning ────────────────────────────── */
+    --red-0:#fff0f0;     --red-10:#fedbdb;    --red-20:#ffa8aa;    --red-30:#ff565e;
+    --red-40:#f72a42;    --red-60:#cd0037;    --red-80:#9f182d;    --red-90:#860628;    --red-100:#5b051c;
+    --orange-0:#fff3e1;  --orange-10:#ffe9c9; --orange-20:#fdc298; --orange-30:#ff9d56;
+    --orange-40:#f18333; --orange-60:#c25000; --orange-80:#a64500; --orange-90:#812d00; --orange-100:#611a00;
+    --yellow-0:#fff8da;  --yellow-10:#fef1bb; --yellow-20:#fcdf83; --yellow-30:#f9d255;
+    --yellow-40:#f5c428; --yellow-60:#dfad0d; --yellow-80:#ae880d; --yellow-90:#7f640b; --yellow-100:#664d02;
+    --blue-0:#eff8fd;    --blue-10:#daedfb;   --blue-20:#bbdff7;   --blue-30:#8dcaf2;
+    --blue-40:#4198d2;   --blue-60:#1173a8;   --blue-80:#0c5683;   --blue-90:#0a476d;   --blue-100:#16293d;
+
+    /* ── TRANSPARENCY CHAIN — every state derives from ONE token ────────── */
+    --color-transparent:          light-dark(rgb(255 255 255/0%), rgb(0 0 0/0%));
+    --color-transparent-inverse:  light-dark(rgb(0 0 0/0%), rgb(255 255 255/0%));
+    --color-transparent-hover:    light-dark(rgb(from var(--color-transparent-inverse) r g b/5%),  rgb(from var(--color-transparent-inverse) r g b/10%));
+    --color-transparent-active:   light-dark(rgb(from var(--color-transparent-inverse) r g b/15%), rgb(from var(--color-transparent-inverse) r g b/20%));
+    --color-transparent-disabled: light-dark(rgb(from var(--color-transparent-inverse) r g b/3%),  rgb(from var(--color-transparent-inverse) r g b/7%));
+
+    /* ── SEMANTIC: brand ────────────────────────────────────────────────── */
+    --color-primary-base:   light-dark(var(--solace-80), var(--solace-30));
+    --color-primary-dark:   light-dark(var(--solace-90), rgb(from var(--solace-40) r g b/16%));
+    --color-primary-darker: light-dark(var(--solace-100), rgb(from var(--solace-40) r g b/10%));
+    --color-secondary-base: light-dark(var(--neutral-90), rgb(from var(--white) r g b/90%));
+
+    /* ── SEMANTIC: surfaces ─────────────────────────────────────────────── */
+    --color-bg-canvas:         light-dark(var(--neutral-0),  var(--neutral-100));
+    --color-bg-primary:        light-dark(var(--white),      var(--slate-100));
+    --color-bg-secondary:      light-dark(var(--neutral-10), var(--slate-black));
+    --color-bg-secondary-dark: light-dark(var(--neutral-20), var(--neutral-100));
+    --color-bg-tertiary:       light-dark(var(--neutral-5),  var(--slate-90));
+    --color-bg-accent:         light-dark(var(--solace-10),  var(--solace-100));
+    --color-bg-accent-subdued: light-dark(var(--solace-0),   var(--solace-80));
+    --color-bg-quaternary:     light-dark(var(--neutral-10), var(--slate-80));
+    --color-bg-overlay:        light-dark(rgb(from var(--neutral-100) r g b/60%), rgb(from var(--neutral-100) r g b/60%));
+
+    /* ── SEMANTIC: text ─────────────────────────────────────────────────── */
+    --color-text-base:     light-dark(var(--neutral-90), var(--white));
+    --color-text-sub:      light-dark(rgb(from var(--neutral-100) r g b/65%), rgb(from var(--white) r g b/80%));
+    --color-text-soft:     light-dark(var(--neutral-30), rgb(from var(--white) r g b/65%));
+    --color-text-disabled: light-dark(rgb(from var(--neutral-100) r g b/40%), rgb(from var(--white) r g b/40%));
+    --color-text-inverse:  light-dark(var(--white), var(--neutral-90));
+
+    /* ── SEMANTIC: actions ──────────────────────────────────────────────── */
+    --color-action-primary:          light-dark(var(--solace-80), var(--solace-20));
+    --color-action-primary-hover:    light-dark(var(--solace-90), var(--solace-30));
+    --color-action-primary-active:   light-dark(var(--solace-100), var(--solace-40));
+    --color-action-primary-disabled: light-dark(rgb(from var(--solace-80) r g b/40%), rgb(from var(--solace-20) r g b/40%));
+    --color-action-secondary:          light-dark(var(--neutral-90), rgb(from var(--white) r g b/90%));
+    --color-action-secondary-hover:    light-dark(var(--neutral-100), var(--white));
+    --color-action-secondary-active:   light-dark(var(--neutral-100), var(--white));
+    --color-action-secondary-disabled: light-dark(rgb(from var(--neutral-100) r g b/20%), rgb(from var(--white) r g b/20%));
+
+    /* ── SEMANTIC: borders + icons ──────────────────────────────────────── */
+    --color-border-base:    light-dark(var(--neutral-40), var(--neutral-5));
+    --color-border-sub:     light-dark(rgb(from var(--neutral-60) r g b/20%), rgb(from var(--neutral-0) r g b/20%));
+    --color-border-soft:    light-dark(rgb(from var(--neutral-60) r g b/5%),  rgb(from var(--neutral-0) r g b/8%));
+    --color-border-focus:   light-dark(var(--sky-60), var(--sky-40));
+    --color-border-inverse: light-dark(var(--neutral-5), var(--neutral-40));
+
+    --color-icon-base:    light-dark(var(--neutral-90), var(--neutral-5));
+    --color-icon-sub:     light-dark(rgb(from var(--neutral-90) r g b/70%), rgb(from var(--neutral-0) r g b/80%));
+    --color-icon-soft:    light-dark(rgb(from var(--neutral-90) r g b/50%), rgb(from var(--neutral-0) r g b/60%));
+    --color-icon-inverse: light-dark(var(--neutral-5), var(--neutral-90));
+    --color-icon-product: light-dark(var(--slate-100), var(--neutral-0));
+
+    --color-faded-dark:    light-dark(var(--neutral-80), var(--neutral-5));
+    --color-faded-base:    light-dark(var(--neutral-60), rgb(from var(--neutral-0) r g b/20%));
+    --color-faded-light:   light-dark(var(--neutral-10), rgb(from var(--neutral-0) r g b/8%));
+    --color-faded-lighter: light-dark(var(--neutral-0),  rgb(from var(--white) r g b/40%));
+
+    --color-warning-dark:   light-dark(var(--orange-80), var(--orange-40));
+    --color-warning-base:   light-dark(var(--orange-60), var(--orange-20));
+    --color-error-dark:     light-dark(var(--red-80), var(--red-40));
+    --color-error-base:     light-dark(var(--red-60), var(--red-20));
+    --color-success-dark:   light-dark(var(--solace-90), var(--solace-40));
+    --color-success-base:   light-dark(var(--solace-80), var(--solace-20));
+    --color-highlight-base: light-dark(var(--blue-60), var(--blue-20));
+
+    --color-shadow:           light-dark(var(--neutral-80), var(--neutral-100));
+    --color-shadow-ring:      light-dark(var(--neutral-20), var(--neutral-80));
+    --color-current:          light-dark(var(--neutral-90), var(--white));
+    --color-surface-soft:     light-dark(rgb(from var(--neutral-60) r g b/10%), rgb(from var(--neutral-60) r g b/16%));
+    --color-surface-disabled: light-dark(rgb(from var(--neutral-40) r g b/20%), rgb(from var(--neutral-40) r g b/20%));
+
+    /* ── SPACE — 4px base ───────────────────────────────────────────────── */
+    --space-0x:0rem;
+    --space-0_25x:calc(1 / var(--rem) * 1rem);   --space-0_5x:calc(2 / var(--rem) * 1rem);
+    --space-1x:calc(4 / var(--rem) * 1rem);      --space-1_5x:calc(6 / var(--rem) * 1rem);
+    --space-2x:calc(8 / var(--rem) * 1rem);      --space-2_5x:calc(10 / var(--rem) * 1rem);
+    --space-3x:calc(12 / var(--rem) * 1rem);     --space-4x:calc(16 / var(--rem) * 1rem);
+    --space-5x:calc(20 / var(--rem) * 1rem);     --space-6x:calc(24 / var(--rem) * 1rem);
+    --space-7x:calc(28 / var(--rem) * 1rem);     --space-8x:calc(32 / var(--rem) * 1rem);
+    --space-9x:calc(36 / var(--rem) * 1rem);     --space-10x:calc(40 / var(--rem) * 1rem);
+    --space-12x:calc(48 / var(--rem) * 1rem);    --space-14x:calc(56 / var(--rem) * 1rem);
+    --space-16x:calc(64 / var(--rem) * 1rem);    --space-18x:calc(72 / var(--rem) * 1rem);
+    --space-20x:calc(80 / var(--rem) * 1rem);    --space-24x:calc(96 / var(--rem) * 1rem);
+    --space-32x:calc(128 / var(--rem) * 1rem);   --space-40x:calc(160 / var(--rem) * 1rem);
+
+    /* ── RADIUS ─────────────────────────────────────────────────────────── */
+    --radius-0x:0rem;
+    --radius-0_5x:calc(2 / var(--rem) * 1rem);   --radius-1x:calc(4 / var(--rem) * 1rem);
+    --radius-1_5x:calc(6 / var(--rem) * 1rem);   --radius-2x:calc(8 / var(--rem) * 1rem);
+    --radius-2_5x:calc(10 / var(--rem) * 1rem);  --radius-3x:calc(12 / var(--rem) * 1rem);
+    --radius-3_5x:calc(14 / var(--rem) * 1rem);  --radius-4x:calc(16 / var(--rem) * 1rem);
+    --radius-5x:calc(20 / var(--rem) * 1rem);    --radius-6x:calc(24 / var(--rem) * 1rem);
+    --radius-8x:calc(32 / var(--rem) * 1rem);    --radius-10x:calc(40 / var(--rem) * 1rem);
+    --radius-12x:calc(48 / var(--rem) * 1rem);   --radius-16x:calc(64 / var(--rem) * 1rem);
+    --radius-small:var(--radius-2x);
+    --radius-full:calc(999 / var(--rem) * 1rem);
+
+    /* ── ELEVATION — stacked micro-shadows. The ring appears TWICE. ─────── */
+    --elevation-xsmall:
+      0 0 0 1px rgb(from var(--color-shadow) r g b/4%),
+      0 4px 8px -2px rgb(from var(--color-shadow) r g b/6%),
+      0 2px 4px 0 rgb(from var(--color-shadow) r g b/4%),
+      0 1px 2px 0 rgb(from var(--color-shadow) r g b/4%),
+      0 0 0 1px rgb(from var(--color-shadow-ring) r g b/20%);
+
+    --elevation-small:
+      0 0 0 1px rgb(from var(--color-shadow) r g b/4%),
+      0 16px 8px -8px rgb(from var(--color-shadow) r g b/1%),
+      0 12px 6px -6px rgb(from var(--color-shadow) r g b/2%),
+      0 5px 5px -2.5px rgb(from var(--color-shadow) r g b/8%),
+      0 1px 3px -1.5px rgb(from var(--color-shadow) r g b/16%),
+      0 0 0 1px rgb(from var(--color-shadow-ring) r g b/20%);
+
+    /* THE 7-LAYER. Offset and blur double each step (1,3,6,12,24,48);
+       the negative spread halves. That ladder is what reads as real light. */
+    --elevation-medium:
+      0 0 0 1px rgb(from var(--color-shadow) r g b/4%),
+      0 1px 1px 0.5px rgb(from var(--color-shadow) r g b/4%),
+      0 3px 3px -1.5px rgb(from var(--color-shadow) r g b/2%),
+      0 6px 6px -3px rgb(from var(--color-shadow) r g b/4%),
+      0 12px 12px -6px rgb(from var(--color-shadow) r g b/4%),
+      0 24px 24px -12px rgb(from var(--color-shadow) r g b/4%),
+      0 48px 48px -24px rgb(from var(--color-shadow) r g b/4%),
+      0 0 0 1px rgb(from var(--color-shadow-ring) r g b/20%);
+
+    --elevation-large:
+      0 0 0 1px rgb(from var(--color-shadow) r g b/4%),
+      0 1px 1px 0.5px rgb(from var(--color-shadow) r g b/4%),
+      0 3px 3px -1.5px rgb(from var(--color-shadow) r g b/2%),
+      0 6px 6px -3px rgb(from var(--color-shadow) r g b/4%),
+      0 12px 12px -6px rgb(from var(--color-shadow) r g b/4%),
+      0 24px 24px -12px rgb(from var(--color-shadow) r g b/4%),
+      0 48px 48px -24px rgb(from var(--color-shadow) r g b/4%),
+      0 96px 96px -32px rgb(from var(--color-shadow) r g b/6%),
+      0 0 0 1px rgb(from var(--color-shadow-ring) r g b/20%);
+
+    --elevation-emphasis:
+      0 0 1px rgb(from var(--neutral-100) r g b/12%),
+      0 6px 12px rgb(from var(--neutral-100) r g b/12%);
+
+    /* ── TYPE ───────────────────────────────────────────────────────────── */
+    --font-family-sans: "Solace Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+    --font-size-10:calc(10 / var(--rem) * 1rem);  --font-size-12:calc(12 / var(--rem) * 1rem);
+    --font-size-14:calc(14 / var(--rem) * 1rem);  --font-size-16:calc(16 / var(--rem) * 1rem);
+    --font-size-18:calc(18 / var(--rem) * 1rem);  --font-size-20:calc(20 / var(--rem) * 1rem);
+    --font-size-22:calc(22 / var(--rem) * 1rem);  --font-size-24:calc(24 / var(--rem) * 1rem);
+    --font-size-26:calc(26 / var(--rem) * 1rem);  --font-size-28:calc(28 / var(--rem) * 1rem);
+    --font-size-30:calc(30 / var(--rem) * 1rem);  --font-size-32:calc(32 / var(--rem) * 1rem);
+    --font-size-34:calc(34 / var(--rem) * 1rem);  --font-size-36:calc(36 / var(--rem) * 1rem);
+    --font-size-38:calc(38 / var(--rem) * 1rem);  --font-size-40:calc(40 / var(--rem) * 1rem);
+    --font-size-42:calc(42 / var(--rem) * 1rem);  --font-size-44:calc(44 / var(--rem) * 1rem);
+    --font-size-46:calc(46 / var(--rem) * 1rem);  --font-size-48:calc(48 / var(--rem) * 1rem);
+    --font-size-50:calc(50 / var(--rem) * 1rem);  --font-size-54:calc(54 / var(--rem) * 1rem);
+    --font-size-58:calc(58 / var(--rem) * 1rem);  --font-size-60:calc(60 / var(--rem) * 1rem);
+    --font-size-64:calc(64 / var(--rem) * 1rem);  --font-size-66:calc(66 / var(--rem) * 1rem);
+    --font-size-70:calc(70 / var(--rem) * 1rem);  --font-size-72:calc(72 / var(--rem) * 1rem);
+    --font-size-80:calc(80 / var(--rem) * 1rem);  --font-size-86:calc(86 / var(--rem) * 1rem);
+
+    /* Fluid tier. Every clamp interpolates over exactly 640px → 1440px —
+       the same two numbers as the outer breakpoints and the content cap. */
+    --font-size-text-xsmall:    var(--font-size-14);
+    --font-size-text-small:     var(--font-size-16);
+    --font-size-text-medium:    var(--font-size-18);
+    --font-size-text-large:     clamp(calc(18 / var(--rem) * 1rem), calc(16.4 / var(--rem) * 1rem + 0.25vw),  calc(20 / var(--rem) * 1rem));
+    --font-size-heading-xsmall: clamp(calc(20 / var(--rem) * 1rem), calc(16   / var(--rem) * 1rem + 0.625vw), calc(25 / var(--rem) * 1rem));
+    --font-size-heading-small:  clamp(calc(24 / var(--rem) * 1rem), calc(18.4 / var(--rem) * 1rem + 0.875vw), calc(31 / var(--rem) * 1rem));
+    --font-size-heading-medium: clamp(calc(28 / var(--rem) * 1rem), calc(19.2 / var(--rem) * 1rem + 1.375vw), calc(39 / var(--rem) * 1rem));
+    --font-size-heading-large:  clamp(calc(32 / var(--rem) * 1rem), calc(18.4 / var(--rem) * 1rem + 2.125vw), calc(49 / var(--rem) * 1rem));
+    --font-size-display-small:  clamp(calc(36 / var(--rem) * 1rem), calc(16   / var(--rem) * 1rem + 3.125vw), calc(61 / var(--rem) * 1rem));
+    --font-size-display-medium: clamp(calc(44 / var(--rem) * 1rem), calc(18.4 / var(--rem) * 1rem + 4vw),     calc(76 / var(--rem) * 1rem));
+    --font-size-display-large:  clamp(calc(48 / var(--rem) * 1rem), calc(16   / var(--rem) * 1rem + 5vw),     calc(88 / var(--rem) * 1rem));
+
+    /* Non-standard on purpose. Variable-font weights, matched by stem width. */
+    --font-weight-book:     400;   /* Instrument Sans axis floor is 400; book is used twice */
+    --font-weight-regular:  460;
+    --font-weight-medium:   540;
+    --font-weight-semibold: 600;
+    --font-weight-bold:     700;
+
+    --line-height-tight:1.1;  --line-height-default:1.2;  --line-height-open:1.5;
+    --line-height-display: var(--line-height-tight);
+    --line-height-heading: var(--line-height-default);
+    --line-height-text:    var(--line-height-open);
+
+    --letter-spacing-tight: -0.0275em;
+    --letter-spacing-base:  -0.0075em;
+    --letter-spacing-text:    var(--letter-spacing-base);
+    --letter-spacing-heading: var(--letter-spacing-tight);
+    --letter-spacing-display: var(--letter-spacing-tight);
+    --letter-spacing-banner:  -0.0225em;
+
+    --paragraph-spacing-small: 0.5em;
+    --paragraph-spacing-large: 0.75em;
+
+    /* ── MOTION. Three durations, three easings. Nothing else. ──────────── */
+    --motion-duration-fast:     100ms;
+    --motion-duration-base:     200ms;
+    --motion-duration-slow:     300ms;
+    --motion-duration-emphasis: 400ms;
+
+    --ease-hero:   cubic-bezier(.191, .703, .704, .952);  /* entrances: snaps, then settles */
+    --ease-commit: cubic-bezier(.7, 0, .84, 0);           /* scroll-driven: holds, commits hard */
+    --ease-ui:     ease-in-out;                           /* everything interactive */
+
+    /* ── LAYOUT ─────────────────────────────────────────────────────────── */
+    --viewport-padding: var(--space-4x);
+    --grid-columns: 4;
+    --content-max-width: 1440px;
+    --page-header-height: 67px;
+
+    --z-base: 0;  --z-raised: 1;  --z-sticky: 10;  --z-header: 100;  --z-overlay: 1000;
+
+    /* diagonal hatch used by the page gutters and section dividers */
+    --gradient-diagonal-line:
+      var(--color-border-sub), var(--color-border-sub) 1px,
+      var(--color-transparent) 1px, var(--color-transparent) 5px;
+  }
+
+  @media (min-width: 640.02px)  { :root { --viewport-padding: var(--space-6x); --grid-columns: 8;  } }
+  @media (min-width: 1280.02px) { :root { --viewport-padding: var(--space-8x); --grid-columns: 12; } }
+
+  /* Scheme switching via the space-toggle trick. Sections opt in. */
+  :root,
+  [data-color-scheme="light"] { --color-scheme-light: var(--ON);  --color-scheme-dark: var(--OFF); color-scheme: light; }
+  [data-color-scheme="dark"]  { --color-scheme-light: var(--OFF); --color-scheme-dark: var(--ON);  color-scheme: dark;  }
+
+  /* Section background attribute: sets the paint AND the var descendants read. */
+  [data-background-color="primary-default"]   { --section-bg-color: var(--color-bg-primary);        --section-cell-highlight-bg: var(--color-bg-accent-subdued); background-color: var(--color-bg-primary); }
+  [data-background-color="secondary-default"] { --section-bg-color: var(--color-bg-secondary);      background-color: var(--color-bg-secondary); }
+  [data-background-color="secondary-dark"]    { --section-bg-color: var(--color-bg-secondary-dark); background-color: var(--color-bg-secondary-dark); }
+  [data-background-color="tertiary-default"]  { --section-bg-color: var(--color-bg-tertiary);       background-color: var(--color-bg-tertiary); }
+  [data-background-color="accent-default"]    { --section-bg-color: var(--color-bg-accent);         background-color: var(--color-bg-accent); }
+  [data-background-color="accent-subdued"]    { --section-bg-color: var(--color-bg-accent-subdued); background-color: var(--color-bg-accent-subdued); }
+}

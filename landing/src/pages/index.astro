@@ -1,0 +1,28 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import IntegrationWall from '../components/IntegrationWall.astro';
+---
+
+<Base
+  title="Solace: AI-native intake & triage for the emergency department"
+  description="Solace turns ED intake into a calm, AI-native workflow: multilingual voice intake for patients and an instant, explainable acuity pre-brief for clinicians."
+>
+  <div class="page-homepage">
+    <Header />
+    <main>
+      <Hero />
+      <IntegrationWall />
+    </main>
+  </div>
+</Base>
+
+<style>
+  /* timeline-scope lifts the hero's view timeline into a scope the sticky
+     header can see, even though the header is not a descendant of the hero. */
+  .page-homepage {
+    timeline-scope: --homepage-hero-section;
+    --content-max-width: 1440px;
+  }
+</style>

@@ -1,0 +1,78 @@
+/* ============================================================================
+   LAYOUT — container, grid, section rhythm.
+
+   Breakpoints are 640 / 1080 / 1280 / 1440, min-width only. The .02px is not a
+   typo: `min-width:641px` paired with `max-width:640px` leaves 640.5px
+   unmatched on fractional-DPI displays. Reproduce it.
+
+   The <section> element itself carries NO padding — only colour. All vertical
+   rhythm is delegated to the inner layout component. Keep that split.
+   ========================================================================= */
+
+@layer layout {
+
+  .container {
+    max-width: var(--content-max-width);
+    margin-inline: auto;
+    padding-inline: var(--viewport-padding);
+    container-type: inline-size;
+    box-sizing: content-box;   /* DO NOT CHANGE — the 1440 cap is content, not border */
+  }
+
+  .grid {
+    --_col-gap: var(--viewport-padding);   /* gutter == page gutter, so columns align to page edge */
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns), [col-start] 1fr [col-end]);
+    column-gap: var(--_col-gap, var(--_gap, 0));
+    row-gap: var(--_row-gap, var(--_gap, 0));
+  }
+
+  /* ── Section rhythm. 40px mobile → 96px desktop, one step at 640.02. ──── */
+  .page-section { padding-block: var(--space-10x); }
+  @media (min-width: 640.02px) { .page-section { padding-block: var(--space-24x); } }
+
+  .section-header { padding-block-end: var(--space-12x); }
+  @media (min-width: 640.02px) { .section-header { padding-block-end: var(--space-20x); } }
+
+  /* ── Two-column. Stacks until 1080.02, then goes row. ─────────────────── */
+  .two-col { display: flex; flex-direction: column; gap: var(--viewport-padding); }
+  @media (min-width: 1080.02px) { .two-col-md { flex-direction: row; } }
+  .two-col-reversed > :last-child { order: -1; }
+
+  .two-col-gap-m { gap: var(--space-8x); }
+  @media (min-width: 1080.02px) { .two-col-gap-m { gap: var(--space-16x); } }
+
+  .two-col-gap-l { gap: var(--space-6x); }
+  @media (min-width: 640.02px)  { .two-col-gap-l { gap: var(--space-10x); } }
+  @media (min-width: 1440.02px) { .two-col-gap-l { gap: var(--space-32x); } }
+
+  /* ── Column dividers sit at exactly half the gutter. ──────────────────── */
+  .with-divider > * { position: relative; }
+  .with-divider > * + *::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(-1 * var(--viewport-padding) / 2);
+    inset-block-start: 0;
+    width: var(--space-0_25x);
+    height: 100%;
+    background-color: var(--color-border-sub);
+  }
+
+  /* ── Flow + stack helpers ─────────────────────────────────────────────── */
+  .stack { display: flex; flex-direction: column; }
+  .gap-1x { gap: var(--space-1x); }   .gap-2x { gap: var(--space-2x); }
+  .gap-3x { gap: var(--space-3x); }   .gap-4x { gap: var(--space-4x); }
+  .gap-5x { gap: var(--space-5x); }   .gap-6x { gap: var(--space-6x); }
+  .gap-8x { gap: var(--space-8x); }   .gap-9x { gap: var(--space-9x); }
+  .gap-10x{ gap: var(--space-10x); }  .gap-12x{ gap: var(--space-12x); }
+
+  .row { display: flex; align-items: center; }
+  .row-between { display: flex; align-items: center; justify-content: space-between; }
+  .center { display: flex; align-items: center; justify-content: center; }
+
+  /* Full-bleed escape from the container. */
+  .full-bleed {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
+}

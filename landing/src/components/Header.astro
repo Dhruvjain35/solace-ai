@@ -1,0 +1,136 @@
+---
+import Logo from './Logo.astro';
+
+const nav = [
+  { label: 'Product', href: '/product' },
+  { label: 'How it works', href: '/how-it-works' },
+  { label: 'For clinicians', href: '/clinicians' },
+  { label: 'Integrations', href: '/integrations' },
+  { label: 'Pricing', href: '/pricing' },
+];
+---
+
+<header class="site-header" data-global-header>
+  <div class="container site-header__inner">
+    <a href="/" class="site-header__brand" aria-label="Solace home">
+      <Logo />
+    </a>
+
+    <nav class="site-header__nav" aria-label="Primary">
+      {nav.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+
+    <div class="site-header__actions">
+      <a href="/contact" class="site-header__link">Contact sales</a>
+      <a href="/demo" class="site-header__pill">Book a demo</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  /* The header reads the hero's own scroll progress through a named view
+     timeline. No scroll listener, no IntersectionObserver, no JS at all.
+     Both animated properties are registered, so they interpolate. */
+  @property --header-opacity { syntax: "<number>"; initial-value: 0; inherits: false; }
+  @property --header-ink     { syntax: "<color>";  initial-value: #ffffff; inherits: true; }
+
+  .site-header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-header);
+    block-size: var(--page-header-height);
+    display: flex;
+    align-items: center;
+    color: var(--header-ink);
+    background-color: rgb(from var(--white) r g b / var(--header-opacity));
+    border-block-end: 1px solid
+      rgb(from var(--color-border-sub) r g b / calc(alpha * var(--header-opacity)));
+
+    /* The variable-as-switch trick: `initial` is guaranteed-invalid inside a
+       var() substitution, which kills the whole declaration and removes the
+       blur. A single space substitutes to nothing, leaving `blur(12px)`. */
+    --header-has-blur: ;
+    backdrop-filter: var(--header-has-blur) blur(12px);
+    -webkit-backdrop-filter: var(--header-has-blur) blur(12px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .site-header {
+        animation:
+          header-fade-in linear forwards,
+          header-blur-off step-end forwards;
+        animation-timeline: --homepage-hero-section;
+        /* Superhuman uses `exit-crossing` with header-height offsets, but their
+           hero sits below an announcement bar. Ours is at document top, where
+           exit-crossing resolves as already-passed and the header renders
+           permanently solid. Verified empirically across six candidate ranges;
+           plain `exit` is the one that holds transparent over the hero. */
+        animation-range: exit 0% exit 100%;
+      }
+    }
+  }
+
+  @keyframes header-fade-in {
+    to { --header-opacity: 1; --header-ink: #292827; }
+  }
+  /* Once the header is opaque there is nothing behind it worth blurring,
+     so drop the filter and give the compositor its layer back. */
+  @keyframes header-blur-off {
+    to { --header-has-blur: initial; }
+  }
+
+  /* Browsers without view timelines get a permanently solid header. Slightly
+     less pretty over the hero, but readable, which matters more. */
+  @supports not (animation-timeline: view()) {
+    .site-header {
+      background-color: var(--color-bg-primary);
+      color: var(--color-text-base);
+      border-block-end: 1px solid var(--color-border-sub);
+    }
+  }
+
+  .site-header__inner {
+    inline-size: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-8x);
+  }
+
+  .site-header__brand { display: flex; align-items: center; }
+
+  .site-header__nav {
+    display: none;
+    align-items: center;
+    gap: var(--space-6x);
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+  }
+  @media (min-width: 1080.02px) { .site-header__nav { display: flex; } }
+
+  .site-header__nav a { opacity: 0.86; transition: opacity var(--motion-duration-base) var(--ease-ui); }
+  .site-header__nav a:hover { opacity: 1; }
+
+  .site-header__actions {
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-5x);
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .site-header__link { display: none; opacity: 0.86; transition: opacity var(--motion-duration-base) var(--ease-ui); }
+  .site-header__link:hover { opacity: 1; }
+  @media (min-width: 640.02px) { .site-header__link { display: inline-flex; } }
+
+  .site-header__pill {
+    padding: var(--space-2x) var(--space-4x);
+    border-radius: var(--radius-full);
+    background-color: var(--solace-20);
+    color: var(--neutral-90);
+    letter-spacing: normal;
+    transition: background-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .site-header__pill:hover { background-color: var(--solace-30); }
+</style>

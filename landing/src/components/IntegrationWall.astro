@@ -1,0 +1,80 @@
+---
+/* Superhuman's logo-wall pattern: a bordered cell grid with hairline rules,
+   not a row of floating logos. Note the heading is "Connects to", NOT
+   "Trusted by" — these are integration targets, not customers. */
+const vendors = [
+  { name: 'Epic',           src: '/assets/logos/epic.png' },
+  { name: 'Oracle Cerner',  src: '/assets/logos/cerner.png' },
+  { name: 'athenahealth',   src: '/assets/logos/athenahealth.png' },
+  { name: 'MEDITECH',       src: '/assets/logos/meditech.png' },
+  { name: 'NextGen',        src: '/assets/logos/nextgen.png' },
+  { name: 'eClinicalWorks', src: '/assets/logos/eclinicalworks.png' },
+  { name: 'Veradigm',       src: '/assets/logos/veradigm.png' },
+  { name: 'AdvancedMD',     src: '/assets/logos/advancedmd.png' },
+  { name: 'DrChrono',       src: '/assets/logos/drchrono.png' },
+  { name: 'Elation Health', src: '/assets/logos/elation.png' },
+];
+---
+
+<section data-background-color="secondary-default">
+  <div class="container page-section integration-wall">
+    <p class="integration-wall__lede text-large">Connects to the EHR you already run</p>
+
+    <ul class="integration-wall__grid">
+      {vendors.map((v) => (
+        <li class="integration-wall__cell">
+          <img src={v.src} alt={v.name} loading="lazy" decoding="async" />
+        </li>
+      ))}
+    </ul>
+
+    <p class="integration-wall__note text-xsmall text-sub">
+      Vendor marks are shown to identify supported integrations. They do not imply endorsement.
+    </p>
+  </div>
+</section>
+
+<style>
+  .integration-wall__lede { text-align: center; color: var(--color-text-sub); }
+
+  /* One hairline grid. Cells draw only their start edges; the container draws
+     the outer ring. That avoids doubled 2px borders where cells meet. */
+  .integration-wall__grid {
+    margin-block-start: var(--space-10x);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-block-start: 1px solid var(--color-border-sub);
+    border-inline-start: 1px solid var(--color-border-sub);
+  }
+  @media (min-width: 640.02px)  { .integration-wall__grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 1080.02px) { .integration-wall__grid { grid-template-columns: repeat(5, 1fr); } }
+
+  .integration-wall__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 104px;
+    padding: var(--space-5x) var(--space-4x);
+    border-inline-end: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+
+  .integration-wall__cell img {
+    max-block-size: 30px;
+    max-inline-size: 132px;
+    inline-size: auto;
+    object-fit: contain;
+    filter: grayscale(1);
+    opacity: 0.55;
+    transition:
+      opacity var(--motion-duration-base) var(--ease-ui),
+      filter  var(--motion-duration-base) var(--ease-ui);
+  }
+  .integration-wall__cell:hover img { filter: grayscale(0); opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .integration-wall__cell img { transition: none; }
+  }
+
+  .integration-wall__note { margin-block-start: var(--space-6x); text-align: center; }
+</style>

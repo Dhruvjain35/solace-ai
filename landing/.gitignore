@@ -1,11 +1,5 @@
+node_modules
+dist
+.astro
+.DS_Store
 .vercel
-node_modules/
-
-# scratch (video frame extraction)
-.cruise-frames/
-.demo-frames/
-.work/
-
-# build artifacts
-dist/
-*.tsbuildinfo
