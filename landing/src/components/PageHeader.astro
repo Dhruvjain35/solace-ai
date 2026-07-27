@@ -1,0 +1,39 @@
+---
+export interface Props {
+  eyebrow?: string;
+  title: string;
+  lede?: string;
+  /** Tightens the block for legal and utility pages. */
+  compact?: boolean;
+}
+const { eyebrow, title, lede, compact = false } = Astro.props;
+---
+
+<section data-background-color="secondary-default">
+  <div class:list={['container', 'page-header', compact && 'page-header--compact']}>
+    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    <h1 class={compact ? 'display-small' : 'display-medium'}>{title}</h1>
+    {lede && <p class="text-large text-sub page-header__lede">{lede}</p>}
+    <slot />
+  </div>
+</section>
+
+<style>
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    padding-block: var(--space-16x) var(--space-16x);
+  }
+  @media (min-width: 640.02px) {
+    .page-header { padding-block: var(--space-24x); }
+  }
+  .page-header--compact { padding-block: var(--space-12x); }
+  @media (min-width: 640.02px) {
+    .page-header--compact { padding-block: var(--space-16x); }
+  }
+
+  .page-header h1 { max-inline-size: 20ch; }
+  .page-header__lede { max-inline-size: 62ch; }
+</style>

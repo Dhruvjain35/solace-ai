@@ -1,0 +1,127 @@
+---
+/* The SMART on FHIR handshake as a stepped diagram, used by /integrations and
+   every /integrations/<slug> guide. Vendor-specific: the name is interpolated
+   into the authorize and write-back stations.
+
+   Scheme-agnostic by construction — every colour is a semantic token, so the
+   same markup reads correctly inside a [data-color-scheme="dark"] section
+   without a tone prop. The connectors are CSS-drawn chevrons rather than an
+   icon set: two hairline edges rotated, which keeps the engineering-drawing
+   motif the page gutters already use. */
+export interface Props {
+  vendor: string;
+}
+const { vendor } = Astro.props;
+
+const nodes = [
+  { label: 'Clinician', sub: 'launches Solace in context' },
+  { label: `${vendor} SSO`, sub: 'authorize · no new password' },
+  { label: 'Solace reads the chart', sub: 'minimum-necessary v2 scopes' },
+  { label: `Write-back to ${vendor}`, sub: 'confirm-gated · coded FHIR' },
+];
+---
+
+<div class="flow">
+  <ol class="flow__track">
+    {nodes.map((n, i) => (
+      <li class="flow__node">
+        <span class="mono flow__index">{String(i + 1).padStart(2, '0')}</span>
+        <p class="flow__label">{n.label}</p>
+        <p class="flow__sub">{n.sub}</p>
+      </li>
+    ))}
+  </ol>
+
+  <p class="flow__note text-small">
+    No standing access, the token is scoped to the launch and expires with the session.
+  </p>
+</div>
+
+<style>
+  .flow {
+    /* One local hook so the chevrons stay equally quiet in both schemes;
+       --color-border-base goes near-white on dark and would shout. */
+    --_flow-connector: var(--color-icon-soft);
+  }
+
+  .flow__track {
+    display: grid;
+    gap: var(--space-8x);
+  }
+  @media (min-width: 1080.02px) {
+    .flow__track { grid-template-columns: repeat(4, 1fr); gap: var(--space-10x); }
+  }
+
+  .flow__node {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1x);
+    padding: var(--space-5x);
+    border: 1px solid var(--color-border-sub);
+    border-radius: var(--radius-3x);
+  }
+
+  .flow__index {
+    color: var(--color-text-soft);
+    margin-block-end: var(--space-2x);
+  }
+
+  .flow__label {
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-default);
+    color: var(--color-text-base);
+  }
+
+  .flow__sub {
+    font-size: var(--font-size-12);
+    line-height: var(--line-height-open);
+    color: var(--color-text-sub);
+  }
+
+  /* The connector. A box wearing two edges, rotated: down the stack on
+     mobile, along the row from 1080.02 up. Sits dead centre in the gap. */
+  .flow__node:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    inline-size: 8px;
+    block-size: 8px;
+    border-inline-end: 1.5px solid var(--_flow-connector);
+    border-block-start: 1.5px solid var(--_flow-connector);
+    inset-inline-start: calc(50% - 4px);
+    inset-block-end: calc(-1 * var(--space-4x) - 4px);
+    rotate: 135deg;
+  }
+  @media (min-width: 1080.02px) {
+    .flow__node:not(:last-child)::after {
+      inset-inline-start: auto;
+      inset-block-end: auto;
+      inset-inline-end: calc(-1 * var(--space-5x) - 4px);
+      inset-block-start: calc(50% - 4px);
+      rotate: 45deg;
+    }
+  }
+
+  .flow__note {
+    position: relative;
+    margin-block-start: var(--space-8x);
+    padding-block-start: var(--space-6x);
+    color: var(--color-text-sub);
+    max-inline-size: 62ch;
+  }
+  /* 4-on / 4-off dashed rule, the Suite convention. */
+  .flow__note::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: min(100%, 320px);
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-border-sub) 0, var(--color-border-sub) 4px,
+      transparent 4px, transparent 8px
+    );
+  }
+</style>

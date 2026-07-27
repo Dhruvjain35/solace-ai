@@ -1,0 +1,34 @@
+---
+import Base from './Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+export interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+}
+const { title, description, canonical } = Astro.props;
+---
+
+<Base title={title} description={description} canonical={canonical}>
+  <div class="page">
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </div>
+</Base>
+
+<style>
+  /* Interior pages have no hero to hang the header's view timeline on, so the
+     header simply starts solid. Only the homepage names that timeline. */
+  .page { --content-max-width: 1280px; }
+  .page :global(.site-header) {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-base);
+    border-block-end: 1px solid var(--color-border-sub);
+    animation: none;
+  }
+</style>

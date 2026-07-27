@@ -1,0 +1,307 @@
+---
+import Page from '../layouts/Page.astro';
+import PageHeader from '../components/PageHeader.astro';
+import IntegrationFlow from '../components/IntegrationFlow.astro';
+import { INTEGRATIONS, tierLabel } from '../data/integrations';
+
+/* The integrations hub: the directory of every EHR Solace talks to. Ported
+   from legacy/src/pages/Integrations.tsx.
+
+   The legacy grid was a wall of floating drop-shadow tiles. Here it is one
+   hairline cell grid, the IntegrationWall pattern, because the directory is a
+   table of platforms rather than a set of independent cards. Each cell is the
+   whole link. A hatched filler closes the last row at three columns, where 14
+   platforms would otherwise leave a hole. */
+
+const count = String(INTEGRATIONS.length).padStart(2, '0');
+---
+
+<Page
+  title="Integrations: connect Solace to the chart you already run"
+  description="Solace connects over SMART on FHIR R4, so it reads the chart and writes the visit back in standard codes. Browse the guide for Epic, Oracle Health, athenahealth and every other platform we support."
+>
+  <PageHeader
+    eyebrow="Integrations"
+    title="Connect Solace to the chart you already run."
+    lede="Built on SMART on FHIR R4, so Solace reads the chart and writes the visit back in standard codes, no rip-and-replace, no parallel system to keep in sync."
+  />
+
+  {/* ═══ The directory ═══════════════════════════════════════════════════ */}
+  <section data-background-color="primary-default" aria-labelledby="directory-heading">
+    <div class="container page-section">
+      <div class="directory__head">
+        <h2 id="directory-heading" class="eyebrow">The directory</h2>
+        <span class="mono directory__count">{count} platforms</span>
+      </div>
+
+      <ul class="directory__grid">
+        {INTEGRATIONS.map((item) => (
+          <li class="directory__cell">
+            <a
+              class="directory__link"
+              href={`/integrations/${item.slug}`}
+              aria-label={`${item.name} integration guide`}
+            >
+              <span class="directory__mark">
+                {item.logo
+                  ? <img src={item.logo} alt="" width="28" height="28" loading="lazy" decoding="async" />
+                  : <span class="directory__glyph" aria-hidden="true"></span>}
+              </span>
+
+              <h3 class="directory__name heading-xsmall">{item.name}</h3>
+              <p class="directory__blurb text-small text-sub">{item.blurb}</p>
+
+              <span class="directory__foot">
+                <span class:list={['tier', item.tier === 'native' && 'tier--native']}>
+                  {tierLabel(item.tier)}
+                </span>
+                <span class="directory__arrow" aria-hidden="true">
+                  <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M2 8h11M9 4l4 4-4 4"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </span>
+            </a>
+          </li>
+        ))}
+        <li class="directory__cell directory__cell--filler hatch" aria-hidden="true"></li>
+      </ul>
+    </div>
+  </section>
+
+  {/* ═══ How connection works ════════════════════════════════════════════ */}
+  <section class="how" data-color-scheme="dark" aria-labelledby="how-connect-heading">
+    <div class="container page-section">
+      <div class="how__head">
+        <p class="eyebrow">How connection works</p>
+        <h2 id="how-connect-heading" class="heading-large">One SMART launch, then it just runs.</h2>
+      </div>
+      <IntegrationFlow vendor="your EHR" />
+    </div>
+  </section>
+
+  {/* ═══ Sandbox ═════════════════════════════════════════════════════════ */}
+  <section data-background-color="secondary-default" aria-labelledby="sandbox-heading">
+    <div class="container page-section">
+      <div class="sandbox neu-panel">
+        <div class="sandbox__copy">
+          <span class="sandbox__chip">No credentials</span>
+          <h2 id="sandbox-heading" class="heading-medium">
+            Try it now on the SMART Health IT sandbox.
+          </h2>
+          <p class="text-large text-sub">
+            See the full read-and-write loop against public FHIR R4 data before you touch a
+            single vendor credential.
+          </p>
+        </div>
+
+        <a
+          class="cta-primary sandbox__cta"
+          href="https://solaceaidemo.vercel.app"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span class="cta-primary__label">Launch the sandbox</span>
+          <span class="cta-primary__chip" aria-hidden="true">
+            <svg aria-hidden="true" class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M2 8h11M9 4l4 4-4 4"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+        </a>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  /* ── Directory ────────────────────────────────────────────────────────── */
+  .directory__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4x);
+    padding-block-end: var(--space-5x);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .directory__count { color: var(--color-text-soft); }
+
+  /* One hairline grid: the container draws its start edges, every cell draws
+     its end edges. No doubled 2px rules where cells meet. */
+  .directory__grid {
+    margin-block-start: var(--space-10x);
+    display: grid;
+    grid-template-columns: 1fr;
+    border-block-start: 1px solid var(--color-border-sub);
+    border-inline-start: 1px solid var(--color-border-sub);
+  }
+  @media (min-width: 640.02px)  { .directory__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1080.02px) { .directory__grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .directory__cell {
+    border-inline-end: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+
+  /* 14 platforms divides evenly at one and two columns; only the three-column
+     row needs closing, so the filler is hidden everywhere else. */
+  .directory__cell--filler { display: none; }
+  @media (min-width: 1080.02px) { .directory__cell--filler { display: block; } }
+
+  .directory__link {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    padding: var(--space-6x);
+    background-color: var(--color-transparent);
+    transition: background-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .directory__link:hover { background-color: var(--color-bg-tertiary); }
+
+  .directory__mark {
+    display: flex;
+    align-items: center;
+    block-size: 28px;
+    margin-block-end: var(--space-5x);
+  }
+  .directory__mark img {
+    inline-size: 28px;
+    block-size: 28px;
+    object-fit: contain;
+    filter: grayscale(1);
+    opacity: 0.55;
+    transition:
+      opacity var(--motion-duration-base) var(--ease-ui),
+      filter var(--motion-duration-base) var(--ease-ui);
+  }
+  .directory__link:hover .directory__mark img { filter: grayscale(0); opacity: 1; }
+
+  /* Vendors we hold no mark for get the house hollow glyph rather than a
+     stretched wordmark, so every name in the grid starts on the same edge. */
+  .directory__glyph {
+    inline-size: 12px;
+    block-size: 12px;
+    margin-inline-start: var(--space-2x);
+    border: 1.5px solid var(--color-icon-soft);
+    border-radius: 50%;
+  }
+
+  .directory__name { color: var(--color-text-base); }
+  .directory__blurb { flex: 1 1 auto; margin-block-start: var(--space-2x); }
+
+  .directory__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3x);
+    margin-block-start: var(--space-6x);
+    padding-block-start: var(--space-5x);
+    border-block-start: 1px solid var(--color-border-sub);
+  }
+
+  .directory__arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 36px;
+    block-size: 36px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border-sub);
+    color: var(--color-action-primary);
+    transition:
+      background-color var(--motion-duration-base) var(--ease-ui),
+      border-color var(--motion-duration-base) var(--ease-ui),
+      color var(--motion-duration-base) var(--ease-ui);
+  }
+  .directory__arrow svg { inline-size: 16px; }
+  .directory__link:hover .directory__arrow {
+    background-color: var(--color-action-primary);
+    border-color: var(--color-action-primary);
+    color: var(--color-text-inverse);
+  }
+
+  /* ── Tier chip ────────────────────────────────────────────────────────── */
+  .tier {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1x) var(--space-3x);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border-sub);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-sub);
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    white-space: nowrap;
+  }
+  .tier--native {
+    border-color: rgb(from var(--color-action-primary) r g b / 25%);
+    background-color: var(--color-bg-accent);
+    color: var(--color-action-primary);
+  }
+
+  /* ── How connection works ─────────────────────────────────────────────── */
+  .how { background-color: var(--slate-90); color: var(--color-text-base); }
+  .how__head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    padding-block-end: var(--space-12x);
+  }
+  .how__head h2 { max-inline-size: 18ch; }
+
+  /* ── Sandbox ──────────────────────────────────────────────────────────── */
+  .sandbox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-8x);
+    padding: var(--space-8x);
+  }
+  @media (min-width: 640.02px) { .sandbox { padding: var(--space-12x); } }
+  @media (min-width: 1080.02px) {
+    .sandbox { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-12x); }
+  }
+
+  .sandbox__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    max-inline-size: 56ch;
+  }
+
+  .sandbox__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1x) var(--space-3x);
+    border-radius: var(--radius-full);
+    border: 1px solid rgb(from var(--color-action-primary) r g b / 25%);
+    background-color: var(--color-bg-accent);
+    color: var(--color-action-primary);
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+  }
+
+  .sandbox__cta { flex: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .directory__link,
+    .directory__mark img,
+    .directory__arrow { transition: none; }
+  }
+</style>

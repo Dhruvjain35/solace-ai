@@ -1,0 +1,1001 @@
+---
+import Page from '../layouts/Page.astro';
+import PageHeader from '../components/PageHeader.astro';
+import CtaPrimary from '../components/CtaPrimary.astro';
+
+/* Ported from legacy/src/pages/Security.tsx, with the demonstrations that used
+   to live in legacy/src/components/security/Visuals.tsx and data.ts folded in.
+   Copy is carried across verbatim; only the visual system changed.
+
+   The three legacy demonstrations survive as system objects rather than as
+   decorated cards:
+     PhiScrub     -> two neu-panels either side of a labelled boundary column
+     PipelineFlow -> three panels, the one that holds PHI flipped to dark scheme
+     LeakGate     -> a dark file card, no macOS traffic lights (raw hex, banned)
+   Icons are gone except the two arrows and the check; the bordered grid IS the
+   visual, the same way TrustStrip and IntegrationWall work. */
+
+const chartFields = [
+  { k: 'Name', v: 'Marcus Reyes', tone: 'phi' },
+  { k: 'MRN', v: 'MR-4821-0093', tone: 'phi' },
+  { k: 'DOB', v: '1968-03-12', tone: 'phi' },
+  { k: 'Phone', v: '(512) 555-0148', tone: 'phi' },
+  { k: 'Problem', v: 'Exertional chest pain', tone: 'plain' },
+  { k: 'Vitals', v: 'HR 118 · BP 148/92', tone: 'plain' },
+  { k: 'Note', v: '“58M, tightness radiating to L arm…”', tone: 'phi' },
+];
+
+const modelFields = [
+  { k: 'Subject', v: '[slot S1]', tone: 'coded' },
+  { k: 'MRN', v: 'removed', tone: 'removed' },
+  { k: 'Age band', v: '50–59', tone: 'coded' },
+  { k: 'Phone', v: 'removed', tone: 'removed' },
+  { k: 'Problem', v: 'I20.9 · Angina', tone: 'coded' },
+  { k: 'Vitals', v: 'LOINC 8867-4 · 118', tone: 'coded' },
+  { k: 'Note', v: 'removed', tone: 'removed' },
+];
+
+/* Each step shows the actual artifact it emits, the real payload the model or
+   runtime hands to the next stage, so the flow reads as a data pipeline. */
+const steps = [
+  {
+    who: 'Model',
+    io: 'in: coded catalog → out: plan',
+    phi: false,
+    title: 'Plan',
+    body: 'The model reads the coded catalog and the question, then emits a structured query plan. No PHI is in scope.',
+    artifact: 'fetch(problem) where code = I20.9\nfill {S1} from vitals.HR',
+  },
+  {
+    who: 'Your runtime',
+    io: 'in: plan + chart → out: filled slots',
+    phi: true,
+    title: 'Execute',
+    body: 'Your trusted runtime runs the plan against the real chart, fills the slots, and keeps every identifier inside your environment.',
+    artifact: 'S1 = "Marcus Reyes"   // never leaves\nHR = 118              your runtime',
+  },
+  {
+    who: 'Model',
+    io: 'in: slot tokens → out: narration',
+    phi: false,
+    title: 'Narrate',
+    body: 'The model writes the answer over slot tokens, never the raw values, so re-identification only happens in your runtime.',
+    artifact: '"{S1} presents with angina,\n HR {S1.hr}, consider ECG…"',
+  },
+];
+
+const leakGateCode = `// CI gate: the build fails if raw PHI can reach a prompt
+test('no raw PHI in any model prompt', () => {
+  const prompt = buildPrompt(chart, question);
+
+  for (const field of RAW_PHI_FIELDS) {
+    // name, MRN, DOB, address, phone, free-text notes
+    expect(prompt).not.toContain(chart[field]);
+  }
+});`;
+
+const stats = [
+  { big: '749', label: 'automated tests every release', note: 'PASS · gates the build' },
+  { big: '0', label: 'raw PHI tokens allowed in any prompt', note: 'enforced at the boundary' },
+  { big: '100%', label: 'AI write-backs confirm-gated by a clinician', note: 'no automatic chart writes' },
+  { big: '1', label: 'tenant-isolation check on every query', note: 'every workspace, every read' },
+];
+
+const controlCategories = ['AI safety', 'Infrastructure', 'Governance'];
+
+/* The nine controls map 1:1 to Solace's real architecture, grouped into three
+   categories so the grid reads as a deliberate, numbered control catalog. */
+const controls = [
+  {
+    kicker: 'PHI isolation',
+    cat: 'AI safety',
+    title: 'The model never sees raw PHI.',
+    body: 'Our AI plans and narrates over coded, de-identified metadata and {slot} tokens. Names, MRNs, dates of birth and free-text notes are stripped before any prompt is built.',
+    points: [
+      'Raw identifiers replaced with slot tokens at the boundary',
+      'An automated leak-gate test fails the build if real PHI reaches a prompt',
+      'Re-identification happens only in your trusted runtime, never in a model call',
+    ],
+  },
+  {
+    kicker: 'Consent gate',
+    cat: 'AI safety',
+    title: 'No consent, no AI. Enforced at the boundary.',
+    body: 'A recorded-consent chokepoint sits in front of every AI request. With no consent on file the request is refused before it leaves your environment, and the refusal is logged.',
+    points: [
+      'Consent state checked on every AI invocation',
+      'Refusals are explicit and recorded, not silent',
+      'Patient can decline; the visit still works without the AI',
+    ],
+  },
+  {
+    kicker: 'Confirm-gated writes',
+    cat: 'AI safety',
+    title: 'Nothing reaches the chart without a click.',
+    body: 'Solace runs a Plan to Execute to Narrate pipeline. The model proposes; it never executes tools directly. Every write-back is staged for a clinician to review and approve.',
+    points: [
+      'The model plans actions; your runtime executes them',
+      'Write-backs are confirm-gated, never automatic',
+      'The clinician always makes the final call',
+    ],
+  },
+  {
+    kicker: 'Encryption',
+    cat: 'Infrastructure',
+    title: 'Encrypted in transit and at rest.',
+    body: 'Data is encrypted everywhere with customer-managed AWS KMS keys. Application secrets live in AWS Secrets Manager and are never inlined into code or configuration.',
+    points: [
+      'Customer-managed KMS keys, in transit and at rest',
+      'TLS-only storage; no plaintext object access',
+      'Secrets in AWS Secrets Manager, rotated, never hardcoded',
+    ],
+  },
+  {
+    kicker: 'Access control',
+    cat: 'Infrastructure',
+    title: 'Passwordless, role-scoped, tenant-isolated.',
+    body: 'Sign-in is a single-use magic link, sessions are short-lived JWTs, and admin powers are role-scoped. Every workspace query carries a tenant-isolation check.',
+    points: [
+      'Passwordless magic-link sign-in, JWT sessions',
+      'Role-scoped admin, least-privilege by default',
+      'Tenant-isolation check enforced on every workspace query',
+    ],
+  },
+  {
+    kicker: 'Network & edge',
+    cat: 'Infrastructure',
+    title: 'Hardened at the edge with CloudFront + WAF.',
+    body: 'Traffic enters through CloudFront and a WAF tuned with IP-reputation filters, OWASP managed rules and rate limiting. Outbound EHR calls are guarded against SSRF.',
+    points: [
+      'WAF: IP reputation, OWASP managed rules, rate limiting',
+      'SSRF guards on every outbound EHR request',
+      'TLS-only transport end to end',
+    ],
+  },
+  {
+    kicker: 'Audit trail',
+    cat: 'Governance',
+    title: 'Append-only, on every sensitive action.',
+    body: 'Chart reads, AI requests, write-backs, sign-ins and admin changes all land in an append-only audit log, so a covered entity can reconstruct exactly what happened and when.',
+    points: [
+      'Append-only log of reads, AI calls and write-backs',
+      'Sign-ins and admin changes recorded',
+      'Available to covered entities for review under the BAA',
+    ],
+  },
+  {
+    kicker: 'Interoperability',
+    cat: 'Governance',
+    title: 'SMART on FHIR v2, minimum-necessary scopes.',
+    body: 'We connect over SMART on FHIR v2 and request only the minimum-necessary scopes for the task, in line with HIPAA section 164.502(b). We never ask for access we do not use.',
+    points: [
+      'SMART on FHIR v2 authorization',
+      'Minimum-necessary scopes (HIPAA 164.502(b))',
+      'No standing access beyond the active workflow',
+    ],
+  },
+  {
+    kicker: 'Data minimization',
+    cat: 'Governance',
+    title: 'Short-lived sessions, automatic expiry.',
+    body: 'Intake sessions are short-lived and patient records and media carry an automatic TTL. Magic-link tokens are single-use and stored only as hashes, never in the clear.',
+    points: [
+      'Automatic TTL expiry on patient records and media',
+      'Short-lived intake sessions',
+      'Single-use magic-link tokens stored as hashes only',
+    ],
+  },
+];
+
+const suites = [
+  { title: 'PHI-isolation suite', body: 'Proves no raw identifier reaches a model prompt.' },
+  { title: 'Tenant-isolation suite', body: 'Proves one workspace can never read another.' },
+  { title: 'Consent-gate suite', body: 'Proves no consent means no AI, every time.' },
+];
+
+const posture = [
+  {
+    title: 'HIPAA Business Associate',
+    status: 'In place',
+    body: 'Solace operates as a Business Associate and will sign a BAA before any PHI is processed. Infrastructure runs on HIPAA-eligible AWS under a BAA; model inference runs via AWS Bedrock in covered regions.',
+  },
+  {
+    title: 'SOC 2 Type II',
+    status: 'In progress',
+    body: 'Our SOC 2 program is underway. Current status, scope and the most recent observation period are available on request under NDA.',
+  },
+  {
+    title: 'Penetration testing',
+    status: 'On request',
+    body: 'Independent testing summaries, our security questionnaire responses and architecture diagrams are available to qualified buyers during review.',
+  },
+];
+---
+
+<Page
+  title="Security at Solace: built so the model never touches PHI"
+  description="How Solace protects protected health information: PHI isolation enforced in code, a consent gate on every AI request, confirm-gated write-backs, and 749 automated tests that gate every release."
+>
+  <PageHeader
+    eyebrow="Security & trust"
+    title="Built so the model never touches PHI."
+    lede="Solace handles the most sensitive data in medicine. So our defenses are not policy promises, they are enforced in code, on every request, and verified on every release."
+  >
+    <div class="hero-actions">
+      <CtaPrimary href="/contact" label="Book a security review" />
+      <a class="cta-secondary" href="/contact">Request our security docs</a>
+    </div>
+  </PageHeader>
+
+  {/* ===== PHI isolation, the before/after demonstration ===== */}
+  <section data-background-color="primary-default" aria-labelledby="phiscrub-heading">
+    <div class="container page-section">
+      <div class="sec-head">
+        <p class="eyebrow eyebrow--accent">PHI isolation, shown</p>
+        <div class="rule-dashed" aria-hidden="true"></div>
+        <h2 id="phiscrub-heading" class="heading-large">See exactly what the model receives.</h2>
+        <p class="text-medium text-sub sec-head__lede">
+          The same patient, on both sides of the boundary. Names, MRNs, dates of birth and free text
+          never cross it; the model reasons over coded metadata and a single slot token.
+        </p>
+      </div>
+
+      <div class="scrub">
+        <article class="scrub__card neu-panel">
+          <p class="scrub__label scrub__label--phi mono">In the chart · contains PHI</p>
+          <ul class="scrub__fields">
+            {chartFields.map((f) => (
+              <li class="scrub__row">
+                <span class="scrub__key mono">{f.k}</span>
+                <span class:list={['scrub__value', `scrub__value--${f.tone}`]}>{f.v}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <div class="scrub__boundary">
+          <span class="scrub__badge" aria-hidden="true">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M2 8h11M9 4l4 4-4 4"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path>
+            </svg>
+          </span>
+          <span class="scrub__boundary-label mono">PHI isolation boundary</span>
+        </div>
+
+        <article class="scrub__card neu-panel">
+          <p class="scrub__label scrub__label--coded mono">What the model receives · coded only</p>
+          <ul class="scrub__fields">
+            {modelFields.map((f) => (
+              <li class="scrub__row">
+                <span class="scrub__key mono">{f.k}</span>
+                <span class:list={['scrub__value', `scrub__value--${f.tone}`]}>{f.v}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
+
+      <p class="text-small text-sub scrub__note">
+        Re-identification happens only in your trusted runtime, never in a model call.
+      </p>
+    </div>
+  </section>
+
+  {/* ===== Plan / Execute / Narrate pipeline ===== */}
+  <section data-background-color="secondary-default" aria-labelledby="pipeline-heading">
+    <div class="container page-section">
+      <div class="sec-head">
+        <p class="eyebrow eyebrow--accent">How a request flows</p>
+        <div class="rule-dashed" aria-hidden="true"></div>
+        <h2 id="pipeline-heading" class="heading-large">The model halves never touch raw data.</h2>
+      </div>
+
+      <ol class="pipeline">
+        {steps.map((s, i) => (
+          <li data-color-scheme={s.phi ? 'dark' : undefined}>
+            <article class="pipeline__step neu-panel">
+              <div class="pipeline__top">
+                <span class="pipeline__num mono" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                <span class="pipeline__who">{s.who}</span>
+              </div>
+              <p class="pipeline__phi mono">{s.phi ? 'PHI stays here' : 'No PHI'}</p>
+              <h3 class="heading-xsmall">{s.title}</h3>
+              <p class="text-small text-sub">{s.body}</p>
+              <pre class="pipeline__artifact" aria-hidden="true"><span class="pipeline__io">{s.io}</span>{s.artifact}</pre>
+            </article>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  {/* ===== The leak-gate test ===== */}
+  <section data-background-color="primary-default" aria-labelledby="leakgate-heading">
+    <div class="container page-section leakgate">
+      <div class="leakgate__copy">
+        <p class="eyebrow eyebrow--accent">Enforced, not promised</p>
+        <div class="rule-dashed" aria-hidden="true"></div>
+        <h2 id="leakgate-heading" class="heading-medium">If PHI could reach a prompt, the build stops.</h2>
+        <p class="text-medium text-sub leakgate__lede">
+          The isolation boundary is a test, not a guideline. It runs on every commit and fails the
+          release if a single raw identifier can make it into a model prompt.
+        </p>
+      </div>
+
+      <figure class="leakgate__file" data-color-scheme="dark">
+        <figcaption class="leakgate__bar">
+          <span class="mono">phi-isolation.test.ts</span>
+          <span class="mono leakgate__tag">CI</span>
+        </figcaption>
+        <pre class="leakgate__code"><code>{leakGateCode}</code></pre>
+        <p class="leakgate__status mono">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8.5l3.4 3.4L13 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          PASS · 749/749 on the latest release
+        </p>
+      </figure>
+    </div>
+  </section>
+
+  {/* ===== Trust-signal stat row ===== */}
+  <section data-background-color="secondary-default" aria-label="Security at a glance">
+    <div class="container page-section">
+      <ul class="stats neu-panel">
+        {stats.map((s) => (
+          <li class="stats__cell">
+            <span class="stats__tick" aria-hidden="true"></span>
+            <p class="stats__big">{s.big}</p>
+            <p class="text-small text-sub stats__label">{s.label}</p>
+            <p class="stats__note mono">{s.note}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  {/* ===== The controls grid ===== */}
+  <section data-background-color="primary-default" aria-labelledby="controls-heading">
+    <div class="container page-section">
+      <div class="sec-head">
+        <p class="eyebrow">The controls</p>
+        <div class="rule-dashed" aria-hidden="true"></div>
+        <h2 id="controls-heading" class="heading-large">Nine layers, every one of them load-bearing.</h2>
+        <ul class="chips">
+          {controlCategories.map((g) => <li class="chips__chip mono">{g}</li>)}
+        </ul>
+      </div>
+
+      <ol class="controls">
+        {controls.map((c, i) => (
+          <li class="controls__cell">
+            <div class="controls__top">
+              <span class="controls__kicker mono">{c.kicker}</span>
+              <span class="controls__num mono" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+            </div>
+            <h3 class="heading-xsmall controls__title">{c.title}</h3>
+            <p class="text-small text-sub">{c.body}</p>
+            <ul class="bullets">
+              {c.points.map((point) => <li class="text-small">{point}</li>)}
+            </ul>
+            <p class="eyebrow controls__cat">{c.cat}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  {/* ===== Testing and process, on ink ===== */}
+  <section class="process" data-color-scheme="dark" aria-labelledby="process-heading">
+    <div class="container page-section">
+      <div class="sec-head">
+        <p class="eyebrow eyebrow--onDark">Verified every release</p>
+        <p class="process__chip mono">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8.5l3.4 3.4L13 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          749 tests · 749 pass
+        </p>
+        <h2 id="process-heading" class="heading-large">Tested like the safety control it is.</h2>
+        <p class="text-medium text-sub sec-head__lede">
+          Every release runs 749 automated tests, including dedicated suites for PHI isolation,
+          tenant isolation and the consent gate. If raw PHI could reach a prompt, if a tenant could
+          read another tenant, or if the consent chokepoint could be bypassed, the build does not
+          ship.
+        </p>
+      </div>
+
+      <ul class="suites">
+        {suites.map((s) => (
+          <li class="suites__card neu-panel">
+            <p class="suites__pass mono">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8.5l3.4 3.4L13 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              Pass
+            </p>
+            <h3 class="heading-xsmall">{s.title}</h3>
+            <p class="text-small text-sub">{s.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  {/* ===== Posture / attestations ===== */}
+  <section data-background-color="secondary-default" aria-labelledby="posture-heading">
+    <div class="container page-section">
+      <div class="sec-head">
+        <p class="eyebrow">Attestations</p>
+        <div class="rule-dashed" aria-hidden="true"></div>
+        <h2 id="posture-heading" class="heading-medium">Where our attestations stand today.</h2>
+        <p class="text-medium text-sub sec-head__lede">
+          We would rather be precise than impressive. Here is the honest status, and what you can ask
+          us for during a review.
+        </p>
+      </div>
+
+      <ul class="posture neu-panel">
+        {posture.map((p) => (
+          <li class="posture__cell">
+            <div class="posture__top">
+              <h3 class="heading-xsmall">{p.title}</h3>
+              <span
+                class:list={['posture__status', 'mono', p.status === 'In place' && 'posture__status--live']}
+              >{p.status}</span>
+            </div>
+            <p class="text-small text-sub">{p.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  {/* ===== Close, CTA to contact ===== */}
+  <section data-background-color="primary-default" aria-labelledby="security-cta-heading">
+    <div class="container page-section closing">
+      <h2 id="security-cta-heading" class="display-small closing__heading">
+        Let your security team kick the tires.
+      </h2>
+      <p class="text-large text-sub closing__lede">
+        We will walk your team through the architecture, share our SOC 2 status and questionnaire,
+        and answer the hard questions.
+      </p>
+      <div class="hero-actions closing__actions">
+        <CtaPrimary href="/contact" label="Book a security review" />
+        <a class="cta-secondary" href="/hipaa">See our HIPAA posture</a>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  /* ── Shared page furniture ─────────────────────────────────────────────── */
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3x);
+    margin-block-start: var(--space-4x);
+  }
+
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    padding-block-end: var(--space-10x);
+  }
+  @media (min-width: 640.02px) {
+    .sec-head { padding-block-end: var(--space-12x); }
+  }
+  .sec-head h2 { max-inline-size: 22ch; }
+  .sec-head__lede { max-inline-size: 62ch; }
+
+  .eyebrow--accent { color: var(--color-action-primary); }
+  .eyebrow--onDark { color: var(--color-primary-base); }
+
+  /* 4-on / 4-off dashed rule under the eyebrow, same as Suite. */
+  .rule-dashed {
+    inline-size: min(100%, 320px);
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-border-sub) 0, var(--color-border-sub) 4px,
+      transparent 4px, transparent 8px
+    );
+  }
+
+  /* Hollow circles, never filled dots. */
+  .bullets { display: grid; gap: var(--space-2_5x); }
+  .bullets li { position: relative; padding-inline-start: var(--space-6x); }
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.45em;
+    inline-size: 12px;
+    block-size: 12px;
+    border: 1.5px solid var(--color-icon-soft);
+    border-radius: 50%;
+  }
+
+  /* ── PHI scrub, the before/after ───────────────────────────────────────── */
+  .scrub {
+    display: grid;
+    gap: var(--space-5x);
+    align-items: stretch;
+  }
+  @media (min-width: 1080.02px) {
+    .scrub { grid-template-columns: 1fr auto 1fr; gap: var(--space-6x); }
+  }
+
+  .scrub__card { padding: var(--space-6x); }
+
+  .scrub__label {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: var(--font-weight-semibold);
+    padding-block-end: var(--space-4x);
+  }
+  .scrub__label--phi   { color: var(--color-warning-dark); }
+  .scrub__label--coded { color: var(--color-success-dark); }
+
+  .scrub__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4x);
+    padding-block: var(--space-2x);
+    border-block-start: 1px solid var(--color-border-sub);
+  }
+
+  .scrub__key {
+    flex: none;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-sub);
+  }
+
+  .scrub__value {
+    text-align: end;
+    font-size: var(--font-size-14);
+    font-weight: var(--font-weight-medium);
+  }
+  .scrub__value--phi {
+    color: var(--color-warning-dark);
+    background-color: rgb(from var(--color-warning-dark) r g b / 8%);
+    border-radius: var(--radius-1x);
+    padding-inline: var(--space-1_5x);
+  }
+  .scrub__value--coded {
+    color: var(--color-success-dark);
+    background-color: rgb(from var(--color-success-base) r g b / 10%);
+    border-radius: var(--radius-1x);
+    padding-inline: var(--space-1_5x);
+  }
+  .scrub__value--removed {
+    color: var(--color-text-disabled);
+    text-decoration: line-through;
+  }
+
+  .scrub__boundary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3x);
+  }
+  @media (min-width: 1080.02px) {
+    .scrub__boundary { flex-direction: column; }
+  }
+
+  .scrub__badge {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--space-10x);
+    block-size: var(--space-10x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-action-secondary);
+    color: var(--color-text-inverse);
+    box-shadow: var(--elevation-xsmall);
+    /* Stacked layout reads top-to-bottom, the row layout reads left-to-right. */
+    rotate: 90deg;
+  }
+  @media (min-width: 1080.02px) { .scrub__badge { rotate: 0deg; } }
+  .scrub__badge svg { inline-size: var(--space-5x); }
+
+  .scrub__boundary-label {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--color-text-sub);
+    font-size: var(--font-size-10);
+  }
+  @media (min-width: 1080.02px) {
+    .scrub__boundary-label { writing-mode: vertical-rl; rotate: 180deg; }
+  }
+
+  .scrub__note { margin-block-start: var(--space-6x); text-align: center; }
+
+  /* ── Pipeline ─────────────────────────────────────────────────────────── */
+  .pipeline { display: grid; gap: var(--space-4x); }
+  @media (min-width: 1080.02px) { .pipeline { grid-template-columns: repeat(3, 1fr); } }
+  .pipeline > li { display: flex; }
+
+  .pipeline__step {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2x);
+    inline-size: 100%;
+    padding: var(--space-6x);
+  }
+  /* The Execute step is the only one that ever holds an identifier, so it is
+     the only one painted dark. That contrast IS the argument. The scheme flag
+     sits on the <li> so materials.css's dark .neu-panel pair can match it. */
+
+  .pipeline__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3x);
+    inline-size: 100%;
+  }
+
+  .pipeline__num {
+    font-size: var(--font-size-28);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    color: var(--color-text-soft);
+  }
+
+  .pipeline__who {
+    padding: var(--space-1x) var(--space-2_5x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-bg-accent);
+    color: var(--color-success-dark);
+    font-size: var(--font-size-10);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .pipeline__phi {
+    margin-block-start: var(--space-3x);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--color-text-sub);
+    font-size: var(--font-size-10);
+  }
+
+  .pipeline__artifact {
+    margin: var(--space-3x) 0 0;
+    inline-size: 100%;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    padding: var(--space-3x) var(--space-4x);
+    border-radius: var(--radius-2x);
+    background-color: var(--color-surface-soft);
+    border: 1px solid var(--color-border-soft);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-10);
+    line-height: var(--line-height-open);
+    letter-spacing: normal;
+    color: var(--color-success-dark);
+  }
+  .pipeline > li[data-color-scheme='dark'] .pipeline__artifact {
+    color: var(--color-text-sub);
+  }
+
+  .pipeline__io {
+    display: block;
+    margin-block-end: var(--space-1_5x);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-soft);
+  }
+
+  /* ── Leak gate ────────────────────────────────────────────────────────── */
+  .leakgate { display: grid; gap: var(--space-10x); align-items: center; }
+  @media (min-width: 1080.02px) {
+    .leakgate { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16x); }
+  }
+
+  .leakgate__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+  }
+  .leakgate__lede { max-inline-size: 48ch; }
+
+  .leakgate__file {
+    margin: 0;
+    min-inline-size: 0;
+    border-radius: var(--radius-4x);
+    overflow: hidden;
+    background-color: var(--slate-100);
+    color: var(--color-text-base);
+    box-shadow: var(--elevation-medium);
+  }
+
+  .leakgate__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4x);
+    padding: var(--space-3x) var(--space-5x);
+    border-block-end: 1px solid var(--color-border-soft);
+    color: var(--color-text-soft);
+  }
+  .leakgate__tag {
+    padding: var(--space-0_5x) var(--space-2x);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border-soft);
+    letter-spacing: 0.12em;
+    font-size: var(--font-size-10);
+  }
+
+  .leakgate__code {
+    margin: 0;
+    overflow-x: auto;
+    padding: var(--space-5x);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-12);
+    line-height: var(--line-height-open);
+    letter-spacing: normal;
+    color: var(--color-text-sub);
+    tab-size: 2;
+  }
+
+  .leakgate__status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2x);
+    padding: var(--space-3x) var(--space-5x);
+    border-block-start: 1px solid var(--color-border-soft);
+    color: var(--color-primary-base);
+  }
+  .leakgate__status svg { inline-size: var(--space-4x); flex: none; }
+
+  /* ── Stats ────────────────────────────────────────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    overflow: hidden;
+  }
+  @media (min-width: 1080.02px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+
+  .stats__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-6x);
+    border-inline-end: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .stats__cell:nth-child(2n) { border-inline-end: none; }
+  .stats__cell:nth-last-child(-n + 2) { border-block-end: none; }
+  @media (min-width: 1080.02px) {
+    .stats__cell { border-block-end: none; }
+    .stats__cell:nth-child(2n) { border-inline-end: 1px solid var(--color-border-sub); }
+    .stats__cell:last-child { border-inline-end: none; }
+  }
+
+  .stats__tick {
+    inline-size: var(--space-9x);
+    block-size: var(--space-0_5x);
+    border-radius: var(--radius-full);
+    background-color: var(--solace-50);
+  }
+
+  .stats__big {
+    margin-block-start: var(--space-5x);
+    font-size: var(--font-size-display-small);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-display);
+  }
+
+  .stats__label { margin-block-start: var(--space-3x); max-inline-size: 20ch; }
+
+  .stats__note {
+    margin-block-start: var(--space-4x);
+    padding-block-start: var(--space-3x);
+    border-block-start: 1px solid var(--color-border-sub);
+    inline-size: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: var(--font-size-10);
+    color: var(--color-action-primary);
+  }
+
+  /* ── Category chips ───────────────────────────────────────────────────── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2_5x);
+    margin-block-start: var(--space-1x);
+  }
+  .chips__chip {
+    padding: var(--space-1x) var(--space-3x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-bg-accent);
+    border: 1px solid rgb(from var(--solace-30) r g b / 40%);
+    color: var(--color-success-dark);
+    font-size: var(--font-size-10);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── Controls, one hairline grid ──────────────────────────────────────── */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    border-block-start: 1px solid var(--color-border-sub);
+    border-inline-start: 1px solid var(--color-border-sub);
+  }
+  @media (min-width: 640.02px)  { .controls { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1080.02px) { .controls { grid-template-columns: repeat(3, 1fr); } }
+
+  .controls__cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3x);
+    padding: var(--space-7x) var(--space-6x);
+    border-inline-end: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+
+  .controls__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3x);
+    padding-block-end: var(--space-4x);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+
+  .controls__kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-action-primary);
+  }
+
+  .controls__num {
+    font-size: var(--font-size-26);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    color: var(--solace-30);
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .controls__cell:hover .controls__num { color: var(--color-action-primary); }
+
+  .controls__title { margin-block-start: var(--space-2x); }
+
+  .controls .bullets {
+    margin-block-start: var(--space-2x);
+    padding-block-start: var(--space-5x);
+    border-block-start: 1px solid var(--color-border-sub);
+  }
+
+  .controls__cat {
+    margin-block-start: auto;
+    padding-block-start: var(--space-5x);
+    color: var(--color-text-soft);
+  }
+
+  /* ── Process, on ink ──────────────────────────────────────────────────── */
+  .process { background-color: var(--slate-90); color: var(--color-text-base); }
+
+  .process__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2x);
+    padding: var(--space-1_5x) var(--space-4x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-transparent-hover);
+    border: 1px solid var(--color-border-soft);
+    color: var(--color-primary-base);
+    font-size: var(--font-size-12);
+  }
+  .process__chip svg { inline-size: var(--space-3x); flex: none; }
+
+  .suites { display: grid; gap: var(--space-4x); }
+  @media (min-width: 640.02px) { .suites { grid-template-columns: repeat(3, 1fr); } }
+
+  .suites__card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2x);
+    padding: var(--space-6x);
+  }
+
+  .suites__pass {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2x);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: var(--font-size-10);
+    color: var(--color-primary-base);
+    padding-block-end: var(--space-1x);
+  }
+  .suites__pass svg { inline-size: var(--space-4x); flex: none; }
+
+  /* ── Posture ──────────────────────────────────────────────────────────── */
+  .posture {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: hidden;
+  }
+  @media (min-width: 1080.02px) { .posture { grid-template-columns: repeat(3, 1fr); } }
+
+  .posture__cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3x);
+    padding: var(--space-7x) var(--space-6x);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .posture__cell:last-child { border-block-end: none; }
+  @media (min-width: 1080.02px) {
+    .posture__cell {
+      border-block-end: none;
+      border-inline-end: 1px solid var(--color-border-sub);
+    }
+    .posture__cell:last-child { border-inline-end: none; }
+  }
+
+  .posture__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3x);
+  }
+
+  .posture__status {
+    flex: none;
+    padding: var(--space-1x) var(--space-3x);
+    border-radius: var(--radius-full);
+    border: 1px solid rgb(from var(--solace-30) r g b / 50%);
+    background-color: var(--color-bg-accent);
+    color: var(--color-success-dark);
+    font-size: var(--font-size-10);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .posture__status--live {
+    background-color: var(--color-action-primary);
+    border-color: var(--color-action-primary);
+    color: var(--color-text-inverse);
+  }
+
+  /* ── Closing ──────────────────────────────────────────────────────────── */
+  .closing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-5x);
+  }
+  .closing__heading { max-inline-size: 18ch; }
+  .closing__lede { max-inline-size: 46ch; }
+  .closing__actions { justify-content: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .controls__num { transition: none; }
+  }
+</style>

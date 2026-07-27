@@ -1,0 +1,613 @@
+---
+import Page from '../layouts/Page.astro';
+import PageHeader from '../components/PageHeader.astro';
+
+/* Same legal reading shell as /privacy. The document is data so the numbering,
+   the sticky table of contents and the mobile jump list can never drift out of
+   sync with the prose. Copy carried across verbatim from the legacy Terms.tsx. */
+
+type Block =
+  | { kind: 'p'; html: string }
+  | { kind: 'list'; items: string[] }
+  | { kind: 'note'; html: string };
+
+interface Clause {
+  id: string;
+  title: string;
+  blocks: Block[];
+}
+
+const clauses: Clause[] = [
+  {
+    id: 'acceptance',
+    title: 'Acceptance of terms',
+    blocks: [
+      {
+        kind: 'note',
+        html: 'This is a template agreement provided for information only. It is not legal advice and must be reviewed and adapted by qualified counsel before launch.',
+      },
+      {
+        kind: 'p',
+        html: 'These Terms of Service (the “Terms”) govern your access to and use of the Solace patient-intake and clinical-triage services (the “Services”) provided by Solace AI, Inc. (“Solace”). By accessing or using the Services, you agree to these Terms. Where a separate master services agreement or order form exists between Solace and your organization, that agreement controls if it conflicts with these Terms.',
+      },
+    ],
+  },
+  {
+    id: 'eligibility',
+    title: 'Eligibility',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'The Services are intended solely for use by <strong>licensed clinicians and healthcare organizations</strong> and their authorized staff, in the course of providing or supporting care. By using the Services you represent that you are authorized to act on behalf of your organization and to bind it to these Terms.',
+      },
+    ],
+  },
+  {
+    id: 'accounts',
+    title: 'Accounts & access',
+    blocks: [
+      {
+        kind: 'list',
+        items: [
+          'Access is granted through passwordless magic-link sign-in; keep your access credentials and devices secure.',
+          'You are responsible for activity under your account and for ensuring your staff use the Services in line with these Terms and applicable law.',
+          'Notify us promptly of any unauthorized access or suspected security incident.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'acceptable-use',
+    title: 'Acceptable use',
+    blocks: [
+      { kind: 'p', html: 'You agree not to:' },
+      {
+        kind: 'list',
+        items: [
+          'Use the Services unlawfully or in violation of any patient’s rights.',
+          'Attempt to bypass the consent gate, PHI-isolation or access controls.',
+          'Reverse engineer, probe or interfere with the Services except as the law expressly permits.',
+          'Submit data you lack the right or authorization to submit.',
+          'Use the Services to build a competing product or to train models.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'phi-and-the-baa',
+    title: 'PHI & the BAA',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'To the extent the Services involve protected health information, <strong>the Business Associate Agreement (BAA)</strong> between Solace and your organization governs the handling of that PHI. The BAA controls over these Terms with respect to PHI. Solace processes PHI only as the BAA permits, applies the minimum-necessary standard, and does not use PHI to train models or for advertising.',
+      },
+    ],
+  },
+  {
+    id: 'clinical-disclaimer',
+    title: 'Clinical-decision-support disclaimer',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'Solace is a <strong>clinical-decision-support and triage aid</strong>. It surfaces summaries, prioritization signals and drafted documentation to assist qualified clinicians. It does not practice medicine, does not diagnose, and does not replace clinical judgment.',
+      },
+      {
+        kind: 'list',
+        items: [
+          '<strong>The clinician makes the final call</strong> on every triage decision, order and chart entry.',
+          'Write-backs are confirm-gated; nothing reaches the chart without a clinician’s explicit approval.',
+          'The Services are not intended to be, and are not marketed as, a regulated medical device, and no medical-device claim is made.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'intellectual-property',
+    title: 'Intellectual property',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'Solace and its licensors own all rights in the Services, including the software, models, interfaces and content, excluding your data. We grant your organization a limited, non-exclusive, non-transferable right to use the Services during your subscription. Your organization retains all rights in the data it submits, subject to the BAA.',
+      },
+    ],
+  },
+  {
+    id: 'warranties',
+    title: 'Warranties & disclaimers',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'The Services are provided on an “as is” and “as available” basis. To the fullest extent permitted by law, Solace disclaims all warranties, express or implied, including merchantability, fitness for a particular purpose and non-infringement. We do not warrant that the Services will be uninterrupted, error-free or that any output is appropriate for a particular clinical situation.',
+      },
+    ],
+  },
+  {
+    id: 'limitation-of-liability',
+    title: 'Limitation of liability',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'To the fullest extent permitted by law, neither party will be liable for indirect, incidental, special, consequential or punitive damages, or for lost profits or revenues. Solace’s aggregate liability arising out of or related to the Services will not exceed the amounts paid by your organization for the Services in the twelve months preceding the claim, except where a higher limit is set in your master services agreement.',
+      },
+    ],
+  },
+  {
+    id: 'indemnification',
+    title: 'Indemnification',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'Your organization will defend and indemnify Solace against third-party claims arising from your misuse of the Services, your breach of these Terms, or your violation of applicable law or any patient’s rights, except to the extent caused by Solace’s own breach.',
+      },
+    ],
+  },
+  {
+    id: 'term-termination',
+    title: 'Term & termination',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'These Terms apply while you use the Services. Either party may terminate as set out in your master services agreement, or for material breach that goes uncured after notice. On termination, your right to use the Services ends, and PHI is returned or disposed of as the BAA requires.',
+      },
+    ],
+  },
+  {
+    id: 'governing-law',
+    title: 'Governing law',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'These Terms are governed by the laws of the State of Delaware, without regard to its conflict-of-laws rules, unless your master services agreement specifies otherwise. The parties consent to the exclusive jurisdiction of the courts located there for disputes not subject to that agreement.',
+      },
+    ],
+  },
+  {
+    id: 'changes',
+    title: 'Changes to these terms',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'We may update these Terms from time to time. When changes are material, we will update the “Last updated” date above and, where appropriate, provide additional notice. Continued use of the Services after an update means you accept the revised Terms.',
+      },
+    ],
+  },
+  {
+    id: 'contact',
+    title: 'Contact us',
+    blocks: [
+      {
+        kind: 'p',
+        html: 'Questions about these Terms? Email <a href="mailto:legal@solace.health"><strong>legal@solace.health</strong></a>. We respond within one business day.',
+      },
+      {
+        kind: 'note',
+        html: 'Reminder: this template requires review by counsel before launch to ensure it reflects your final commercial terms and the laws that apply to your organization.',
+      },
+    ],
+  },
+];
+
+const num = (i: number) => String(i + 1).padStart(2, '0');
+---
+
+<Page
+  title="Terms of service | Solace"
+  description="The agreement that governs your use of Solace, written for the clinicians and organizations who depend on it."
+>
+  <div class="legal-progress" aria-hidden="true"></div>
+
+  <PageHeader
+    eyebrow="Terms of service"
+    title="The terms behind the trust."
+    lede="The agreement that governs your use of Solace, written for the clinicians and organizations who depend on it."
+    compact
+  >
+    <p class="mono legal-stamp">Last updated June 2026</p>
+  </PageHeader>
+
+  <section data-background-color="primary-default" aria-label="Terms of service document">
+    <div class="container page-section legal">
+      <div class="legal__main">
+        <details class="legal__jump" data-legal-jump>
+          <summary>
+            <span class="eyebrow">On this page</span>
+            <svg class="legal__jump-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </summary>
+          <ol class="legal__jump-list">
+            {clauses.map((c, i) => (
+              <li>
+                <a href={`#${c.id}`}>
+                  <span class="mono legal__jump-num">{num(i)}</span>
+                  <span>{c.title}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </details>
+
+        <article class="legal__doc">
+          {clauses.map((c, i) => (
+            <section class="legal__clause" id={c.id} aria-labelledby={`${c.id}-heading`} data-legal-clause>
+              <div class="legal__head">
+                <span class="mono legal__num" aria-hidden="true">{num(i)}</span>
+                <h2 id={`${c.id}-heading`} class="heading-small">{c.title}</h2>
+                <a class="legal__anchor" href={`#${c.id}`} aria-label={`Link to section: ${c.title}`}>
+                  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M6.5 9.5a2.6 2.6 0 003.9.28l1.9-1.9a2.6 2.6 0 00-3.68-3.68l-1.1 1.09M9.5 6.5a2.6 2.6 0 00-3.9-.28l-1.9 1.9a2.6 2.6 0 003.68 3.68l1.09-1.09"
+                      stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+              </div>
+
+              <div class="legal__blocks">
+                {c.blocks.map((b) =>
+                  b.kind === 'p' ? (
+                    <p class="legal__p" set:html={b.html} />
+                  ) : b.kind === 'list' ? (
+                    <ul class="legal__list">
+                      {b.items.map((item) => <li set:html={item} />)}
+                    </ul>
+                  ) : (
+                    <aside class="legal__note neu-well">
+                      <p class="eyebrow">Notice</p>
+                      <p class="legal__note-body" set:html={b.html} />
+                    </aside>
+                  ),
+                )}
+              </div>
+            </section>
+          ))}
+        </article>
+
+        <a class="legal__top neu-raised" href="#main">
+          <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M7 11.5v-9M3 6.5L7 2.5l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Back to top
+        </a>
+      </div>
+
+      <aside class="legal__aside">
+        <div class="legal__toc">
+          <p class="eyebrow">On this page</p>
+          <nav aria-label="On this page">
+            <ol class="legal__toc-list">
+              {clauses.map((c, i) => (
+                <li>
+                  <a class="legal__toc-link" href={`#${c.id}`} data-toc-link={c.id}>
+                    <span class="mono legal__toc-num">{num(i)}</span>
+                    <span>{c.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
+      </aside>
+    </div>
+  </section>
+</Page>
+
+<script>
+  // State, not animation: the rail marks whichever clause owns the viewport.
+  // Everything that actually moves is CSS.
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]'));
+  const clauses = Array.from(document.querySelectorAll<HTMLElement>('[data-legal-clause]'));
+
+  if (links.length && clauses.length) {
+    const ratios = new Map<string, number>(clauses.map((c) => [c.id, 0]));
+
+    const mark = (id: string) => {
+      for (const link of links) {
+        if (link.dataset.tocLink === id) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      }
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          ratios.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+        }
+        // Document order wins ties, so the rail settles on the upper clause.
+        let best = '';
+        let bestRatio = 0;
+        for (const [id, ratio] of ratios) {
+          if (ratio > bestRatio) {
+            best = id;
+            bestRatio = ratio;
+          }
+        }
+        if (best) mark(best);
+      },
+      { rootMargin: '-20% 0px -65% 0px', threshold: [0, 0.25, 0.5, 1] },
+    );
+
+    for (const clause of clauses) io.observe(clause);
+  }
+
+  // A native <details> stays open after an in-page jump. Close it so the
+  // reader lands on the heading rather than under the list they just used.
+  const jump = document.querySelector<HTMLDetailsElement>('[data-legal-jump]');
+  jump?.addEventListener('click', (event) => {
+    if ((event.target as HTMLElement).closest('a')) jump.open = false;
+  });
+</script>
+
+<style>
+  /* ── Reading progress. Scroll-driven, no listener, no JS. ─────────────── */
+  .legal-progress {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: var(--space-0_5x);
+    z-index: calc(var(--z-header) + 1);
+    transform-origin: 0 50%;
+    scale: 0 1;
+    pointer-events: none;
+    background-image: linear-gradient(
+      90deg,
+      var(--solace-80) 0%,
+      var(--solace-50) 55%,
+      var(--solace-30) 100%
+    );
+  }
+  @supports (animation-timeline: scroll()) {
+    .legal-progress {
+      animation: legal-progress-grow linear both;
+      animation-timeline: scroll(root block);
+    }
+  }
+  @supports not (animation-timeline: scroll()) {
+    .legal-progress { display: none; }
+  }
+  @keyframes legal-progress-grow {
+    from { scale: 0 1; }
+    to   { scale: 1 1; }
+  }
+
+  .legal-stamp {
+    margin-block-start: var(--space-2x);
+    color: var(--color-text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Shell: prose column, plus a rail from 1080.02 up. ────────────────── */
+  /* No align-items here on purpose. The rail's sticky child can only travel
+     as far as its own grid item is tall, so the aside has to keep the default
+     `stretch` and span the full document row. */
+  .legal {
+    display: grid;
+    gap: var(--space-12x);
+  }
+  @media (min-width: 1080.02px) {
+    .legal { grid-template-columns: minmax(0, 1fr) 220px; gap: var(--space-16x); }
+  }
+
+  .legal__main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-inline-size: 0;
+  }
+
+  /* ── Mobile jump list. Native disclosure, so it costs nothing. ────────── */
+  .legal__jump {
+    inline-size: 100%;
+    margin-block-end: var(--space-10x);
+    border: 1px solid var(--color-border-sub);
+    border-radius: var(--radius-3x);
+    overflow: hidden;
+  }
+  @media (min-width: 1080.02px) { .legal__jump { display: none; } }
+
+  .legal__jump summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3x);
+    padding: var(--space-3x) var(--space-4x);
+    cursor: pointer;
+    list-style: none;
+  }
+  .legal__jump summary::-webkit-details-marker { display: none; }
+
+  .legal__jump-chevron {
+    inline-size: 16px;
+    flex: none;
+    color: var(--color-icon-soft);
+    transition: rotate var(--motion-duration-base) var(--ease-ui);
+  }
+  .legal__jump[open] .legal__jump-chevron { rotate: 180deg; }
+
+  .legal__jump-list {
+    max-block-size: 58vh;
+    overflow-y: auto;
+    padding-block: var(--space-2x);
+    border-block-start: 1px solid var(--color-border-sub);
+  }
+  .legal__jump-list a {
+    display: flex;
+    gap: var(--space-2_5x);
+    padding-block: var(--space-2x);
+    padding-inline: var(--space-4x);
+    font-size: var(--font-size-text-small);
+    color: var(--color-text-sub);
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .legal__jump-list a:hover { color: var(--color-text-base); }
+  .legal__jump-num { color: var(--color-faded-base); }
+
+  /* ── The document. 72ch measure, hairline between clauses. ───────────── */
+  .legal__doc { inline-size: 100%; max-inline-size: 72ch; }
+
+  .legal__clause {
+    padding-block: var(--space-12x);
+    border-block-start: 1px solid var(--color-border-sub);
+    scroll-margin-block-start: var(--space-6x);
+  }
+  .legal__clause:first-child { padding-block-start: var(--space-0x); border-block-start: none; }
+  .legal__clause:last-child  { padding-block-end: var(--space-0x); }
+
+  .legal__head { display: flex; align-items: baseline; gap: var(--space-4x); }
+  .legal__num {
+    flex: none;
+    color: var(--color-action-primary);
+    font-weight: var(--font-weight-medium);
+  }
+  .legal__head h2 { min-inline-size: 0; }
+
+  /* Icon-only permalink. Quiet until the clause is hovered or it is focused. */
+  .legal__anchor {
+    flex: none;
+    align-self: center;
+    display: inline-flex;
+    opacity: 0;
+    color: var(--color-icon-soft);
+    transition: opacity var(--motion-duration-base) var(--ease-ui),
+                color   var(--motion-duration-base) var(--ease-ui);
+  }
+  .legal__anchor svg { inline-size: 16px; block-size: 16px; }
+  .legal__head:hover .legal__anchor,
+  .legal__anchor:focus-visible { opacity: 1; }
+  .legal__anchor:hover { color: var(--color-action-primary); }
+  /* Touch never hovers, so the affordance has to stand on its own there. */
+  @media (hover: none) { .legal__anchor { opacity: 1; } }
+
+  .legal__blocks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5x);
+    margin-block-start: var(--space-5x);
+  }
+  @media (min-width: 640.02px) {
+    .legal__blocks { padding-inline-start: var(--space-8x); }
+  }
+
+  .legal__p {
+    font-size: var(--font-size-text-medium);
+    line-height: var(--line-height-open);
+    color: var(--color-text-sub);
+  }
+
+  /* :global because the emphasis and links live inside set:html strings, which
+     never receive the scope attribute. */
+  .legal__p :global(strong),
+  .legal__list :global(strong),
+  .legal__note-body :global(strong) {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-base);
+  }
+  .legal__p :global(a),
+  .legal__note-body :global(a) {
+    color: var(--color-action-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .legal__p :global(a:hover),
+  .legal__note-body :global(a:hover) { color: var(--color-action-primary-hover); }
+
+  .legal__list { display: grid; gap: var(--space-3x); }
+  .legal__list li {
+    position: relative;
+    padding-inline-start: var(--space-7x);
+    font-size: var(--font-size-text-medium);
+    line-height: var(--line-height-open);
+    color: var(--color-text-sub);
+  }
+  /* Hollow circle, never a filled dot. */
+  .legal__list li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.55em;
+    inline-size: 12px;
+    block-size: 12px;
+    border: 1.5px solid var(--color-icon-soft);
+    border-radius: 50%;
+  }
+
+  /* ── Counsel notices. Carved into the page rather than stuck onto it. ─── */
+  .legal__note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2x);
+    padding: var(--space-5x) var(--space-6x);
+  }
+  .legal__note-body {
+    font-size: var(--font-size-text-small);
+    line-height: var(--line-height-open);
+    color: var(--color-text-sub);
+  }
+
+  .legal__top {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2x);
+    margin-block-start: var(--space-12x);
+    padding: var(--space-2_5x) var(--space-5x);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    color: var(--color-text-sub);
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .legal__top:hover { color: var(--color-text-base); }
+  .legal__top svg {
+    inline-size: 14px;
+    block-size: 14px;
+    transition: translate var(--motion-duration-slow) var(--ease-ui);
+  }
+  .legal__top:hover svg { translate: 0 -2px; }
+
+  /* ── The rail. ────────────────────────────────────────────────────────── */
+  .legal__aside { display: none; }
+  @media (min-width: 1080.02px) { .legal__aside { display: block; } }
+
+  .legal__toc {
+    position: sticky;
+    inset-block-start: calc(var(--page-header-height) + var(--space-8x));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4x);
+  }
+
+  .legal__toc-list { display: flex; flex-direction: column; }
+  .legal__toc-link {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2_5x);
+    padding-block: var(--space-1_5x);
+    padding-inline-start: var(--space-4x);
+    border-inline-start: 2px solid var(--color-border-sub);
+    font-size: var(--font-size-text-xsmall);
+    line-height: var(--line-height-default);
+    color: var(--color-text-sub);
+    transition: color        var(--motion-duration-base) var(--ease-ui),
+                border-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .legal__toc-link:hover { color: var(--color-text-base); border-inline-start-color: var(--color-border-base); }
+  .legal__toc-link[aria-current='true'] {
+    color: var(--color-action-primary);
+    border-inline-start-color: var(--color-action-primary);
+    font-weight: var(--font-weight-medium);
+  }
+  .legal__toc-num { flex: none; color: var(--color-faded-base); }
+  .legal__toc-link[aria-current='true'] .legal__toc-num { color: var(--color-action-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .legal__anchor,
+    .legal__jump-chevron,
+    .legal__jump-list a,
+    .legal__toc-link,
+    .legal__top,
+    .legal__top svg,
+    .legal__p :global(a),
+    .legal__note-body :global(a) { transition: none; }
+  }
+</style>

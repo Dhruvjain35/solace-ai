@@ -1,0 +1,530 @@
+---
+import Page from '../layouts/Page.astro';
+import PageHeader from '../components/PageHeader.astro';
+import CtaPrimary from '../components/CtaPrimary.astro';
+
+/* Ported from legacy/src/pages/Contact.tsx.
+   The form contract is unchanged: it POSTs JSON to /api/lead with the fields
+   name, email, org, message, website (honeypot), topic and source:"contact",
+   shows the success panel immediately, and falls back to a prefilled mailto
+   compose when the endpoint is unconfigured or the network fails. The reason
+   cards still drive the topic select. Copy is carried across verbatim. */
+
+const CONTACT_EMAIL = 'hello@solace.health';
+
+type Reason = {
+  icon: 'calendar' | 'shield' | 'plug' | 'buoy' | 'press';
+  title: string;
+  body: string;
+  topic: string;
+};
+
+const reasons: Reason[] = [
+  {
+    icon: 'calendar',
+    title: 'Book a demo',
+    body: 'See the live queue and the patient snapshot working, in about 20 minutes.',
+    topic: 'Demo request',
+  },
+  {
+    icon: 'shield',
+    title: 'Security review',
+    body: 'Walk your security team through the architecture, our SOC 2 status and questionnaire.',
+    topic: 'Security review',
+  },
+  {
+    icon: 'plug',
+    title: 'Integrations',
+    body: 'SMART on FHIR v2, HL7 and EHR specifics for your environment.',
+    topic: 'Integrations',
+  },
+  {
+    icon: 'buoy',
+    title: 'Support',
+    body: 'Already running Solace and need a hand? We are here.',
+    topic: 'Support',
+  },
+  {
+    icon: 'press',
+    title: 'Press',
+    body: 'Media, analyst and speaking requests for the Solace team.',
+    topic: 'Press',
+  },
+];
+
+const topics = reasons.map((r) => r.topic);
+
+/* Line icons drawn here rather than pulled from an icon package: five paths is
+   cheaper than a dependency, and they inherit the stroke weight of the page. */
+const icons: Record<Reason['icon'], string> = {
+  calendar:
+    'M5 5.5h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2ZM3 10h18M8 3v4M16 3v4M9.2 14.6l2.1 2.1 3.9-4',
+  shield:
+    'M12 2.8 4.6 5.7v5.3c0 4.4 3 8.2 7.4 9.8 4.4-1.6 7.4-5.4 7.4-9.8V5.7ZM8.7 12l2.3 2.3 4.3-4.5',
+  plug: 'M9 2.8v4.8M15 2.8v4.8M6.6 7.6h10.8v3.6a5.4 5.4 0 0 1-10.8 0ZM12 16.6v4.6',
+  buoy: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 15.6a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2ZM5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9',
+  press:
+    'M4 5.5h12.6v13H6a2 2 0 0 1-2-2ZM16.6 9.2H20v7.3a2 2 0 0 1-2 2h-1.4M7.2 9.2h6.3M7.2 12.4h6.3M7.2 15.6h4',
+};
+
+const fields = [
+  {
+    id: 'contact-name',
+    name: 'name',
+    label: 'Full name',
+    type: 'text',
+    placeholder: 'Dr. Jordan Lee',
+    autocomplete: 'name',
+    required: true,
+  },
+  {
+    id: 'contact-email',
+    name: 'email',
+    label: 'Work email',
+    type: 'email',
+    placeholder: 'you@hospital.org',
+    autocomplete: 'email',
+    required: true,
+  },
+  {
+    id: 'contact-org',
+    name: 'org',
+    label: 'Organization',
+    type: 'text',
+    placeholder: 'North Texas ED',
+    autocomplete: 'organization',
+    required: false,
+  },
+];
+---
+
+<Page
+  title="Contact | Solace"
+  description="Tell us what you need and the right person on our team will reach out. We reply within one business day."
+>
+  <PageHeader
+    eyebrow="Contact"
+    title="Let’s talk."
+    lede="Tell us what you need and the right person on our team will reach out. We reply within one business day."
+  >
+    <div class="hero-actions">
+      <CtaPrimary href="/demo" label="Book a demo" />
+      <a class="cta-secondary" href={`mailto:${CONTACT_EMAIL}`}>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="hero-actions__icon">
+          <path
+            d="M3.5 6.5h17v11h-17zM3.9 7l8.1 5.6L20.1 7"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        {CONTACT_EMAIL}
+      </a>
+    </div>
+  </PageHeader>
+
+  <section data-background-color="primary-default" aria-label="Ways to reach us">
+    <div class="container page-section contact">
+      <div class="contact__reasons">
+        <h2 class="heading-medium">What can we help with?</h2>
+
+        <ul class="reasons">
+          {reasons.map((r, i) => (
+            <li>
+              <button
+                type="button"
+                class="reason neu-raised"
+                data-topic={r.topic}
+                aria-pressed={i === 0 ? 'true' : 'false'}
+              >
+                <span class="reason__icon" aria-hidden="true">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d={icons[r.icon]}
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span class="reason__copy">
+                  <span class="reason__title">{r.title}</span>
+                  <span class="reason__body text-small text-sub">{r.body}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="contact__panel neu-panel">
+        <form class="form" data-contact-form>
+          <div class="field">
+            <label class="field__label" for="contact-topic">Topic</label>
+            <div class="field__well neu-inset field__well--select">
+              <select id="contact-topic" name="topic" class="field__control">
+                {topics.map((t) => <option value={t}>{t}</option>)}
+              </select>
+              <svg class="field__chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="m4 6.5 4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {fields.map((f) => (
+            <div class="field">
+              <label class="field__label" for={f.id}>{f.label}</label>
+              <div class="field__well neu-inset">
+                <input
+                  id={f.id}
+                  class="field__control"
+                  name={f.name}
+                  type={f.type}
+                  placeholder={f.placeholder}
+                  autocomplete={f.autocomplete}
+                  required={f.required}
+                />
+              </div>
+            </div>
+          ))}
+
+          <div class="field">
+            <label class="field__label" for="contact-message">How can we help?</label>
+            <div class="field__well neu-inset">
+              <textarea
+                id="contact-message"
+                class="field__control field__control--area"
+                name="message"
+                rows="4"
+                placeholder="A line or two about what you are looking for."></textarea>
+            </div>
+          </div>
+
+          <!-- Honeypot. Bots fill it; /api/lead accepts and silently drops those. -->
+          <div class="visually-hidden" aria-hidden="true">
+            <label for="contact-website">Website</label>
+            <input id="contact-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <button type="submit" class="cta-primary form__submit">
+            <span class="cta-primary__label">Send message</span>
+            <span class="cta-primary__chip" aria-hidden="true">
+              <svg aria-hidden="true" class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M2 8h11M9 4l4 4-4 4"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+          </button>
+
+          <p class="text-xsmall text-sub form__fine">
+            This opens your mail app with everything prefilled, or write us directly at{' '}
+            <a class="form__fine-link" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          </p>
+        </form>
+
+        <div class="sent" data-contact-success hidden>
+          <span class="sent__mark" aria-hidden="true">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+              <path
+                d="m5.5 12.4 4.2 4.2 8.8-9.2"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <p class="sent__title" tabindex="-1" data-contact-success-title>Your email is ready.</p>
+          <p class="text-small text-sub sent__body">
+            We opened your mail app with the message prefilled to {CONTACT_EMAIL}. Hit send and we
+            will reply within one business day.
+          </p>
+          <button type="button" class="sent__again" data-contact-reset>Compose another</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<script>
+  /* Same contract as legacy/src/lib/lead.ts: POST the lead to /api/lead, and if
+     that is unconfigured or the network fails, open a prefilled mail compose so
+     a lead is never lost. */
+  type Lead = {
+    name: string;
+    email: string;
+    org: string;
+    message: string;
+    website: string;
+    topic: string;
+    source: 'contact';
+  };
+
+  const LEAD_EMAIL = 'hello@solace.health';
+
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  const success = document.querySelector<HTMLElement>('[data-contact-success]');
+  const successTitle = document.querySelector<HTMLElement>('[data-contact-success-title]');
+  const reset = document.querySelector<HTMLButtonElement>('[data-contact-reset]');
+  const topicSelect = document.querySelector<HTMLSelectElement>('#contact-topic');
+  const reasonButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('.reason[data-topic]'),
+  );
+
+  function syncReasons(value: string) {
+    reasonButtons.forEach((b) =>
+      b.setAttribute('aria-pressed', b.dataset.topic === value ? 'true' : 'false'),
+    );
+  }
+
+  reasonButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const value = button.dataset.topic ?? '';
+      if (topicSelect) topicSelect.value = value;
+      syncReasons(value);
+    });
+  });
+
+  topicSelect?.addEventListener('change', () => syncReasons(topicSelect.value));
+
+  async function submitLead(lead: Lead): Promise<boolean> {
+    try {
+      const r = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(lead),
+      });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function mailtoLead(lead: Lead): void {
+    const lines = [
+      lead.name && `Name: ${lead.name}`,
+      `Work email: ${lead.email}`,
+      lead.org && `Organization: ${lead.org}`,
+      lead.topic && `Topic: ${lead.topic}`,
+      '',
+      lead.message,
+    ];
+    window.location.href = `mailto:${LEAD_EMAIL}?subject=${encodeURIComponent(
+      'Contact request',
+    )}&body=${encodeURIComponent(lines.join('\n'))}`;
+  }
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const lead: Lead = {
+      name: String(data.get('name') ?? '').trim(),
+      email: String(data.get('email') ?? '').trim(),
+      org: String(data.get('org') ?? '').trim(),
+      message: String(data.get('message') ?? '').trim(),
+      website: String(data.get('website') ?? ''),
+      topic: String(data.get('topic') ?? ''),
+      source: 'contact',
+    };
+
+    form.hidden = true;
+    if (success) success.hidden = false;
+    successTitle?.focus();
+
+    const ok = await submitLead(lead);
+    if (!ok) mailtoLead(lead);
+  });
+
+  reset?.addEventListener('click', () => {
+    if (success) success.hidden = true;
+    if (form) {
+      form.hidden = false;
+      form.querySelector<HTMLInputElement>('#contact-name')?.focus();
+    }
+  });
+</script>
+
+<style>
+  /* ── Hero actions, slotted into PageHeader ─────────────────────────────── */
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3x);
+    margin-block-start: var(--space-3x);
+  }
+  .hero-actions__icon { inline-size: 16px; block-size: 16px; }
+
+  /* ── Two columns: reasons, then the form ───────────────────────────────── */
+  .contact { display: grid; gap: var(--space-12x); align-items: start; }
+  @media (min-width: 1080.02px) {
+    .contact { grid-template-columns: 1fr minmax(0, 480px); gap: var(--space-16x); }
+  }
+
+  .contact__reasons { display: flex; flex-direction: column; gap: var(--space-8x); }
+
+  .reasons { display: flex; flex-direction: column; gap: var(--space-3x); }
+
+  .reason {
+    inline-size: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    padding: var(--space-5x);
+    text-align: start;
+    border-radius: var(--radius-4x);
+  }
+
+  /* Selected state replaces the raised material's ring with a brand hairline;
+     the light lip and the shadow ladder stay put so the card does not jump. */
+  .reason[aria-pressed='true'] {
+    box-shadow:
+      inset 0 1px 0 0 rgb(from var(--white) r g b / 95%),
+      inset 0 0 0 1.5px rgb(from var(--solace-60) r g b / 55%),
+      0 1px 2px -0.5px rgb(from var(--color-shadow) r g b / 6%),
+      0 4px 5px -2px rgb(from var(--color-shadow) r g b / 5%),
+      0 10px 12px -5px rgb(from var(--color-shadow) r g b / 4%);
+  }
+
+  .reason__icon {
+    flex: none;
+    inline-size: calc(44 / var(--rem) * 1rem);
+    block-size: calc(44 / var(--rem) * 1rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-3x);
+    background-color: var(--color-bg-accent);
+    color: var(--color-action-primary);
+  }
+  .reason__icon svg { inline-size: 20px; block-size: 20px; }
+
+  .reason__copy { display: flex; flex-direction: column; gap: var(--space-1x); }
+
+  .reason__title {
+    font-size: var(--font-size-text-medium);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+  }
+
+  .reason__body { display: block; }
+
+  /* ── The form panel ────────────────────────────────────────────────────── */
+  .contact__panel { padding: var(--space-8x); }
+  @media (min-width: 640.02px) { .contact__panel { padding: var(--space-10x); } }
+  @media (min-width: 1080.02px) {
+    .contact__panel {
+      position: sticky;
+      inset-block-start: calc(var(--page-header-height) + var(--space-8x));
+    }
+  }
+
+  .form { display: flex; flex-direction: column; gap: var(--space-5x); }
+  .form[hidden], .sent[hidden] { display: none; }
+
+  .field { display: flex; flex-direction: column; gap: var(--space-2x); }
+
+  .field__label {
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-base);
+  }
+
+  .field__well { padding: var(--space-3x) var(--space-4x); }
+  .field__well--select { position: relative; }
+
+  .field__control {
+    inline-size: 100%;
+    display: block;
+    background-color: transparent;
+    border: none;
+    outline-offset: 4px;
+    font-size: var(--font-size-text-small);
+    color: var(--color-text-base);
+  }
+  .field__control::placeholder { color: var(--color-text-disabled); }
+  .field__control--area { resize: vertical; min-block-size: calc(96 / var(--rem) * 1rem); }
+
+  .field__well--select .field__control {
+    appearance: none;
+    padding-inline-end: var(--space-6x);
+    cursor: pointer;
+  }
+  .field__chevron {
+    position: absolute;
+    inset-inline-end: var(--space-4x);
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    inline-size: 16px;
+    block-size: 16px;
+    color: var(--color-icon-soft);
+    pointer-events: none;
+  }
+
+  .form__submit {
+    inline-size: 100%;
+    justify-content: space-between;
+    margin-block-start: var(--space-1x);
+  }
+
+  .form__fine { text-align: center; }
+  .form__fine-link { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ── Success state ─────────────────────────────────────────────────────── */
+  .sent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: var(--space-3x);
+    min-block-size: calc(420 / var(--rem) * 1rem);
+  }
+
+  .sent__mark {
+    inline-size: calc(56 / var(--rem) * 1rem);
+    block-size: calc(56 / var(--rem) * 1rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-4x);
+    background-color: var(--color-bg-accent);
+    color: var(--color-action-primary);
+    margin-block-end: var(--space-3x);
+  }
+  .sent__mark svg { inline-size: 28px; block-size: 28px; }
+
+  .sent__title {
+    font-size: var(--font-size-heading-xsmall);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+  }
+
+  .sent__body { max-inline-size: 34ch; }
+
+  .sent__again {
+    margin-block-start: var(--space-4x);
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--color-border-base);
+    transition: text-decoration-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .sent__again:hover { text-decoration-color: currentColor; }
+  @media (prefers-reduced-motion: reduce) { .sent__again { transition: none; } }
+</style>

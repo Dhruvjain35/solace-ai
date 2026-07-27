@@ -1,0 +1,564 @@
+---
+import Page from '../../layouts/Page.astro';
+import CtaPrimary from '../../components/CtaPrimary.astro';
+import IntegrationFlow from '../../components/IntegrationFlow.astro';
+import { INTEGRATIONS, getGuideSteps, tierLabel, type Integration } from '../../data/integrations';
+
+/* Per-platform integration guide. Ported from
+   legacy/src/pages/IntegrationGuide.tsx.
+
+   Legacy read the slug at runtime and rendered a not-found branch for unknown
+   platforms. Static generation makes that branch unreachable: getStaticPaths
+   builds exactly the fourteen known slugs and anything else is a real 404. */
+
+export function getStaticPaths() {
+  return INTEGRATIONS.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+}
+
+interface Props {
+  item: Integration;
+}
+const { item } = Astro.props;
+
+const steps = getGuideSteps(item);
+const native = item.tier === 'native';
+
+const SECURITY_NOTES = [
+  {
+    tag: 'phi-isolation',
+    title: 'PHI isolation in code',
+    body: 'The AI plans and narrates over coded metadata. Raw PHI never reaches the model, and a leak test gates every release.',
+  },
+  {
+    tag: 'smart-v2-scopes',
+    title: 'Minimum-necessary scopes',
+    body: 'Solace requests only the SMART v2 scopes a workflow needs. Nothing broad, nothing unused.',
+  },
+  {
+    tag: 'kms-vault',
+    title: 'Secrets in a vault',
+    body: 'Client secrets and tokens live in a managed vault, never in the browser or a config file.',
+  },
+  {
+    tag: 'append-only-log',
+    title: 'Every write audited',
+    body: 'Every read and write the AI performs is saved to the record, with a clinician on the final call.',
+  },
+];
+
+const SCOPES = [
+  'patient/Patient.rs',
+  'patient/Condition.rs',
+  'patient/Observation.rs',
+  'patient/MedicationRequest.rs',
+  'patient/AllergyIntolerance.rs',
+  'patient/DocumentReference.cu',
+  'user/Encounter.rs',
+];
+
+const WRITES = [
+  { resource: 'DocumentReference', code: 'LOINC 11506-3', label: 'Progress note' },
+  { resource: 'Condition', code: 'ICD-10 I20.9', label: 'Angina pectoris, unspecified' },
+  { resource: 'Observation', code: 'LOINC 8867-4', label: 'Heart rate · 118 bpm' },
+];
+---
+
+<Page
+  title={`${item.name} integration: connect Solace over SMART on FHIR`}
+  description={item.blurb}
+>
+  {/* ═══ Header ══════════════════════════════════════════════════════════ */}
+  <section data-background-color="secondary-default" aria-labelledby="guide-heading">
+    <div class="container guide-header">
+      <nav class="guide-header__crumbs text-small" aria-label="Breadcrumb">
+        <a class="guide-header__back" href="/integrations">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M14 8H3M7 4L3 8l4 4"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Integrations
+        </a>
+        <span class="guide-header__sep" aria-hidden="true">/</span>
+        <span>{item.name}</span>
+      </nav>
+
+      {item.logo && (
+        <span class="guide-header__mark">
+          <img src={item.logo} alt="" width="48" height="48" decoding="async" />
+        </span>
+      )}
+
+      <div class="guide-header__title">
+        <h1 id="guide-heading" class="display-small">{item.name}</h1>
+        <span class:list={['tier', native && 'tier--native']}>{tierLabel(item.tier)}</span>
+      </div>
+
+      <p class="text-large text-sub guide-header__lede">{item.blurb}</p>
+    </div>
+  </section>
+
+  {/* ═══ The connection at a glance ══════════════════════════════════════ */}
+  <section data-background-color="primary-default" aria-labelledby="flow-heading">
+    <div class="container page-section">
+      <div class="block-head">
+        <p class="eyebrow">The connection at a glance</p>
+        <h2 id="flow-heading" class="heading-medium">
+          {native
+            ? `One SMART launch, inside your ${item.name} tenant.`
+            : 'One SMART launch over standard FHIR R4.'}
+        </h2>
+      </div>
+      <IntegrationFlow vendor={item.name} />
+    </div>
+  </section>
+
+  {/* ═══ The connect guide ═══════════════════════════════════════════════ */}
+  <section data-background-color="secondary-default" aria-labelledby="connect-heading">
+    <div class="container page-section">
+      <div class="block-head">
+        <p class="eyebrow">{native ? `The ${item.name} pathway` : 'Connect over SMART on FHIR'}</p>
+        <h2 id="connect-heading" class="heading-large">
+          {native ? `Bring Solace into ${item.name}.` : 'Sandbox first, then your endpoint.'}
+        </h2>
+      </div>
+
+      <ol class="steps neu-panel">
+        {steps.map((step, i) => (
+          <li class="steps__item">
+            <span class="mono steps__index">{String(i + 1).padStart(2, '0')}</span>
+            <div class="steps__body">
+              <h3 class="heading-xsmall">{step.title}</h3>
+              <p class="text-small text-sub">{step.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  {/* ═══ Once connected ══════════════════════════════════════════════════ */}
+  <section class="once" data-color-scheme="dark" aria-labelledby="capabilities-heading">
+    <div class="container page-section">
+      <div class="block-head">
+        <p class="eyebrow">Once connected</p>
+        <h2 id="capabilities-heading" class="heading-large">What {item.name} gets you.</h2>
+      </div>
+
+      <div class="once__hero">
+        <div class="once__copy">
+          <h3 class="heading-small">The chart, read and reasoned on launch.</h3>
+          <p class="text-medium text-sub">
+            Solace matches the patient and reads demographics, problems, medications and
+            allergies over USCDI, then drafts acuity, a differential and a coded workup before
+            the clinician walks in. This is the Atlas snapshot, live from {item.name}.
+          </p>
+        </div>
+
+        <figure class="chart">
+          <div class="chart__bar">
+            <span class="chart__dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span class="mono chart__url">atlas.solace.health · launched from {item.name}</span>
+          </div>
+          <img
+            src="/assets/shots/ehr-clean.png"
+            width="1148"
+            height="556"
+            loading="lazy"
+            decoding="async"
+            alt={`The Solace Atlas snapshot Solace reads from and writes back to ${item.name}: the live patient queue, a provisional triage acuity, and the connected health record in FHIR R4 shape.`}
+          />
+        </figure>
+      </div>
+
+      <div class="once__grid">
+        <div class="once__col">
+          <h3 class="heading-xsmall">Only what the workflow needs.</h3>
+          <div class="card neu-panel">
+            <h4 class="heading-xsmall">What Solace asks for</h4>
+            <ul class="scopes">
+              {SCOPES.map((scope) => (
+                <li><code class="mono scopes__chip">{scope}</code></li>
+              ))}
+            </ul>
+            <p class="text-small text-sub">
+              Minimum necessary, per HIPAA <b class="card__cite">164.502(b)</b>. Read scopes for
+              the chart, one create/update scope for the note. Nothing broad, nothing unused.
+            </p>
+          </div>
+        </div>
+
+        <div class="once__col">
+          <h3 class="heading-xsmall">The visit, written back coded.</h3>
+          <div class="card neu-panel">
+            <h4 class="heading-xsmall">Solace wrote to {item.name}</h4>
+            <ul class="writes">
+              {WRITES.map((w) => (
+                <li class="writes__row">
+                  <span class="writes__text">
+                    <span class="writes__resource">
+                      {w.resource}<span class="mono writes__code">{w.code}</span>
+                    </span>
+                    <span class="writes__label">{w.label}</span>
+                  </span>
+                  <span class="writes__check" aria-hidden="true">
+                    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
+                      <path
+                        d="M3.5 8.5l3 3 6-7"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p class="text-small text-sub">
+              Coded, not free text. Every write is confirm-gated by the clinician and saved to
+              the audit log.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ═══ Security ════════════════════════════════════════════════════════ */}
+  <section data-background-color="primary-default" aria-labelledby="security-heading">
+    <div class="container page-section">
+      <div class="block-head">
+        <p class="eyebrow">Built to be trusted</p>
+        <h2 id="security-heading" class="heading-medium">
+          Every connection is held to the same security bar.
+        </h2>
+      </div>
+
+      <ul class="security neu-panel">
+        {SECURITY_NOTES.map((note, i) => (
+          <li class="security__cell">
+            <div class="security__meta">
+              <span class="mono security__index">{String(i + 1).padStart(2, '0')}</span>
+              <span class="mono security__tag">{note.tag}</span>
+            </div>
+            <h3 class="heading-xsmall">{note.title}</h3>
+            <p class="text-small text-sub">{note.body}</p>
+          </li>
+        ))}
+      </ul>
+
+      <a class="arrow-link security__link" href="/security">
+        <span>Read how Solace handles security and PHI</span>
+        <svg viewBox="0 0 20 14.17" fill="none" aria-hidden="true">
+          <circle cx="2" cy="7.08" r="1.6" fill="currentColor"></circle>
+          <path
+            d="M6.5 7.08h11M13.4 2.2l4.9 4.88-4.9 4.89"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  {/* ═══ Closing ═════════════════════════════════════════════════════════ */}
+  <section data-background-color="secondary-default" aria-labelledby="guide-close-heading">
+    <div class="container page-section close">
+      <h2 id="guide-close-heading" class="display-small close__heading">
+        See Solace on {item.name}.
+      </h2>
+      <p class="text-large text-sub close__lede">
+        Book a walkthrough on your own stack, or try the full read-and-write loop on the public
+        sandbox first, no credentials.
+      </p>
+      <div class="close__actions">
+        <CtaPrimary href="/demo" label="Book a Demo" />
+        <a class="cta-secondary" href="https://solaceaidemo.vercel.app" target="_blank" rel="noreferrer">
+          Try the sandbox
+        </a>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  /* ── Header. Matches PageHeader's rhythm; the breadcrumb and the vendor
+        mark are why this one is set by hand. ────────────────────────────── */
+  .guide-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    padding-block: var(--space-16x);
+  }
+  @media (min-width: 640.02px) { .guide-header { padding-block: var(--space-24x); } }
+
+  .guide-header__crumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2x);
+    color: var(--color-text-sub);
+  }
+  .guide-header__back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1_5x);
+    color: var(--color-action-primary);
+    font-weight: var(--font-weight-medium);
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .guide-header__back:hover { color: var(--color-action-primary-hover); }
+  .guide-header__back svg { inline-size: 14px; }
+  .guide-header__sep { color: var(--color-text-soft); }
+
+  .guide-header__mark {
+    display: flex;
+    align-items: center;
+    block-size: 48px;
+    margin-block-start: var(--space-4x);
+  }
+  .guide-header__mark img { inline-size: 48px; block-size: 48px; object-fit: contain; }
+
+  .guide-header__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4x);
+  }
+  .guide-header__lede { max-inline-size: 62ch; }
+
+  /* ── Tier chip ────────────────────────────────────────────────────────── */
+  .tier {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1x) var(--space-3x);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border-sub);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-sub);
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    white-space: nowrap;
+  }
+  .tier--native {
+    border-color: rgb(from var(--color-action-primary) r g b / 25%);
+    background-color: var(--color-bg-accent);
+    color: var(--color-action-primary);
+  }
+
+  /* ── Shared block head ────────────────────────────────────────────────── */
+  .block-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    padding-block-end: var(--space-12x);
+  }
+  .block-head h2 { max-inline-size: 22ch; }
+
+  /* ── The connect guide ────────────────────────────────────────────────── */
+  .steps { overflow: hidden; }
+  .steps__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-4x);
+    padding: var(--space-6x);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  @media (min-width: 640.02px) {
+    .steps__item { gap: var(--space-8x); padding: var(--space-8x); }
+  }
+  .steps__item:last-child { border-block-end: none; }
+
+  .steps__index {
+    font-size: var(--font-size-14);
+    color: var(--color-action-primary);
+    padding-block-start: 0.25em;
+  }
+  .steps__body { display: flex; flex-direction: column; gap: var(--space-2x); min-inline-size: 0; }
+
+  /* ── Once connected ───────────────────────────────────────────────────── */
+  .once { background-color: var(--slate-90); color: var(--color-text-base); }
+
+  .once__hero { display: flex; flex-direction: column; gap: var(--space-10x); }
+  @media (min-width: 1080.02px) {
+    .once__hero { flex-direction: row; align-items: center; gap: var(--space-16x); }
+    .once__hero > :first-child { flex: 5 1 0; min-inline-size: 0; }
+    .once__hero > :last-child  { flex: 7 1 0; min-inline-size: 0; }
+  }
+  .once__copy { display: flex; flex-direction: column; gap: var(--space-5x); }
+  .once__copy p { max-inline-size: 46ch; }
+
+  /* Browser frame. Chrome drawn in tokens, so the dots are hairline rings
+     rather than three coloured lozenges. */
+  .chart {
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--radius-4x);
+    background-color: var(--color-bg-primary);
+    box-shadow: var(--elevation-large);
+  }
+  .chart__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4x);
+    padding: var(--space-3x) var(--space-4x);
+    background-color: var(--color-bg-tertiary);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .chart__dots { display: flex; gap: var(--space-1_5x); flex: none; }
+  .chart__dots span {
+    inline-size: 9px;
+    block-size: 9px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border-base);
+  }
+  .chart__url {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-sub);
+  }
+  .chart img { inline-size: 100%; block-size: auto; }
+
+  .once__grid {
+    display: grid;
+    gap: var(--space-8x);
+    margin-block-start: var(--space-16x);
+  }
+  @media (min-width: 1080.02px) { .once__grid { grid-template-columns: repeat(2, 1fr); } }
+  .once__col { display: flex; flex-direction: column; gap: var(--space-5x); }
+  .once__col > .card { flex: 1 1 auto; }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5x);
+    padding: var(--space-6x);
+  }
+  @media (min-width: 640.02px) { .card { padding: var(--space-8x); } }
+  .card__cite { font-weight: var(--font-weight-medium); color: var(--color-text-base); }
+
+  .scopes { display: flex; flex-wrap: wrap; gap: var(--space-2x); }
+  .scopes__chip {
+    display: inline-block;
+    padding: var(--space-1_5x) var(--space-2_5x);
+    border-radius: var(--radius-1_5x);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-soft);
+    color: var(--color-primary-base);
+  }
+
+  .writes { display: flex; flex-direction: column; gap: var(--space-2_5x); }
+  .writes__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3x);
+    padding: var(--space-3x) var(--space-4x);
+    border-radius: var(--radius-2x);
+    background-color: var(--color-bg-accent);
+    border: 1px solid var(--color-border-soft);
+  }
+  .writes__text { display: flex; flex-direction: column; gap: var(--space-0_5x); min-inline-size: 0; flex: 1 1 auto; }
+  .writes__resource {
+    font-size: var(--font-size-14);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-default);
+  }
+  .writes__code { margin-inline-start: var(--space-2x); color: var(--color-primary-base); }
+  .writes__label {
+    font-size: var(--font-size-12);
+    color: var(--color-text-sub);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .writes__check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 24px;
+    block-size: 24px;
+    border-radius: 50%;
+    background-color: var(--color-action-primary);
+    color: var(--color-text-inverse);
+  }
+  .writes__check svg { inline-size: 14px; }
+
+  /* ── Security ─────────────────────────────────────────────────────────── */
+  .security {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: hidden;
+  }
+  @media (min-width: 640.02px)  { .security { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1080.02px) { .security { grid-template-columns: repeat(4, 1fr); } }
+
+  .security__cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2x);
+    padding: var(--space-6x);
+    border-inline-end: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .security__cell:last-child { border-inline-end: none; }
+  @media (min-width: 640.02px) {
+    .security__cell:nth-child(2n) { border-inline-end: none; }
+    .security__cell:nth-last-child(-n + 2) { border-block-end: none; }
+  }
+  @media (min-width: 1080.02px) {
+    .security__cell { border-block-end: none; }
+    .security__cell:nth-child(2n) { border-inline-end: 1px solid var(--color-border-sub); }
+    .security__cell:last-child { border-inline-end: none; }
+  }
+
+  .security__meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2x);
+    padding-block-end: var(--space-3x);
+    margin-block-end: var(--space-2x);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  /* Legacy lifted and re-tinted these cards on hover. They are not links, so
+     the affordance was a lie; the ordinal simply sits quiet. */
+  .security__index {
+    font-size: var(--font-size-20);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    color: var(--solace-30);
+  }
+  .security__tag { font-size: var(--font-size-10); color: var(--color-text-soft); }
+
+  .security__link { margin-block-start: var(--space-9x); }
+
+  /* ── Closing ──────────────────────────────────────────────────────────── */
+  .close { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5x); }
+  .close__heading { max-inline-size: 18ch; }
+  .close__lede { max-inline-size: 52ch; }
+  .close__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3x);
+    margin-block-start: var(--space-4x);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .guide-header__back { transition: none; }
+  }
+</style>

@@ -1,0 +1,324 @@
+---
+import Page from '../layouts/Page.astro';
+import PageHeader from '../components/PageHeader.astro';
+import CtaPrimary from '../components/CtaPrimary.astro';
+
+/* Ported from legacy/src/pages/Pricing.tsx.
+   The legacy page was three tone-skinned cards (paper / ink / deep green) with
+   hairline feature rows. The tones survive, but they are now driven by the
+   scheme tokens rather than by hand-picked classes: the two dark tiers opt in
+   with data-color-scheme="dark" on their cell, which flips text, borders and
+   the .neu-panel material in one move. Copy is carried across verbatim. */
+
+type Tier = {
+  name: string;
+  price: string;
+  per: string;
+  who: string;
+  rows: string[];
+  cta: string;
+  href: string;
+  popular?: boolean;
+  tone: 'paper' | 'ink' | 'green';
+};
+
+const tiers: Tier[] = [
+  {
+    name: 'Solo',
+    price: 'Free',
+    per: 'for one clinician',
+    who: 'start tonight, on your own.',
+    rows: [
+      'ambient notes for up to 50 visits a month',
+      'letters and forms, drafted for you',
+      'the clinical calculators, built in',
+    ],
+    cta: 'Start free',
+    href: '/demo',
+    tone: 'paper',
+  },
+  {
+    name: 'Group',
+    price: '$99',
+    per: 'per clinician, per month',
+    who: 'for practices and emergency departments.',
+    rows: [
+      'everything in Solo, with no visit cap',
+      'the live queue and the patient snapshot',
+      'write-back into your hospital system',
+      'patient intake in 20 languages',
+    ],
+    cta: 'Book a Demo',
+    href: '/demo',
+    popular: true,
+    tone: 'ink',
+  },
+  {
+    name: 'Health system',
+    price: '$199',
+    per: 'per clinician, per month',
+    who: 'for hospitals and networks of them.',
+    rows: [
+      'everything in Group',
+      'value-based care reporting',
+      'single sign-on for your whole staff',
+      'encryption keys your hospital holds',
+      'insurance approvals, drafted and tracked',
+    ],
+    cta: 'Talk to us',
+    href: '/demo',
+    tone: 'green',
+  },
+];
+
+/* The legacy BigStatement scrubbed each word's opacity against the section's
+   scroll progress with Framer Motion. Same mechanic here, no JS: the section
+   names a view timeline and every word animates against its own slice of it.
+   The slices are computed at build time so the CSS never needs calc(). */
+const statement =
+  'One subscription covers the notes, the queue, the letters and the intake. About half what the big ambient scribes charge, with the whole front door included.';
+const statementWords = statement.split(' ');
+const REVEAL_START = 8; // % of the cover range where the first word begins
+const REVEAL_STEP = 2.4; // % each subsequent word is pushed back
+const REVEAL_SPAN = 12; // % a single word takes to come up
+const words = statementWords.map((word, i) => ({
+  word,
+  from: `${(REVEAL_START + i * REVEAL_STEP).toFixed(1)}%`,
+  to: `${(REVEAL_START + i * REVEAL_STEP + REVEAL_SPAN).toFixed(1)}%`,
+}));
+---
+
+<Page
+  title="Pricing | Solace"
+  description="Start free on your own. Bring the whole team when you are ready. Everything in your tier is included, nothing sold back to you feature by feature."
+>
+  <PageHeader
+    eyebrow="Pricing"
+    title="Simple, honest pricing."
+    lede="Start free on your own. Bring the whole team when you are ready. Everything in your tier is included, nothing sold back to you feature by feature."
+  />
+
+  <section data-background-color="primary-default" aria-labelledby="tiers-heading">
+    <div class="container page-section">
+      <h2 id="tiers-heading" class="visually-hidden">Solace Plans</h2>
+
+      <ul class="tiers">
+        {tiers.map((tier) => (
+          <li
+            class:list={['tiers__cell', `tiers__cell--${tier.tone}`]}
+            data-color-scheme={tier.tone === 'paper' ? 'light' : 'dark'}
+          >
+            <article class:list={['tier', 'neu-panel', `tier--${tier.tone}`]}>
+              <div class="tier__top">
+                <h3 class="eyebrow tier__name">{tier.name}</h3>
+                {tier.popular && <span class="tier__badge">Most popular</span>}
+              </div>
+
+              <p class="tier__price">{tier.price}</p>
+              <p class="text-small text-sub tier__per">{tier.per}</p>
+              <p class="tier__who">{tier.who}</p>
+
+              <ul class="tier__rows">
+                {tier.rows.map((row) => (
+                  <li class="text-small tier__row">{row}</li>
+                ))}
+              </ul>
+
+              <a class="tier__cta" href={tier.href}>{tier.cta}</a>
+            </article>
+          </li>
+        ))}
+      </ul>
+
+      <p class="text-small text-sub tiers__note">
+        Every tier keeps the same rule: Solace drafts, your clinicians review and sign. Nothing
+        reaches the chart on its own.
+      </p>
+    </div>
+  </section>
+
+  <section class="statement" data-color-scheme="dark">
+    <div class="container page-section statement__inner">
+      <p class="statement__text">
+        {words.map(({ word, from, to }) => (
+          <>
+            <span class="statement__word" style={`--from:${from};--to:${to}`}>{word}</span>{' '}
+          </>
+        ))}
+      </p>
+    </div>
+  </section>
+
+  <section data-background-color="secondary-default" aria-labelledby="pricing-close-heading">
+    <div class="container page-section">
+      <div class="close">
+        <div class="close__row">
+          <h2 id="pricing-close-heading" class="heading-small">Do we have to talk to sales first?</h2>
+          <p class="text-medium text-sub close__body">
+            No. Book a demo, see the whole flow on a workflow that looks like yours, and start the
+            same day. A full health-system rollout takes a few weeks, not quarters.
+          </p>
+        </div>
+        <CtaPrimary href="/demo" label="Book a Demo" />
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  /* ── Tiers ─────────────────────────────────────────────────────────────── */
+  .tiers {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2_5x);
+    align-items: stretch;
+  }
+  @media (min-width: 1080.02px) {
+    .tiers { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* The cell exists so the card can be a descendant of the scheme attribute:
+     the dark .neu-panel material is selected as [data-color-scheme="dark"] .neu-panel. */
+  .tiers__cell { display: flex; }
+
+  .tier {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-8x);
+    color: var(--color-text-base);
+  }
+  @media (min-width: 640.02px) {
+    .tier { padding: var(--space-9x); }
+  }
+
+  /* The deep-green tier keeps the panel's lips and shadow ladder and swaps only
+     the fill. Unlayered, so it lands on top of the layered material. */
+  .tier--green {
+    background: linear-gradient(180deg, var(--solace-90) 0, var(--solace-100) 100%);
+  }
+
+  /* The badge is taller than the eyebrow, so the row is given the badge's
+     height on every card. Otherwise the popular tier's name sits a few pixels
+     lower than its neighbours and the whole row looks off its rail. */
+  .tier__top {
+    inline-size: 100%;
+    min-block-size: calc(28 / var(--rem) * 1rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4x);
+  }
+
+  .tier__name { letter-spacing: 0.16em; }
+
+  .tier__badge {
+    flex: none;
+    padding: var(--space-1x) var(--space-3x);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border-sub);
+    background-color: var(--color-transparent-hover);
+    color: var(--color-text-base);
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+  }
+
+  .tier__price {
+    margin-block-start: var(--space-7x);
+    font-size: var(--font-size-display-small);
+    font-weight: var(--font-weight-medium);
+    line-height: 96%;
+    letter-spacing: var(--letter-spacing-display);
+  }
+
+  .tier__per { margin-block-start: var(--space-2_5x); }
+
+  .tier__who {
+    margin-block-start: var(--space-7x);
+    font-size: var(--font-size-text-large);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-default);
+    max-inline-size: 24ch;
+  }
+
+  .tier__rows { inline-size: 100%; margin-block: var(--space-5x) var(--space-8x); }
+
+  .tier__row {
+    padding-block: var(--space-3x);
+    border-block-start: 1px solid var(--color-border-sub);
+    color: var(--color-text-sub);
+  }
+
+  /* margin-block-start:auto pins it to the floor of the card, so the three
+     buttons line up across the row however long the feature lists run. */
+  .tier__cta {
+    inline-size: 100%;
+    margin-block-start: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3x) var(--space-6x);
+    border-radius: var(--radius-3x);
+    background-color: var(--color-action-secondary);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-16);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    transition: background-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .tier__cta:hover { background-color: var(--color-action-secondary-hover); }
+  @media (prefers-reduced-motion: reduce) { .tier__cta { transition: none; } }
+
+  .tiers__note {
+    margin-block-start: var(--space-10x);
+    margin-inline: auto;
+    max-inline-size: 46ch;
+    text-align: center;
+  }
+
+  /* ── Scroll-scrubbed statement ─────────────────────────────────────────── */
+  .statement { background-color: var(--slate-90); color: var(--color-text-base); }
+
+  .statement__inner { view-timeline-name: --pricing-statement; view-timeline-axis: block; }
+
+  .statement__text {
+    max-inline-size: 24ch;
+    font-size: var(--font-size-display-small);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-default);
+    letter-spacing: var(--letter-spacing-display);
+  }
+
+  /* Default state is fully legible. The dim resting opacity only exists where
+     a view timeline can bring it back up. */
+  .statement__word { color: var(--solace-20); }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .statement__word {
+        opacity: 0.22;
+        animation: statement-word linear forwards;
+        animation-timeline: --pricing-statement;
+        animation-range: cover var(--from) cover var(--to);
+      }
+    }
+  }
+
+  @keyframes statement-word { to { opacity: 1; } }
+
+  /* ── Close ─────────────────────────────────────────────────────────────── */
+  .close {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-8x);
+    max-inline-size: 72ch;
+    padding-block-start: var(--space-8x);
+    border-block-start: 1px solid var(--color-border-sub);
+  }
+
+  .close__row { display: flex; flex-direction: column; gap: var(--space-3x); }
+  .close__body { max-inline-size: 60ch; }
+</style>

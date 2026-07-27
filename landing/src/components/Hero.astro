@@ -94,40 +94,57 @@ import CtaPrimary from './CtaPrimary.astro';
 
   .hero__cta { display: flex; justify-content: center; margin-block-start: var(--space-8x); }
 
-  /* One grid cell holds every floating element. Placement is align-self /
-     justify-self, never position:absolute, so the collage reflows on its own. */
+  /* The stage is a positioning context for the figure and the glass cards.
+     The figure is centred on small screens and offset once the cards appear
+     beside it, so it never sits under them. */
   .hero__stage {
     position: relative;
     margin-block-start: var(--space-9x);
-    block-size: clamp(340px, 34vw, 500px);
+    block-size: clamp(280px, 60vw, 360px);
+  }
+  @media (min-width: 640.02px) {
+    .hero__stage { block-size: clamp(340px, 34vw, 500px); }
   }
 
   .hero__figure {
     position: absolute;
     inset-inline-start: 50%;
     inset-block-end: calc(-1 * var(--space-32x));
-    translate: -16% 0;
+    translate: -50% 0;
     z-index: var(--z-raised);
     filter: drop-shadow(0 40px 70px rgb(0 0 0 / 0.62));
   }
+  @media (min-width: 640.02px) {
+    .hero__figure { translate: -16% 0; }
+  }
   .hero__figure img { block-size: clamp(400px, 42vw, 560px); inline-size: auto; }
 
-  .hero__card { position: absolute; z-index: 2; display: grid; gap: var(--space-2x); }
+  /* Mobile first, matching the rest of the system: the collage is unreadable
+     at small sizes, so the base state is figure-only and the cards are added
+     back as room appears. */
+  .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-2x); }
   .hero__card-note { color: rgb(from var(--white) r g b / 0.70); }
 
-  .hero__card--intake { inset-inline-start: 0; inset-block-start: var(--space-6x); inline-size: 300px; }
-  .hero__card--brief  { inset-inline-end: 0;   inset-block-start: var(--space-2x); inline-size: 330px; }
+  .hero__card--intake { inset-inline-start: 0; inset-block-start: var(--space-6x); }
+  .hero__card--brief  { inset-inline-end: 0;   inset-block-start: var(--space-2x); }
   .hero__card--queue  { inset-inline-start: var(--space-20x); inset-block-start: 62%; inline-size: 272px; }
 
-  /* Below 1080 the collage is unreadable at these sizes; drop to the figure. */
-  @media (max-width: 1080px) {
-    .hero__card--queue { display: none; }
-    .hero__card--intake, .hero__card--brief { inline-size: 258px; }
+  /* Cards arrive one at a time as the row can actually hold them. Two 258px
+     cards plus the ~246px figure need 762px, so showing both at 640 put the
+     pre-brief squarely over her face. */
+  @media (min-width: 640.02px) {
+    .hero__card--intake { display: grid; inline-size: 258px; }
   }
-  @media (max-width: 640px) {
-    .hero__card { display: none; }
-    .hero__stage { block-size: clamp(280px, 60vw, 360px); }
-    .hero__figure { translate: -50% 0; }
+
+  @media (min-width: 1080.02px) {
+    .hero__card--brief { display: grid; inline-size: 300px; }
+    .hero__card--intake { inline-size: 280px; }
+  }
+
+  @media (min-width: 1280.02px) {
+    .hero__card--queue { display: grid; }
+    .hero__card--intake { inline-size: 300px; }
+    .hero__card--brief  { inline-size: 330px; }
   }
 
   .hero__brief-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3x); }
@@ -165,18 +182,33 @@ import CtaPrimary from './CtaPrimary.astro';
   .hero__rows dt { color: rgb(from var(--white) r g b / 0.88); }
   .hero__rows dd { margin: 0; color: rgb(from var(--white) r g b / 0.70); }
 
-  /* Sits in the hero's bottom-left dead space, clear of the figure. */
+  /* Base is the narrow case: the figure is centred, so the disclosure lands on
+     her scrubs where low-alpha white is unreadable. Scrim it and centre it.
+     Above 640 it moves into the hero's bottom-left dead space, clear of her. */
   .hero__disclosure {
     position: relative;
     z-index: 3;
-    margin-block-start: var(--space-24x);
-    padding-block-end: var(--space-6x);
+    margin-block-start: var(--space-16x);
+    padding-block: var(--space-8x) var(--space-6x);
     padding-inline: var(--viewport-padding);
-    max-inline-size: 40ch;
+    text-align: center;
     font-size: var(--font-size-12);
-    color: rgb(from var(--white) r g b / 0.45);
+    color: rgb(from var(--white) r g b / 0.66);
+    background: linear-gradient(
+      180deg,
+      rgb(from var(--slate-black) r g b / 0) 0,
+      rgb(from var(--slate-black) r g b / 0.72) 38%,
+      rgb(from var(--slate-black) r g b / 0.86) 100%
+    );
   }
-  @media (max-width: 640px) {
-    .hero__disclosure { max-inline-size: none; text-align: center; }
+  @media (min-width: 640.02px) {
+    .hero__disclosure {
+      margin-block-start: var(--space-24x);
+      padding-block: 0 var(--space-6x);
+      max-inline-size: 40ch;
+      text-align: start;
+      color: rgb(from var(--white) r g b / 0.45);
+      background: none;
+    }
   }
 </style>

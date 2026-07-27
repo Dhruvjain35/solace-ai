@@ -1,0 +1,262 @@
+---
+import Page from '../layouts/Page.astro';
+
+/* Ported from legacy/src/pages/Demo.tsx. The shape is the legacy one on
+   purpose: the booking form sits beside the headline rather than under a
+   PageHeader, so it is above the fold on a laptop.
+
+   The form posts to the same /api/lead function the legacy page used, and
+   falls back to a mailto compose when that function is not configured, so a
+   lead is never dropped. That is the only JS on the page. */
+
+const reassurances = [
+  'Nothing to install, nothing to integrate for the demo',
+  'HIPAA-grade from the first call',
+  'See the live queue and the patient snapshot working',
+];
+
+const fields = [
+  { name: 'name',  label: 'Full name',    type: 'text',  placeholder: 'Dr. Jordan Lee',  autocomplete: 'name' },
+  { name: 'email', label: 'Work email',   type: 'email', placeholder: 'you@hospital.org', autocomplete: 'email' },
+  { name: 'org',   label: 'Organization', type: 'text',  placeholder: 'North Texas ED',   autocomplete: 'organization' },
+];
+---
+
+<Page
+  title="Book a Solace demo"
+  description="See Solace on your floor. A live walkthrough on a workflow that looks like yours, in about 20 minutes."
+>
+  <section data-background-color="secondary-default" aria-labelledby="demo-heading">
+    <div class="container page-section demo">
+      <div class="demo__grid">
+        {/* ── Left, the pitch ─────────────────────────────────────────── */}
+        <div class="demo__copy">
+          <p class="eyebrow">Book a demo</p>
+          <div class="demo__dashed" aria-hidden="true"></div>
+          <h1 id="demo-heading" class="display-medium demo__title">See Solace on your floor.</h1>
+          <p class="text-large text-sub demo__lede">
+            A live walkthrough on a workflow that looks like yours, in about 20 minutes.
+          </p>
+          <ul class="demo__list">
+            {reassurances.map((line) => <li class="text-medium">{line}</li>)}
+          </ul>
+        </div>
+
+        {/* ── Right, the form ─────────────────────────────────────────── */}
+        <div class="demo__panel neu-panel">
+          <form class="lead" data-lead-form>
+            {fields.map((field) => (
+              <div class="lead__field">
+                <label class="lead__label text-small weight-medium" for={`demo-${field.name}`}>
+                  {field.label}
+                </label>
+                <div class="lead__well neu-inset">
+                  <input
+                    class="lead__input"
+                    id={`demo-${field.name}`}
+                    name={field.name}
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    autocomplete={field.autocomplete}
+                    required
+                  />
+                </div>
+              </div>
+            ))}
+
+            <button type="submit" class="cta-primary lead__submit">
+              <span class="cta-primary__label">Book a Demo</span>
+              <span class="cta-primary__chip" aria-hidden="true">
+                <svg aria-hidden="true" class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M2 8h11M9 4l4 4-4 4"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+          </form>
+
+          <div class="lead__sent" data-lead-sent role="status" tabindex="-1" hidden>
+            <svg class="lead__check" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M4 12.5 9.5 18 20 6.5"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <p class="heading-xsmall">Request sent.</p>
+            <p class="text-small text-sub lead__sent-note">
+              We will reach out within one business day. If your email client opened, just hit send
+              to finish.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Quiet hand-off to the live patient flow ─────────────────────── */}
+      <p class="text-small text-sub demo__alt">
+        or <a
+          class="demo__alt-link"
+          href="https://solaceaidemo.vercel.app"
+          target="_blank"
+          rel="noreferrer"
+        >try the patient flow yourself</a>
+      </p>
+    </div>
+  </section>
+</Page>
+
+<script>
+  // Fire and confirm, matching the legacy page: the confirmation swaps in
+  // immediately, and a mailto compose is the backstop if /api/lead is not
+  // configured or the network fails.
+  const form = document.querySelector<HTMLFormElement>('[data-lead-form]');
+  const sent = document.querySelector<HTMLElement>('[data-lead-sent]');
+
+  if (form && sent) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const data = new FormData(form);
+      const lead = {
+        name: String(data.get('name') ?? ''),
+        email: String(data.get('email') ?? ''),
+        org: String(data.get('org') ?? ''),
+        source: 'demo',
+      };
+
+      form.hidden = true;
+      sent.hidden = false;
+      sent.focus();
+
+      let ok = false;
+      try {
+        const response = await fetch('/api/lead', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(lead),
+        });
+        ok = response.ok;
+      } catch {
+        ok = false;
+      }
+
+      if (!ok) {
+        const body = [
+          lead.name && `Name: ${lead.name}`,
+          `Work email: ${lead.email}`,
+          lead.org && `Organization: ${lead.org}`,
+          '',
+          "I'd like to book a Solace demo.",
+        ]
+          .filter(Boolean)
+          .join('\n');
+        window.location.href =
+          `mailto:hello@solace.health?subject=${encodeURIComponent('Demo request')}` +
+          `&body=${encodeURIComponent(body)}`;
+      }
+    });
+  }
+</script>
+
+<style>
+  .demo__grid { display: flex; flex-direction: column; gap: var(--space-10x); }
+  @media (min-width: 1080.02px) {
+    .demo__grid { flex-direction: row; align-items: center; gap: var(--space-16x); }
+    .demo__grid > * { flex: 1 1 0; min-inline-size: 0; }
+  }
+
+  .demo__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
+  .demo__title { max-inline-size: 12ch; }
+  .demo__lede  { max-inline-size: 42ch; }
+
+  /* 4-on / 4-off rule under the eyebrow, the house divider. */
+  .demo__dashed {
+    inline-size: min(100%, 320px);
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-border-sub) 0, var(--color-border-sub) 4px,
+      transparent 4px, transparent 8px
+    );
+  }
+
+  .demo__list { display: grid; gap: var(--space-3x); margin-block-start: var(--space-5x); }
+  .demo__list li { position: relative; padding-inline-start: var(--space-7x); }
+  /* Hollow circle, never a filled dot. */
+  .demo__list li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.55em;
+    inline-size: 12px;
+    block-size: 12px;
+    border: 1.5px solid var(--color-icon-soft);
+    border-radius: 50%;
+  }
+
+  /* ── The form panel ──────────────────────────────────────────────────── */
+  .demo__panel { padding: var(--space-8x); }
+  @media (min-width: 640.02px) { .demo__panel { padding: var(--space-10x); } }
+
+  /* Both states set display, so both have to re-honour [hidden] themselves. */
+  .lead { display: flex; flex-direction: column; gap: var(--space-5x); }
+  .lead[hidden] { display: none; }
+  .lead__field { display: flex; flex-direction: column; gap: var(--space-2x); }
+  .lead__label { color: var(--color-text-base); }
+
+  .lead__well { border-radius: var(--radius-full); }
+
+  .lead__input {
+    inline-size: 100%;
+    padding: var(--space-3x) var(--space-5x);
+    border: none;
+    background-color: transparent;
+    font-size: var(--font-size-text-small);
+    color: var(--color-text-base);
+    border-radius: inherit;
+  }
+  .lead__input::placeholder { color: var(--color-text-disabled); }
+
+  .lead__submit {
+    inline-size: 100%;
+    margin-block-start: var(--space-1x);
+  }
+
+  .lead__sent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2x);
+    min-block-size: 340px;
+    text-align: center;
+  }
+  .lead__sent[hidden] { display: none; }
+  .lead__check {
+    inline-size: var(--space-8x);
+    block-size: var(--space-8x);
+    margin-block-end: var(--space-3x);
+    color: var(--color-primary-base);
+  }
+  .lead__sent-note { max-inline-size: 34ch; }
+
+  /* ── Hand-off line ───────────────────────────────────────────────────── */
+  .demo__alt { margin-block-start: var(--space-14x); text-align: center; }
+  .demo__alt-link {
+    color: var(--color-text-base);
+    font-weight: var(--font-weight-medium);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: rgb(from var(--color-text-base) r g b / 0.3);
+    transition: text-decoration-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .demo__alt-link:hover { text-decoration-color: var(--color-text-base); }
+  @media (prefers-reduced-motion: reduce) { .demo__alt-link { transition: none; } }
+</style>

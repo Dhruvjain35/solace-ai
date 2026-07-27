@@ -1,0 +1,423 @@
+---
+import Page from '../layouts/Page.astro';
+import PageHeader from '../components/PageHeader.astro';
+import CtaPrimary from '../components/CtaPrimary.astro';
+
+/* Ported from legacy/src/pages/Company.tsx.
+   Scene order is preserved exactly: mega opening, mission scrub, the welcome
+   screen beside the promise copy, three value tiles, the numbers band, the
+   founder note, the centred close.
+
+   The two Framer mechanics are rebuilt in CSS with scroll-driven animations:
+     - BigStatement's per-word opacity scrub becomes one named view timeline on
+       the paragraph, with each word owning a slice of it.
+     - TileGrid's ±6vh counter-drift becomes a shared view timeline on each
+       grid, with odd and even columns running opposite keyframes.
+   Both are gated behind @supports and prefers-reduced-motion, and both resolve
+   to the finished state when unsupported. No JS on this page. */
+
+const MISSION =
+  'Emergency rooms feel chaotic because nobody can see what is coming. Patients wait in the dark while care teams meet every story cold. Solace lets patients tell their story from their own phone, in their own language, so the team knows who needs help first. We build for the people in the waiting room and the people running it.';
+
+const missionWords = MISSION.split(' ');
+
+/* Word i of n brightens across its own slice of the paragraph's transit.
+   The 0.8 overlap is inherited from the legacy band() helper, so neighbouring
+   words are still lighting up when the next one starts. */
+const SCRUB_START = 10;
+const SCRUB_END = 70;
+const scrubSpan = SCRUB_END - SCRUB_START;
+const wordRange = (i: number, n: number) => {
+  const from = SCRUB_START + (i / n) * scrubSpan;
+  const to = Math.min(SCRUB_START + ((i + 0.8) / n) * scrubSpan, SCRUB_END);
+  return `animation-range: cover ${from.toFixed(2)}% cover ${to.toFixed(2)}%`;
+};
+
+const values = [
+  {
+    title: 'Patients first, paperwork last.',
+    sub: 'a photo of your card and your own words fill in the forms, so people get the attention.',
+    tone: 'pale',
+  },
+  {
+    title: 'The AI shows its work.',
+    sub: 'everything it reads or writes is saved to the record. nothing hidden, ever.',
+    tone: 'ink',
+  },
+  {
+    title: 'Clinicians make the call.',
+    sub: 'Solace prepares a clear summary. a clinician always makes the final decision.',
+    tone: 'green',
+  },
+];
+
+const numbers = [
+  {
+    kicker: 'Languages',
+    big: '20',
+    suffix: '',
+    sub: 'speak or type in yours. your care team reads it in theirs.',
+  },
+  {
+    kicker: 'Spoken guidance',
+    big: '~7',
+    suffix: 'sec',
+    sub: 'from telling your story to hearing what happens next.',
+  },
+  {
+    kicker: 'Honest waits',
+    big: '15',
+    suffix: 'sec',
+    sub: 'the wait time on your phone refreshes this often, so the number is real.',
+  },
+];
+---
+
+<Page
+  title="Company: why we build Solace"
+  description="Calm should be standard care. The mission, the values, and the promise on the first screen of every Solace check-in."
+>
+  <PageHeader
+    eyebrow="Company"
+    title="Calm should be standard care."
+    lede="We are building emergency rooms where no one waits in the dark, not patients, and not the people caring for them."
+  />
+
+  {/* ── 1 · Mission, word-by-word scrub ─────────────────────────────────── */}
+  <section data-background-color="primary-default" aria-labelledby="mission-heading">
+    <div class="container page-section mission">
+      <h2 id="mission-heading" class="visually-hidden">Our mission</h2>
+      <p class="mission__statement">
+        {missionWords.map((word, i) => (
+          <>
+            <span class="mission__word" style={wordRange(i, missionWords.length)}>{word}</span>{' '}
+          </>
+        ))}
+      </p>
+    </div>
+  </section>
+
+  {/* ── 2 · The promise, the welcome screen beside the copy ─────────────── */}
+  <section data-background-color="tertiary-default" aria-labelledby="promise-heading">
+    <div class="container page-section promise">
+      <div class="promise__copy">
+        <p class="eyebrow">Where it started</p>
+        <div class="promise__dashed" aria-hidden="true"></div>
+        <h2 id="promise-heading" class="heading-large">The first screen is a promise.</h2>
+        <p class="text-medium text-sub">
+          Before a single question gets asked, the app says the quiet part out loud: you’re not
+          waiting alone. A calm voice, your own language, and a clear picture of what happens next.
+        </p>
+        <p class="text-medium text-sub">
+          Every screen we ship has to keep that promise. If it adds worry instead of taking worry
+          away, it does not ship.
+        </p>
+      </div>
+
+      <figure class="promise__figure neu-well">
+        <span class="promise__shot">
+          <img
+            src="/assets/screens/welcome.png"
+            alt="The Solace welcome screen on a patient's phone, headed “You’re not waiting alone.”"
+            width="1179"
+            height="2556"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption class="promise__tag">Illustrative</figcaption>
+        </span>
+      </figure>
+    </div>
+  </section>
+
+  {/* ── 3 · What we believe, three tiles ────────────────────────────────── */}
+  <section data-background-color="primary-default" aria-labelledby="beliefs-heading">
+    <div class="container page-section beliefs">
+      <h2 id="beliefs-heading" class="heading-medium">What we believe</h2>
+
+      <ul class="beliefs__grid">
+        {values.map((value) => (
+          <li class="beliefs__item">
+            <article
+              class:list={['beliefs__card', `beliefs__card--${value.tone}`]}
+              data-color-scheme={value.tone === 'pale' ? 'light' : 'dark'}
+            >
+              <h3 class="heading-small">{value.title}</h3>
+              <p class="text-small beliefs__sub">{value.sub}</p>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  {/* ── 4 · The numbers ─────────────────────────────────────────────────── */}
+  <section data-background-color="secondary-default" aria-labelledby="numbers-heading">
+    <div class="container page-section">
+      <h2 id="numbers-heading" class="visually-hidden">Solace By The Numbers</h2>
+
+      <ul class="numbers neu-panel">
+        {numbers.map((fact) => (
+          <li class="numbers__cell">
+            <p class="eyebrow">{fact.kicker}</p>
+            <p class="numbers__big">
+              {fact.big}{fact.suffix && <span class="numbers__suffix">&nbsp;{fact.suffix}</span>}
+            </p>
+            <p class="text-small text-sub numbers__sub">{fact.sub}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  {/* ── 5 · A note from the team ────────────────────────────────────────── */}
+  <section data-background-color="tertiary-default" aria-labelledby="note-heading">
+    <div class="container page-section">
+      <div class="note neu-panel">
+        <h2 id="note-heading" class="eyebrow">A note from the team</h2>
+        <p class="note__body">
+          We started Solace after too many nights watching people wait in the dark. No sense of
+          when, no one to ask, the hardest part of the emergency was the not knowing. So we are
+          building the version of that night we wish our own families had. A calm voice in your
+          language, an honest wait time, and a care team that already knows your story when they
+          pull back the curtain.
+        </p>
+        <p class="note__sign text-medium weight-medium text-sub">The Solace team</p>
+      </div>
+    </div>
+  </section>
+
+  {/* ── 6 · Close ───────────────────────────────────────────────────────── */}
+  <section data-background-color="secondary-default" aria-labelledby="company-cta-heading">
+    <div class="container page-section close">
+      <h2 id="company-cta-heading" class="display-small close__heading">Come see it working.</h2>
+      <p class="text-large text-sub close__sub">
+        Fifteen minutes is enough to see the whole flow, from the QR code in the waiting room to
+        the note that writes itself.
+      </p>
+      <div class="close__actions">
+        <CtaPrimary href="/demo" label="Book a Demo" />
+        <a class="cta-secondary" href="/clinicians">For Clinicians</a>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  /* ── Mission ─────────────────────────────────────────────────────────── */
+  .mission__statement {
+    max-inline-size: 26ch;
+    font-size: var(--font-size-heading-large);
+    line-height: 1.18;
+    letter-spacing: var(--letter-spacing-heading);
+    /* The timeline every word inside reads. Declared here so all of them
+       share one progress, the way the legacy section-level scroll did. */
+    view-timeline-name: --mission-scrub;
+    view-timeline-axis: block;
+  }
+
+  /* Resting state is the finished state: no support, no motion, no problem. */
+  .mission__word { color: var(--color-primary-base); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .mission__word {
+        animation: mission-word linear both;
+        animation-timeline: --mission-scrub;
+      }
+    }
+  }
+  @keyframes mission-word {
+    from { color: var(--color-text-soft); }
+    to   { color: var(--color-primary-base); }
+  }
+
+  /* ── Promise ─────────────────────────────────────────────────────────── */
+  .promise { display: flex; flex-direction: column; gap: var(--space-10x); }
+  @media (min-width: 1080.02px) {
+    .promise { flex-direction: row; align-items: center; gap: var(--space-16x); }
+    .promise > * { flex: 1 1 0; min-inline-size: 0; }
+  }
+
+  .promise__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+  }
+  .promise__copy h2 { max-inline-size: 14ch; }
+  .promise__copy p:not(.eyebrow) { max-inline-size: 46ch; }
+
+  /* 4-on / 4-off rule under the eyebrow, same as the suite panels. */
+  .promise__dashed {
+    inline-size: min(100%, 320px);
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-border-sub) 0, var(--color-border-sub) 4px,
+      transparent 4px, transparent 8px
+    );
+  }
+
+  /* The screenshot is a full 1179x2556 phone capture, so it is capped by
+     height and centred in a recessed well rather than sized by width. */
+  .promise__figure {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    padding: var(--space-8x) var(--space-6x);
+  }
+  .promise__shot { position: relative; display: inline-block; line-height: 0; max-inline-size: 100%; }
+  .promise__figure img {
+    inline-size: auto;
+    max-inline-size: 100%;
+    max-block-size: 520px;
+    object-fit: contain;
+    border-radius: var(--radius-4x);
+    box-shadow: var(--elevation-medium);
+  }
+  .promise__tag {
+    position: absolute;
+    inset-block-start: var(--space-3x);
+    inset-inline-end: var(--space-3x);
+    padding: var(--space-0_5x) var(--space-2x);
+    border-radius: var(--radius-full);
+    background-color: rgb(from var(--neutral-100) r g b / 0.62);
+    color: var(--white);
+    font-size: var(--font-size-10);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ── Beliefs ─────────────────────────────────────────────────────────── */
+  .beliefs { display: flex; flex-direction: column; gap: var(--space-10x); }
+
+  .beliefs__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3x);
+    view-timeline-name: --beliefs-drift;
+    view-timeline-axis: block;
+  }
+  @media (min-width: 1080.02px) {
+    .beliefs__grid { grid-template-columns: repeat(3, 1fr); }
+    /* The middle column sits low, as it does in the reference. */
+    .beliefs__item:nth-child(2) { padding-block-start: var(--space-10x); }
+  }
+
+  .beliefs__card {
+    block-size: 100%;
+    min-block-size: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--space-3x);
+    padding: var(--space-6x);
+    border-radius: var(--radius-6x);
+    color: var(--color-text-base);
+    overflow: hidden;
+  }
+  @media (min-width: 1080.02px) { .beliefs__card { min-block-size: 360px; } }
+
+  .beliefs__sub { color: var(--color-text-sub); }
+
+  .beliefs__card--pale {
+    background-image: linear-gradient(166.14deg, var(--solace-10) 0%, var(--solace-20) 100%);
+  }
+  .beliefs__card--ink   { background-color: var(--slate-100); }
+  .beliefs__card--green { background-color: var(--solace-80); }
+
+  /* ── Numbers ─────────────────────────────────────────────────────────── */
+  /* overflow:hidden so the cells clip to the panel radius. That is also why
+     the numbers band does not drift: it is one surface, not three tiles. */
+  .numbers {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: hidden;
+  }
+  @media (min-width: 1080.02px) { .numbers { grid-template-columns: repeat(3, 1fr); } }
+
+  .numbers__cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-8x);
+    min-block-size: 300px;
+    padding: var(--space-8x) var(--space-6x);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .numbers__cell:last-child { border-block-end: none; }
+  @media (min-width: 1080.02px) {
+    .numbers__cell {
+      min-block-size: 380px;
+      border-block-end: none;
+      border-inline-end: 1px solid var(--color-border-sub);
+    }
+    .numbers__cell:last-child { border-inline-end: none; }
+  }
+
+  .numbers__big {
+    font-size: var(--font-size-display-large);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-display);
+    color: var(--color-text-base);
+  }
+  .numbers__suffix { font-size: 0.42em; }
+  .numbers__sub { max-inline-size: 34ch; }
+
+  /* ── Counter-drift. Odd columns rise, even columns fall, both driven by
+     the one timeline on the grid. Desktop only, exactly like the legacy
+     isWide gate, and off entirely under reduced motion. ─────────────────── */
+  @media (prefers-reduced-motion: no-preference) and (min-width: 1080.02px) {
+    @supports (animation-timeline: view()) {
+      .beliefs__item {
+        animation: drift-up linear both;
+        animation-range: cover 0% cover 100%;
+        animation-timeline: --beliefs-drift;
+      }
+      .beliefs__item:nth-child(2n) { animation-name: drift-down; }
+    }
+  }
+  @keyframes drift-up   { from { translate: 0 3vh; }  to { translate: 0 -3vh; } }
+  @keyframes drift-down { from { translate: 0 -3vh; } to { translate: 0 3vh; } }
+
+  /* ── Founder note ────────────────────────────────────────────────────── */
+  .note {
+    max-inline-size: 920px;
+    margin-inline: auto;
+    padding: var(--space-10x) var(--space-8x);
+  }
+  @media (min-width: 640.02px)  { .note { padding: var(--space-14x); } }
+  @media (min-width: 1080.02px) { .note { padding: var(--space-16x); } }
+
+  .note__body {
+    margin-block-start: var(--space-6x);
+    font-size: var(--font-size-22);
+    line-height: 1.3;
+    letter-spacing: var(--letter-spacing-heading);
+  }
+  @media (min-width: 640.02px)  { .note__body { font-size: var(--font-size-26); } }
+  @media (min-width: 1080.02px) { .note__body { font-size: var(--font-size-32); } }
+
+  .note__sign { margin-block-start: var(--space-8x); }
+
+  /* ── Close ───────────────────────────────────────────────────────────── */
+  .close {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-6x);
+    text-align: center;
+  }
+  .close__heading { max-inline-size: 16ch; }
+  .close__sub { max-inline-size: 46ch; }
+  .close__actions {
+    margin-block-start: var(--space-3x);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3x);
+  }
+</style>
