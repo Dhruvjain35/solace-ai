@@ -212,6 +212,10 @@ import CtaPrimary from './CtaPrimary.astro';
     z-index: 1;
     mix-blend-mode: screen;
     pointer-events: none;
+    /* Breaks the circular shrink-to-fit between the abspos <picture> and the
+       percentage max-width its child inherits from the reset. */
+    inline-size: max-content;
+    max-inline-size: none;
   }
   /* Overhang = figure height (115vw) - stage height (92vw), so her top lands on
      the stage top and the dissolving tail runs off the bottom. */
@@ -221,7 +225,18 @@ import CtaPrimary from './CtaPrimary.astro';
   /* 2.5x the previous scale. The plate is re-exported from the 4000x5261 native
      source at 3500px for 2x, so this is still a downscale at every DPR -- the
      old 2300px export would have been upscaled 1.5x here. */
-  .hero__figure img { block-size: clamp(560px, 115vw, 1750px); inline-size: auto; }
+  .hero__figure img {
+    block-size: clamp(560px, 115vw, 1750px);
+    inline-size: auto;
+    /* The global reset sets `img, picture { max-width: 100% }`. On an absolutely
+       positioned <picture> that percentage has no resolved width to measure
+       against, so the width collapsed while block-size held it -- rendering her
+       1.19x vertically stretched at 1440 and 1.54x at 390. Both the override and
+       the explicit ratio are needed: the first frees the width, the second makes
+       any future distortion impossible. */
+    max-inline-size: none;
+    aspect-ratio: 862 / 1750;
+  }
 
   /* Cards sit ABOVE the figure and deliberately overlap her, which is what
      builds depth. Ranged beside her they read as a flat row. */
