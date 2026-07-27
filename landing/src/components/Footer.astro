@@ -1,5 +1,6 @@
 ---
 import Logo from './Logo.astro';
+import WordPaths from './brand/WordPaths.astro';
 
 /* The old footer pointed 8 links at 2 destinations: all four "Product" links
    went to /product (which redirects to /) and all four "Use cases" links went
@@ -74,8 +75,11 @@ const year = new Date().getFullYear();
     </div>
   </div>
 
-  <!-- Ghosted wordmark. Placeholder until a real logotype SVG exists. -->
-  <p class="footer__ghost" aria-hidden="true">solace</p>
+  <!-- Ghosted wordmark, traced from the real logotype so it stays crisp at
+       full-bleed width. Bleeds past the container on purpose. -->
+  <svg class="footer__ghost" viewBox="0 0 1648 560" fill="currentColor" aria-hidden="true" focusable="false">
+    <WordPaths />
+  </svg>
 </footer>
 
 <style>
@@ -128,13 +132,11 @@ const year = new Date().getFullYear();
   }
 
   .footer__ghost {
-    margin: 0;
-    padding-inline: var(--viewport-padding);
-    font-size: clamp(4rem, 19vw, 17rem);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: -0.045em;
-    line-height: 0.8;
-    text-align: center;
+    display: block;
+    inline-size: calc(100% - (var(--viewport-padding) * 2));
+    max-inline-size: var(--content-max-width);
+    margin: 0 auto;
+    padding-block-end: var(--space-6x);
     color: rgb(from var(--color-text-base) r g b / 0.05);
     user-select: none;
     pointer-events: none;

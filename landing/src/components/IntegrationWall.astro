@@ -23,7 +23,8 @@ const vendors = [
     <ul class="integration-wall__grid">
       {vendors.map((v) => (
         <li class="integration-wall__cell">
-          <img src={v.src} alt={v.name} loading="lazy" decoding="async" />
+          <img src={v.src} alt="" loading="lazy" decoding="async" width="28" height="28" />
+          <span class="integration-wall__name">{v.name}</span>
         </li>
       ))}
     </ul>
@@ -49,10 +50,14 @@ const vendors = [
   @media (min-width: 640.02px)  { .integration-wall__grid { grid-template-columns: repeat(3, 1fr); } }
   @media (min-width: 1080.02px) { .integration-wall__grid { grid-template-columns: repeat(5, 1fr); } }
 
+  /* The vendor files are 64px icon marks with no wordmark, so a lone glyph
+     reads as a grey dot. Pairing the real mark with the name set in our own
+     type is an honest lockup and carries the row. */
   .integration-wall__cell {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: var(--space-2_5x);
     min-block-size: 104px;
     padding: var(--space-5x) var(--space-4x);
     border-inline-end: 1px solid var(--color-border-sub);
@@ -60,20 +65,32 @@ const vendors = [
   }
 
   .integration-wall__cell img {
-    max-block-size: 30px;
-    max-inline-size: 132px;
-    inline-size: auto;
+    inline-size: 28px;
+    block-size: 28px;
+    flex: none;
     object-fit: contain;
     filter: grayscale(1);
-    opacity: 0.55;
+    opacity: 0.5;
     transition:
       opacity var(--motion-duration-base) var(--ease-ui),
       filter  var(--motion-duration-base) var(--ease-ui);
   }
+
+  .integration-wall__name {
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-base);
+    color: var(--color-text-sub);
+    white-space: nowrap;
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+
   .integration-wall__cell:hover img { filter: grayscale(0); opacity: 1; }
+  .integration-wall__cell:hover .integration-wall__name { color: var(--color-text-base); }
 
   @media (prefers-reduced-motion: reduce) {
-    .integration-wall__cell img { transition: none; }
+    .integration-wall__cell img,
+    .integration-wall__name { transition: none; }
   }
 
   .integration-wall__note { margin-block-start: var(--space-6x); text-align: center; }

@@ -33,21 +33,53 @@
     .manifesto__inner > :last-child { order: -1; }
   }
 
+  /* No photo budget, so this is built rather than shot. The structure is
+     deliberate: a large-scale hatch field (the same engineering-drawing motif
+     as the page gutters), one clean light source from the upper left, a crisp
+     horizon rule, and a vignette. Structure is what keeps it from reading as
+     a blurred blob. */
   .manifesto__visual {
     position: relative;
     aspect-ratio: 1080 / 888;
     border-radius: var(--radius-5x);
     overflow: hidden;
     background-color: var(--slate-black);
-    background-image: repeating-linear-gradient(-45deg, var(--gradient-diagonal-line));
+    /* Hatch at 3x the gutter scale so it reads as texture, not noise. */
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgb(from var(--neutral-0) r g b / 0.07) 0,
+      rgb(from var(--neutral-0) r g b / 0.07) 1px,
+      transparent 1px,
+      transparent 15px
+    );
   }
+
   .manifesto__wash {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 70% 55% at 28% 30%, rgb(from var(--solace-40) r g b / 0.55) 0, transparent 70%),
-      radial-gradient(ellipse 60% 50% at 76% 72%, rgb(from var(--solace-20) r g b / 0.32) 0, transparent 72%),
-      linear-gradient(160deg, rgb(from var(--slate-90) r g b / 0.30) 0, rgb(from var(--slate-black) r g b / 0.86) 100%);
+      /* single key light, tight falloff */
+      radial-gradient(ellipse 62% 48% at 24% 22%, rgb(from var(--solace-40) r g b / 0.62) 0, transparent 62%),
+      /* cool fill opposite it, much weaker */
+      radial-gradient(ellipse 55% 42% at 82% 84%, rgb(from var(--solace-80) r g b / 0.40) 0, transparent 68%),
+      /* vignette */
+      radial-gradient(ellipse 92% 92% at 50% 50%, transparent 42%, rgb(from var(--slate-black) r g b / 0.72) 100%);
+  }
+
+  /* The horizon. One crisp edge is what makes the field read as composed. */
+  .manifesto__wash::after {
+    content: '';
+    position: absolute;
+    inset-inline: 12%;
+    inset-block-start: 58%;
+    block-size: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0,
+      rgb(from var(--solace-20) r g b / 0.55) 22%,
+      rgb(from var(--solace-20) r g b / 0.55) 78%,
+      transparent 100%
+    );
   }
 
   .manifesto__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6x); }

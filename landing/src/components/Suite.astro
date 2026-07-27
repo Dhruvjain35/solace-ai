@@ -107,8 +107,10 @@ const panels = [
             </div>
 
             <figure class="suite__figure">
-              <img src={p.shot} alt={p.shotAlt} loading="lazy" decoding="async" />
-              <figcaption class="suite__tag">Illustrative</figcaption>
+              <span class="suite__shot">
+                <img src={p.shot} alt={p.shotAlt} loading="lazy" decoding="async" />
+                <figcaption class="suite__tag">Illustrative</figcaption>
+              </span>
             </figure>
           </article>
         </>
@@ -225,13 +227,15 @@ const panels = [
   /* The shots are a mix of portrait phone captures and landscape terminal
      captures. Without a height cap the portrait ones stretch the row and leave
      the copy column stranded beside a column of dead space. */
-  /* fit-content so the figure hugs the image, which lets the "Illustrative"
-     tag anchor to the artwork edge rather than the column edge. */
-  .suite__figure {
+  /* The figure is a flex item, so flex-basis wins over any width it sets —
+     the inner span is what actually hugs the artwork, which is what lets the
+     "Illustrative" tag anchor to the image edge rather than the column edge. */
+  .suite__figure { margin: 0; display: flex; justify-content: center; }
+  .suite__shot {
     position: relative;
-    margin-inline: auto;
-    inline-size: fit-content;
+    display: inline-block;
     max-inline-size: 100%;
+    line-height: 0;
   }
   .suite__figure img {
     inline-size: auto;
