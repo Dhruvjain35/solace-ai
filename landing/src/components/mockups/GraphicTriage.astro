@@ -58,7 +58,6 @@
 
 <style>
   .gfx {
-    container-type: inline-size;
     inline-size: 100%;
     padding: 7cqw 6cqw 8cqw;
     border-radius: var(--radius-6x);
@@ -90,7 +89,8 @@
   }
   .gfx__evidence-label { font-size: 3.1cqw; color: var(--neutral-60); }
   .gfx__bar { display: block; block-size: 1.6cqw; border-radius: 100px; background-color: var(--neutral-10); }
-  .gfx__bar i { display: block; block-size: 100%; inline-size: var(--w); border-radius: 100px; background-color: var(--solace-30); }
+  .gfx__bar i { display: block; block-size: 100%; inline-size: var(--w); border-radius: 100px; background-color: var(--red-30); }
+  .gfx__bar:last-of-type i { background-color: var(--neutral-30); }
 
   /* Plane 2 — the score itself, lifted forward. */
   .gfx__card {
@@ -116,7 +116,9 @@
     inline-size: 13cqw; block-size: 13cqw;
     flex: none;
     border-radius: var(--radius-3x);
-    background: linear-gradient(180deg, var(--solace-60) 0%, var(--solace-90) 100%);
+    /* ESI 2 is high acuity. Green read as "all clear", which is the opposite of
+       what this number means. */
+    background: linear-gradient(180deg, var(--red-40) 0%, var(--red-80) 100%);
     color: var(--white);
     font-size: 7cqw;
     font-weight: var(--font-weight-semibold);
@@ -139,8 +141,9 @@
     margin-inline-start: auto;
     font-style: normal;
     font-size: 3cqw;
-    color: var(--solace-80);
+    color: var(--neutral-60);
   }
+  .gfx__why li:nth-child(-n+2) em { color: var(--red-60); }
 
   /* Plane 3 — the asymmetric safety rule, offset forward and left so it reads
      as a separate mechanism rather than another row of the card. */

@@ -1,192 +1,204 @@
 ---
-/* Atlas — the EHR copilot. This is the flagship surface, so it gets the dark
-   treatment and the most room.
+/* Atlas — the EHR copilot.
 
-   The hard problem Atlas actually solves is not "chat with the chart". It is
-   that a real patient history is mostly UNSTRUCTURED and mostly SOMEONE ELSE'S:
-   scanned faxes, outside discharge summaries, PDFs, handwriting. Answering a
-   clinical question honestly means reading all of it, citing where each claim
-   came from, and doing it without the record leaving the hospital's boundary.
+   Rebuilt light. The dark version broke the section: every other figure here
+   sits on the warm neutral bed, and one near-black slab in the middle read as
+   a foreign object rather than as the flagship.
 
-   So the graphic shows three things in order: the question, an answer whose
-   every clause is CITED back to a named source, and the documents themselves
-   being read — including the ones nobody has structured. The boundary is a
-   stated property on the surface, not a footnote. */
+   The hard problem Atlas solves is not "chat with the chart". A real patient
+   history is mostly UNSTRUCTURED and mostly SOMEONE ELSE'S — scanned faxes,
+   outside discharge summaries, handwriting. Answering honestly means reading
+   all of it and citing where each claim came from.
+
+   Neumorphic rules followed as set out in materials.css: light from directly
+   above so every offset is Y-only, warm taupe shade rather than blue-grey,
+   contrast held in the 4-18% band, blur 2-3x the offset, and a real hairline on
+   every surface so the shapes survive forced-colors. */
 ---
 
 <div class="atl">
-  <div class="atl__chrome" aria-hidden="true">
-    <span class="atl__dot"></span><span class="atl__dot"></span><span class="atl__dot"></span>
-    <span class="atl__chrome-title">Atlas &middot; Reyes, Marisol &middot; 47</span>
-    <span class="atl__boundary">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.8 13.2 4v4.1c0 3.2-2.2 5.3-5.2 6.1-3-.8-5.2-2.9-5.2-6.1V4L8 1.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      Inside your tenant
+  <div class="atl__head">
+    <span class="atl__mark" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.8v12.4M1.8 8h12.4" stroke="currentColor" stroke-width="1.1" opacity=".55"/><path d="M8 1.8c2 2 3 3.8 3 6.2s-1 4.2-3 6.2c-2-2-3-3.8-3-6.2s1-4.2 3-6.2Z" stroke="currentColor" stroke-width="1.1" opacity=".55"/></svg>
     </span>
+    <span class="atl__title">Atlas</span>
+    <span class="atl__pt">Reyes, Marisol &middot; 47</span>
   </div>
 
-  <div class="atl__body">
-    <p class="atl__ask">Has she presented with this before, and what was ruled out?</p>
+  <p class="atl__ask">Has she presented with this before, and what was ruled out?</p>
 
-    <div class="atl__answer">
-      <p>
-        Twice. <span class="atl__cite">March 2024<sup>1</sup></span> and
-        <span class="atl__cite">November 2023<sup>2</sup></span>, both for chest
-        tightness. ACS was ruled out on the second visit by serial troponins
-        <span class="atl__cite">outside lab<sup>3</sup></span>. A stress echo was
-        ordered and never completed.
-      </p>
-      <p class="atl__flag">
-        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.6 15 14H1L8 1.6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6.2v3.4M8 11.4v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        The incomplete stress echo is the open thread from last time.
-      </p>
-    </div>
-
-    <p class="atl__srcs-label">Read for this answer</p>
-    <ul class="atl__srcs">
-      <li>
-        <span class="atl__ico atl__ico--fax" aria-hidden="true">
-          <svg viewBox="0 0 16 16" fill="none"><path d="M4 5.4V2.4h8v3M3 5.4h10a1.4 1.4 0 0 1 1.4 1.4v3.4A1.4 1.4 0 0 1 13 11.6h-1v2H4v-2H3a1.4 1.4 0 0 1-1.4-1.4V6.8A1.4 1.4 0 0 1 3 5.4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-        </span>
-        <span class="atl__src-t"><b>Cardiology fax, scanned</b><i>14 pages &middot; handwritten margin notes</i></span>
-        <span class="atl__badge">Read</span>
-      </li>
-      <li>
-        <span class="atl__ico atl__ico--pdf" aria-hidden="true">
-          <svg viewBox="0 0 16 16" fill="none"><path d="M4 2h5l3.2 3.2V14H4V2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.8 2.2v3.2H12" stroke="currentColor" stroke-width="1.3"/></svg>
-        </span>
-        <span class="atl__src-t"><b>Discharge summary, outside system</b><i>St. Vincent&rsquo;s &middot; not in your EHR</i></span>
-        <span class="atl__badge">Read</span>
-      </li>
-      <li>
-        <span class="atl__ico atl__ico--lab" aria-hidden="true">
-          <svg viewBox="0 0 16 16" fill="none"><path d="M6.4 2v4.3L2.8 12a1.6 1.6 0 0 0 1.4 2.4h7.6A1.6 1.6 0 0 0 13.2 12L9.6 6.3V2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.4 2h5.2M4.9 9.8h6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        </span>
-        <span class="atl__src-t"><b>Serial troponins</b><i>Structured &middot; 3 results</i></span>
-        <span class="atl__badge">Read</span>
-      </li>
-    </ul>
-
-    <div class="atl__foot">
-      <span>Nothing here left the hospital. No training on your data.</span>
-      <span class="atl__foot-n">Every read and write logged</span>
-    </div>
+  <div class="atl__ans">
+    <p>
+      Twice. <span class="atl__cite">March 2024</span> and
+      <span class="atl__cite">November 2023</span>, both for chest tightness. ACS
+      was ruled out on the second visit by serial troponins. A stress echo was
+      ordered and <mark>never completed</mark>.
+    </p>
   </div>
+
+  <div class="atl__flag">
+    <span class="atl__flag-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.6 15 14H1L8 1.6Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 6.2v3.3M8 11.4v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </span>
+    <span>The incomplete stress echo is the open thread from last time.</span>
+  </div>
+
+  <p class="atl__label">Read for this answer</p>
+
+  <ul class="atl__srcs">
+    <li>
+      <span class="atl__ico" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M4 5.4V2.4h8v3M3 5.4h10a1.4 1.4 0 0 1 1.4 1.4v3.4A1.4 1.4 0 0 1 13 11.6h-1v2H4v-2H3a1.4 1.4 0 0 1-1.4-1.4V6.8A1.4 1.4 0 0 1 3 5.4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="atl__src"><b>Cardiology fax, scanned</b><i>14 pages, handwritten margin notes</i></span>
+      <span class="atl__tick" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </li>
+    <li>
+      <span class="atl__ico" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M4 2h5l3.2 3.2V14H4V2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.8 2.2v3.2H12" stroke="currentColor" stroke-width="1.3"/></svg>
+      </span>
+      <span class="atl__src"><b>Discharge summary from another hospital</b><i>Not in your EHR</i></span>
+      <span class="atl__tick" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </li>
+    <li>
+      <span class="atl__ico" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M6.4 2v4.3L2.8 12a1.6 1.6 0 0 0 1.4 2.4h7.6A1.6 1.6 0 0 0 13.2 12L9.6 6.3V2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.4 2h5.2M4.9 9.8h6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </span>
+      <span class="atl__src"><b>Serial troponins</b><i>Three results from your EHR</i></span>
+      <span class="atl__tick" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </li>
+  </ul>
+
+  <p class="atl__foot">Reads and writes to your EHR. Every one of them logged.</p>
 </div>
 
 <style>
   .atl {
-    container-type: inline-size;
     inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
     border-radius: var(--radius-6x);
-    overflow: hidden;
-    background: linear-gradient(168deg, #0d211d 0%, #071417 58%, #05171e 100%);
-    border: 1px solid rgb(255 255 255 / 0.10);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.08),
-      0 2px 6px rgb(from var(--neutral-100) r g b / 0.18),
-      0 24px 56px rgb(from var(--neutral-100) r g b / 0.26);
-    color: var(--white);
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
   }
 
-  .atl__chrome {
-    display: flex; align-items: center; gap: 1.6cqw;
-    padding: 3.2cqw 4cqw;
-    border-block-end: 1px solid rgb(255 255 255 / 0.09);
-    background-color: rgb(255 255 255 / 0.03);
-  }
-  .atl__dot { inline-size: 1.5cqw; block-size: 1.5cqw; border-radius: 100px; background-color: rgb(255 255 255 / 0.20); }
-  .atl__chrome-title { margin-inline-start: 2.4cqw; font-size: 2.7cqw; color: rgb(255 255 255 / 0.62); }
-  .atl__boundary {
-    margin-inline-start: auto;
-    display: inline-flex; align-items: center; gap: 1.4cqw;
-    padding: 1.2cqw 2.6cqw;
-    border-radius: 100px;
-    border: 1px solid rgb(from var(--solace-30) r g b / 0.30);
-    background-color: rgb(from var(--solace-30) r g b / 0.12);
-    color: var(--solace-20);
-    font-size: 2.6cqw;
-    white-space: nowrap;
-  }
-  .atl__boundary svg { inline-size: 3cqw; block-size: 3cqw; }
-
-  .atl__body { display: flex; flex-direction: column; gap: 3.4cqw; padding: 4.6cqw 4.6cqw 4cqw; }
-
-  .atl__ask {
-    align-self: flex-end;
-    max-inline-size: 76%;
-    padding: 2.6cqw 3.4cqw;
-    border-radius: var(--radius-3x) var(--radius-3x) 0.8cqw var(--radius-3x);
-    background-color: rgb(255 255 255 / 0.10);
-    font-size: 3.2cqw;
-    line-height: 1.45;
-  }
-
-  .atl__answer { display: flex; flex-direction: column; gap: 2.4cqw; }
-  .atl__answer p { font-size: 3.3cqw; line-height: 1.6; color: rgb(255 255 255 / 0.90); }
-
-  /* Citations are inline and named. A claim you cannot trace is a claim a
-     clinician cannot use. */
-  .atl__cite {
-    padding: 0.3cqw 1cqw;
-    border-radius: 0.8cqw;
-    background-color: rgb(from var(--solace-30) r g b / 0.18);
-    color: var(--solace-20);
-    white-space: nowrap;
-  }
-  .atl__cite sup { font-size: 0.72em; margin-inline-start: 0.3cqw; opacity: 0.8; }
-
-  .atl__flag {
-    display: flex; align-items: flex-start; gap: 2cqw;
-    padding: 2.6cqw 3cqw;
-    border-radius: var(--radius-2x);
-    border-inline-start: 0.7cqw solid #c9a227;
-    background-color: rgb(201 162 39 / 0.10);
-    font-size: 3cqw !important;
-    color: rgb(255 255 255 / 0.88) !important;
-  }
-  .atl__flag svg { inline-size: 3.4cqw; block-size: 3.4cqw; flex: none; margin-block-start: 0.3cqw; color: #e8c04a; }
-
-  .atl__srcs-label { font-size: 2.7cqw; color: rgb(255 255 255 / 0.50); }
-
-  .atl__srcs { margin: 0; padding: 0; list-style: none; display: grid; gap: 1.8cqw; }
-  .atl__srcs li {
-    display: flex; align-items: center; gap: 2.6cqw;
-    padding: 2.6cqw 3cqw;
-    border-radius: var(--radius-2x);
-    background-color: rgb(255 255 255 / 0.05);
-    border: 1px solid rgb(255 255 255 / 0.07);
-  }
-  .atl__ico {
+  .atl__head { display: flex; align-items: center; gap: 2.2cqw; }
+  .atl__mark {
     display: grid; place-items: center;
     inline-size: 7cqw; block-size: 7cqw; flex: none;
     border-radius: var(--radius-2x);
-    background-color: rgb(255 255 255 / 0.08);
-    color: rgb(255 255 255 / 0.80);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.10);
+    color: var(--solace-80);
   }
-  .atl__ico svg { inline-size: 3.8cqw; block-size: 3.8cqw; }
-  .atl__ico--fax { color: #7fb8e8; }
-  .atl__ico--pdf { color: #e8a07f; }
-  .atl__ico--lab { color: var(--solace-30); }
-  .atl__src-t { display: flex; flex-direction: column; gap: 0.3cqw; min-inline-size: 0; }
-  .atl__src-t b { font-size: 3cqw; font-weight: var(--font-weight-medium); }
-  .atl__src-t i { font-style: normal; font-size: 2.6cqw; color: rgb(255 255 255 / 0.52); }
-  .atl__badge {
-    margin-inline-start: auto;
-    padding: 0.9cqw 2.2cqw;
-    border-radius: 100px;
-    background-color: rgb(from var(--solace-30) r g b / 0.16);
-    color: var(--solace-20);
-    font-size: 2.5cqw;
-    white-space: nowrap;
+  .atl__mark svg { inline-size: 4cqw; block-size: 4cqw; }
+  .atl__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .atl__pt { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-60); }
+
+  /* Pressed into the surface rather than raised — it is an input, and the
+     inset is what tells you so without a border or a label. */
+  .atl__ask {
+    padding: 3.2cqw 4cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.22),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+    font-size: 3.5cqw;
+    line-height: 1.45;
+    color: var(--neutral-90);
   }
 
-  .atl__foot {
-    display: flex; align-items: center; gap: 3cqw;
-    margin-block-start: 1cqw;
-    padding-block-start: 3cqw;
-    border-block-start: 1px solid rgb(255 255 255 / 0.09);
-    font-size: 2.7cqw;
-    color: rgb(255 255 255 / 0.58);
+  /* Raised above the bed: the answer is the object with weight here. */
+  .atl__ans {
+    padding: 4cqw 4.4cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.20);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.10),
+      0 8px 20px rgb(from var(--neutral-40) r g b / 0.14);
   }
-  .atl__foot-n { margin-inline-start: auto; color: rgb(255 255 255 / 0.78); white-space: nowrap; }
+  .atl__ans p { font-size: 3.5cqw; line-height: 1.62; color: var(--neutral-90); }
+  .atl__cite {
+    padding: 0.2cqw 1.1cqw;
+    border-radius: 0.9cqw;
+    background-color: var(--solace-10);
+    color: var(--solace-100);
+    white-space: nowrap;
+  }
+  .atl__ans mark {
+    background-color: var(--red-0);
+    color: var(--red-90);
+    border-radius: 0.9cqw;
+    padding: 0.2cqw 1.1cqw;
+  }
+
+  .atl__flag {
+    display: flex; align-items: center; gap: 2.6cqw;
+    padding: 3cqw 3.6cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--red-0);
+    border: 1px solid rgb(from var(--red-30) r g b / 0.34);
+    font-size: 3.2cqw;
+    line-height: 1.42;
+    color: var(--red-90);
+  }
+  .atl__flag-icon { inline-size: 4.2cqw; block-size: 4.2cqw; flex: none; color: var(--red-60); }
+  .atl__flag-icon svg { inline-size: 100%; block-size: 100%; }
+
+  .atl__label { font-size: 3cqw; color: var(--neutral-60); }
+
+  .atl__srcs { margin: 0; padding: 0; list-style: none; display: grid; gap: 2.2cqw; }
+  .atl__srcs li {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3cqw 3.4cqw;
+    border-radius: var(--radius-2x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+  }
+  .atl__ico {
+    display: grid; place-items: center;
+    inline-size: 7.4cqw; block-size: 7.4cqw; flex: none;
+    border-radius: var(--radius-2x);
+    background-color: var(--neutral-5);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-80);
+  }
+  .atl__ico svg { inline-size: 4cqw; block-size: 4cqw; }
+  .atl__src { display: flex; flex-direction: column; gap: 0.3cqw; min-inline-size: 0; }
+  .atl__src b { font-size: 3.2cqw; font-weight: var(--font-weight-medium); }
+  .atl__src i { font-style: normal; font-size: 2.9cqw; color: var(--neutral-60); }
+  .atl__tick {
+    margin-inline-start: auto;
+    display: grid; place-items: center;
+    inline-size: 5.6cqw; block-size: 5.6cqw; flex: none;
+    border-radius: 100px;
+    background-color: var(--solace-10);
+    color: var(--solace-80);
+  }
+  .atl__tick svg { inline-size: 3.2cqw; block-size: 3.2cqw; }
+
+  .atl__foot {
+    padding-block-start: 3cqw;
+    border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    font-size: 3cqw;
+    color: var(--neutral-60);
+  }
 </style>

@@ -9,7 +9,7 @@
    and the content can say what the product actually does. */
 import PhoneFrame from './mockups/PhoneFrame.astro';
 import ScreenIntake from './mockups/ScreenIntake.astro';
-import ScreenScribe from './mockups/ScreenScribe.astro';
+import GraphicScribe from './mockups/GraphicScribe.astro';
 import GraphicTriage from './mockups/GraphicTriage.astro';
 import GraphicAtlas from './mockups/GraphicAtlas.astro';
 const panels = [
@@ -119,13 +119,9 @@ const panels = [
                   <PhoneFrame width="clamp(230px, 26vw, 300px)"><ScreenIntake /></PhoneFrame>
                 </div>
               )}
-              {p.mock === 'scribe' && (
-                <div class="suite__device">
-                  <PhoneFrame width="clamp(230px, 26vw, 300px)"><ScreenScribe /></PhoneFrame>
-                </div>
-              )}
-              {p.mock === 'triage' && <GraphicTriage />}
-              {p.mock === 'atlas' && <GraphicAtlas />}
+              {p.mock === 'scribe' && <div class="suite__mock"><GraphicScribe /></div>}
+              {p.mock === 'triage' && <div class="suite__mock"><GraphicTriage /></div>}
+              {p.mock === 'atlas' && <div class="suite__mock"><GraphicAtlas /></div>}
             </figure>
           </article>
         </>
@@ -250,6 +246,12 @@ const panels = [
     min-inline-size: 0;
   }
   .suite__figure > :global(*) { max-inline-size: 560px; inline-size: 100%; }
+
+  /* The graphics size themselves in cqw, and an element cannot be its own query
+     container — with container-type on the graphic root, its own cqw units were
+     resolving against a 1376px ancestor and every measurement came out ~2.5x
+     too large. The container has to be this wrapper. */
+  .suite__mock { container-type: inline-size; inline-size: 100%; max-inline-size: 560px; }
 
   /* The two device panels sit on a soft plinth so the phone has something to
      cast a shadow onto instead of floating on the section bed. */

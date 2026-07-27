@@ -5,10 +5,21 @@
    at every DPR, it re-flows, it inherits the type system, and it can never look
    like a re-photographed demo video.
 
-   Aperture measured off the asset's alpha channel rather than eyeballed:
+   Aperture measured off the asset's alpha channel:
      x 100..1305 of 1406  ->  left 7.112%, width 85.775%
-     y 251..2721 of 2822  ->  top  8.894%, height 87.562%
-   The screen's corner radius settles by ~90px of 1406, so 6.4% of frame width.
+     y 101..2720 of 2822  ->  top  3.579%, height 92.842%
+
+   The first measurement of the top was wrong and it showed: scanning the CENTRE
+   column hits the Dynamic Island, which is opaque, so it returned the island's
+   lower edge (y=251) instead of the screen's top (y=101). The screen was
+   rendering as a visible rectangle starting below the island rather than
+   running behind it. Columns clear of the island give the real top.
+
+   Corner radius solves to R~187 of 1406 (13.3% of frame width) from the edge
+   profile, not the 6.4% first used. iPhone screen corners are large.
+
+   Island occupies x 517..888, y 143..249 -> 3.5..12.3cqw down the screen and
+   42.9%..73.6% across, so a status row must straddle it, not start under it.
 
    Frame source: github.com/Dhruvjain35/playmaker-landing (assets/images/device).
 */
@@ -17,14 +28,24 @@ interface Props {
   width?: string;
   class?: string;
   screenClass?: string;
+  /** Render a captured screen into the aperture instead of slotted DOM. */
+  src?: string;
+  alt?: string;
 }
-const { finish = 'natural', width = '260px', class: cls = '', screenClass = '' } = Astro.props;
+const {
+  finish = 'natural',
+  width = '260px',
+  class: cls = '',
+  screenClass = '',
+  src,
+  alt = '',
+} = Astro.props;
 const base = `/assets/device/iphone-${finish}`;
 ---
 
 <div class:list={['phone', cls]} style={`--phone-w:${width}`}>
   <div class:list={['phone__screen', screenClass]}>
-    <slot />
+    {src ? <img class="phone__shot" src={src} alt={alt} loading="lazy" decoding="async" /> : <slot />}
   </div>
   <img
     class="phone__frame"
@@ -54,11 +75,11 @@ const base = `/assets/device/iphone-${finish}`;
   .phone__screen {
     position: absolute;
     inset-inline-start: 7.112%;
-    inset-block-start: 8.894%;
+    inset-block-start: 3.579%;
     inline-size: 85.775%;
-    block-size: 87.562%;
+    block-size: 92.842%;
     overflow: hidden;
-    border-radius: calc(var(--phone-w) * 0.064);
+    border-radius: calc(var(--phone-w) * 0.133);
     background-color: var(--neutral-0);
     /* Content is authored against a 1206x2471 aperture and scaled by the
        container, so every screen keeps identical internal proportions
@@ -66,6 +87,18 @@ const base = `/assets/device/iphone-${finish}`;
     container-type: inline-size;
     display: flex;
     flex-direction: column;
+  }
+
+  /* A captured screen fills the aperture. The captures are 560x1214 (0.4613),
+     the aperture is 1206x2620 (0.4603) — near enough that cover crops under a
+     pixel, so nothing is visibly cut. */
+  .phone__shot {
+    inline-size: 100%;
+    block-size: 100%;
+    max-inline-size: none;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
   }
 
   .phone__frame {

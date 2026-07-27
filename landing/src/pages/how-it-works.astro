@@ -1,4 +1,5 @@
 ---
+import PhoneFrame from '../components/mockups/PhoneFrame.astro';
 import Page from '../layouts/Page.astro';
 import PageHeader from '../components/PageHeader.astro';
 import CtaPrimary from '../components/CtaPrimary.astro';
@@ -157,16 +158,7 @@ const letterTemplates = [
         <div class="drift drift--up">
           <figure class="moment moment--deep reveal" data-color-scheme="dark">
             <figcaption class="moment__label">their language, from the first tap</figcaption>
-            <div class="device moment__device">
-              <img
-                src="/assets/screens/lang.webp"
-                alt="The Solace check-in asking the patient to choose their language, with twenty available"
-                width="1179"
-                height="2556"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
+            <PhoneFrame class="moment__device" width="clamp(210px, 24vw, 268px)" src="/assets/screens/lang.webp" alt="The Solace check-in asking the patient to choose their language, with twenty available" />
           </figure>
         </div>
       </div>
@@ -185,31 +177,13 @@ const letterTemplates = [
         <div class="drift drift--up">
           <figure class="moment moment--teal moment--sm reveal">
             <figcaption class="moment__label">spoken or typed, their words</figcaption>
-            <div class="device moment__device">
-              <img
-                src="/assets/screens/symptoms.webp"
-                alt="The patient describing their symptoms by voice or by typing"
-                width="1179"
-                height="2556"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
+            <PhoneFrame class="moment__device" width="clamp(210px, 24vw, 268px)" src="/assets/screens/symptoms.webp" alt="The patient describing their symptoms by voice or by typing" />
           </figure>
         </div>
         <div class="drift drift--down moment-pair__offset">
           <figure class="moment moment--ink moment--sm reveal" data-color-scheme="dark">
             <figcaption class="moment__label">two or three questions that fit</figcaption>
-            <div class="device moment__device">
-              <img
-                src="/assets/screens/questions.webp"
-                alt="Follow-up questions chosen to fit the story the patient just told"
-                width="1179"
-                height="2556"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
+            <PhoneFrame class="moment__device" width="clamp(210px, 24vw, 268px)" src="/assets/screens/questions.webp" alt="Follow-up questions chosen to fit the story the patient just told" />
           </figure>
         </div>
       </div>
@@ -228,16 +202,7 @@ const letterTemplates = [
         <div class="drift drift--down">
           <figure class="moment moment--paper neu-well reveal">
             <figcaption class="moment__label">one photo, the form fills itself</figcaption>
-            <div class="device moment__device">
-              <img
-                src="/assets/screens/insurance.webp"
-                alt="The insurance card step, where one photo fills in the member details"
-                width="1179"
-                height="2556"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
+            <PhoneFrame class="moment__device" width="clamp(210px, 24vw, 268px)" src="/assets/screens/insurance.webp" alt="The insurance card step, where one photo fills in the member details" />
           </figure>
         </div>
       </div>
@@ -256,16 +221,7 @@ const letterTemplates = [
         <div class="drift drift--up">
           <figure class="moment moment--teal reveal">
             <figcaption class="moment__label">a clear place in line</figcaption>
-            <div class="device moment__device">
-              <img
-                src="/assets/screens/plan.webp"
-                alt="The explained plan: the patient's priority, their wait time and what happens next"
-                width="1179"
-                height="2556"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
+            <PhoneFrame class="moment__device" width="clamp(210px, 24vw, 268px)" src="/assets/screens/plan.webp" alt="The explained plan: the patient's priority, their wait time and what happens next" />
           </figure>
         </div>
       </div>
