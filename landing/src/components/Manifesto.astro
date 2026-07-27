@@ -1,0 +1,88 @@
+---
+/* Visual is the CSS hatch-and-wash option from the spec: free, distinctive, and
+   consistent with the engineering-drawing motif already used in the gutters.
+   Swap for a licensed waiting-room photograph if budget appears. */
+---
+
+<section class="manifesto" data-color-scheme="dark" aria-labelledby="manifesto-heading">
+  <div class="container page-section manifesto__inner">
+    <div class="manifesto__visual" aria-hidden="true">
+      <div class="manifesto__wash"></div>
+    </div>
+
+    <div class="manifesto__copy">
+      <h2 id="manifesto-heading" class="manifesto__heading">Calm should be standard care.</h2>
+      <p class="manifesto__body">
+        Emergency rooms feel chaotic because nobody can see what is coming. Patients wait in the
+        dark, and care teams meet every story cold. When the story arrives first, the waiting room
+        finally makes sense to <em>both</em> of them.
+      </p>
+      <a class="manifesto__cta" href="/how-it-works">Read how it works</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .manifesto { background-color: var(--slate-90); color: var(--color-text-base); }
+
+  .manifesto__inner { display: flex; flex-direction: column; gap: var(--space-10x); }
+  @media (min-width: 1080.02px) {
+    .manifesto__inner { flex-direction: row; align-items: center; gap: var(--space-16x); }
+    .manifesto__inner > * { flex: 1 1 0; min-inline-size: 0; }
+    /* Image flips to the left, matching the reference. */
+    .manifesto__inner > :last-child { order: -1; }
+  }
+
+  .manifesto__visual {
+    position: relative;
+    aspect-ratio: 1080 / 888;
+    border-radius: var(--radius-5x);
+    overflow: hidden;
+    background-color: var(--slate-black);
+    background-image: repeating-linear-gradient(-45deg, var(--gradient-diagonal-line));
+  }
+  .manifesto__wash {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 55% at 28% 30%, rgb(from var(--solace-40) r g b / 0.55) 0, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 76% 72%, rgb(from var(--solace-20) r g b / 0.32) 0, transparent 72%),
+      linear-gradient(160deg, rgb(from var(--slate-90) r g b / 0.30) 0, rgb(from var(--slate-black) r g b / 0.86) 100%);
+  }
+
+  .manifesto__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6x); }
+
+  .manifesto__heading {
+    font-size: var(--font-size-32);
+    line-height: 96%;
+    letter-spacing: var(--letter-spacing-display);
+  }
+  @media (min-width: 640.02px)  { .manifesto__heading { font-size: var(--font-size-36); } }
+  @media (min-width: 1080.02px) { .manifesto__heading { font-size: var(--font-size-48); } }
+
+  .manifesto__body {
+    font-size: var(--font-size-text-medium);
+    color: var(--color-text-sub);
+    max-inline-size: 54ch;
+  }
+  @media (min-width: 1080.02px) { .manifesto__body { font-size: var(--font-size-20); } }
+  .manifesto__body em { font-style: italic; color: var(--color-text-base); }
+
+  .manifesto__cta {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-3x) var(--space-6x);
+    border-radius: var(--radius-3x);
+    border: 1px solid rgb(from var(--white) r g b / 0.32);
+    font-size: var(--font-size-16);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    transition: background-color var(--motion-duration-base) var(--ease-ui),
+                border-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .manifesto__cta:hover {
+    background-color: var(--color-transparent-hover);
+    border-color: rgb(from var(--white) r g b / 0.55);
+  }
+  @media (prefers-reduced-motion: reduce) { .manifesto__cta { transition: none; } }
+</style>

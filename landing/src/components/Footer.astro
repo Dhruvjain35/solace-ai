@@ -1,0 +1,144 @@
+---
+import Logo from './Logo.astro';
+
+/* The old footer pointed 8 links at 2 destinations: all four "Product" links
+   went to /product (which redirects to /) and all four "Use cases" links went
+   to /clinicians. These point at the real anchors that now exist. */
+const columns = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'Smart Patient Intake', href: '/#suite-intake' },
+      { label: 'Triage', href: '/#suite-triage' },
+      { label: 'Ambient Scribe', href: '/#suite-scribe' },
+      { label: 'Atlas', href: '/#suite-atlas' },
+      { label: 'Phone agent', href: '/how-it-works#phone' },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { label: 'About', href: '/company' },
+      { label: 'How it works', href: '/how-it-works' },
+      { label: 'Integrations', href: '/integrations' },
+      { label: 'Pricing', href: '/pricing' },
+      { label: 'Contact', href: '/contact' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { label: 'Security', href: '/security' },
+      { label: 'HIPAA', href: '/hipaa' },
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
+    ],
+  },
+  {
+    title: 'Connect',
+    links: [
+      { label: 'LinkedIn', href: 'https://www.linkedin.com/company/solace-health' },
+      { label: 'X', href: 'https://x.com' },
+    ],
+  },
+];
+
+const year = new Date().getFullYear();
+---
+
+<footer class="footer" data-color-scheme="dark">
+  <div class="container page-section footer__inner">
+    <div class="footer__brand">
+      <Logo size={28} />
+      <h3 class="footer__tagline">AI-native intake and triage for the emergency department.</h3>
+    </div>
+
+    <nav class="footer__nav" aria-label="Footer">
+      {columns.map((col) => (
+        <div class="footer__col">
+          <h4 class="footer__col-title">{col.title}</h4>
+          <ul>
+            {col.links.map((l) => (
+              <li><a href={l.href}>{l.label}</a></li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+
+    <div class="footer__legal">
+      <p class="text-xsmall">
+        HIPAA Business Associate. BAA signed before any patient data moves.
+      </p>
+      <p class="text-xsmall footer__copy">&copy; {year} Solace. All rights reserved.</p>
+    </div>
+  </div>
+
+  <!-- Ghosted wordmark. Placeholder until a real logotype SVG exists. -->
+  <p class="footer__ghost" aria-hidden="true">solace</p>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--slate-100);
+    color: var(--color-text-base);
+  }
+
+  .footer__inner { display: grid; gap: var(--space-12x); }
+  @media (min-width: 640.02px)  { .footer__inner { grid-template-columns: auto 1fr; } }
+  @media (min-width: 1080.02px) { .footer__inner { grid-template-columns: minmax(auto, 450px) 1fr; } }
+
+  .footer__brand { display: flex; flex-direction: column; gap: var(--space-5x); align-items: flex-start; }
+  .footer__tagline {
+    font-size: var(--font-size-18);
+    font-weight: var(--font-weight-medium);
+    max-inline-size: 23ch;
+    letter-spacing: calc(-0.63 / var(--rem) * 1rem);
+    line-height: var(--line-height-heading);
+  }
+  @media (min-width: 1080.02px) { .footer__tagline { font-size: var(--font-size-28); } }
+
+  .footer__nav { display: grid; grid-template-columns: 1fr; gap: var(--space-10x); }
+  @media (min-width: 640.02px)  { .footer__nav { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1080.02px) { .footer__nav { grid-template-columns: repeat(4, 1fr); } }
+
+  .footer__col { display: flex; flex-direction: column; gap: var(--space-4x); }
+  .footer__col-title { font-size: var(--font-size-16); font-weight: var(--font-weight-medium); }
+  .footer__col ul { display: flex; flex-direction: column; gap: var(--space-3x); }
+  .footer__col a {
+    font-size: var(--font-size-text-small);
+    color: var(--color-text-sub);
+    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .footer__col a:hover { color: var(--color-text-base); }
+
+  .footer__legal {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2x);
+    padding-block-start: var(--space-8x);
+    border-block-start: 1px solid var(--color-border-sub);
+    color: var(--color-text-sub);
+  }
+  @media (min-width: 640.02px) {
+    .footer__legal { flex-direction: row; align-items: center; justify-content: space-between; }
+  }
+
+  .footer__ghost {
+    margin: 0;
+    padding-inline: var(--viewport-padding);
+    font-size: clamp(4rem, 19vw, 17rem);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.045em;
+    line-height: 0.8;
+    text-align: center;
+    color: rgb(from var(--color-text-base) r g b / 0.05);
+    user-select: none;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) { .footer__col a { transition: none; } }
+</style>

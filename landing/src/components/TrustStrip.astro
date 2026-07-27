@@ -1,0 +1,87 @@
+---
+/* Not in Superhuman. Solace needs it: the security review is the actual buying
+   gate for a hospital, and it currently lives three clicks deep.
+
+   Every fact here is one I could verify in the repo. This is new copy, so it is
+   written to the verified floor rather than inheriting claims from /security.
+   No shield icons, no padlocks — the bordered grid IS the visual. */
+const facts = [
+  {
+    title: 'HIPAA Business Associate',
+    body: 'A signed BAA before any patient data moves.',
+  },
+  {
+    title: 'Consent gate',
+    body: 'No consent, no AI call. Enforced at the API, not in policy.',
+  },
+  {
+    title: 'Append-only audit log',
+    body: 'Every read and every write, kept for six years.',
+  },
+  {
+    title: 'SOC 2 Type II in progress',
+    body: 'Ask us for the current status and our questionnaire.',
+  },
+];
+---
+
+<section data-background-color="primary-default" aria-labelledby="trust-heading">
+  <div class="container page-section trust">
+    <div class="trust__head">
+      <h2 id="trust-heading" class="heading-medium">Let your security team kick the tires.</h2>
+      <p class="text-medium text-sub">
+        We would rather be precise than impressive. Here is exactly where we stand.
+      </p>
+      <a class="cta-secondary" href="/contact?topic=security">Book a security review</a>
+    </div>
+
+    <ul class="trust__grid neu-panel">
+      {facts.map((f) => (
+        <li class="trust__cell">
+          <h3 class="heading-xsmall">{f.title}</h3>
+          <p class="text-small text-sub">{f.body}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .trust__head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4x);
+    max-inline-size: 62ch;
+    padding-block-end: var(--space-12x);
+  }
+  .trust__head .cta-secondary { margin-block-start: var(--space-2x); }
+
+  /* overflow:hidden so cells clip to the panel radius without their own. */
+  .trust__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: hidden;
+  }
+  @media (min-width: 640.02px)  { .trust__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1080.02px) { .trust__grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .trust__cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2x);
+    padding: var(--space-8x) var(--space-6x);
+    border-inline-end: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+  }
+  .trust__cell:last-child { border-inline-end: none; }
+  @media (min-width: 640.02px) {
+    .trust__cell:nth-child(2n) { border-inline-end: none; }
+    .trust__cell:nth-last-child(-n + 2) { border-block-end: none; }
+  }
+  @media (min-width: 1080.02px) {
+    .trust__cell { border-block-end: none; }
+    .trust__cell:nth-child(2n) { border-inline-end: 1px solid var(--color-border-sub); }
+    .trust__cell:last-child { border-inline-end: none; }
+  }
+</style>

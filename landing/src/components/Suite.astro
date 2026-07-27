@@ -1,0 +1,262 @@
+---
+/* Superhuman's tabbed section. All four panels render — this is not a swap.
+   The sticky bar highlights whichever panel is in view. */
+const panels = [
+  {
+    id: 'suite-intake',
+    tab: 'Intake',
+    eyebrow: 'Smart Patient Intake',
+    heading: 'Check in by voice, in twenty languages.',
+    sub: 'Patients tell their story on their own phone, from a QR code in the waiting room. Nothing to install, no account, no clipboard.',
+    link: { label: 'See the patient flow', href: '/how-it-works#patient-side' },
+    list: [
+      'Speak or type, in their own language',
+      'Two or three follow-up questions that fit the story',
+      'One photo fills in the insurance card',
+      'Spoken guidance back, in their language',
+    ],
+    shot: '/assets/screens/lang.png',
+    shotAlt: 'Solace intake asking the patient to choose a language',
+  },
+  {
+    id: 'suite-triage',
+    tab: 'Triage',
+    eyebrow: 'Triage',
+    heading: 'Urgency, with its reasons attached.',
+    sub: 'A suggested priority and the evidence behind it, on the screen before the patient reaches a bed. Your clinicians always make the call.',
+    link: { label: 'How the score works', href: '/clinicians#atlas' },
+    list: [
+      'A suggested priority the moment intake ends',
+      'The reasons behind it, shown on every patient',
+      'A safety rule that can only raise urgency, never lower it',
+      'Refined again when bedside vitals land',
+    ],
+    shot: '/assets/shots/terminal.png',
+    shotAlt: 'Clinician terminal showing a provisional acuity level and its contributing factors',
+  },
+  {
+    id: 'suite-scribe',
+    tab: 'Ambient Scribe',
+    eyebrow: 'Ambient Scribe',
+    heading: 'Notes that write themselves while you work.',
+    sub: 'Talk to your patient. The note drafts as you do, and the letters and forms are already waiting when the visit ends.',
+    link: { label: 'See what it drafts', href: '/clinicians#queue' },
+    list: [
+      'A draft note linked to what was actually said',
+      'Twenty-four letters and forms, filled from the chart',
+      'Edit it once and it learns how you write',
+      'You read, you sign, you send',
+    ],
+    shot: '/assets/shots/plan.png',
+    shotAlt: 'A drafted care plan ready for clinician review',
+  },
+  {
+    id: 'suite-atlas',
+    tab: 'Atlas',
+    eyebrow: 'Atlas',
+    heading: 'Open the chart and the work is already started.',
+    sub: 'The summary on top, the causes to rule out under it, the tests ready to order. Review it, change it, make it yours.',
+    link: { label: 'Bring Atlas to your team', href: '/clinicians' },
+    list: [
+      'A live queue sorted by who needs help first',
+      'The dangerous causes, flagged on every patient',
+      'A suggested workup you accept or skip',
+      'Every AI read and write, saved to the record',
+    ],
+    shot: '/assets/shots/queue.png',
+    shotAlt: 'Live patient queue ordered by acuity',
+  },
+];
+---
+
+<section data-background-color="secondary-default" aria-labelledby="suite-heading">
+  <div class="container page-section suite">
+    <div class="suite__head">
+      <h2 id="suite-heading" class="heading-large">The whole front door.</h2>
+      <a class="cta-secondary" href="/demo">See the full flow</a>
+    </div>
+
+    <div class="suite__tabs" role="tablist" aria-label="Solace suite" data-suite-tabs>
+      {panels.map((p, i) => (
+        <a class="suite__tab" href={`#${p.id}`} role="tab" data-index={i} aria-selected={i === 0 ? 'true' : 'false'}>
+          {p.tab}
+        </a>
+      ))}
+    </div>
+
+    <div class="suite__panels">
+      {panels.map((p, i) => (
+        <>
+          {i > 0 && <div class="hatch-rule" aria-hidden="true"></div>}
+          <article class="suite__panel" id={p.id} data-panel-index={i}>
+            <div class="suite__copy">
+              <p class="eyebrow">{p.eyebrow}</p>
+              <div class="suite__dashed" aria-hidden="true"></div>
+              <h3 class="heading-medium">{p.heading}</h3>
+              <p class="text-medium text-sub">{p.sub}</p>
+              <a class="arrow-link" href={p.link.href}>
+                <span>{p.link.label}</span>
+                <svg viewBox="0 0 20 14.17" fill="none" aria-hidden="true">
+                  <circle cx="2" cy="7.08" r="1.6" fill="currentColor" />
+                  <path d="M6.5 7.08h11M13.4 2.2l4.9 4.88-4.9 4.89" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
+              <ul class="suite__list">
+                {p.list.map((item) => <li class="text-large">{item}</li>)}
+              </ul>
+            </div>
+
+            <figure class="suite__figure">
+              <img src={p.shot} alt={p.shotAlt} loading="lazy" decoding="async" />
+              <figcaption class="suite__tag">Illustrative</figcaption>
+            </figure>
+          </article>
+        </>
+      ))}
+    </div>
+  </div>
+</section>
+
+<script>
+  // Not an animation — this is state. The bar reflects whichever panel owns the
+  // viewport. Everything that actually moves is CSS.
+  const bar = document.querySelector('[data-suite-tabs]');
+  if (bar) {
+    const tabs = Array.from(bar.querySelectorAll('.suite__tab'));
+    const panels = Array.from(document.querySelectorAll('[data-panel-index]'));
+    const setActive = (i: number) => {
+      bar.setAttribute('data-active-index', String(i));
+      tabs.forEach((t, n) => t.setAttribute('aria-selected', n === i ? 'true' : 'false'));
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActive(Number((visible.target as HTMLElement).dataset.panelIndex));
+      },
+      { rootMargin: '-45% 0px -45% 0px', threshold: [0, 0.25, 0.5, 1] },
+    );
+    panels.forEach((p) => io.observe(p));
+  }
+</script>
+
+<style>
+  .suite__head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5x);
+    align-items: flex-start;
+    padding-block-end: var(--space-8x);
+  }
+  @media (min-width: 640.02px) {
+    .suite__head { flex-direction: row; align-items: center; justify-content: space-between; }
+  }
+
+  /* Sticky under the site header. */
+  .suite__tabs {
+    display: none;
+    position: sticky;
+    inset-block-start: var(--page-header-height);
+    z-index: var(--z-sticky);
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--color-border-sub);
+    background-color: var(--color-bg-secondary);
+  }
+  @media (min-width: 640.02px) { .suite__tabs { display: grid; } }
+
+  .suite__tab {
+    padding: var(--space-5x) var(--space-4x);
+    text-align: center;
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-sub);
+    border-inline-end: 1px solid var(--color-border-sub);
+    transition: background-color var(--motion-duration-base) var(--ease-ui),
+                color var(--motion-duration-base) var(--ease-ui);
+  }
+  .suite__tab:last-child { border-inline-end: none; }
+  .suite__tab[aria-selected='true'] {
+    background-color: hsl(from var(--color-bg-secondary) h s calc(l - 3));
+    color: var(--color-text-base);
+  }
+
+  .suite__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8x);
+    padding: var(--space-8x);
+    background-color: var(--color-bg-tertiary);
+    border-inline: 1px solid var(--color-border-sub);
+    border-block-end: 1px solid var(--color-border-sub);
+    scroll-margin-block-start: calc(var(--page-header-height) * 2);
+  }
+  @media (min-width: 1080.02px) {
+    .suite__panel { flex-direction: row; align-items: center; gap: var(--space-16x); padding: var(--space-12x); }
+    .suite__copy, .suite__figure { flex: 1 1 0; min-inline-size: 0; }
+  }
+
+  .suite__copy { display: flex; flex-direction: column; gap: var(--space-4x); align-items: flex-start; }
+
+  /* 4-on / 4-off dashed rule under the eyebrow. */
+  .suite__dashed {
+    inline-size: min(100%, 320px);
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-border-sub) 0, var(--color-border-sub) 4px,
+      transparent 4px, transparent 8px
+    );
+  }
+
+  .suite__list { display: grid; gap: var(--space-3x); margin-block-start: var(--space-2x); }
+  .suite__list li { position: relative; padding-inline-start: var(--space-7x); }
+  /* Hollow circle, never a filled dot. */
+  .suite__list li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.55em;
+    inline-size: 12px; block-size: 12px;
+    border: 1.5px solid var(--color-icon-soft);
+    border-radius: 50%;
+  }
+
+  /* The shots are a mix of portrait phone captures and landscape terminal
+     captures. Without a height cap the portrait ones stretch the row and leave
+     the copy column stranded beside a column of dead space. */
+  /* fit-content so the figure hugs the image, which lets the "Illustrative"
+     tag anchor to the artwork edge rather than the column edge. */
+  .suite__figure {
+    position: relative;
+    margin-inline: auto;
+    inline-size: fit-content;
+    max-inline-size: 100%;
+  }
+  .suite__figure img {
+    inline-size: auto;
+    max-inline-size: 100%;
+    max-block-size: 460px;
+    object-fit: contain;
+    border-radius: var(--radius-4x);
+    box-shadow: var(--elevation-medium);
+  }
+
+  .suite__tag {
+    position: absolute;
+    inset-block-start: var(--space-3x);
+    inset-inline-end: var(--space-3x);
+    padding: var(--space-0_5x) var(--space-2x);
+    border-radius: var(--radius-full);
+    background-color: rgb(from var(--neutral-100) r g b / 0.62);
+    color: var(--white);
+    font-size: var(--font-size-10);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .suite__tab { transition: none; }
+  }
+</style>

@@ -1,0 +1,56 @@
+---
+/* Light scheme on a bright field, so the ink stays dark. The heading's tight
+   3-line stack comes from max-inline-size: 12ch + line-height: 90% — not from
+   manual line breaks. No subhead; the reference does not have one. */
+---
+
+<section class="closing" aria-labelledby="closing-heading">
+  <div class="container closing__inner">
+    <h2 id="closing-heading" class="closing__heading">Bring calm to your floor.</h2>
+    <a class="closing__cta" href="/demo">Book a demo</a>
+  </div>
+</section>
+
+<style>
+  .closing {
+    background-image: linear-gradient(270deg, #0b6b53 9.04%, #7ccbb2 84.36%, #e7f4ef 100%);
+    color: var(--neutral-90);
+  }
+
+  .closing__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-10x);
+    padding-block: var(--space-24x);
+    min-block-size: 288px;
+  }
+  @media (min-width: 1080.02px) {
+    .closing__inner { flex-direction: row; align-items: center; gap: var(--space-20x); }
+  }
+
+  .closing__heading {
+    font-size: var(--font-size-heading-large);
+    line-height: 90%;
+    letter-spacing: var(--letter-spacing-display);
+    max-inline-size: 12ch;
+  }
+
+  .closing__cta {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-4x) var(--space-8x);
+    border-radius: var(--radius-full);
+    background-color: var(--white);
+    color: var(--neutral-90);
+    font-size: var(--font-size-16);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: normal;
+    box-shadow: var(--elevation-xsmall);
+    transition: background-color var(--motion-duration-base) var(--ease-ui);
+  }
+  .closing__cta:hover { background-color: var(--neutral-5); }
+  @media (prefers-reduced-motion: reduce) { .closing__cta { transition: none; } }
+</style>
