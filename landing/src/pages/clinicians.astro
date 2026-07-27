@@ -164,7 +164,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         <figure class="phone phone--pale reveal">
           <span class="phone__shot">
             <img
-              src="/assets/screens/meds.png"
+              src="/assets/screens/meds.webp"
               alt="Solace intake confirming the medications a patient takes"
               width="1179"
               height="2556"
@@ -178,7 +178,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         <figure class="phone phone--deep reveal">
           <span class="phone__shot">
             <img
-              src="/assets/screens/medical.png"
+              src="/assets/screens/medical.webp"
               alt="Solace intake asking a patient about past medical history"
               width="1179"
               height="2556"
@@ -1860,7 +1860,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   .statement__word { display: inline; }
 
   @keyframes word-in {
-    from { opacity: 0.16; }
+    from { opacity: 0.42; }  /* unrevealed state must still clear 3:1 */
     to   { opacity: 1; }
   }
   @supports (animation-timeline: view()) {

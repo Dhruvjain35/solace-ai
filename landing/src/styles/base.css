@@ -11,12 +11,16 @@
    size-adjust equalises relative error across cap and x-height:
        s² = (505 × 700) / (510 × 720)  →  s = 0.98117
    Result: cap 70.63 vs 70.00 target, x-height 50.03 vs 50.06. Line boxes match
-   exactly, so swapping in licensed Messina Sans later reflows nothing.        */
+   exactly, so swapping in licensed Messina Sans later reflows nothing.
+
+   Both faces are subsetted to the 230 characters the site actually renders and
+   have the unused wdth axis instanced out: 184KB -> 60KB. The wght axis is
+   kept, because 460 and 540 are load-bearing.                                 */
 @font-face {
   font-family: "Solace Sans";
   src: url("/fonts/InstrumentSans-Variable.woff2") format("woff2-variations");
   font-weight: 400 700;
-  font-stretch: 75% 100%;
+  font-stretch: 100%;   /* wdth axis pinned out during subsetting */
   font-style: normal;
   font-display: swap;
   size-adjust: 98.1%;
@@ -28,7 +32,7 @@
   font-family: "Solace Sans";
   src: url("/fonts/InstrumentSans-Italic-Variable.woff2") format("woff2-variations");
   font-weight: 400 700;
-  font-stretch: 75% 100%;
+  font-stretch: 100%;   /* wdth axis pinned out during subsetting */
   font-style: italic;
   font-display: swap;
   size-adjust: 98.1%;

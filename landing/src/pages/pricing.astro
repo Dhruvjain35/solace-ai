@@ -298,7 +298,7 @@ const words = statementWords.map((word, i) => ({
   @supports (animation-timeline: view()) {
     @media (prefers-reduced-motion: no-preference) {
       .statement__word {
-        opacity: 0.22;
+        opacity: 0.42;  /* unrevealed state must still clear 3:1 for 61px text */
         animation: statement-word linear forwards;
         animation-timeline: --pricing-statement;
         animation-range: cover var(--from) cover var(--to);

@@ -15,7 +15,9 @@ const panels = [
       'One photo fills in the insurance card',
       'Spoken guidance back, in their language',
     ],
-    shot: '/assets/screens/lang.png',
+    shot: "/assets/screens/lang.webp",
+    shotW: 560,
+    shotH: 1214,
     shotAlt: 'Solace intake asking the patient to choose a language',
   },
   {
@@ -31,7 +33,9 @@ const panels = [
       'A safety rule that can only raise urgency, never lower it',
       'Refined again when bedside vitals land',
     ],
-    shot: '/assets/shots/terminal.png',
+    shot: "/assets/shots/terminal.webp",
+    shotW: 960,
+    shotH: 464,
     shotAlt: 'Clinician terminal showing a provisional acuity level and its contributing factors',
   },
   {
@@ -47,7 +51,9 @@ const panels = [
       'Edit it once and it learns how you write',
       'You read, you sign, you send',
     ],
-    shot: '/assets/shots/plan.png',
+    shot: "/assets/shots/plan.webp",
+    shotW: 760,
+    shotH: 1499,
     shotAlt: 'A drafted care plan ready for clinician review',
   },
   {
@@ -63,7 +69,9 @@ const panels = [
       'A suggested workup you accept or skip',
       'Every AI read and write, saved to the record',
     ],
-    shot: '/assets/shots/queue.png',
+    shot: "/assets/shots/queue.webp",
+    shotW: 600,
+    shotH: 540,
     shotAlt: 'Live patient queue ordered by acuity',
   },
 ];
@@ -108,7 +116,14 @@ const panels = [
 
             <figure class="suite__figure">
               <span class="suite__shot">
-                <img src={p.shot} alt={p.shotAlt} loading="lazy" decoding="async" />
+                <img
+                  src={p.shot}
+                  alt={p.shotAlt}
+                  width={p.shotW}
+                  height={p.shotH}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <figcaption class="suite__tag">Illustrative</figcaption>
               </span>
             </figure>

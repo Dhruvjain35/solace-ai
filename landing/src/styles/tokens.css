@@ -100,7 +100,12 @@
 
     --color-text-base:     var(--neutral-90);
     --color-text-sub:      rgb(from var(--neutral-100) r g b/65%);
-    --color-text-soft:     var(--neutral-30);
+    /* DELIBERATE DIVERGENCE FROM SUPERHUMAN. Theirs binds this to --neutral-30
+       (#bfbcb6), which is 1.89:1 on white and fails AA badly. They get away
+       with it because they use it on tinted surfaces; we use it for real 12px
+       mono text on white. --neutral-60 is 4.87:1 and passes AA while staying
+       clearly softer than --color-text-sub. Do not "restore" this to 30. */
+    --color-text-soft:     var(--neutral-60);
     --color-text-disabled: rgb(from var(--neutral-100) r g b/40%);
     --color-text-inverse:  var(--white);
 

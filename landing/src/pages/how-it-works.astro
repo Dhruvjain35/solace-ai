@@ -159,7 +159,7 @@ const letterTemplates = [
             <figcaption class="moment__label">their language, from the first tap</figcaption>
             <div class="device moment__device">
               <img
-                src="/assets/screens/lang.png"
+                src="/assets/screens/lang.webp"
                 alt="The Solace check-in asking the patient to choose their language, with twenty available"
                 width="1179"
                 height="2556"
@@ -187,7 +187,7 @@ const letterTemplates = [
             <figcaption class="moment__label">spoken or typed, their words</figcaption>
             <div class="device moment__device">
               <img
-                src="/assets/screens/symptoms.png"
+                src="/assets/screens/symptoms.webp"
                 alt="The patient describing their symptoms by voice or by typing"
                 width="1179"
                 height="2556"
@@ -202,7 +202,7 @@ const letterTemplates = [
             <figcaption class="moment__label">two or three questions that fit</figcaption>
             <div class="device moment__device">
               <img
-                src="/assets/screens/questions.png"
+                src="/assets/screens/questions.webp"
                 alt="Follow-up questions chosen to fit the story the patient just told"
                 width="1179"
                 height="2556"
@@ -230,7 +230,7 @@ const letterTemplates = [
             <figcaption class="moment__label">one photo, the form fills itself</figcaption>
             <div class="device moment__device">
               <img
-                src="/assets/screens/insurance.png"
+                src="/assets/screens/insurance.webp"
                 alt="The insurance card step, where one photo fills in the member details"
                 width="1179"
                 height="2556"
@@ -258,7 +258,7 @@ const letterTemplates = [
             <figcaption class="moment__label">a clear place in line</figcaption>
             <div class="device moment__device">
               <img
-                src="/assets/screens/plan.png"
+                src="/assets/screens/plan.webp"
                 alt="The explained plan: the patient's priority, their wait time and what happens next"
                 width="1179"
                 height="2556"
@@ -340,7 +340,7 @@ const letterTemplates = [
         </p>
         <div class="device-wide">
           <img
-            src="/assets/shots/ehr-clean.png"
+            src="/assets/shots/ehr-clean.webp"
             alt="The Solace clinician view: the patient summary, the causes to rule out and the reasons behind the suggested priority"
             width="1148"
             height="556"
@@ -471,7 +471,7 @@ const letterTemplates = [
 
         <div class="device band__device" aria-hidden="true">
           <img
-            src="/assets/screens/plan.png"
+            src="/assets/screens/plan.webp"
             alt=""
             width="1179"
             height="2556"
@@ -594,7 +594,8 @@ const letterTemplates = [
     line-height: 1;
     letter-spacing: var(--letter-spacing-heading);
     font-variant-numeric: tabular-nums;
-    color: rgb(from var(--color-primary-base) r g b / 45%);
+    /* 45% of the brand green is 2.09:1 on white. 70% clears 3:1 for 49px. */
+    color: rgb(from var(--color-primary-base) r g b / 70%);
   }
 
   .step__title {
@@ -611,7 +612,7 @@ const letterTemplates = [
 
   .disclosure {
     margin-block-start: var(--space-10x);
-    color: var(--color-text-disabled);
+    color: var(--color-text-sub);  /* text-disabled is 2.58:1; sub is 7.4:1 */
   }
 
   /* ── App moments ─────────────────────────────────────────────────────── */
