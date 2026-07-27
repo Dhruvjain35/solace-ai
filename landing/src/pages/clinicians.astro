@@ -16,7 +16,6 @@ import CtaPrimary from '../components/CtaPrimary.astro';
        lucide icons and Tailwind cqw utilities. They are rebuilt here as plain
        markup with an Atlas palette mapped onto the primitive tokens, so the
        app chrome keeps its own light identity even inside the dark section.
-       Every one carries the "Illustrative" tag, matching Suite.astro.
      - Sizes inside the rigs stay in cqw. That is the one unit outside the
        space scale, and it is load-bearing: it is what makes the mockups scale
        vector-crisp with the rig rather than breaking apart at small widths. */
@@ -172,8 +171,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
               decoding="async"
             />
           </span>
-          <figcaption class="tag">Illustrative</figcaption>
-        </figure>
+</figure>
 
         <figure class="phone phone--deep reveal">
           <span class="phone__shot">
@@ -186,8 +184,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
               decoding="async"
             />
           </span>
-          <figcaption class="tag">Illustrative</figcaption>
-        </figure>
+</figure>
       </div>
     </div>
   </section>
@@ -395,8 +392,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         </div>
         <div class="rig__deck" aria-hidden="true"></div>
         <figcaption class="rig__cap">
-          <span class="tag">Illustrative</span>
-          <span class="visually-hidden">
+<span class="visually-hidden">
             Solace Atlas patient snapshot: a clear summary, the dangerous causes to rule out and the
             suggested tests.
           </span>
@@ -600,8 +596,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         </div>
         <div class="rig__deck" aria-hidden="true"></div>
         <figcaption class="rig__cap">
-          <span class="tag">Illustrative</span>
-          <span class="visually-hidden">
+<span class="visually-hidden">
             Solace Atlas letters and forms: a chart-aware template library beside a drafted work or
             school note waiting to be signed.
           </span>
@@ -637,8 +632,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         </p>
 
         <div class="snap">
-          <span class="tag snap__tag">Illustrative</span>
-          <div class="snap__head">
+<div class="snap__head">
             <img
               class="snap__face"
               src="/assets/faces/patient-elena.jpg"
@@ -888,8 +882,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         </div>
         <div class="rig__deck" aria-hidden="true"></div>
         <figcaption class="rig__cap">
-          <span class="tag">Illustrative</span>
-          <span class="visually-hidden">
+<span class="visually-hidden">
             Solace Atlas workspace: the live patient queue, wait times and pain alerts.
           </span>
         </figcaption>
@@ -974,17 +967,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     );
   }
 
-  /* The "this is a mockup" tag, matching Suite.astro exactly. */
-  .tag {
-    padding: var(--space-0_5x) var(--space-2x);
-    border-radius: var(--radius-full);
-    background-color: rgb(from var(--neutral-100) r g b / 0.62);
-    color: var(--white);
-    font-size: var(--font-size-10);
-    font-weight: var(--font-weight-medium);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
 
   /* The legacy page was built on a Framer fade-up. This is that idiom in CSS.
      Where scroll-driven animations are unsupported, content is simply
@@ -1930,12 +1912,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   }
 
   /* Bottom-right: the top-right corner already belongs to the ESI badge. */
-  .snap__tag {
-    position: absolute;
-    inset-block-end: var(--space-3x);
-    inset-inline-end: var(--space-3x);
-    z-index: var(--z-raised);
-  }
 
   .snap__head {
     display: flex;

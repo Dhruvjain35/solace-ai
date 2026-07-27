@@ -124,8 +124,7 @@ const panels = [
                   loading="lazy"
                   decoding="async"
                 />
-                <figcaption class="suite__tag">Illustrative</figcaption>
-              </span>
+</span>
             </figure>
           </article>
         </>
@@ -242,9 +241,8 @@ const panels = [
   /* The shots are a mix of portrait phone captures and landscape terminal
      captures. Without a height cap the portrait ones stretch the row and leave
      the copy column stranded beside a column of dead space. */
-  /* The figure is a flex item, so flex-basis wins over any width it sets —
-     the inner span is what actually hugs the artwork, which is what lets the
-     "Illustrative" tag anchor to the image edge rather than the column edge. */
+  /* The figure is a flex item, so flex-basis wins over any width it sets;
+     the inner span is what actually hugs the artwork. */
   .suite__figure { margin: 0; display: flex; justify-content: center; }
   .suite__shot {
     position: relative;
@@ -261,19 +259,6 @@ const panels = [
     box-shadow: var(--elevation-medium);
   }
 
-  .suite__tag {
-    position: absolute;
-    inset-block-start: var(--space-3x);
-    inset-inline-end: var(--space-3x);
-    padding: var(--space-0_5x) var(--space-2x);
-    border-radius: var(--radius-full);
-    background-color: rgb(from var(--neutral-100) r g b / 0.62);
-    color: var(--white);
-    font-size: var(--font-size-10);
-    font-weight: var(--font-weight-medium);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .suite__tab { transition: none; }

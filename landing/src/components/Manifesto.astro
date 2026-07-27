@@ -1,14 +1,14 @@
 ---
-/* Visual is the CSS hatch-and-wash option from the spec: free, distinctive, and
-   consistent with the engineering-drawing motif already used in the gutters.
-   Swap for a licensed waiting-room photograph if budget appears. */
+/* Visual is a graded sky plate from the same pipeline as the hero, so the two
+   read as one world. See public/assets/hero/CREDITS.md. */
 ---
 
 <section class="manifesto" data-color-scheme="dark" aria-labelledby="manifesto-heading">
   <div class="container page-section manifesto__inner">
-    <div class="manifesto__visual" aria-hidden="true">
-      <div class="manifesto__wash"></div>
-    </div>
+    <picture class="manifesto__visual">
+      <source srcset="/assets/hero/manifesto.webp 1x, /assets/hero/manifesto@2x.webp 2x" type="image/webp" />
+      <img src="/assets/hero/manifesto.webp" alt="" width="800" height="658" loading="lazy" decoding="async" />
+    </picture>
 
     <div class="manifesto__copy">
       <h2 id="manifesto-heading" class="manifesto__heading">Calm should be standard care.</h2>
@@ -29,57 +29,25 @@
   @media (min-width: 1080.02px) {
     .manifesto__inner { flex-direction: row; align-items: center; gap: var(--space-16x); }
     .manifesto__inner > * { flex: 1 1 0; min-inline-size: 0; }
-    /* Image flips to the left, matching the reference. */
-    .manifesto__inner > :last-child { order: -1; }
+    /* Image left, copy right, matching the reference. The visual is already
+       first in the DOM, so no order override is needed; the previous
+       :last-child{order:-1} was flipping it the wrong way. */
   }
 
-  /* No photo budget, so this is built rather than shot. The structure is
-     deliberate: a large-scale hatch field (the same engineering-drawing motif
-     as the page gutters), one clean light source from the upper left, a crisp
-     horizon rule, and a vignette. Structure is what keeps it from reading as
-     a blurred blob. */
+  /* Same graded sky pipeline as the hero, so the two plates read as one
+     world. Replaces the CSS-only fallback, which was three overlapping blurs
+     and looked like a placeholder next to a photographic hero. */
   .manifesto__visual {
-    position: relative;
-    aspect-ratio: 1080 / 888;
+    display: block;
     border-radius: var(--radius-5x);
     overflow: hidden;
-    background-color: var(--slate-black);
-    /* Hatch at 3x the gutter scale so it reads as texture, not noise. */
-    background-image: repeating-linear-gradient(
-      -45deg,
-      rgb(from var(--neutral-0) r g b / 0.07) 0,
-      rgb(from var(--neutral-0) r g b / 0.07) 1px,
-      transparent 1px,
-      transparent 15px
-    );
+    box-shadow: var(--elevation-medium);
   }
-
-  .manifesto__wash {
-    position: absolute;
-    inset: 0;
-    background:
-      /* single key light, tight falloff */
-      radial-gradient(ellipse 62% 48% at 24% 22%, rgb(from var(--solace-40) r g b / 0.62) 0, transparent 62%),
-      /* cool fill opposite it, much weaker */
-      radial-gradient(ellipse 55% 42% at 82% 84%, rgb(from var(--solace-80) r g b / 0.40) 0, transparent 68%),
-      /* vignette */
-      radial-gradient(ellipse 92% 92% at 50% 50%, transparent 42%, rgb(from var(--slate-black) r g b / 0.72) 100%);
-  }
-
-  /* The horizon. One crisp edge is what makes the field read as composed. */
-  .manifesto__wash::after {
-    content: '';
-    position: absolute;
-    inset-inline: 12%;
-    inset-block-start: 58%;
-    block-size: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent 0,
-      rgb(from var(--solace-20) r g b / 0.55) 22%,
-      rgb(from var(--solace-20) r g b / 0.55) 78%,
-      transparent 100%
-    );
+  .manifesto__visual img {
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 1080 / 888;
+    object-fit: cover;
   }
 
   .manifesto__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6x); }

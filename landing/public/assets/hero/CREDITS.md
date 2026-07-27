@@ -10,3 +10,8 @@ light-wrapped to sit inside the sky plate. **Licence provenance is the owner's
 to confirm**; the source filename suggests a stock library. The rendered asset
 is 406x660 CSS px because the supplied original was only 520x610, which is the
 current ceiling on its sharpness.
+
+**manifesto.webp / manifesto@2x.webp** — derived from an Unsplash photograph
+(`images.unsplash.com/photo-1513002749550-c59d786b8e6c`), same emerald ramp as
+the hero plate. Unsplash License. Deliberately a wispier frame than the hero so
+the two read as one world without being the same picture.
