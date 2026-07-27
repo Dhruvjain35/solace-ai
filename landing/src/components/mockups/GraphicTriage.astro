@@ -1,0 +1,172 @@
+---
+/* Triage, as a layered composition rather than a screenshot.
+
+   Almost every triage model outputs a number. Two things here are not standard,
+   and they are what the graphic is built around:
+
+     1. The reasons travel WITH the score. The evidence is not buried behind a
+        "why?" link — it is stacked directly behind the score card, physically.
+     2. The safety rule is ASYMMETRIC. Bedside vitals can raise urgency and are
+        structurally unable to lower it. That is a design property, not a
+        promise, so it gets its own object in the frame.
+
+   Layering is honest depth: each plane is a real element on the neumorphic
+   plinth with its own contact shadow, not a drop-shadow on a flat picture. */
+---
+
+<div class="gfx">
+  <div class="gfx__stack">
+    <div class="gfx__evidence" aria-hidden="true">
+      <span class="gfx__evidence-label">Contributing evidence</span>
+      <span class="gfx__bar"><i style="--w:86%"></i></span>
+      <span class="gfx__bar"><i style="--w:64%"></i></span>
+      <span class="gfx__bar"><i style="--w:41%"></i></span>
+    </div>
+
+    <div class="gfx__card">
+      <div class="gfx__card-head">
+        <span class="gfx__card-title">Suggested priority</span>
+        <span class="gfx__card-note">Reyes, M.</span>
+      </div>
+
+      <div class="gfx__level">
+        <span class="gfx__level-n">2</span>
+        <span class="gfx__level-t">
+          <b>High</b>
+          <i>Emergent &mdash; see within 10 minutes</i>
+        </span>
+      </div>
+
+      <ul class="gfx__why">
+        <li><span>Respiratory rate 24</span><em>Strong</em></li>
+        <li><span>SpO&#8322; 93% on room air</span><em>Strong</em></li>
+        <li><span>Two prior visits, same complaint</span><em>Moderate</em></li>
+      </ul>
+    </div>
+
+    <div class="gfx__gate">
+      <span class="gfx__gate-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V3.6M4.4 7.2 8 3.6l3.6 3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="gfx__gate-text">
+        <b>Raised 3 &rarr; 2</b>
+        <i>Bedside vitals can raise urgency. The rule cannot lower it.</i>
+      </span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .gfx {
+    container-type: inline-size;
+    inline-size: 100%;
+    padding: 7cqw 6cqw 8cqw;
+    border-radius: var(--radius-6x);
+    /* Neumorphic plinth: light from directly above, warm taupe shade, hairline
+       so the shape survives forced-colors. Per the rules in materials.css. */
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+  }
+
+  .gfx__stack { position: relative; display: grid; }
+
+  /* Plane 1 — evidence, sitting behind and above the score. */
+  .gfx__evidence {
+    position: relative;
+    z-index: 1;
+    inline-size: 74%;
+    margin-inline-start: auto;
+    display: flex; flex-direction: column; gap: 2cqw;
+    padding: 4cqw 5cqw 6cqw;
+    border-radius: var(--radius-4x) var(--radius-4x) 0 0;
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.20);
+    border-block-end: none;
+    box-shadow: 0 -1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+  }
+  .gfx__evidence-label { font-size: 3.1cqw; color: var(--neutral-60); }
+  .gfx__bar { display: block; block-size: 1.6cqw; border-radius: 100px; background-color: var(--neutral-10); }
+  .gfx__bar i { display: block; block-size: 100%; inline-size: var(--w); border-radius: 100px; background-color: var(--solace-30); }
+
+  /* Plane 2 — the score itself, lifted forward. */
+  .gfx__card {
+    position: relative;
+    z-index: 2;
+    margin-block-start: -3cqw;
+    display: flex; flex-direction: column; gap: 4cqw;
+    padding: 5cqw;
+    border-radius: var(--radius-4x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.12),
+      0 12px 28px rgb(from var(--neutral-40) r g b / 0.18);
+  }
+  .gfx__card-head { display: flex; align-items: baseline; gap: 3cqw; }
+  .gfx__card-title { font-size: 3.6cqw; font-weight: var(--font-weight-medium); color: var(--neutral-90); }
+  .gfx__card-note { margin-inline-start: auto; font-size: 3.2cqw; color: var(--neutral-60); }
+
+  .gfx__level { display: flex; align-items: center; gap: 4cqw; }
+  .gfx__level-n {
+    display: grid; place-items: center;
+    inline-size: 13cqw; block-size: 13cqw;
+    flex: none;
+    border-radius: var(--radius-3x);
+    background: linear-gradient(180deg, var(--solace-60) 0%, var(--solace-90) 100%);
+    color: var(--white);
+    font-size: 7cqw;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: -0.04em;
+    box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.32);
+  }
+  .gfx__level-t { display: flex; flex-direction: column; gap: 0.6cqw; }
+  .gfx__level-t b { font-size: 5.2cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.03em; }
+  .gfx__level-t i { font-style: normal; font-size: 3.3cqw; color: var(--neutral-60); }
+
+  .gfx__why { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; }
+  .gfx__why li {
+    display: flex; align-items: center; gap: 3cqw;
+    padding-block: 2.4cqw;
+    border-block-start: 1px solid var(--neutral-10);
+    font-size: 3.4cqw;
+    color: var(--neutral-90);
+  }
+  .gfx__why em {
+    margin-inline-start: auto;
+    font-style: normal;
+    font-size: 3cqw;
+    color: var(--solace-80);
+  }
+
+  /* Plane 3 — the asymmetric safety rule, offset forward and left so it reads
+     as a separate mechanism rather than another row of the card. */
+  .gfx__gate {
+    position: relative;
+    z-index: 3;
+    inline-size: 84%;
+    margin-block-start: -2.5cqw;
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.6cqw 4.4cqw;
+    border-radius: var(--radius-3x);
+    background: linear-gradient(180deg, var(--solace-100) 0%, #052a21 100%);
+    color: var(--white);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.14),
+      0 10px 22px rgb(from var(--solace-100) r g b / 0.30);
+  }
+  .gfx__gate-icon {
+    display: grid; place-items: center;
+    inline-size: 7cqw; block-size: 7cqw; flex: none;
+    border-radius: 100px;
+    background-color: rgb(from var(--solace-30) r g b / 0.22);
+    color: var(--solace-20);
+  }
+  .gfx__gate-icon svg { inline-size: 4cqw; block-size: 4cqw; }
+  .gfx__gate-text { display: flex; flex-direction: column; gap: 0.4cqw; }
+  .gfx__gate-text b { font-size: 3.5cqw; font-weight: var(--font-weight-medium); }
+  .gfx__gate-text i { font-style: normal; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.68); }
+</style>

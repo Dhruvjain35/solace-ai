@@ -1,0 +1,79 @@
+---
+/* iPhone 16 shell. The frame PNG carries a transparent screen aperture, so the
+   slotted content sits UNDER it and shows through — which means the screen is
+   live DOM, not a screenshot. That is the whole point: text stays vector-sharp
+   at every DPR, it re-flows, it inherits the type system, and it can never look
+   like a re-photographed demo video.
+
+   Aperture measured off the asset's alpha channel rather than eyeballed:
+     x 100..1305 of 1406  ->  left 7.112%, width 85.775%
+     y 251..2721 of 2822  ->  top  8.894%, height 87.562%
+   The screen's corner radius settles by ~90px of 1406, so 6.4% of frame width.
+
+   Frame source: github.com/Dhruvjain35/playmaker-landing (assets/images/device).
+*/
+interface Props {
+  finish?: 'natural' | 'black';
+  width?: string;
+  class?: string;
+  screenClass?: string;
+}
+const { finish = 'natural', width = '260px', class: cls = '', screenClass = '' } = Astro.props;
+const base = `/assets/device/iphone-${finish}`;
+---
+
+<div class:list={['phone', cls]} style={`--phone-w:${width}`}>
+  <div class:list={['phone__screen', screenClass]}>
+    <slot />
+  </div>
+  <img
+    class="phone__frame"
+    src={`${base}.webp`}
+    srcset={`${base}.webp 1x, ${base}@2x.webp 2x`}
+    alt=""
+    width="703"
+    height="1411"
+    loading="lazy"
+    decoding="async"
+  />
+</div>
+
+<style>
+  .phone {
+    position: relative;
+    inline-size: var(--phone-w);
+    max-inline-size: 100%;
+    aspect-ratio: 1406 / 2822;
+    /* The device reads as a physical object on the plinth, so it casts a real
+       contact shadow rather than floating. */
+    filter:
+      drop-shadow(0 2px 4px rgb(from var(--neutral-100) r g b / 0.10))
+      drop-shadow(0 18px 34px rgb(from var(--neutral-100) r g b / 0.16));
+  }
+
+  .phone__screen {
+    position: absolute;
+    inset-inline-start: 7.112%;
+    inset-block-start: 8.894%;
+    inline-size: 85.775%;
+    block-size: 87.562%;
+    overflow: hidden;
+    border-radius: calc(var(--phone-w) * 0.064);
+    background-color: var(--neutral-0);
+    /* Content is authored against a 1206x2471 aperture and scaled by the
+       container, so every screen keeps identical internal proportions
+       regardless of the width the page renders the device at. */
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .phone__frame {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+</style>

@@ -1,0 +1,159 @@
+---
+/* Patient intake, as live DOM inside the phone aperture.
+
+   What this has to communicate is the thing that is actually hard to copy:
+   the patient tells their story ONCE, on their OWN phone, in their OWN
+   language, with no app and no account — which is what removes the interpreter
+   bottleneck from the front door. So the language control is the loudest thing
+   on the screen and "No app. No account." is stated outright.
+
+   Language names appear in their own script because that is how every real
+   language picker on earth labels them; all interface chrome is English.
+
+   Everything is sized in cqw against the aperture, so the whole screen scales
+   with the device rather than needing a second layout per breakpoint. */
+---
+
+<div class="scr">
+  <div class="scr__bar">
+    <span>9:41</span>
+    <span class="scr__bar-right" aria-hidden="true">
+      <svg viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor" opacity=".35"/></svg>
+      <svg viewBox="0 0 24 12" fill="none"><rect x="0.6" y="1.2" width="19" height="9.6" rx="3" stroke="currentColor" stroke-width="1.1"/><rect x="2.2" y="2.8" width="13" height="6.4" rx="1.6" fill="currentColor"/><path d="M21.4 4.6v2.8a2 2 0 0 0 0-2.8Z" fill="currentColor"/></svg>
+    </span>
+  </div>
+
+  <div class="scr__head">
+    <span class="scr__mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="2.6" y="2.6" width="18.8" height="18.8" rx="6" stroke="currentColor" stroke-width="1.8"/><path d="M15.1 8.6c-1-.9-2.3-1.3-3.5-1-1.6.4-2.3 2-1.4 3 .8.9 3.3.6 4.1 1.6.9 1-.1 2.6-1.7 2.9-1.3.3-2.6-.2-3.6-1.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="scr__brand">solace</span>
+    <span class="scr__step">Step 1 of 3</span>
+  </div>
+
+  <p class="scr__ask">Answer in whichever language is easiest.</p>
+
+  <div class="scr__langs">
+    <span class="scr__lang">English</span>
+    <span class="scr__lang scr__lang--on">Tagalog</span>
+    <span class="scr__lang">Español</span>
+    <span class="scr__lang scr__lang--more">+17</span>
+  </div>
+
+  <div class="scr__thread">
+    <p class="scr__q">What brought you in today?</p>
+    <p class="scr__a">A tight chest since this morning, and it&rsquo;s hard to breathe.</p>
+    <p class="scr__q">Does the tightness spread to your arm or jaw?</p>
+    <p class="scr__follow">Follow-ups adapt to the answer &mdash; usually two or three.</p>
+  </div>
+
+  <div class="scr__rec">
+    <span class="scr__meter" aria-hidden="true">
+      <i style="--h:34%"></i><i style="--h:70%"></i><i style="--h:96%"></i><i style="--h:52%"></i>
+      <i style="--h:78%"></i><i style="--h:44%"></i><i style="--h:88%"></i><i style="--h:30%"></i>
+      <i style="--h:62%"></i><i style="--h:40%"></i><i style="--h:74%"></i><i style="--h:26%"></i>
+    </span>
+    <span class="scr__time">0:12</span>
+  </div>
+
+  <p class="scr__hint">Hold to speak, or type instead</p>
+
+  <div class="scr__foot">
+    <span>No app. No account.</span>
+    <span>Nothing to install</span>
+  </div>
+</div>
+
+<style>
+  .scr {
+    inline-size: 100%;
+    block-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 3cqw 6cqw 5cqw;
+    background: linear-gradient(180deg, var(--neutral-0) 0%, var(--neutral-5) 100%);
+    color: var(--neutral-100);
+    font-size: 5.4cqw;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  .scr__bar {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 5cqw; font-weight: var(--font-weight-semibold);
+    padding-block-end: 1cqw;
+  }
+  .scr__bar-right { display: flex; align-items: center; gap: 1.6cqw; }
+  .scr__bar-right svg { block-size: 3.6cqw; inline-size: auto; }
+
+  .scr__head { display: flex; align-items: center; gap: 2cqw; }
+  .scr__mark { inline-size: 6.4cqw; block-size: 6.4cqw; color: var(--solace-80); }
+  .scr__mark svg { inline-size: 100%; block-size: 100%; }
+  .scr__brand { font-size: 6cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.03em; }
+  .scr__step { margin-inline-start: auto; font-size: 4.4cqw; color: var(--neutral-60); }
+
+  .scr__ask { font-size: 7cqw; font-weight: var(--font-weight-medium); line-height: 1.25; letter-spacing: -0.02em; }
+
+  /* The language control is the loudest element because it is the feature. */
+  .scr__langs { display: flex; flex-wrap: wrap; gap: 2cqw; }
+  .scr__lang {
+    padding: 1.8cqw 3.4cqw;
+    border-radius: 100px;
+    border: 0.5cqw solid var(--neutral-20);
+    font-size: 4.6cqw;
+    color: var(--neutral-80);
+    background-color: var(--white);
+  }
+  .scr__lang--on {
+    background-color: var(--solace-80);
+    border-color: var(--solace-80);
+    color: var(--white);
+    font-weight: var(--font-weight-medium);
+  }
+  .scr__lang--more { color: var(--neutral-60); }
+
+  .scr__thread { display: flex; flex-direction: column; gap: 2.4cqw; margin-block-start: 1cqw; }
+  .scr__q { font-size: 5cqw; color: var(--neutral-60); }
+  .scr__follow { font-size: 4cqw; color: var(--neutral-40); }
+  .scr__a {
+    align-self: flex-start;
+    padding: 3cqw 3.6cqw;
+    border-radius: 4cqw 4cqw 4cqw 1.2cqw;
+    background-color: var(--solace-10);
+    color: var(--solace-100);
+    font-size: 5cqw;
+    line-height: 1.42;
+  }
+
+  /* A captured level meter with fixed bar heights. It is a readout, not
+     decoration, and deliberately does not animate. */
+  .scr__rec {
+    margin-block-start: auto;
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.2cqw 4cqw;
+    border-radius: 4cqw;
+    background-color: var(--white);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-100) r g b / 0.06),
+                0 6px 14px rgb(from var(--neutral-100) r g b / 0.06);
+  }
+  .scr__meter { display: flex; align-items: flex-end; gap: 1.6cqw; block-size: 8cqw; flex: 1; }
+  .scr__meter i {
+    inline-size: 1.1cqw;
+    block-size: var(--h);
+    border-radius: 0.55cqw;
+    background-color: var(--solace-50);
+  }
+  .scr__time { font-size: 4.6cqw; color: var(--neutral-60); font-variant-numeric: tabular-nums; }
+
+  .scr__hint { text-align: center; font-size: 4.4cqw; color: var(--neutral-60); }
+
+  .scr__foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-block-start: 3cqw;
+    border-block-start: 0.5cqw solid var(--neutral-20);
+    font-size: 4.2cqw;
+    color: var(--neutral-60);
+  }
+  .scr__foot span:first-child { color: var(--neutral-90); font-weight: var(--font-weight-medium); }
+</style>
