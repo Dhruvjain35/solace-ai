@@ -1,8 +1,19 @@
 ---
 import CtaPrimary from './CtaPrimary.astro';
+
+/* The background is a real photographed sky, colour-graded to the Solace
+   emerald ramp, not a CSS gradient. The clinician is composited into it with a
+   light wrap and a bottom fade so she belongs to the plate rather than sitting
+   on top of it. See public/assets/hero/CREDITS.md.
+
+   Motion is a slow ken-burns drift on the sky, which is why the plate is
+   rendered oversized: it can move without ever exposing an edge. */
 ---
 
 <section class="hero" data-color-scheme="dark" id="main">
+  <div class="hero__sky" aria-hidden="true"></div>
+  <div class="hero__veil" aria-hidden="true"></div>
+
   <div class="container hero__inner">
     <h1 class="hero__title display-large">Triage that starts at the door</h1>
 
@@ -44,11 +55,8 @@ import CtaPrimary from './CtaPrimary.astro';
       </div>
 
       <picture class="hero__figure">
-        <source
-          srcset="/assets/clinician-hero.webp 1x, /assets/clinician-hero@2x.webp 2x"
-          type="image/webp"
-        />
-        <img src="/assets/clinician-hero.png" alt="" width="376" height="610" fetchpriority="high" />
+        <source srcset="/assets/hero/clinician.webp 1x, /assets/hero/clinician@2x.webp 2x" type="image/webp" />
+        <img src="/assets/hero/clinician.webp" alt="" width="406" height="660" fetchpriority="high" decoding="async" />
       </picture>
     </div>
   </div>
@@ -57,7 +65,6 @@ import CtaPrimary from './CtaPrimary.astro';
 </section>
 
 <style>
-  /* Names the timeline the sticky header reads. Nothing else uses it. */
   .hero {
     position: relative;
     isolation: isolate;
@@ -67,12 +74,45 @@ import CtaPrimary from './CtaPrimary.astro';
     view-timeline-name: --homepage-hero-section;
     view-timeline-axis: block;
     color: var(--white);
+    background-color: var(--slate-black);
+  }
+
+  /* Oversized on purpose so the drift never reveals an edge. */
+  .hero__sky {
+    position: absolute;
+    inset: -6% -6% -6% -6%;
+    z-index: -2;
+    background-image: image-set(
+      url('/assets/hero/sky.webp') 1x,
+      url('/assets/hero/sky@2x.webp') 2x
+    );
+    background-size: cover;
+    background-position: 50% 58%;
+    transform-origin: 58% 60%;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__sky { animation: sky-drift 78s var(--ease-ui) infinite alternate; }
+  }
+  @keyframes sky-drift {
+    from { transform: scale(1) translate3d(0, 0, 0); }
+    to   { transform: scale(1.09) translate3d(-1.6%, -1.1%, 0); }
+  }
+
+  /* Darkens the top so the nav and headline sit on near-black, and seals the
+     bottom edge into the section boundary. */
+  .hero__veil {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
     background:
-      linear-gradient(rgb(255 255 255 / 0.10) 0, rgb(255 255 255 / 0) 100%),
-      radial-gradient(circle at 68% 46%, rgb(from var(--solace-40) r g b / 0.55) 0, rgb(0 0 0 / 0) 50%),
-      radial-gradient(circle at 50% 98%, rgb(from var(--solace-20) r g b / 0.45) 0, rgb(0 0 0 / 0) 55%),
-      radial-gradient(circle at 18% 22%, rgb(12 66 67 / 0.85) 0, rgb(0 0 0 / 0) 60%),
-      linear-gradient(180deg, #12312a 0, #0a1f1b 55%, var(--slate-black) 100%);
+      linear-gradient(180deg,
+        rgb(from var(--slate-black) r g b / 0.62) 0,
+        rgb(from var(--slate-black) r g b / 0.18) 30%,
+        rgb(from var(--slate-black) r g b / 0.02) 52%,
+        rgb(from var(--slate-black) r g b / 0.45) 92%,
+        rgb(from var(--slate-black) r g b / 0.82) 100%),
+      radial-gradient(ellipse 74% 52% at 50% 6%,
+        rgb(from var(--slate-black) r g b / 0.34) 0, transparent 72%);
   }
 
   .hero__inner { position: relative; z-index: var(--z-raised); }
@@ -82,6 +122,7 @@ import CtaPrimary from './CtaPrimary.astro';
     text-align: center;
     max-inline-size: 15ch;
     margin-inline: auto;
+    text-shadow: 0 2px 24px rgb(from var(--slate-black) r g b / 0.45);
   }
 
   .hero__sub {
@@ -89,14 +130,12 @@ import CtaPrimary from './CtaPrimary.astro';
     margin-inline: auto;
     max-inline-size: 46ch;
     text-align: center;
-    color: rgb(from var(--white) r g b / 0.72);
+    color: rgb(from var(--white) r g b / 0.78);
+    text-shadow: 0 1px 16px rgb(from var(--slate-black) r g b / 0.5);
   }
 
   .hero__cta { display: flex; justify-content: center; margin-block-start: var(--space-8x); }
 
-  /* The stage is a positioning context for the figure and the glass cards.
-     The figure is centred on small screens and offset once the cards appear
-     beside it, so it never sits under them. */
   .hero__stage {
     position: relative;
     margin-block-start: var(--space-9x);
@@ -109,19 +148,15 @@ import CtaPrimary from './CtaPrimary.astro';
   .hero__figure {
     position: absolute;
     inset-inline-start: 50%;
-    inset-block-end: calc(-1 * var(--space-32x));
+    inset-block-end: calc(-1 * var(--space-24x));
     translate: -50% 0;
     z-index: var(--z-raised);
-    filter: drop-shadow(0 40px 70px rgb(0 0 0 / 0.62));
   }
   @media (min-width: 640.02px) {
-    .hero__figure { translate: -16% 0; }
+    .hero__figure { translate: -14% 0; }
   }
-  .hero__figure img { block-size: clamp(400px, 42vw, 560px); inline-size: auto; }
+  .hero__figure img { block-size: clamp(420px, 44vw, 620px); inline-size: auto; }
 
-  /* Mobile first, matching the rest of the system: the collage is unreadable
-     at small sizes, so the base state is figure-only and the cards are added
-     back as room appears. */
   .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-2x); }
   .hero__card-note { color: rgb(from var(--white) r g b / 0.70); }
 
@@ -129,18 +164,15 @@ import CtaPrimary from './CtaPrimary.astro';
   .hero__card--brief  { inset-inline-end: 0;   inset-block-start: var(--space-2x); }
   .hero__card--queue  { inset-inline-start: var(--space-20x); inset-block-start: 62%; inline-size: 272px; }
 
-  /* Cards arrive one at a time as the row can actually hold them. Two 258px
-     cards plus the ~246px figure need 762px, so showing both at 640 put the
-     pre-brief squarely over her face. */
+  /* Cards arrive as the row can actually hold them; two cards plus the figure
+     need ~760px, so showing both at 640 put one over her face. */
   @media (min-width: 640.02px) {
     .hero__card--intake { display: grid; inline-size: 258px; }
   }
-
   @media (min-width: 1080.02px) {
     .hero__card--brief { display: grid; inline-size: 300px; }
     .hero__card--intake { inline-size: 280px; }
   }
-
   @media (min-width: 1280.02px) {
     .hero__card--queue { display: grid; }
     .hero__card--intake { inline-size: 300px; }
@@ -182,9 +214,6 @@ import CtaPrimary from './CtaPrimary.astro';
   .hero__rows dt { color: rgb(from var(--white) r g b / 0.88); }
   .hero__rows dd { margin: 0; color: rgb(from var(--white) r g b / 0.70); }
 
-  /* Base is the narrow case: the figure is centred, so the disclosure lands on
-     her scrubs where low-alpha white is unreadable. Scrim it and centre it.
-     Above 640 it moves into the hero's bottom-left dead space, clear of her. */
   .hero__disclosure {
     position: relative;
     z-index: 3;
@@ -193,13 +222,7 @@ import CtaPrimary from './CtaPrimary.astro';
     padding-inline: var(--viewport-padding);
     text-align: center;
     font-size: var(--font-size-12);
-    color: rgb(from var(--white) r g b / 0.66);
-    background: linear-gradient(
-      180deg,
-      rgb(from var(--slate-black) r g b / 0) 0,
-      rgb(from var(--slate-black) r g b / 0.72) 38%,
-      rgb(from var(--slate-black) r g b / 0.86) 100%
-    );
+    color: rgb(from var(--white) r g b / 0.62);
   }
   @media (min-width: 640.02px) {
     .hero__disclosure {
@@ -207,8 +230,7 @@ import CtaPrimary from './CtaPrimary.astro';
       padding-block: 0 var(--space-6x);
       max-inline-size: 40ch;
       text-align: start;
-      color: rgb(from var(--white) r g b / 0.45);
-      background: none;
+      color: rgb(from var(--white) r g b / 0.55);
     }
   }
 </style>
