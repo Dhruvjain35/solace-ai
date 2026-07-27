@@ -63,7 +63,10 @@ backend/models/*.gz
 !backend/models/.gitkeep
 
 # Kaggle / Triageist training data (licensed competition data, not code)
-data/
+# Anchored. Unanchored `data/` matches any directory of that name at any depth,
+# which silently excluded landing/src/data/ and broke the marketing site build
+# on a clean clone while passing locally.
+/data/
 
 # Remotion rendered videos and demo outputs
 demo/out/
