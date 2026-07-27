@@ -242,11 +242,11 @@ const posture = [
 
       <div class="scrub">
         <article class="scrub__card neu-panel">
-          <p class="scrub__label scrub__label--phi mono">In the chart · contains PHI</p>
+          <p class="scrub__label scrub__label--phi tnum">In the chart · contains PHI</p>
           <ul class="scrub__fields">
             {chartFields.map((f) => (
               <li class="scrub__row">
-                <span class="scrub__key mono">{f.k}</span>
+                <span class="scrub__key tnum">{f.k}</span>
                 <span class:list={['scrub__value', `scrub__value--${f.tone}`]}>{f.v}</span>
               </li>
             ))}
@@ -264,15 +264,15 @@ const posture = [
                 stroke-linejoin="round"></path>
             </svg>
           </span>
-          <span class="scrub__boundary-label mono">PHI isolation boundary</span>
+          <span class="scrub__boundary-label tnum">PHI isolation boundary</span>
         </div>
 
         <article class="scrub__card neu-panel">
-          <p class="scrub__label scrub__label--coded mono">What the model receives · coded only</p>
+          <p class="scrub__label scrub__label--coded tnum">What the model receives · coded only</p>
           <ul class="scrub__fields">
             {modelFields.map((f) => (
               <li class="scrub__row">
-                <span class="scrub__key mono">{f.k}</span>
+                <span class="scrub__key tnum">{f.k}</span>
                 <span class:list={['scrub__value', `scrub__value--${f.tone}`]}>{f.v}</span>
               </li>
             ))}
@@ -300,10 +300,10 @@ const posture = [
           <li data-color-scheme={s.phi ? 'dark' : undefined}>
             <article class="pipeline__step neu-panel">
               <div class="pipeline__top">
-                <span class="pipeline__num mono" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                <span class="pipeline__num tnum" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
                 <span class="pipeline__who">{s.who}</span>
               </div>
-              <p class="pipeline__phi mono">{s.phi ? 'PHI stays here' : 'No PHI'}</p>
+              <p class="pipeline__phi tnum">{s.phi ? 'PHI stays here' : 'No PHI'}</p>
               <h3 class="heading-xsmall">{s.title}</h3>
               <p class="text-small text-sub">{s.body}</p>
               <pre class="pipeline__artifact" aria-hidden="true"><span class="pipeline__io">{s.io}</span>{s.artifact}</pre>
@@ -329,11 +329,11 @@ const posture = [
 
       <figure class="leakgate__file" data-color-scheme="dark">
         <figcaption class="leakgate__bar">
-          <span class="mono">phi-isolation.test.ts</span>
-          <span class="mono leakgate__tag">CI</span>
+          <span class="tnum">phi-isolation.test.ts</span>
+          <span class="tnum leakgate__tag">CI</span>
         </figcaption>
         <pre class="leakgate__code"><code>{leakGateCode}</code></pre>
-        <p class="leakgate__status mono">
+        <p class="leakgate__status tnum">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M3 8.5l3.4 3.4L13 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
@@ -352,7 +352,7 @@ const posture = [
             <span class="stats__tick" aria-hidden="true"></span>
             <p class="stats__big">{s.big}</p>
             <p class="text-small text-sub stats__label">{s.label}</p>
-            <p class="stats__note mono">{s.note}</p>
+            <p class="stats__note tnum">{s.note}</p>
           </li>
         ))}
       </ul>
@@ -367,7 +367,7 @@ const posture = [
         <div class="rule-dashed" aria-hidden="true"></div>
         <h2 id="controls-heading" class="heading-large">Nine layers, every one of them load-bearing.</h2>
         <ul class="chips">
-          {controlCategories.map((g) => <li class="chips__chip mono">{g}</li>)}
+          {controlCategories.map((g) => <li class="chips__chip tnum">{g}</li>)}
         </ul>
       </div>
 
@@ -375,8 +375,8 @@ const posture = [
         {controls.map((c, i) => (
           <li class="controls__cell">
             <div class="controls__top">
-              <span class="controls__kicker mono">{c.kicker}</span>
-              <span class="controls__num mono" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <span class="controls__kicker tnum">{c.kicker}</span>
+              <span class="controls__num tnum" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
             </div>
             <h3 class="heading-xsmall controls__title">{c.title}</h3>
             <p class="text-small text-sub">{c.body}</p>
@@ -395,7 +395,7 @@ const posture = [
     <div class="container page-section">
       <div class="sec-head">
         <p class="eyebrow eyebrow--onDark">Verified every release</p>
-        <p class="process__chip mono">
+        <p class="process__chip tnum">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M3 8.5l3.4 3.4L13 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
@@ -413,7 +413,7 @@ const posture = [
       <ul class="suites">
         {suites.map((s) => (
           <li class="suites__card neu-panel">
-            <p class="suites__pass mono">
+            <p class="suites__pass tnum">
               <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="M3 8.5l3.4 3.4L13 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>
@@ -684,7 +684,6 @@ const posture = [
     border-radius: var(--radius-2x);
     background-color: var(--color-surface-soft);
     border: 1px solid var(--color-border-soft);
-    font-family: var(--font-family-mono);
     font-size: var(--font-size-10);
     line-height: var(--line-height-open);
     letter-spacing: normal;
@@ -747,7 +746,6 @@ const posture = [
     margin: 0;
     overflow-x: auto;
     padding: var(--space-5x);
-    font-family: var(--font-family-mono);
     font-size: var(--font-size-12);
     line-height: var(--line-height-open);
     letter-spacing: normal;

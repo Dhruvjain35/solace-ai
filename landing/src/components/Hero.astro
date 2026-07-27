@@ -44,44 +44,102 @@ import CtaPrimary from './CtaPrimary.astro';
         <img src="/assets/hero/subject.webp" alt="" width="862" height="1750" fetchpriority="high" decoding="async" />
       </picture>
 
+      {/* Card 1 of 3 — the conversation, mirroring the reference's assistant
+          panel: a spoken exchange, an inline source chip, suggested follow-ups
+          and a live input. The patient answered in Tagalog; what the care team
+          reads is English, which is the point of the feature. */}
       <div class="glass hero__card hero__card--intake">
-        <div class="hero__card-head">
-          <span class="hero__pill">Voice intake</span>
-          <span class="mono hero__card-meta">Tagalog</span>
+        <div class="card__head">
+          <span class="card__glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 10.2a2.6 2.6 0 0 0 2.6-2.6V4.1a2.6 2.6 0 1 0-5.2 0v3.5A2.6 2.6 0 0 0 8 10.2Z" fill="currentColor"/><path d="M4 7.4v.4a4 4 0 0 0 8 0v-.4M8 11.8v2.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </span>
+          <span class="card__title">Intake</span>
+          <span class="card__meta">Waiting room</span>
         </div>
-        <p class="hero__quote">&ldquo;Nahihirapan akong huminga simula kaninang umaga.&rdquo;</p>
-        <div class="hero__wave" aria-hidden="true">
-          <span></span><span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span><span></span>
+
+        <p class="card__said">Take your time. What brought you in today?</p>
+        <p class="card__reply">I&rsquo;ve had a tight chest since this morning and it&rsquo;s hard to breathe.</p>
+        <p class="card__note">
+          Spoken in <span class="card__chip">Tagalog</span> &middot; read by your team in English
+        </p>
+
+        <div class="card__suggests">
+          <span class="card__suggest">Does it spread to your arm?</span>
+          <span class="card__suggest">Any pressure or sweating?</span>
         </div>
-        <p class="mono hero__card-note">Shortness of breath, onset ~6h</p>
+
+        <div class="card__input">
+          <span>Ask a follow-up</span>
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.4 8h9.4M8.6 4.4 12.6 8l-4 3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
       </div>
 
+      {/* Card 2 of 3 — the document, mirroring the reference's workspace panel:
+          a titled draft with emphasised spans and an action row underneath. */}
       <div class="glass hero__card hero__card--brief">
-        <div class="hero__card-head">
-          <span class="hero__pill">Clinician pre-brief</span>
-          <span class="hero__esi">Provisional ESI 2</span>
+        <div class="card__head">
+          <span class="card__glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M4 2.2h5.2L12.4 5.4v8.4H4V2.2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9 2.4v3.2h3.2M6 8.6h4M6 11h2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </span>
+          <span class="card__title">Pre-brief</span>
+          <span class="card__meta">Before the room is ready</span>
         </div>
-        <p class="hero__name">M. Reyes, 47</p>
-        <dl class="hero__rows">
-          <div><dt>Respiratory rate</dt><dd class="mono">24</dd></div>
-          <div><dt>SpO&#8322;</dt><dd class="mono">93%</dd></div>
-          <div><dt>Heart rate</dt><dd class="mono">112</dd></div>
-          <div><dt>EHR match</dt><dd class="mono">Epic &middot; 2 priors</dd></div>
-        </dl>
+
+        <p class="card__doc-title">Marisol Reyes, 47</p>
+        <p class="card__doc">
+          Chest tightness and breathlessness for <mark>about six hours</mark>, worse lying
+          flat. Two prior visits for <u>the same complaint</u> are already in the chart.
+          Suggested priority is <mark>high</mark> &mdash; the reasons are attached, and you
+          can change it.
+        </p>
+
+        <div class="card__toolbar" aria-hidden="true">
+          <span class="card__act">Accept</span>
+          <span class="card__act">Edit</span>
+          <span class="card__act">Reasons</span>
+          <span class="card__act card__act--end">Send to chart</span>
+        </div>
       </div>
 
+      {/* Card 3 of 3 — the list, mirroring the reference's inbox: counted tabs
+          over rows, with the leading row accented. */}
       <div class="glass hero__card hero__card--queue">
-        <div class="hero__card-head">
-          <span class="hero__pill">Live queue</span>
-          <span class="mono hero__card-meta">4 waiting</span>
+        <div class="card__tabs">
+          <span class="card__tab card__tab--on">Critical <b>2</b></span>
+          <span class="card__tab">Urgent <b>5</b></span>
+          <span class="card__tab">Waiting <b>7</b></span>
         </div>
-        <dl class="hero__rows">
-          <div><dt>Reyes, M.</dt><dd class="mono">ESI 2 &middot; 0:41</dd></div>
-          <div><dt>Osei, K.</dt><dd class="mono">ESI 3 &middot; 4:12</dd></div>
-          <div><dt>Duarte, L.</dt><dd class="mono">ESI 4 &middot; 9:03</dd></div>
-        </dl>
+        <ul class="card__list">
+          <li class="card__row card__row--lead">
+            <span class="card__who">Reyes, M.</span>
+            <span class="card__why">Chest tightness, short of breath</span>
+            <span class="card__when tnum">0:41</span>
+          </li>
+          <li class="card__row">
+            <span class="card__who">Osei, K.</span>
+            <span class="card__why">Fever, three days</span>
+            <span class="card__when tnum">4:12</span>
+          </li>
+          <li class="card__row">
+            <span class="card__who">Duarte, L.</span>
+            <span class="card__why">Ankle injury, can bear weight</span>
+            <span class="card__when tnum">9:03</span>
+          </li>
+        </ul>
       </div>
+
+      {/* Floating claims, in the reference's icon-plus-sentence pill. These are
+          the two things about Solace that are genuinely hard to copy, so they
+          get said outright rather than being left to a feature list. */}
+      <span class="glass hero__claim hero__claim--safety">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.8 13.2 4v4.1c0 3.2-2.2 5.3-5.2 6.1-3-.8-5.2-2.9-5.2-6.1V4L8 1.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 10.4V6.1M6.2 7.6 8 5.8l1.8 1.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Can raise urgency. Never lower it.
+      </span>
+
+      <span class="glass hero__claim hero__claim--audit">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.6 8s2.1-4 5.4-4 5.4 4 5.4 4-2.1 4-5.4 4-5.4-4-5.4-4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3"/></svg>
+        Every read and write, saved to the chart.
+      </span>
     </div>
   </div>
 
@@ -202,7 +260,7 @@ import CtaPrimary from './CtaPrimary.astro';
   /* Only the top ~62% of the figure is opaque before the dissolve begins, so the
      stage is sized to her VISIBLE extent and the faded tail is allowed to hang
      below it. Sizing to her full height left a dead band under her. */
-  @media (min-width: 640.02px) { .hero__stage { block-size: clamp(700px, 92vw, 1440px); } }
+  @media (min-width: 640.02px) { .hero__stage { block-size: clamp(700px, 80vw, 1260px); } }
 
   .hero__figure {
     position: absolute;
@@ -220,7 +278,7 @@ import CtaPrimary from './CtaPrimary.astro';
   /* Overhang = figure height (115vw) - stage height (92vw), so her top lands on
      the stage top and the dissolving tail runs off the bottom. */
   @media (min-width: 640.02px) {
-    .hero__figure { translate: -44% 0; inset-block-end: clamp(-340px, -23vw, 0px); }
+    .hero__figure { translate: -44% 0; inset-block-end: clamp(-500px, -35vw, 0px); }
   }
   /* 2.5x the previous scale. The plate is re-exported from the 4000x5261 native
      source at 3500px for 2x, so this is still a downscale at every DPR -- the
@@ -240,7 +298,7 @@ import CtaPrimary from './CtaPrimary.astro';
 
   /* Cards sit ABOVE the figure and deliberately overlap her, which is what
      builds depth. Ranged beside her they read as a flat row. */
-  .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-2_5x); }
+  .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-3x); }
 
   /* Percentages, not fixed offsets: the stage is now viewport-scaled, so fixed
      offsets left the cards stranded at the top away from her face. */
@@ -248,83 +306,191 @@ import CtaPrimary from './CtaPrimary.astro';
   .hero__card--brief  { inset-inline-end: 0;   inset-block-start: 8%; }
   /* Deliberately crosses the figure. Ranged beside her the three cards read as
      a flat row; overlapping one is what puts her in the middle of a stack. */
-  .hero__card--queue  { inset-inline-start: 24%; inset-block-start: 66%; inline-size: 300px; }
+  .hero__card--queue  { inset-inline-start: 12%; inset-block-start: 56%; inline-size: 340px; }
 
   @media (min-width: 640.02px) {
     .hero__card--intake { display: grid; inline-size: 300px; }
   }
   @media (min-width: 1080.02px) {
-    .hero__card--brief { display: grid; inline-size: 330px; }
+    .hero__card--brief { display: grid; inline-size: 348px; }
     .hero__card--intake { inline-size: 310px; }
   }
   @media (min-width: 1280.02px) {
-    .hero__card--queue { display: grid; }
-    .hero__card--intake { inline-size: 320px; }
-    .hero__card--brief  { inline-size: 356px; }
+    .hero__card--queue { display: grid; inline-size: 372px; }
+    .hero__card--intake { inline-size: 330px; }
+    .hero__card--brief  { inline-size: 372px; }
   }
 
-  .hero__card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3x); }
-  .hero__card-meta { color: rgb(from var(--white) r g b / 0.55); }
+  /* ── Card internals ────────────────────────────────────────────────────
+     Sentence case throughout. The reference has no uppercase letter-spaced
+     eyebrows, no monospace and no status pill with a leading dot -- all three
+     are what made the previous cards read as generated rather than as product
+     surface. Headers are an icon, a name and a quiet qualifier.            */
 
-  .hero__pill {
-    font-size: var(--font-size-12);
-    font-weight: var(--font-weight-medium);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgb(from var(--white) r g b / 0.70);
-  }
-
-  .hero__quote { font-size: var(--font-size-text-medium); line-height: 1.45; }
-  .hero__name  { font-size: var(--font-size-20); font-weight: var(--font-weight-medium); }
-  .hero__card-note { color: rgb(from var(--white) r g b / 0.65); }
-
-  /* A level meter, not decoration: ten fixed bars showing a captured waveform.
-     Nothing pulses. */
-  .hero__wave { display: flex; align-items: flex-end; gap: 4px; block-size: 26px; }
-  .hero__wave span {
-    inline-size: 3px;
-    border-radius: 1.5px;
-    background-color: rgb(from var(--solace-20) r g b / 0.6);
-  }
-  .hero__wave span:nth-child(1) { block-size: 30% } .hero__wave span:nth-child(2) { block-size: 62% }
-  .hero__wave span:nth-child(3) { block-size: 96% } .hero__wave span:nth-child(4) { block-size: 74% }
-  .hero__wave span:nth-child(5) { block-size: 44% } .hero__wave span:nth-child(6) { block-size: 82% }
-  .hero__wave span:nth-child(7) { block-size: 58% } .hero__wave span:nth-child(8) { block-size: 34% }
-  .hero__wave span:nth-child(9) { block-size: 68% } .hero__wave span:nth-child(10){ block-size: 26% }
-
-  .hero__esi {
-    display: inline-flex;
+  .card__head {
+    display: flex;
     align-items: center;
-    gap: var(--space-1_5x);
-    padding: var(--space-0_5x) var(--space-2_5x);
-    border-radius: var(--radius-full);
-    background-color: rgb(from var(--solace-20) r g b / 0.16);
-    border: 1px solid rgb(from var(--solace-20) r g b / 0.32);
-    color: var(--solace-20);
+    gap: var(--space-2x);
+    padding-block-end: var(--space-3x);
+    border-block-end: 1px solid rgb(from var(--white) r g b / 0.12);
+  }
+  .card__glyph {
+    display: grid;
+    place-items: center;
+    inline-size: 22px; block-size: 22px;
+    flex: none;
+    border-radius: var(--radius-2x);
+    background-color: rgb(from var(--white) r g b / 0.14);
+    color: rgb(from var(--white) r g b / 0.92);
+  }
+  .card__glyph svg { inline-size: 13px; block-size: 13px; }
+  .card__title { font-size: var(--font-size-14); font-weight: var(--font-weight-medium); }
+  .card__meta {
+    margin-inline-start: auto;
     font-size: var(--font-size-12);
-    font-weight: var(--font-weight-medium);
-    letter-spacing: normal;
+    color: rgb(from var(--white) r g b / 0.58);
     white-space: nowrap;
   }
-  .hero__esi::before {
-    content: "";
-    inline-size: 6px; block-size: 6px;
+
+  /* Conversation */
+  .card__said { font-size: var(--font-size-14); line-height: 1.5; color: rgb(from var(--white) r g b / 0.90); }
+  .card__reply {
+    /* justify-self, not align-self: the card is a grid, so align-self moves it
+       on the block axis and the bubble stayed left. */
+    justify-self: end;
+    max-inline-size: 88%;
+    padding: var(--space-2x) var(--space-3x);
+    border-radius: var(--radius-3x);
+    background-color: rgb(from var(--white) r g b / 0.16);
+    font-size: var(--font-size-14);
+    line-height: 1.45;
+  }
+  .card__note { font-size: var(--font-size-12); color: rgb(from var(--white) r g b / 0.62); }
+  .card__chip {
+    padding: 1px 6px;
+    border-radius: var(--radius-2x);
+    background-color: rgb(from var(--solace-30) r g b / 0.22);
+    color: var(--solace-20);
+  }
+  .card__suggests { display: flex; flex-wrap: wrap; gap: var(--space-2x); }
+  .card__suggest {
+    padding: var(--space-1_5x) var(--space-2_5x);
     border-radius: var(--radius-full);
-    background-color: currentColor;
+    border: 1px solid rgb(from var(--white) r g b / 0.22);
+    font-size: var(--font-size-12);
+    color: rgb(from var(--white) r g b / 0.80);
   }
-
-  .hero__rows { margin: 0; display: grid; font-size: var(--font-size-14); }
-  .hero__rows > div {
+  .card__input {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    gap: var(--space-4x);
-    padding-block: var(--space-2x);
-    border-block-end: 1px solid rgb(from var(--white) r g b / 0.10);
+    gap: var(--space-3x);
+    padding: var(--space-2_5x) var(--space-3x);
+    border-radius: var(--radius-3x);
+    border: 1px solid rgb(from var(--white) r g b / 0.20);
+    font-size: var(--font-size-13, var(--font-size-14));
+    color: rgb(from var(--white) r g b / 0.60);
   }
-  .hero__rows > div:last-child { border-block-end: none; }
-  .hero__rows dt { color: rgb(from var(--white) r g b / 0.88); }
-  .hero__rows dd { margin: 0; color: rgb(from var(--white) r g b / 0.72); }
+  .card__input svg { inline-size: 14px; block-size: 14px; flex: none; }
 
+  /* Document */
+  .card__doc-title { font-size: var(--font-size-18, var(--font-size-20)); font-weight: var(--font-weight-medium); }
+  .card__doc { font-size: var(--font-size-14); line-height: 1.55; color: rgb(from var(--white) r g b / 0.86); }
+  .card__doc mark {
+    background-color: rgb(from var(--solace-30) r g b / 0.26);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+  .card__doc u { text-decoration-color: rgb(from var(--white) r g b / 0.45); text-underline-offset: 2px; }
+  .card__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2x);
+    padding-block-start: var(--space-3x);
+    border-block-start: 1px solid rgb(from var(--white) r g b / 0.12);
+  }
+  .card__act {
+    padding: var(--space-1x) var(--space-2_5x);
+    border-radius: var(--radius-2x);
+    background-color: rgb(from var(--white) r g b / 0.10);
+    font-size: var(--font-size-12);
+    color: rgb(from var(--white) r g b / 0.82);
+    white-space: nowrap;
+  }
+  .card__act--end { margin-inline-start: auto; background-color: rgb(from var(--solace-30) r g b / 0.24); color: var(--solace-10); }
+
+  /* List */
+  .card__tabs {
+    display: flex;
+    gap: var(--space-4x);
+    padding-block-end: var(--space-3x);
+    border-block-end: 1px solid rgb(from var(--white) r g b / 0.12);
+    font-size: var(--font-size-13, var(--font-size-14));
+  }
+  .card__tab { color: rgb(from var(--white) r g b / 0.58); }
+  .card__tab b { font-weight: var(--font-weight-medium); color: rgb(from var(--white) r g b / 0.42); }
+  .card__tab--on { color: var(--white); }
+  .card__tab--on b { color: var(--solace-20); }
+
+  .card__list { margin: 0; padding: 0; list-style: none; display: grid; }
+  .card__row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: var(--space-2_5x);
+    padding-block: var(--space-2x);
+    padding-inline-start: var(--space-2_5x);
+    border-inline-start: 2px solid transparent;
+    font-size: var(--font-size-13, var(--font-size-14));
+  }
+  .card__row--lead { border-inline-start-color: var(--solace-30); }
+  .card__who { font-weight: var(--font-weight-medium); white-space: nowrap; }
+  .card__why {
+    color: rgb(from var(--white) r g b / 0.60);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card__when { color: rgb(from var(--white) r g b / 0.52); }
+
+  /* ── Floating claims ───────────────────────────────────────────────────
+     The reference's icon-plus-sentence pill. Not a status chip: no leading
+     dot, no coloured capsule -- it is a line of prose that happens to float. */
+  .hero__claim {
+    position: absolute;
+    z-index: 3;
+    display: none;
+    align-items: center;
+    gap: var(--space-2x);
+    padding: var(--space-2_5x) var(--space-4x);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-14);
+    white-space: nowrap;
+  }
+  .hero__claim svg { inline-size: 15px; block-size: 15px; flex: none; color: var(--solace-20); }
+  .hero__claim--safety { inset-inline-end: 5%;  inset-block-start: 34%; }
+  .hero__claim--audit  { inset-inline-end: 3%; inset-block-start: 55%; }
+  @media (min-width: 1080.02px) { .hero__claim--safety { display: inline-flex; } }
+  @media (min-width: 1280.02px) { .hero__claim--audit  { display: inline-flex; } }
+
+  /* ── Entrance ──────────────────────────────────────────────────────────
+     One-shot, staggered. `backwards` holds the from-state during the delay so
+     nothing flashes at full opacity before its turn. Deliberately finite --
+     anything that loops here would be the pulsing decoration this design is
+     meant to avoid. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__card, .hero__claim { animation: card-in 620ms var(--ease-ui, cubic-bezier(0.22, 1, 0.36, 1)) backwards; }
+    .hero__card--intake  { animation-delay: 240ms; }
+    .hero__card--brief   { animation-delay: 380ms; }
+    .hero__card--queue   { animation-delay: 520ms; }
+    .hero__claim--safety { animation-delay: 660ms; }
+    .hero__claim--audit  { animation-delay: 780ms; }
+  }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.965); }
+    to   { opacity: 1; transform: none; }
+  }
   .hero__disclosure {
     position: relative;
     z-index: 3;
@@ -337,7 +503,7 @@ import CtaPrimary from './CtaPrimary.astro';
   }
   @media (min-width: 640.02px) {
     .hero__disclosure {
-      margin-block-start: var(--space-24x);
+      margin-block-start: var(--space-12x);
       padding-block: 0 var(--space-6x);
       max-inline-size: 40ch;
       text-align: start;

@@ -202,7 +202,7 @@ const num = (i: number) => String(i + 1).padStart(2, '0');
     lede="The agreement that governs your use of Solace, written for the clinicians and organizations who depend on it."
     compact
   >
-    <p class="mono legal-stamp">Last updated June 2026</p>
+    <p class="tnum legal-stamp">Last updated June 2026</p>
   </PageHeader>
 
   <section data-background-color="primary-default" aria-label="Terms of service document">
@@ -219,7 +219,7 @@ const num = (i: number) => String(i + 1).padStart(2, '0');
             {clauses.map((c, i) => (
               <li>
                 <a href={`#${c.id}`}>
-                  <span class="mono legal__jump-num">{num(i)}</span>
+                  <span class="tnum legal__jump-num">{num(i)}</span>
                   <span>{c.title}</span>
                 </a>
               </li>
@@ -231,7 +231,7 @@ const num = (i: number) => String(i + 1).padStart(2, '0');
           {clauses.map((c, i) => (
             <section class="legal__clause" id={c.id} aria-labelledby={`${c.id}-heading`} data-legal-clause>
               <div class="legal__head">
-                <span class="mono legal__num" aria-hidden="true">{num(i)}</span>
+                <span class="tnum legal__num" aria-hidden="true">{num(i)}</span>
                 <h2 id={`${c.id}-heading`} class="heading-small">{c.title}</h2>
                 <a class="legal__anchor" href={`#${c.id}`} aria-label={`Link to section: ${c.title}`}>
                   <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -277,7 +277,7 @@ const num = (i: number) => String(i + 1).padStart(2, '0');
               {clauses.map((c, i) => (
                 <li>
                   <a class="legal__toc-link" href={`#${c.id}`} data-toc-link={c.id}>
-                    <span class="mono legal__toc-num">{num(i)}</span>
+                    <span class="tnum legal__toc-num">{num(i)}</span>
                     <span>{c.title}</span>
                   </a>
                 </li>

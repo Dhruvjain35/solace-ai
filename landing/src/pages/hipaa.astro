@@ -84,7 +84,7 @@ const chain = [
     lede="How Solace meets the Privacy, Security and Breach Notification Rules, and exactly what your organization gets when you bring us in."
     compact
   >
-    <p class="stamp mono">Last updated June 2026</p>
+    <p class="stamp tnum">Last updated June 2026</p>
   </PageHeader>
 
   <section data-background-color="primary-default">
@@ -94,7 +94,7 @@ const chain = [
         <details class="doc-nav-m">
           <summary>
             <span class="doc-nav-m__current">
-              <span class="mono doc-nav-m__num" data-current-num>01</span>
+              <span class="tnum doc-nav-m__num" data-current-num>01</span>
               <span data-current-title>Our role: Business Associate</span>
             </span>
             <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -106,7 +106,7 @@ const chain = [
               {sections.map((s, i) => (
                 <li>
                   <a href={`#${s.id}`} data-toc-link={s.id}>
-                    <span class="mono doc-nav-m__num">{num(i)}</span>
+                    <span class="tnum doc-nav-m__num">{num(i)}</span>
                     <span>{s.title}</span>
                   </a>
                 </li>
@@ -118,9 +118,9 @@ const chain = [
         <article class="doc__article">
           <section id="our-role" class="doc__section" aria-labelledby="our-role-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">01</span>
+              <span class="doc__num tnum" aria-hidden="true">01</span>
               <h2 id="our-role-h" class="doc__title">Our role: Business Associate</h2>
-              <a class="doc__anchor mono" href="#our-role" aria-label="Link to Our role: Business Associate">#</a>
+              <a class="doc__anchor tnum" href="#our-role" aria-label="Link to Our role: Business Associate">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -149,7 +149,7 @@ const chain = [
                       class:list={['chain__node', `chain__node--${node.tone}`]}
                       data-color-scheme={node.tone === 'dark' ? 'dark' : undefined}
                     >
-                      <span class="chain__tag mono">{node.tag}</span>
+                      <span class="chain__tag tnum">{node.tag}</span>
                       <span class="chain__text">
                         <span class="chain__label">{node.label}</span>
                         <span class="chain__sub">{node.sub}</span>
@@ -170,9 +170,9 @@ const chain = [
 
           <section id="privacy-rule" class="doc__section" aria-labelledby="privacy-rule-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">02</span>
+              <span class="doc__num tnum" aria-hidden="true">02</span>
               <h2 id="privacy-rule-h" class="doc__title">The Privacy Rule</h2>
-              <a class="doc__anchor mono" href="#privacy-rule" aria-label="Link to The Privacy Rule">#</a>
+              <a class="doc__anchor tnum" href="#privacy-rule" aria-label="Link to The Privacy Rule">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -191,9 +191,9 @@ const chain = [
 
           <section id="security-rule" class="doc__section" aria-labelledby="security-rule-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">03</span>
+              <span class="doc__num tnum" aria-hidden="true">03</span>
               <h2 id="security-rule-h" class="doc__title">The Security Rule</h2>
-              <a class="doc__anchor mono" href="#security-rule" aria-label="Link to The Security Rule">#</a>
+              <a class="doc__anchor tnum" href="#security-rule" aria-label="Link to The Security Rule">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -209,7 +209,7 @@ const chain = [
                       <h3 class="matrix__label">
                         {col.label} <span class="text-sub">safeguards</span>
                       </h3>
-                      <span class="matrix__cite mono">{col.cite}</span>
+                      <span class="matrix__cite tnum">{col.cite}</span>
                     </div>
                     <ul class="bullets bullets--tight">
                       {col.rows.map((r) => <li>{r}</li>)}
@@ -222,9 +222,9 @@ const chain = [
 
           <section id="administrative-safeguards" class="doc__section" aria-labelledby="administrative-safeguards-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">04</span>
+              <span class="doc__num tnum" aria-hidden="true">04</span>
               <h2 id="administrative-safeguards-h" class="doc__title">Administrative safeguards</h2>
-              <a class="doc__anchor mono" href="#administrative-safeguards" aria-label="Link to Administrative safeguards">#</a>
+              <a class="doc__anchor tnum" href="#administrative-safeguards" aria-label="Link to Administrative safeguards">#</a>
             </div>
             <div class="doc__body">
               <ul class="bullets">
@@ -252,9 +252,9 @@ const chain = [
 
           <section id="technical-safeguards" class="doc__section" aria-labelledby="technical-safeguards-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">05</span>
+              <span class="doc__num tnum" aria-hidden="true">05</span>
               <h2 id="technical-safeguards-h" class="doc__title">Technical safeguards</h2>
-              <a class="doc__anchor mono" href="#technical-safeguards" aria-label="Link to Technical safeguards">#</a>
+              <a class="doc__anchor tnum" href="#technical-safeguards" aria-label="Link to Technical safeguards">#</a>
             </div>
             <div class="doc__body">
               <ul class="bullets">
@@ -281,9 +281,9 @@ const chain = [
 
           <section id="physical-safeguards" class="doc__section" aria-labelledby="physical-safeguards-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">06</span>
+              <span class="doc__num tnum" aria-hidden="true">06</span>
               <h2 id="physical-safeguards-h" class="doc__title">Physical safeguards</h2>
-              <a class="doc__anchor mono" href="#physical-safeguards" aria-label="Link to Physical safeguards">#</a>
+              <a class="doc__anchor tnum" href="#physical-safeguards" aria-label="Link to Physical safeguards">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -297,9 +297,9 @@ const chain = [
 
           <section id="phi-isolation" class="doc__section" aria-labelledby="phi-isolation-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">07</span>
+              <span class="doc__num tnum" aria-hidden="true">07</span>
               <h2 id="phi-isolation-h" class="doc__title">PHI isolation &amp; minimum necessary</h2>
-              <a class="doc__anchor mono" href="#phi-isolation" aria-label="Link to PHI isolation and minimum necessary">#</a>
+              <a class="doc__anchor tnum" href="#phi-isolation" aria-label="Link to PHI isolation and minimum necessary">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -319,9 +319,9 @@ const chain = [
 
           <section id="breach-notification" class="doc__section" aria-labelledby="breach-notification-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">08</span>
+              <span class="doc__num tnum" aria-hidden="true">08</span>
               <h2 id="breach-notification-h" class="doc__title">Breach notification</h2>
-              <a class="doc__anchor mono" href="#breach-notification" aria-label="Link to Breach notification">#</a>
+              <a class="doc__anchor tnum" href="#breach-notification" aria-label="Link to Breach notification">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -341,9 +341,9 @@ const chain = [
 
           <section id="what-you-get" class="doc__section" aria-labelledby="what-you-get-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">09</span>
+              <span class="doc__num tnum" aria-hidden="true">09</span>
               <h2 id="what-you-get-h" class="doc__title">What a covered entity gets</h2>
-              <a class="doc__anchor mono" href="#what-you-get" aria-label="Link to What a covered entity gets">#</a>
+              <a class="doc__anchor tnum" href="#what-you-get" aria-label="Link to What a covered entity gets">#</a>
             </div>
             <div class="doc__body">
               <ul class="bullets">
@@ -357,9 +357,9 @@ const chain = [
 
           <section id="requests" class="doc__section" aria-labelledby="requests-h">
             <div class="doc__head">
-              <span class="doc__num mono" aria-hidden="true">10</span>
+              <span class="doc__num tnum" aria-hidden="true">10</span>
               <h2 id="requests-h" class="doc__title">Compliance requests</h2>
-              <a class="doc__anchor mono" href="#requests" aria-label="Link to Compliance requests">#</a>
+              <a class="doc__anchor tnum" href="#requests" aria-label="Link to Compliance requests">#</a>
             </div>
             <div class="doc__body">
               <p>
@@ -393,7 +393,7 @@ const chain = [
               {sections.map((s, i) => (
                 <li>
                   <a href={`#${s.id}`} data-toc-link={s.id}>
-                    <span class="mono doc-toc__num">{num(i)}</span>
+                    <span class="tnum doc-toc__num">{num(i)}</span>
                     <span>{s.title}</span>
                   </a>
                 </li>

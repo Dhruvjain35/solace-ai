@@ -130,7 +130,7 @@ const WRITES = [
       <ol class="steps neu-panel">
         {steps.map((step, i) => (
           <li class="steps__item">
-            <span class="mono steps__index">{String(i + 1).padStart(2, '0')}</span>
+            <span class="tnum steps__index">{String(i + 1).padStart(2, '0')}</span>
             <div class="steps__body">
               <h3 class="heading-xsmall">{step.title}</h3>
               <p class="text-small text-sub">{step.body}</p>
@@ -164,7 +164,7 @@ const WRITES = [
             <span class="chart__dots" aria-hidden="true">
               <span></span><span></span><span></span>
             </span>
-            <span class="mono chart__url">atlas.solace.health · launched from {item.name}</span>
+            <span class="tnum chart__url">atlas.solace.health · launched from {item.name}</span>
           </div>
           <img
             src="/assets/shots/ehr-clean.webp"
@@ -184,7 +184,7 @@ const WRITES = [
             <h4 class="heading-xsmall">What Solace asks for</h4>
             <ul class="scopes">
               {SCOPES.map((scope) => (
-                <li><code class="mono scopes__chip">{scope}</code></li>
+                <li><code class="tnum scopes__chip">{scope}</code></li>
               ))}
             </ul>
             <p class="text-small text-sub">
@@ -203,7 +203,7 @@ const WRITES = [
                 <li class="writes__row">
                   <span class="writes__text">
                     <span class="writes__resource">
-                      {w.resource}<span class="mono writes__code">{w.code}</span>
+                      {w.resource}<span class="tnum writes__code">{w.code}</span>
                     </span>
                     <span class="writes__label">{w.label}</span>
                   </span>
@@ -245,8 +245,8 @@ const WRITES = [
         {SECURITY_NOTES.map((note, i) => (
           <li class="security__cell">
             <div class="security__meta">
-              <span class="mono security__index">{String(i + 1).padStart(2, '0')}</span>
-              <span class="mono security__tag">{note.tag}</span>
+              <span class="tnum security__index">{String(i + 1).padStart(2, '0')}</span>
+              <span class="tnum security__tag">{note.tag}</span>
             </div>
             <h3 class="heading-xsmall">{note.title}</h3>
             <p class="text-small text-sub">{note.body}</p>

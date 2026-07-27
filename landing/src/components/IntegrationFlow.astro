@@ -25,7 +25,7 @@ const nodes = [
   <ol class="flow__track">
     {nodes.map((n, i) => (
       <li class="flow__node">
-        <span class="mono flow__index">{String(i + 1).padStart(2, '0')}</span>
+        <span class="tnum flow__index">{String(i + 1).padStart(2, '0')}</span>
         <p class="flow__label">{n.label}</p>
         <p class="flow__sub">{n.sub}</p>
       </li>

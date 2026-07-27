@@ -1472,11 +1472,11 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     text-transform: uppercase;
   }
   .atlas__likely--mod { background-color: rgb(from var(--atlas-up) r g b / 0.15); color: var(--atlas-up); }
-  .atlas__icd { flex: none; color: var(--atlas-muted); font-family: var(--font-family-mono); font-size: 0.72cqw; letter-spacing: normal; }
+  .atlas__icd { flex: none; color: var(--atlas-muted); font-size: 0.72cqw; letter-spacing: normal; }
 
   /* SHAP attribution */
   .atlas__drivers { display: flex; flex-direction: column; gap: 0.45cqw; margin-block-start: 0.5cqw; }
-  .atlas__driver { display: flex; align-items: center; gap: 0.7cqw; font-family: var(--font-family-mono); letter-spacing: normal; }
+  .atlas__driver { display: flex; align-items: center; gap: 0.7cqw; letter-spacing: normal; }
   .atlas__drivername { inline-size: 32%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75cqw; }
   .atlas__track { flex: 1 1 auto; block-size: 0.9cqw; overflow: hidden; border-radius: 0.25cqw; background-color: var(--atlas-chip); }
   .atlas__bar { display: block; block-size: 100%; border-radius: 0.25cqw; }
@@ -1623,7 +1623,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     border-radius: 0.4cqw;
     background-color: var(--atlas-chip);
     color: var(--atlas-ink);
-    font-family: var(--font-family-mono);
     font-size: 0.85cqw;
     font-weight: var(--font-weight-semibold);
     letter-spacing: normal;
@@ -1977,7 +1976,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     font-size: var(--font-size-16);
     line-height: var(--line-height-open);
   }
-  .snap__vitals { font-family: var(--font-family-mono); font-size: var(--font-size-14); letter-spacing: 0.02em; }
+  .snap__vitals { font-size: var(--font-size-14); letter-spacing: 0.02em; }
   .snap__quote { font-style: italic; }
 
   @keyframes panel-in {

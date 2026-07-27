@@ -124,8 +124,11 @@
     color: var(--color-text-sub);
   }
 
-  .mono {
-    font-family: var(--font-family-mono);
+  /* Was .mono, on a ui-monospace stack. The monospace is gone from the site
+     entirely — it read as generated-template UI rather than as product. What
+     was actually wanted here is figure alignment in tables and specs, which
+     tabular-nums gives in the body face. */
+  .tnum {
     font-size: var(--font-size-12);
     letter-spacing: normal;
     font-variant-numeric: tabular-nums;
