@@ -41,7 +41,7 @@ import CtaPrimary from './CtaPrimary.astro';
     <div class="hero__stage">
       <picture class="hero__figure">
         <source srcset="/assets/hero/subject.webp 1x, /assets/hero/subject@2x.webp 2x" type="image/webp" />
-        <img src="/assets/hero/subject.webp" alt="" width="562" height="1150" fetchpriority="high" decoding="async" />
+        <img src="/assets/hero/subject.webp" alt="" width="862" height="1750" fetchpriority="high" decoding="async" />
       </picture>
 
       <div class="glass hero__card hero__card--intake">
@@ -194,31 +194,46 @@ import CtaPrimary from './CtaPrimary.astro';
   .hero__stage {
     position: relative;
     margin-block-start: var(--space-8x);
-    block-size: clamp(340px, 64vw, 430px);
+    block-size: clamp(560px, 104vw, 700px);
   }
-  @media (min-width: 640.02px) { .hero__stage { block-size: clamp(430px, 47vw, 720px); } }
+  /* Sized to contain the figure rather than let it climb into the copy. At 2.5x
+     she is taller than the old stage, and anchored to its bottom she was
+     overrunning the headline and putting the CTA across her eye. */
+  /* Only the top ~62% of the figure is opaque before the dissolve begins, so the
+     stage is sized to her VISIBLE extent and the faded tail is allowed to hang
+     below it. Sizing to her full height left a dead band under her. */
+  @media (min-width: 640.02px) { .hero__stage { block-size: clamp(700px, 92vw, 1440px); } }
 
   .hero__figure {
     position: absolute;
     inset-inline-start: 50%;
-    inset-block-end: calc(-1 * var(--space-32x));
+    inset-block-end: calc(-1 * var(--space-8x));
     translate: -50% 0;
     z-index: 1;
     mix-blend-mode: screen;
     pointer-events: none;
   }
-  @media (min-width: 640.02px) { .hero__figure { translate: -44% 0; } }
-  .hero__figure img { block-size: clamp(400px, 46vw, 700px); inline-size: auto; }
+  /* Overhang = figure height (115vw) - stage height (92vw), so her top lands on
+     the stage top and the dissolving tail runs off the bottom. */
+  @media (min-width: 640.02px) {
+    .hero__figure { translate: -44% 0; inset-block-end: clamp(-340px, -23vw, 0px); }
+  }
+  /* 2.5x the previous scale. The plate is re-exported from the 4000x5261 native
+     source at 3500px for 2x, so this is still a downscale at every DPR -- the
+     old 2300px export would have been upscaled 1.5x here. */
+  .hero__figure img { block-size: clamp(560px, 115vw, 1750px); inline-size: auto; }
 
   /* Cards sit ABOVE the figure and deliberately overlap her, which is what
      builds depth. Ranged beside her they read as a flat row. */
   .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-2_5x); }
 
-  .hero__card--intake { inset-inline-start: 0; inset-block-start: var(--space-6x); }
-  .hero__card--brief  { inset-inline-end: 0;   inset-block-start: 0; }
+  /* Percentages, not fixed offsets: the stage is now viewport-scaled, so fixed
+     offsets left the cards stranded at the top away from her face. */
+  .hero__card--intake { inset-inline-start: 0; inset-block-start: 14%; }
+  .hero__card--brief  { inset-inline-end: 0;   inset-block-start: 8%; }
   /* Deliberately crosses the figure. Ranged beside her the three cards read as
      a flat row; overlapping one is what puts her in the middle of a stack. */
-  .hero__card--queue  { inset-inline-start: 22%; inset-block-start: 58%; inline-size: 300px; }
+  .hero__card--queue  { inset-inline-start: 24%; inset-block-start: 66%; inline-size: 300px; }
 
   @media (min-width: 640.02px) {
     .hero__card--intake { display: grid; inline-size: 300px; }
