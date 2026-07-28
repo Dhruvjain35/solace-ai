@@ -97,7 +97,15 @@ const year = new Date().getFullYear();
   .footer__col { display: flex; flex-direction: column; gap: var(--space-4x); }
   .footer__col-title { font-size: var(--font-size-16); font-weight: var(--font-weight-medium); }
   .footer__col ul { display: flex; flex-direction: column; gap: var(--space-3x); }
+  /* WCAG 2.2 target-size wants 24px on anything that is not an inline link
+     inside a sentence. These are a list of destinations, not prose, so the
+     exception does not apply — and on a phone a 19px tall target is a miss
+     waiting to happen regardless of what the spec says. The box grows; the
+     text does not move. */
   .footer__col a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 24px;
     font-size: var(--font-size-text-small);
     color: var(--color-text-sub);
     transition: color var(--motion-duration-base) var(--ease-ui);

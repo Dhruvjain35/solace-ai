@@ -290,9 +290,16 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
     from { opacity: 1; scale: 1; }
     to   { opacity: 0; scale: 1.055; }
   }
+  /* The melt blur has to scale with the figure or it is not the same effect at
+     two sizes. A fixed 7px across an 816px-wide figure is a soft dissolve; the
+     same 7px across a 276px one is nearly three times as heavy in proportion,
+     which is why she went to an unreadable smudge on a phone. */
+  .hero__figure { --melt: 7px; }
+  @media (max-width: 640px) { .hero__figure { --melt: 3.5px; } }
+
   @keyframes hero-morph-melt {
     0%   { filter: blur(0px) saturate(1); }
-    50%  { filter: blur(7px) saturate(0.9); }
+    50%  { filter: blur(var(--melt)) saturate(0.9); }
     100% { filter: blur(0px) saturate(1); }
   }
 
@@ -349,7 +356,11 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
   .hero__stage {
     position: relative;
     margin-block-start: var(--space-8x);
-    block-size: clamp(560px, 104vw, 700px);
+    /* On a phone this was pinned to its 560px floor at every width, so she
+       rendered 276px wide inside a 390-430px viewport — a small strip in the
+       middle with the hero's bed all round her. Tied to the viewport she fills
+       it the way she does on a desktop. */
+    block-size: clamp(560px, 150vw, 760px);
   }
   /* Sized to contain the figure rather than let it climb into the copy. At 2.5x
      she is taller than the old stage, and anchored to its bottom she was
@@ -431,6 +442,24 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
        percentage max-width its child inherits from the reset. */
     inline-size: max-content;
     max-inline-size: none;
+    /* A safety net for the blend, not a visual effect. The plate is black
+       outside her because `screen` renders black as nothing — but that is a
+       promise the compositor makes, and a device that ignores `mix-blend-mode`
+       for any reason paints the plate instead, which is a hard black rectangle
+       sitting in the middle of the hero. This was reported on a phone and I
+       could not reproduce it in either Chromium or WebKit at any width, so
+       rather than guess at the device, this removes the failure mode: the
+       element's own edges are feathered, so the worst case is a soft dark
+       shape rather than a box with corners. Costs nothing when the blend works,
+       because the asset is already black out there. */
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%),
+      linear-gradient(180deg, transparent 0%, #000 7%, #000 88%, transparent 100%);
+            mask-image:
+      linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%),
+      linear-gradient(180deg, transparent 0%, #000 7%, #000 88%, transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-composite: intersect;
   }
   /* Overhang = figure height (115vw) - stage height (92vw), so her top lands on
      the stage top and the dissolving tail runs off the bottom. */
@@ -442,9 +471,10 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
      old 2300px export would have been upscaled 1.5x here. */
   .hero__figure {
     /* Sized by the frames inside it; the group is what carries the blend. */
-    block-size: clamp(560px, 115vw, 1750px);
+    block-size: clamp(560px, 168vw, 1750px);
     aspect-ratio: 862 / 1750;
   }
+  @media (min-width: 640.02px) { .hero__figure { block-size: clamp(560px, 115vw, 1750px); } }
   .hero__frame img {
     inline-size: 100%;
     block-size: 100%;
@@ -471,8 +501,37 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
      a flat row; overlapping one is what puts her in the middle of a stack. */
   .hero__card--queue  { inset-inline-start: 12%; inset-block-start: 56%; inline-size: 340px; }
 
+  /* Two of the three, on a phone. They were all display:none under 640, so the
+     one thing on this page that shows the product working was invisible on the
+     device most people arrive on — the hero was a photograph and a headline.
+     Two, not three: three at this width is a pile, and the queue card is the
+     widest of them.
+
+     They are scaled rather than reflowed. The card internals are a fixed
+     composition and reflowing them at 300px turns each into a paragraph;
+     `scale` keeps the composition and shrinks it whole, and the layout box is
+     kept at the pre-scale size with a transform-origin that pins each to its own
+     corner so neither can push the page wider. */
+  .hero__card--intake,
+  .hero__card--brief { display: grid; inline-size: 300px; }
+  @media (max-width: 640px) {
+    .hero__card--intake {
+      scale: 0.62;
+      transform-origin: 0 0;
+      inset-block-start: 4%;
+      inset-inline-start: 0;
+    }
+    .hero__card--brief {
+      scale: 0.62;
+      transform-origin: 100% 0;
+      inset-block-start: 46%;
+      inset-inline-end: 0;
+    }
+  }
+
   @media (min-width: 640.02px) {
     .hero__card--intake { display: grid; inline-size: 300px; }
+    .hero__card--brief { display: none; }
   }
   @media (min-width: 1080.02px) {
     .hero__card--brief { display: grid; inline-size: 348px; }

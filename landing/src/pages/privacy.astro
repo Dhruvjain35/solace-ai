@@ -484,7 +484,14 @@ const num = (i: number) => String(i + 1).padStart(2, '0');
   .legal__anchor {
     flex: none;
     align-self: center;
+    /* The glyph stays 16px; the hit area does not. A 16x16 control is under the
+       24px minimum and is genuinely hard to hit on a phone. */
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 24px;
+    block-size: 24px;
+    margin-inline-start: calc(-1 * var(--space-1x));
     opacity: 0;
     color: var(--color-icon-soft);
     transition: opacity var(--motion-duration-base) var(--ease-ui),

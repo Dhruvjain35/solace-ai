@@ -59,6 +59,38 @@
             mask-composite: intersect;
   }
 
+  /* On a phone the leftward dissolve leaves almost nothing. The mask reaches
+     full opacity at 68% of the width, so on a 390px screen the photograph only
+     exists in the last 125px and the section reads as a dark panel with a hint
+     of something at the edge. The dissolve is a two-column idea: copy on the
+     left, image on the right. There is one column here.
+
+     So on narrow screens it becomes a vertical dissolve instead — the image
+     holds the lower half and fades up behind the text — plus a veil dark enough
+     to keep the copy at contrast over it. Same intent, correct axis. */
+  @media (max-width: 900px) {
+    .manifesto__plate {
+      background-position: center 38%;
+      -webkit-mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.30) 0%, rgb(0 0 0 / 0.55) 42%, #000 100%);
+              mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.30) 0%, rgb(0 0 0 / 0.55) 42%, #000 100%);
+      -webkit-mask-composite: source-over;
+              mask-composite: add;
+    }
+    /* The veil is a sibling of the plate rather than part of it, so the plate's
+       own scale animation cannot drag it. */
+    .manifesto::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image: linear-gradient(180deg,
+        rgb(from var(--slate-90) r g b / 0.62) 0%,
+        rgb(from var(--slate-90) r g b / 0.52) 46%,
+        rgb(from var(--slate-90) r g b / 0.72) 100%);
+    }
+  }
+
   .manifesto__inner {
     position: relative;
     display: flex;

@@ -35,10 +35,9 @@ const facts = [
       <a class="cta-secondary" href="/privacy">Read the privacy policy</a>
     </div>
 
-    <ul class="trust__grid neu-panel">
-      {facts.map((f, i) => (
-        <li class="trust__cell">
-          <span class="trust__idx" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+    <ul class="trust__grid">
+      {facts.map((f) => (
+        <li class="trust__cell neu-raised">
           <h3 class="heading-xsmall">{f.title}</h3>
           <p class="text-small text-sub">{f.body}</p>
         </li>
@@ -70,42 +69,63 @@ const facts = [
   }
   .trust__head .cta-secondary { margin-block-start: var(--space-2x); }
 
-  /* overflow:hidden so cells clip to the panel radius without their own. */
+  /* Four surfaces, not four compartments. They were cells inside one panel,
+     divided by hairlines — which reads as a table, and a table is the one thing
+     a security list should not look like. Each fact now sits on its own raised
+     surface with its own catch-light along the top edge and its own shade
+     underneath, so the grid has depth to it rather than ruling.
+
+     The numbers are gone with the dividers. They were there to give the eye an
+     order to read four identical boxes in; four separate cards do that on their
+     own, and a numbered list implies a sequence these facts do not have. */
   .trust__grid {
     display: grid;
     grid-template-columns: 1fr;
-    overflow: hidden;
+    gap: var(--space-4x);
   }
-  @media (min-width: 640.02px)  { .trust__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 640.02px)  { .trust__grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-5x); } }
   @media (min-width: 1080.02px) { .trust__grid { grid-template-columns: repeat(4, 1fr); } }
 
   .trust__cell {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2x);
-    padding: var(--space-8x) var(--space-6x);
-    border-inline-end: 1px solid var(--color-border-sub);
-    border-block-end: 1px solid var(--color-border-sub);
+    gap: var(--space-2_5x);
+    padding: var(--space-7x) var(--space-6x);
+    border-radius: var(--radius-4x);
+    /* .neu-raised is tuned for buttons, and at card size its ladder reads flat.
+       This is the same construction one step up: the catch-light and the hairline
+       stay, the drop gets a longer pure-Y ladder so the card sits ON the field
+       rather than against it. Kept short of .neu-panel, which is the page's
+       signature surface and should stay the biggest thing in the room. */
+    box-shadow:
+      inset 0 1px 0 0 rgb(from var(--white) r g b / 95%),
+      inset 0 0 0 1px rgb(from var(--neutral-40) r g b / 10%),
+      0 1px 2px -1px  rgb(from var(--neutral-40) r g b / 12%),
+      0 4px 8px -2px  rgb(from var(--neutral-40) r g b / 11%),
+      0 10px 20px -6px rgb(from var(--neutral-40) r g b / 10%),
+      0 20px 36px -12px rgb(from var(--neutral-40) r g b / 8%);
+    /* The lift on hover is already in .neu-raised, which was built for controls.
+       These are not controls, so it is dialled back to a rise rather than a
+       press: the surface lifts, nothing invites a click. */
+    transition: translate var(--motion-duration-slow) var(--ease-ui),
+                box-shadow var(--motion-duration-slow) var(--ease-ui);
   }
-  .trust__cell:last-child { border-inline-end: none; }
-  @media (min-width: 640.02px) {
-    .trust__cell:nth-child(2n) { border-inline-end: none; }
-    .trust__cell:nth-last-child(-n + 2) { border-block-end: none; }
+  @media (hover: hover) {
+    .trust__cell:hover {
+      translate: 0 -3px;
+      box-shadow:
+        inset 0 1px 0 0 rgb(from var(--white) r g b / 95%),
+        inset 0 0 0 1px rgb(from var(--neutral-40) r g b / 12%),
+        0 2px 4px -1px  rgb(from var(--neutral-40) r g b / 13%),
+        0 6px 12px -3px rgb(from var(--neutral-40) r g b / 12%),
+        0 14px 28px -8px rgb(from var(--neutral-40) r g b / 11%),
+        0 28px 48px -14px rgb(from var(--neutral-40) r g b / 9%);
+    }
   }
-  @media (min-width: 1080.02px) {
-    .trust__cell { border-block-end: none; }
-    .trust__cell:nth-child(2n) { border-inline-end: 1px solid var(--color-border-sub); }
-    .trust__cell:last-child { border-inline-end: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .trust__cell { transition: none; }
+    .trust__cell:hover { translate: none; }
   }
 
-  /* An index per cell, in the brand colour. Four identical bordered boxes gave
-     the eye nothing to enter by; a number gives it an order to read them in. */
-  .trust__idx {
-    display: block;
-    margin-block-end: var(--space-3x);
-    font-size: var(--font-size-text-small);
-    font-weight: var(--font-weight-semibold);
-    font-variant-numeric: tabular-nums;
-    color: var(--color-primary-base);
-  }
+  .trust__cell h3 { color: var(--color-text-base); }
 </style>
