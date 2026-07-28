@@ -65,6 +65,58 @@ is the obvious next candidate.
   replaced by the CSS gradient field.
 
 
+## The scroll morph — replaced again 2026-07-28 (second plate)
+
+**nurse.webp / nurse@2x.webp** — a second supplied frame of the same clinician,
+better hair and a warm studio plate instead of a grey one. Built by
+`scratchpad/nurse2/sil3.py` + `compose5.py`.
+
+**Every discriminator flipped, and that is the whole lesson here.** The previous
+plate was neutral grey against warm hair, so saturation keyed the rim. This one
+is warm beige against warm hair, so saturation is useless and brightness does the
+work: measured across both boundaries, hair and scrubs run 0-36 and the plate
+runs 100-175. Nothing about the last build's thresholds transferred; only its
+structure did.
+
+Four things this plate needed that the last one did not:
+
+1. **A darkness test in the seed.** The navy scrubs are dark enough that the
+   diffusion inpaint reproduced them as plate and the difference against them
+   came out at zero — the entire lower body fell out of the silhouette. The
+   plate never goes below 100 (measured p1 = 102), so anything under 75 is her,
+   full stop.
+2. **Opposite tests on the two sides.** She sits inside the frame here, so both
+   edges are real. On the right, walk until the pixel is ACTUALLY HAIR — dark
+   AND saturated — because stopping at the first non-bright pixel halts on the
+   first strand and leaves every patch of plate behind it. On the left that same
+   test eats the cap, which is the brightest object in the frame; there the plate
+   is warm (0.20-0.45) and the cap neutral (under 0.15), so saturation stops the
+   walk instead.
+3. **Erode the boundary curve before smoothing it.** A median plus a blur
+   preserves any nub wider than its kernel. Taking the local extreme inward
+   removes protrusions outright.
+4. **Blob removal for what is trapped behind strands.** The rim is interleaved
+   with the hair, so it neither protrudes past the boundary nor lies outboard of
+   it — no walk and no erosion can reach it. Threshold hard, clean up
+   morphologically, feather the SHAPE and suppress with that. Feathering per
+   pixel instead removes part of each blob and leaves the rest, which reads as
+   mottling and is worse than the blob.
+
+**Registration is now a full similarity**, solved from the same two landmarks
+(pupil 655,340 and ear canal 425,445 against 485,340 and 255,460): scale 1.0261,
+rotation -3.02 deg. Without the rotation term the ear landed 12px out, because
+this head is tilted about three degrees differently from the frame it dissolves
+with. Both landmarks now land exactly.
+
+Falloffs unchanged in kind: left 210px (the canvas still cuts her hair), right
+130, top 330 so the cap dissolves rather than starting at a line, bottom 200.
+
+**Consent, unchanged and still unresolved.** This frame depicts an identifiable
+person presented as a healthcare professional, and no model release accompanies
+it. Flagged, not cleared.
+
+---
+
 ## The scroll morph — replaced 2026-07-28
 
 **nurse.webp / nurse@2x.webp** — a masked clinician in scrubs and a surgical
