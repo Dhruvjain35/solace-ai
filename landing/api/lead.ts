@@ -72,22 +72,36 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   const to = process.env.LEAD_TO_EMAIL || 'contacthelp.solace@gmail.com';
   let delivered = false;
 
+  /* Both branches check the response. They did not, and that was the one bug
+     that mattered here: a configured-but-failing channel set delivered = true
+     off a rejected request, so the page showed "You are on the list", never
+     opened its mail draft, and the signup was gone. Resend returns 403 for an
+     unverified sending domain, which is exactly the state a new account is in —
+     so the failure would have arrived on the first real signup, not eventually.
+
+     Anything that does not actually deliver has to fall through to a non-2xx,
+     because a non-2xx is what makes the client compose the mail draft instead. */
+  const failures: string[] = [];
+
   try {
     if (webhook) {
-      await fetch(webhook, {
+      const r = await fetch(webhook, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ text: summary, content: summary }),
       });
-      delivered = true;
+      if (r.ok) delivered = true;
+      else failures.push(`webhook ${r.status}`);
     }
     if (resendKey) {
-      await fetch('https://api.resend.com/emails', {
+      const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { authorization: `Bearer ${resendKey}`, 'content-type': 'application/json' },
         body: JSON.stringify({
-          // Resend will only send from a domain verified on the account.
-          // mysolaceclinic.com is ours; solace.health was never.
+          // Resend sends only from a domain verified on the account, or from
+          // onboarding@resend.dev — and that one delivers only to the account
+          // owner's own address. Configure LEAD_FROM_EMAIL to match whichever
+          // you have; the default assumes mysolaceclinic.com is verified.
           from: process.env.LEAD_FROM_EMAIL || 'Solace <waitlist@mysolaceclinic.com>',
           to: [to],
           reply_to: email,
@@ -95,15 +109,18 @@ export default async function handler(req: Req, res: Res): Promise<void> {
           text: summary,
         }),
       });
-      delivered = true;
+      if (r.ok) delivered = true;
+      else failures.push(`resend ${r.status} ${await r.text().catch(() => '')}`.trim());
     }
-  } catch {
-    res.status(502).json({ error: 'Could not deliver the request right now.' });
-    return;
+  } catch (err) {
+    failures.push(`threw ${String(err)}`);
   }
 
   if (!delivered) {
-    res.status(501).json({ error: 'Lead delivery is not configured.' });
+    // Logged in full so a misconfiguration is one look at the Vercel logs, and
+    // never returned to the browser: the response reaches the person signing up.
+    console.error('[lead] undelivered', { source, channels: { webhook: !!webhook, resend: !!resendKey }, failures });
+    res.status(failures.length ? 502 : 501).json({ error: 'Lead delivery is not configured.' });
     return;
   }
   res.status(200).json({ ok: true });
