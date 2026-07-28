@@ -124,9 +124,9 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   title="For clinicians: meet the story before the patient"
   description="One line of story, the causes that must not be missed and the next action worth taking — ready before you open the door. And when you disagree, you win."
 >
+  <div class="field">
   <!-- ══ Hero ═════════════════════════════════════════════════════════════ -->
   <section class="hero" data-color-scheme="light" aria-labelledby="hero-heading">
-    <div class="hero__mesh" aria-hidden="true"></div>
     <div class="container hero__inner">
       <h1 id="hero-heading" class="hero__title">Meet the story before the patient.</h1>
       <p class="hero__lede">
@@ -159,8 +159,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
       data-color-scheme="light"
       aria-labelledby={`act-${act.index}`}
     >
-      <div class="act__mesh" aria-hidden="true"></div>
-      <div class="container act__inner">
+        <div class="container act__inner">
         <div class="act__copy reveal">
           <p class="act__chapter">
             <span class="act__index">{act.index}</span>
@@ -188,7 +187,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
 
   <!-- ══ What it will not do ══════════════════════════════════════════════ -->
   <section id="limits" class="limits" data-color-scheme="light" aria-labelledby="limits-heading">
-    <div class="limits__mesh" aria-hidden="true"></div>
     <div class="container page-section limits__inner">
       <div class="limits__head reveal">
         <p class="act__chapter"><span class="act__rule" aria-hidden="true"></span><span>The short version</span></p>
@@ -231,7 +229,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
 
   <!-- ══ Close ════════════════════════════════════════════════════════════ -->
   <section class="close" data-color-scheme="light" aria-labelledby="close-heading">
-    <div class="close__mesh" aria-hidden="true"></div>
     <div class="container page-section close__inner">
       <h2 id="close-heading" class="close__heading reveal">Bring it to your team.</h2>
       <p class="close__sub reveal">
@@ -250,6 +247,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
       </div>
     </div>
   </section>
+  </div>
 </Page>
 
 <style>
@@ -267,26 +265,33 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
      the bottom — the same wash the product screens sit on. It is a single
      stack of radials on white rather than a per-section mesh, so the page
      reads as one surface you scroll down instead of six panels stacked up. */
+  /* One element carries the wash for the entire page. The previous version gave
+     every section its own copy and offset it, which sounded continuous and was
+     not: each section also painted white, so every boundary between them was a
+     hard horizontal seam. A single field spanning the document has no seams to
+     have, and the sections are simply transparent. */
+  .field {
+    position: relative;
+    background-color: var(--white);
+    isolation: isolate;
+  }
+  .field::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 62% 26% at 14% 12%, rgb(196 190 240 / 0.34), transparent 72%),
+      radial-gradient(ellipse 54% 22% at 92% 30%, rgb(178 206 236 / 0.30), transparent 70%),
+      radial-gradient(ellipse 70% 24% at 60% 62%, rgb(from var(--solace-30) r g b / 0.34), transparent 72%),
+      radial-gradient(ellipse 78% 26% at 30% 96%, rgb(from var(--solace-30) r g b / 0.40), transparent 74%);
+  }
   .hero, .act, .limits, .close, .say {
     position: relative;
     overflow: hidden;
-    background-color: var(--white);
+    background-color: transparent;
   }
-  .hero__mesh, .act__mesh, .limits__mesh, .close__mesh {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse 74% 62% at 16% 40%, rgb(196 190 240 / 0.30), transparent 70%),
-      radial-gradient(ellipse 62% 54% at 88% 22%, rgb(178 206 236 / 0.26), transparent 68%),
-      radial-gradient(ellipse 88% 62% at 58% 108%, rgb(from var(--solace-30) r g b / 0.44), transparent 72%);
-  }
-  /* Each section samples a different part of the same field, so the wash keeps
-     moving down the page instead of restarting at every section boundary. */
-  .hero__mesh   { background-position: 0 0; }
-  .act__mesh    { background-position: 0 -18%; }
-  .limits__mesh { background-position: 0 -34%; }
-  .close__mesh  { background-position: 0 -52%; }
 
   .arrow {
     display: inline-flex;
@@ -358,8 +363,8 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   @media (min-width: 640.02px) { .act__inner { padding-block: var(--space-20x); } }
   @media (min-width: 1080.02px) {
     .act__inner {
-      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
-      gap: var(--space-16x);
+      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr);
+      gap: var(--space-12x);
       padding-block: var(--space-24x);
     }
     /* Sides alternate so the eye crosses the page. DOM order never changes, so
@@ -388,23 +393,23 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     );
   }
   .act__heading {
-    font-size: var(--font-size-heading-medium);
+    font-size: var(--font-size-heading-large);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-heading);
     letter-spacing: var(--letter-spacing-heading);
     max-inline-size: 20ch;
   }
   .act__sub {
-    font-size: var(--font-size-text-medium);
+    font-size: var(--font-size-text-large);
     line-height: var(--line-height-open);
-    max-inline-size: 48ch;
+    max-inline-size: 44ch;
     color: var(--color-text-sub);
   }
   .act__points { display: grid; gap: var(--space-3x); margin-block-start: var(--space-3x); }
   .act__points li {
     position: relative;
     padding-inline-start: var(--space-7x);
-    font-size: var(--font-size-text-small);
+    font-size: var(--font-size-text-medium);
     line-height: var(--line-height-open);
     color: var(--color-text-sub);
   }
@@ -435,7 +440,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     position: absolute;
     inset-block-start: 0;
     inset-inline-end: 0;
-    font-size: clamp(48px, 6vw, 88px);
+    font-size: clamp(56px, 7vw, 104px);
     font-weight: var(--font-weight-medium);
     line-height: 1;
     letter-spacing: var(--letter-spacing-display);
@@ -449,11 +454,18 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     position: relative;
     container-type: inline-size;
     inline-size: 100%;
-    max-inline-size: 560px;
+    max-inline-size: 640px;
   }
 
   /* ══ LIMITS ═════════════════════════════════════════════════════════════ */
-  .limits__inner { position: relative; z-index: 1; display: flex; flex-direction: column; gap: var(--space-14x); color: var(--white); }
+  .limits__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-14x);
+    color: var(--color-text-base);
+  }
   .limits__head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
   .limits__title {
     font-size: var(--font-size-heading-large);
@@ -480,13 +492,13 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     border-radius: var(--radius-5x);
   }
   .limits__card-title {
-    font-size: var(--font-size-text-medium);
+    font-size: var(--font-size-text-large);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-heading);
     letter-spacing: var(--letter-spacing-heading);
   }
   .limits__card-body {
-    font-size: var(--font-size-text-small);
+    font-size: var(--font-size-text-medium);
     line-height: var(--line-height-open);
     color: var(--color-text-sub);
   }
