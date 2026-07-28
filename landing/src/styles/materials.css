@@ -254,7 +254,7 @@
       radial-gradient(circle at calc(50% - 43% * cos(var(--chip-angle) + 180deg)) calc(50% + 14% * sin(var(--chip-angle) + 180deg)), rgb( 45 212 191 / 50%) 0, transparent 50%) padding-box,
       radial-gradient(circle at calc(50% + 41% * cos(var(--chip-angle) + 270deg)) calc(50% - 25% * sin(var(--chip-angle) + 270deg)), rgb(104 255 226 / 45%) 0, transparent 50%) padding-box,
       linear-gradient(180deg, #127d61 0, #0b6b53 100%) border-box;
-    animation: chip-orbit 10s linear infinite;
+    animation: chip-orbit 6.5s linear infinite;
     animation-play-state: paused;
   }
   .cta-primary:hover .cta-primary__chip { animation-play-state: running; }

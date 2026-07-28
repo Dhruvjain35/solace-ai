@@ -93,7 +93,7 @@ const CAPTIONS = [
 
 <style>
   .ch {
-    --clip-dur: 9.5s;
+    --clip-dur: 5.8s;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -137,7 +137,13 @@ const CAPTIONS = [
     white-space: nowrap;
   }
   .ch__st svg { inline-size: 3cqw; block-size: 3cqw; }
-  .ch__st--pre  { background-color: var(--neutral-10); color: var(--neutral-60); opacity: 0; }
+  /* --neutral-60 is 4.87:1 on white, which is where the token is documented
+     and where the rest of the graphic uses it. On this chip's own tinted fill
+     it drops to 4.4:1 and misses AA. The pill is only on screen during the
+     clip's opening beat, which is exactly why it went unseen: the settled
+     frame of this graphic is the written state, so a sweep of the page at rest
+     never renders it. */
+  .ch__st--pre  { background-color: var(--neutral-10); color: var(--neutral-80); opacity: 0; }
   .ch__st--post {
     background-color: var(--white);
     border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);

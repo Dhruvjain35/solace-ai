@@ -149,10 +149,18 @@ const INTAKE_CAPTIONS = [
 ];
 
 /* ── Geometry ──────────────────────────────────────────────────────────────
-   S is how much scrolling one act is worth. Below about 0.7 the cards trip
-   over each other; above about 1.1 the pin outstays its welcome. */
+   S is how much scrolling one act is worth, and it is set by one rule: a card
+   travels 88vh to get from below the fold to its place on the table, and it
+   should cover that in about 88vh of scrolling. Anything less and the card is
+   moving faster than your hand, which does not read as an arrival — it reads
+   as something jumping out at you.
+
+   At S = 1.25 the arrival takes 0.72 of an act's window, which is 0.9 viewport
+   heights of scroll for 88vh of travel. The remaining 0.28 is the rest the act
+   gets before the next one comes up behind it. */
 const N = acts.length;
-const S = 0.9;
+const S = 1.25;
+const RISE = 0.72;
 const H = N * S + 1;
 const D = H + 1;
 const p0 = 1 / D;
@@ -177,19 +185,21 @@ const cards = acts.map((act, i) => {
     vars: [
       `--z:${i + 1}`,
       `--ratio:${act.ratio}`,
-      `--rise-a:${pct(i === 0 ? 0 : A - 0.62 * w)}`,
+      /* One act's push back is the next act's arrival, to the percentage
+         point, so the two are one movement rather than two that overlap. */
+      `--rise-a:${pct(i === 0 ? 0 : A - (RISE + 0.04) * w)}`,
       `--rise-b:${pct(A - 0.04 * w)}`,
-      `--head-a:${pct(A - 0.5 * w)}`,
+      `--head-a:${pct(A - 0.46 * w)}`,
       `--head-b:${pct(A + 0.02 * w)}`,
-      `--sub-a:${pct(A - 0.38 * w)}`,
+      `--sub-a:${pct(A - 0.34 * w)}`,
       `--sub-b:${pct(A + 0.14 * w)}`,
-      `--t1-a:${pct(A + 0.38 * w)}`,
+      `--t1-a:${pct(A + (0.96 - RISE) * w)}`,
       `--t1-b:${pct(A + 0.96 * w)}`,
-      `--t2-a:${pct(A + 1.38 * w)}`,
+      `--t2-a:${pct(A + (1.96 - RISE) * w)}`,
       `--t2-b:${pct(A + 1.96 * w)}`,
-      `--dim-a:${pct(A + 0.38 * w)}`,
+      `--dim-a:${pct(A + (0.96 - RISE) * w)}`,
       `--dim-b:${pct(A + 1.96 * w)}`,
-      `--off-a:${pct(A + 2.38 * w)}`,
+      `--off-a:${pct(A + (2.96 - RISE) * w)}`,
       `--off-b:${pct(A + 2.96 * w)}`,
     ].join(';'),
   };
@@ -198,6 +208,10 @@ const cards = acts.map((act, i) => {
 const deckVars = [
   `--deck-h:${H}`,
   `--act-scroll:${S * 100}vh`,
+  /* The films now start a third of the way through an act's arrival rather
+     than once it has landed, so a card is never sitting there frozen on the
+     last frame of its own clip while you watch it come in. */
+  `--cue-lead:${((0.5 - 0.35 * S) * 100).toFixed(4)}vh`,
   `--pin-a:${pct(p0)}`,
   `--pin-b:${pct(p0 + N * w)}`,
 ].join(';');
@@ -390,7 +404,7 @@ const deckVars = [
   }
   .deck__device {
     /* The clip root for this act, so it owns the tempo its caption reads. */
-    --clip-dur: 10s;
+    --clip-dur: 6.2s;
     position: relative;
     inline-size: 100%;
     max-inline-size: 400px;
@@ -430,7 +444,7 @@ const deckVars = [
         position: absolute;
         inset-inline: 0;
         block-size: var(--act-scroll);
-        inset-block-start: calc(var(--i) * var(--act-scroll) + 50vh);
+        inset-block-start: calc(var(--i) * var(--act-scroll) + var(--cue-lead));
       }
 
       .deck__stage {
@@ -442,11 +456,6 @@ const deckVars = [
            that container rather than to the viewport, which means it never
            sticks at all. `clip` does the clipping without the scroll box. */
         overflow: clip;
-        /* Cards arrive tilted and settle flat. Perspective has to live on the
-           parent or every card gets its own vanishing point and the stack
-           stops looking like one object seen from one place. */
-        perspective: 2200px;
-        perspective-origin: 50% 42%;
       }
 
       .deck__cards {
@@ -463,7 +472,21 @@ const deckVars = [
         margin-inline: auto;
         display: block;
         padding-block: 0;
-        transform-style: preserve-3d;
+        /* Cards arrive tilted and settle flat, so they need a vanishing point,
+           and it has to be shared or the stack stops looking like one object
+           seen from one place.
+
+           It lives here, on the cards' direct parent, and this element stays
+           `transform-style: flat` — which is the whole point. Under
+           `preserve-3d` the browser stops painting in z-index order and sorts
+           by computed depth instead, and a card tilting back about its top edge
+           can measure as nearer than the flat card in front of it. The arriving
+           card was therefore drawn BEHIND the one it was replacing, stayed
+           hidden for most of its travel, and flipped to the front in one frame
+           near the end. That flip was the jump: not the speed of the movement
+           but the fact that most of it was invisible. */
+        perspective: 2200px;
+        perspective-origin: 50% 42%;
       }
 
       .deck__card {
@@ -482,6 +505,9 @@ const deckVars = [
         position: absolute;
         inset: 0;
         z-index: var(--z);
+        /* Its own vanishing point for the two tiers inside it, since the card
+           is flattened into its parent's plane and cannot inherit one. */
+        perspective: 2000px;
         transform-origin: 50% 118%;
         animation: deck-rise linear both;
         animation-timeline: --deck;
@@ -596,9 +622,16 @@ const deckVars = [
     }
   }
 
+  /* 88vh is exactly the distance from the card's place on the table to the
+     bottom edge of the stage, so it starts fully out of sight and no further.
+     The first 80% runs at very close to the speed you are scrolling and the
+     last 20% covers only 12vh, which is the settle. A straight two stop ramp
+     arrives at full speed and stops dead, which is the part that reads as a
+     card being thrown at you rather than dealt. */
   @keyframes deck-rise {
-    from { translate: 0 84vh; rotate: x 10deg; }
-    to   { translate: 0 0;    rotate: x 0deg; }
+    0%   { translate: 0 88vh; rotate: x 7deg; }
+    80%  { translate: 0 12vh; rotate: x 1.5deg; }
+    100% { translate: 0 0;    rotate: x 0deg; }
   }
   @keyframes deck-back-1 {
     from { translate: 0 0;      scale: 1;    rotate: x 0deg; }
