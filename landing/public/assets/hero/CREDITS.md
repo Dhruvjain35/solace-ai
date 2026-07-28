@@ -154,6 +154,21 @@ The feather is now keyed to position on that side, not brightness: past her jaw
 everything is hair or plate pretending to be hair, and neither wants a crisp
 edge. Jaw, cap and mask sit left of the ramp and keep theirs.
 
+**The cap, third and last.** Its top edge was the remaining cutout: bright, so
+the darkness rule gave it 4px, and 4px on a translucent cap against a lit plate
+is the whole cutout look in one object. A vertical border fade cannot fix it —
+dimming enough to hide the contour also dims the forehead and the eye, because a
+border fade cannot tell an edge from an interior. The feather can, since it only
+ever acts within F pixels of the boundary. So the feather is now keyed to
+vertical position as well: ~85px over the cap, tapering out by source y=620,
+with the face ~190px clear of any edge and therefore untouched. A 300px top
+falloff on the canvas sits under it so the head emerges out of the dark rather
+than starting at a line, which is what the frame it dissolves with does.
+
+Measured: brightness in the band just inside the silhouette fell from 208 to 145
+at p99. `np.maximum.reduce` cannot broadcast (H,W), (1,W) and (H,1) together —
+pairwise `np.maximum` can.
+
 **Consent, unchanged and still unresolved.** This frame depicts an identifiable
 person presented as a healthcare professional, and no model release accompanies
 it. Flagged, not cleared.
