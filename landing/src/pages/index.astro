@@ -34,5 +34,31 @@ import Footer from '../components/Footer.astro';
   .page-homepage {
     timeline-scope: --homepage-hero-section;
     --content-max-width: 1440px;
+    position: relative;
   }
+
+  /* The hero's colour does not stop at the hero. A tall, very low-contrast wash
+     of the same teal and blue runs down behind the first few sections and dies
+     out, so the page reads as one surface that started dark rather than as a
+     dark block with a light document stapled underneath it.
+
+     It sits at z-index 0 behind the sections, which paint their own opaque
+     backgrounds — so it only shows where a section is transparent, and it is
+     the transition itself that it colours. */
+  .page-homepage::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    block-size: 220vh;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(180deg,
+        rgb(from var(--solace-60) r g b / 0.16) 0%,
+        rgb(from var(--slate-40) r g b / 0.10) 34%,
+        rgb(from var(--solace-30) r g b / 0.06) 62%,
+        transparent 100%);
+  }
+  .page-homepage > * { position: relative; z-index: 1; }
 </style>

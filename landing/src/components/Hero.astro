@@ -157,6 +157,7 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
     </div>
   </div>
 
+  <div class="hero__hem" aria-hidden="true"></div>
 </section>
 
 <style>
@@ -265,8 +266,35 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
   }
   .hero__frame--morph { opacity: 0; }
 
-  @keyframes hero-morph { to { opacity: 1; } }
-  @keyframes hero-morph-out { to { opacity: 0; } }
+  /* Not a straight dissolve. Three things move together, and the middle one is
+     what stops it reading as two photographs fading past each other:
+
+       OPACITY    the two frames swap, summing to one throughout.
+       SCALE      the outgoing frame grows a little as it leaves and the
+                  incoming one settles down onto its final size, so the form
+                  appears to resolve rather than to be replaced.
+       BLUR       the group softens to a peak at the halfway point and comes
+                  back. This is the whole trick. It is the moment where the two
+                  faces least agree, and blurring exactly there means the eye
+                  never gets a sharp frame of the disagreement to catch — the
+                  features melt through each other instead of ghosting.
+
+     The blur sits on the WRAPPER, so it is applied once to the finished
+     composite rather than twice to two frames that would then be screened
+     together. */
+  @keyframes hero-morph {
+    from { opacity: 0; scale: 1.035; }
+    to   { opacity: 1; scale: 1; }
+  }
+  @keyframes hero-morph-out {
+    from { opacity: 1; scale: 1; }
+    to   { opacity: 0; scale: 1.055; }
+  }
+  @keyframes hero-morph-melt {
+    0%   { filter: blur(0px) saturate(1); }
+    50%  { filter: blur(7px) saturate(0.9); }
+    100% { filter: blur(0px) saturate(1); }
+  }
 
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: scroll()) {
@@ -284,6 +312,11 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
          one throughout and the group's total light never rises mid-transition. */
       .hero__figure:has(.hero__frame--morph) .hero__frame:not(.hero__frame--morph) {
         animation: hero-morph-out linear both;
+        animation-timeline: scroll(root block);
+        animation-range: 0 620px;
+      }
+      .hero__figure:has(.hero__frame--morph) {
+        animation: hero-morph-melt linear both;
         animation-timeline: scroll(root block);
         animation-range: 0 620px;
       }
@@ -326,6 +359,33 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
      below it. Sizing to her full height left a dead band under her. */
   @media (min-width: 640.02px) { .hero__stage { block-size: clamp(700px, 80vw, 1260px); } }
 
+  /* The hem. Without it the hero stopped dead against the light section below
+     and the seam was a straight line across the full width of the page. It
+     fades to the exact colour of that section rather than to a guess, so there
+     is no point at which the two are different colours meeting.
+
+     It sits above the background lights but below the figure and the cards, so
+     the bottom of the subject melts into the page along with everything else
+     rather than standing on top of the fade. */
+  .hero__hem {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: clamp(180px, 24vw, 420px);
+    /* --neutral-10 by name, NOT --color-bg-secondary. The hero declares
+       data-color-scheme="dark", so the semantic token resolves to slate-black
+       inside it and the hem faded the dark hero into a slightly different
+       dark — invisible, and the hard seam stayed. The section below is in the
+       light scheme, so the hem has to name the light value directly. */
+    background-image: linear-gradient(180deg,
+      rgb(from var(--neutral-10) r g b / 0) 0%,
+      rgb(from var(--neutral-10) r g b / 0.28) 42%,
+      rgb(from var(--neutral-10) r g b / 0.78) 76%,
+      var(--neutral-10) 100%);
+    pointer-events: none;
+    z-index: 3;
+  }
+
   .hero__figure {
     position: absolute;
     inset-inline-start: 50%;
@@ -367,6 +427,7 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
 
   /* Cards sit ABOVE the figure and deliberately overlap her, which is what
      builds depth. Ranged beside her they read as a flat row. */
+  .hero__card { z-index: 3; }
   .hero__card { position: absolute; z-index: 2; display: none; gap: var(--space-3x); }
 
   /* Percentages, not fixed offsets: the stage is now viewport-scaled, so fixed

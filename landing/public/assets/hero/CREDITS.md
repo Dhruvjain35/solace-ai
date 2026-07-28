@@ -92,14 +92,18 @@ Built by `scratchpad/build3.mjs`, in this order and for these reasons:
    against R puts both frames on the same colour axis and leaves highlights
    alone. Measured lit means: original R228.8 G148.1 B75.2, nurse R160.2 G124.8
    B95.9.
-5. **Smoothstep fades on the bottom AND the leading edge.** The source ends at
+5. **Smoothstep falloff on all four sides.** The source ends at
    85% of the canvas, so without a bottom fade the morph reveals a hard
    horizontal cut across her torso. The left fade matters more: registration
    puts the frame at x = -326, so the canvas cuts straight through her arm and
    leaves a hard vertical line running the full height of the figure. 300px is
    wide enough that the eye never finds an edge and narrow enough not to eat
    into the lit shoulder. The original needs neither, because its subject sits
-   inside the frame with black either side.
+   inside the frame with black either side. The leading fade is 520px, not the
+   300px first used: at 300 the boundary was still findable if you looked for
+   it. The trailing edge and the top get one too, so no straight boundary can
+   exist anywhere in the frame regardless of how the figure is later scaled or
+   positioned. Cheaper than proving there is not one.
 
 One bug worth remembering: compositing an RGBA crop onto an RGB canvas promotes
 the raw buffer to FOUR channels. The fade loop indexed in threes and scrambled
