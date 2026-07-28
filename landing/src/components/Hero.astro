@@ -44,17 +44,19 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
     </div>
 
     <div class="hero__stage">
-      <picture class="hero__figure">
-        <source srcset="/assets/hero/subject.webp 1x, /assets/hero/subject@2x.webp 2x" type="image/webp" />
-        <img src="/assets/hero/subject.webp" alt="" width="862" height="1750" fetchpriority="high" decoding="async" />
-      </picture>
-
-      {MORPH_SRC && (
-        <picture class="hero__figure hero__figure--morph">
-          <source srcset={`${MORPH_SRC}.webp 1x, ${MORPH_SRC}@2x.webp 2x`} type="image/webp" />
-          <img src={`${MORPH_SRC}.webp`} alt="" width="862" height="1750" decoding="async" />
+      <div class="hero__figure">
+        <picture class="hero__frame">
+          <source srcset="/assets/hero/subject.webp 1x, /assets/hero/subject@2x.webp 2x" type="image/webp" />
+          <img src="/assets/hero/subject.webp" alt="" width="862" height="1750" fetchpriority="high" decoding="async" />
         </picture>
-      )}
+
+        {MORPH_SRC && (
+          <picture class="hero__frame hero__frame--morph">
+            <source srcset={`${MORPH_SRC}.webp 1x, ${MORPH_SRC}@2x.webp 2x`} type="image/webp" />
+            <img src={`${MORPH_SRC}.webp`} alt="" width="862" height="1750" decoding="async" />
+          </picture>
+        )}
+      </div>
 
       {/* Card 1 of 3 — the conversation, mirroring the reference's assistant
           panel: a spoken exchange, an inline source chip, suggested follow-ups
@@ -238,101 +240,52 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
                        to   { transform: translate3d( 4%,-3%,0) scale(1.00); } }
 
   /* ══ THE SCROLL MORPH ═══════════════════════════════════════════════════
-     The second subject is revealed by a soft mask edge travelling up the
-     figure as the hero scrolls out, not by a crossfade.
+     A dissolve, and a dissolve is only possible because of where the blending
+     happens.
 
-     That is the whole design decision and it is not a stylistic one. Both
-     subjects are composited with mix-blend-mode: screen, and screen is
-     additive — two screened portraits at 50% opacity do not blend into a
-     third, they both show, and you get a double exposure with two faces in
-     it. A mask has no midpoint where both exist: every pixel belongs to
-     exactly one of them, so the change reads as a transformation instead of
-     a ghost.
+     Screen is additive. Two separately-screened figures crossfading would each
+     add their own light to the hero, so every pixel carrying both would come
+     out brighter than either alone — which is why the first attempt used a
+     wipe instead, and why a wipe left a travelling edge the reference does not
+     have.
 
-     The mask is 240% of the figure with a long ramp, so the edge that crosses
-     the frame is soft over roughly a third of the height. It rides the hero's
-     own view timeline, the same one the header already reads.
+     The fix is to move mix-blend-mode UP. Both frames now live inside
+     .hero__figure, and the SCREEN is on that wrapper. Inside it the two
+     pictures composite with each other normally, so the crossfade is an
+     ordinary opacity blend with no doubling anywhere, and only the finished
+     composite gets screened onto the hero. One blend against the backdrop
+     instead of two.
 
-     WHAT THE SECOND PHOTOGRAPH HAS TO BE, or none of this works:
-       - shot on TRUE BLACK, because screen takes black to transparent and any
-         other backdrop paints a visible rectangle
-       - the same profile, head turned up and away, at the same scale and
-         eye-line, or the mask edge reveals a face in a different place and it
-         reads as a cut
-       - the same warm directional key against the cool plate
-       - 862x1750 and 1725x3500, to match the existing pair
-     A stock nurse photograph on white or grey cannot be used here at all. */
-  /* The mask is three times the height of the figure, so the window onto it is
-     one third. The polarity has to be read carefully, and having it backwards
-     is what made her visible before a single pixel of scroll:
-
-       mask-position 0% 100%  -> the mask's BOTTOM third fills the window, which
-                                 is the transparent band. Nurse hidden.
-       mask-position 0%   0%  -> the mask's TOP third fills the window, which is
-                                 the opaque band. Nurse fully revealed.
-
-     The ramp sits between 40% and 60% of the mask, so the edge crossing the
-     frame is about 60% of the figure's height: soft enough that no hard line is
-     ever visible, tight enough that it still reads as an edge travelling rather
-     than a dissolve. */
-  /* Both figures are masked, with COMPLEMENTARY ramps. This is the part that
-     matters and it is not optional: screen is additive, so if the first figure
-     stayed fully opaque while the second faded in on top of it, every pixel
-     where both are partly present would come out BRIGHTER than either alone.
-     That is what put a pale doubled outline down her jaw and shoulder.
-
-     With complementary masks the two alphas sum to one at every point in the
-     sweep, so there is no region where the composite is carrying more light
-     than a single figure would. */
-  .hero__figure--morph {
+     Registration is what makes it read as one face changing rather than two
+     faces overlapping — see CREDITS.md for how it was measured. */
+  .hero__frame {
     position: absolute;
     inset: 0;
-    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 60%, transparent 100%);
-            mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 60%, transparent 100%);
-    -webkit-mask-size: 100% 300%;
-            mask-size: 100% 300%;
-    -webkit-mask-repeat: no-repeat;
-            mask-repeat: no-repeat;
-    -webkit-mask-position: 0% 100%;
-            mask-position: 0% 100%;
+    display: block;
   }
-  /* The inverse mask on the outgoing figure. Same geometry, opposite band. */
-  .hero__stage:has(.hero__figure--morph) .hero__figure:not(.hero__figure--morph) {
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 40%, #000 60%, #000 100%);
-            mask-image: linear-gradient(180deg, transparent 0%, transparent 40%, #000 60%, #000 100%);
-    -webkit-mask-size: 100% 300%;
-            mask-size: 100% 300%;
-    -webkit-mask-repeat: no-repeat;
-            mask-repeat: no-repeat;
-    -webkit-mask-position: 0% 100%;
-            mask-position: 0% 100%;
-  }
+  .hero__frame--morph { opacity: 0; }
 
-  @keyframes hero-morph {
-    to {
-      -webkit-mask-position: 0% 0%;
-              mask-position: 0% 0%;
-    }
-  }
+  @keyframes hero-morph { to { opacity: 1; } }
+  @keyframes hero-morph-out { to { opacity: 0; } }
+
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: scroll()) {
-      .hero__figure--morph {
+      .hero__frame--morph {
         animation: hero-morph linear both;
         /* The document's own scroll, not the hero's view timeline. A view
-           timeline measures how far a section has travelled THROUGH the
-           viewport, and the hero starts already covering it, so at scrollTop
-           zero its progress is not zero and the morph would be part-done
-           before the page is touched. scroll(root) is zero at zero, which is
-           what "as I start scrolling" actually means. */
+           timeline measures travel THROUGH the viewport, and the hero already
+           covers it at scrollTop zero, so its progress is not zero when the
+           page loads and the change would be part-done before the page is
+           touched. scroll(root) is zero at zero. */
         animation-timeline: scroll(root block);
-        animation-range: 0 640px;
+        animation-range: 0 620px;
       }
-      /* Driven by the same keyframes on the same timeline, so the two ramps
-         cannot drift apart by even a frame. */
-      .hero__stage:has(.hero__figure--morph) .hero__figure:not(.hero__figure--morph) {
-        animation: hero-morph linear both;
+      /* The outgoing frame fades out on the same timeline, so the pair sums to
+         one throughout and the group's total light never rises mid-transition. */
+      .hero__figure:has(.hero__frame--morph) .hero__frame:not(.hero__frame--morph) {
+        animation: hero-morph-out linear both;
         animation-timeline: scroll(root block);
-        animation-range: 0 640px;
+        animation-range: 0 620px;
       }
     }
   }
@@ -394,9 +347,14 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
   /* 2.5x the previous scale. The plate is re-exported from the 4000x5261 native
      source at 3500px for 2x, so this is still a downscale at every DPR -- the
      old 2300px export would have been upscaled 1.5x here. */
-  .hero__figure img {
+  .hero__figure {
+    /* Sized by the frames inside it; the group is what carries the blend. */
     block-size: clamp(560px, 115vw, 1750px);
-    inline-size: auto;
+    aspect-ratio: 862 / 1750;
+  }
+  .hero__frame img {
+    inline-size: 100%;
+    block-size: 100%;
     /* The global reset sets `img, picture { max-width: 100% }`. On an absolutely
        positioned <picture> that percentage has no resolved width to measure
        against, so the width collapsed while block-size held it -- rendering her
