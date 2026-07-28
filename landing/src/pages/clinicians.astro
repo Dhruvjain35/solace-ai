@@ -5,7 +5,6 @@ import GlassPrebrief from '../components/mockups/GlassPrebrief.astro';
 import GlassAuthority from '../components/mockups/GlassAuthority.astro';
 import GlassShift from '../components/mockups/GlassShift.astro';
 import HeroGlass from '../components/mockups/HeroGlass.astro';
-import ActGlyph from '../components/mockups/ActGlyph.astro';
 
 /* Rebuilt dark, on glass.
 
@@ -45,7 +44,6 @@ type Act = {
   chapter: string;
   heading: string;
   sub: string;
-  glyph: string;
   mock: 'prebrief' | 'authority' | 'shift';
 };
 
@@ -55,7 +53,6 @@ const acts: Act[] = [
     index: '01',
     chapter: 'Before the door opens',
     heading: 'You know who is behind the door',
-    glyph: 'prebrief',
     sub: 'One line of story, the two things that must not be missed, and the next thing worth doing. Short enough to read while you walk.',
     mock: 'prebrief',
   },
@@ -63,8 +60,7 @@ const acts: Act[] = [
     id: 'authority',
     index: '02',
     chapter: 'When you disagree',
-    heading: 'You disagree, you win',
-    glyph: 'authority',
+    heading: 'You can always overrule it',
     sub: 'Changing the level takes one tap and applies straight away. No dialog asks if you are sure, and the change is saved with your name on it.',
     mock: 'authority',
   },
@@ -72,8 +68,7 @@ const acts: Act[] = [
     id: 'shift',
     index: '03',
     chapter: 'What you get back',
-    heading: 'You stop working after work',
-    glyph: 'shift',
+    heading: 'Stop finishing notes at home',
     sub: 'Time with patients goes up a little. What really changes is the typing, the forms, and the hour you currently take home.',
     mock: 'shift',
   },
@@ -147,12 +142,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     >
         <div class="container act__inner">
         <div class="act__copy reveal">
-          <p class="act__chapter">
-            <span class="act__index">{act.index}</span>
-            <span class="act__rule" aria-hidden="true"></span>
-            <span>{act.chapter}</span>
-          </p>
-          <h2 id={`act-${act.index}`} class="act__heading">{act.heading}<ActGlyph kind={act.glyph} /></h2>
+          <h2 id={`act-${act.index}`} class="act__heading">{act.heading}</h2>
           <p class="act__sub">{act.sub}</p>
         </div>
 
@@ -172,7 +162,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   <section id="limits" class="limits" data-color-scheme="light" aria-labelledby="limits-heading">
     <div class="container page-section limits__inner">
       <div class="limits__head reveal">
-        <p class="act__chapter"><span class="act__rule" aria-hidden="true"></span><span>The short version</span></p>
         <h2 id="limits-heading" class="limits__title">What it will not do.</h2>
         <p class="limits__sub">
           Capability lists are easy to write and impossible to check. These four
@@ -370,24 +359,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   }
 
   .act__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
-  .act__chapter {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3x);
-    font-size: var(--font-size-text-small);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-sub);
-  }
-  .act__index { color: var(--color-primary-base); font-variant-numeric: tabular-nums; }
-  .act__rule {
-    inline-size: var(--space-8x);
-    block-size: 1px;
-    background-image: repeating-linear-gradient(
-      90deg,
-      var(--color-border-sub) 0, var(--color-border-sub) 4px,
-      transparent 4px, transparent 8px
-    );
-  }
   .act__heading {
     font-size: var(--font-size-heading-large);
     font-weight: var(--font-weight-medium);

@@ -21,14 +21,11 @@ import GraphicLanguages from './mockups/GraphicLanguages.astro';
 import GraphicConfidence from './mockups/GraphicConfidence.astro';
 import GraphicEvidence from './mockups/GraphicEvidence.astro';
 import GraphicHooks from './mockups/GraphicHooks.astro';
-import ActGlyph from './mockups/ActGlyph.astro';
 const panels = [
   {
     id: 'suite-intake',
     tab: 'Intake',
-    eyebrow: 'Smart Patient Intake',
-    heading: 'Everyone speaks first language',
-    glyph: 'language',
+    heading: 'Everyone speaks their own language',
     sub: 'They talk the way they think. Their exact words are kept, the team reads it in English, and the answer goes back spoken.',
     link: { label: 'See the patient flow', href: '/product#patient-side' },
     mock: 'languages',
@@ -36,9 +33,7 @@ const panels = [
   {
     id: 'suite-triage',
     tab: 'Triage',
-    eyebrow: 'Triage',
     heading: 'It tells you when it is unsure',
-    glyph: 'confidence',
     sub: 'Most triage models hand you one number and stop. This one publishes the set the answer is actually in, and a wide set goes to a person.',
     link: { label: 'How the score works', href: '/product#patient-side' },
     mock: 'confidence',
@@ -46,9 +41,7 @@ const panels = [
   {
     id: 'suite-scribe',
     tab: 'Ambient Scribe',
-    eyebrow: 'Ambient Scribe',
     heading: 'A note you can check',
-    glyph: 'evidence',
     sub: 'The note drafts while you talk. Click any line and the exact seconds of audio that produced it play back.',
     link: { label: 'See what it drafts', href: '/product#patient-side' },
     mock: 'evidence',
@@ -56,9 +49,7 @@ const panels = [
   {
     id: 'suite-atlas',
     tab: 'Atlas',
-    eyebrow: 'Atlas',
-    heading: 'It comes to you, in the chart',
-    glyph: 'hooks',
+    heading: 'It appears inside your EHR',
     sub: 'A standard hook fires when you sign an order and the card arrives in place. No new tab, nothing extra to remember.',
     link: { label: 'Bring Atlas to your team', href: '/clinicians' },
     mock: 'hooks',
@@ -87,9 +78,7 @@ const panels = [
           {i > 0 && <div class="hatch-rule" aria-hidden="true"></div>}
           <article class="suite__panel" id={p.id} data-panel-index={i}>
             <div class="suite__copy">
-              <p class="eyebrow">{p.eyebrow}</p>
-              <div class="suite__dashed" aria-hidden="true"></div>
-              <h3 class="heading-medium suite__heading">{p.heading}<ActGlyph kind={p.glyph} /></h3>
+              <h3 class="heading-medium suite__heading">{p.heading}</h3>
               <p class="text-medium text-sub">{p.sub}</p>
               <a class="arrow-link" href={p.link.href}>
                 <span>{p.link.label}</span>
@@ -195,16 +184,6 @@ const panels = [
   .suite__heading { max-inline-size: 15ch; }
   .suite__copy { display: flex; flex-direction: column; gap: var(--space-4x); align-items: flex-start; }
 
-  /* 4-on / 4-off dashed rule under the eyebrow. */
-  .suite__dashed {
-    inline-size: min(100%, 320px);
-    block-size: 1px;
-    background-image: repeating-linear-gradient(
-      90deg,
-      var(--color-border-sub) 0, var(--color-border-sub) 4px,
-      transparent 4px, transparent 8px
-    );
-  }
 
 
   /* Figures are components now, not images, so the old height cap and shadow

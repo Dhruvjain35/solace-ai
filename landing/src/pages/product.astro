@@ -12,7 +12,6 @@ import GraphicAtlas from '../components/mockups/GraphicAtlas.astro';
 import GraphicLetters from '../components/mockups/GraphicLetters.astro';
 import GraphicChart from '../components/mockups/GraphicChart.astro';
 import ClipCaption from '../components/mockups/ClipCaption.astro';
-import ActGlyph from '../components/mockups/ActGlyph.astro';
 import HeroGlass from '../components/mockups/HeroGlass.astro';
 
 /* Rebuilt as seven acts.
@@ -48,7 +47,6 @@ type Act = {
   chapter: string;
   heading: string;
   sub: string;
-  glyph: string;
   bed: 'paper' | 'slate' | 'ink';
   mock: 'intake' | 'triage' | 'queue' | 'workflows' | 'scribe' | 'atlas' | 'letters' | 'chart';
 };
@@ -59,7 +57,6 @@ const acts: Act[] = [
     index: '01',
     chapter: 'In the waiting room',
     heading: 'Check in from the waiting room chair',
-    glyph: 'intake',
     sub: 'A QR code on the wall opens Solace on their own phone. They tell their story once, in their own language, while they wait.',
     bed: 'paper',
     mock: 'intake',
@@ -67,8 +64,7 @@ const acts: Act[] = [
   {
     index: '02',
     chapter: 'In the waiting room',
-    heading: 'Urgency you can check',
-    glyph: 'triage',
+    heading: 'See why it picked that level',
     sub: 'A suggested level lands the moment intake ends, with the evidence that produced it sitting right beside it.',
     bed: 'slate',
     mock: 'triage',
@@ -78,7 +74,6 @@ const acts: Act[] = [
     index: '03',
     chapter: 'At the board',
     heading: 'The queue sorts itself',
-    glyph: 'queue',
     sub: 'Everyone waiting, in one view, ordered by who needs help first. It re-sorts the second a new reading changes something.',
     bed: 'ink',
     mock: 'queue',
@@ -88,7 +83,6 @@ const acts: Act[] = [
     index: '04',
     chapter: 'Behind the board',
     heading: 'Write the rule once',
-    glyph: 'workflow',
     sub: 'Nine real events, branching conditions, fourteen actions, no code. No identifier ever leaves with the payload.',
     bed: 'slate',
     mock: 'workflows',
@@ -97,7 +91,6 @@ const acts: Act[] = [
     index: '05',
     chapter: 'In the room',
     heading: 'The note writes itself',
-    glyph: 'scribe',
     sub: 'Have the conversation. The draft builds as you go, and every clause stays attached to the moment it came from.',
     bed: 'paper',
     mock: 'scribe',
@@ -106,7 +99,6 @@ const acts: Act[] = [
     index: '06',
     chapter: 'In the room',
     heading: 'Ask the chart anything',
-    glyph: 'atlas',
     sub: 'Most of a real history is unstructured and belongs to somebody else. Atlas reads the faxes too, then cites them.',
     bed: 'slate',
     mock: 'atlas',
@@ -115,7 +107,6 @@ const acts: Act[] = [
     index: '07',
     chapter: 'After the visit',
     heading: 'The paperwork is already done',
-    glyph: 'letters',
     sub: 'Work notes, school notes, FMLA, return to play. Two dozen forms that fill themselves in from the visit.',
     bed: 'paper',
     mock: 'letters',
@@ -123,9 +114,8 @@ const acts: Act[] = [
   {
     index: '08',
     chapter: 'Into the chart',
-    heading: 'It lands in the chart, coded',
-    glyph: 'chart',
-    sub: 'Through the same interfaces your hospital already runs. As real fields, not a PDF stapled to the side.',
+    heading: 'It writes back to your EHR',
+    sub: 'Through the same interfaces your hospital already runs. As real coded fields, not a PDF attached to the chart.',
     bed: 'ink',
     mock: 'chart',
   },
@@ -189,12 +179,7 @@ const faqs = [
     >
       <div class="container act__inner">
         <div class="act__copy reveal">
-          <p class="act__chapter">
-            <span class="act__index">{act.index}</span>
-            <span class="act__rule" aria-hidden="true"></span>
-            <span>{act.chapter}</span>
-          </p>
-          <h2 id={`act-${act.index}`} class="heading-medium act__heading">{act.heading}<ActGlyph kind={act.glyph} /></h2>
+          <h2 id={`act-${act.index}`} class="heading-medium act__heading">{act.heading}</h2>
           <p class="text-medium text-sub act__sub">{act.sub}</p>
         </div>
 
@@ -247,7 +232,6 @@ const faqs = [
   <section id="phone" data-background-color="secondary-default" aria-labelledby="phone-heading">
     <div class="container page-section phone">
       <div class="phone__lead reveal">
-        <p class="eyebrow">Phone agent</p>
         <div class="dashed" aria-hidden="true"></div>
         <h2 id="phone-heading" class="heading-medium">Not everyone arrives holding a phone they can use.</h2>
       </div>
@@ -366,27 +350,6 @@ const faqs = [
     gap: var(--space-4x);
   }
 
-  .act__chapter {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3x);
-    font-size: var(--font-size-text-small);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-sub);
-  }
-  .act__index {
-    color: var(--color-primary-base);
-    font-variant-numeric: tabular-nums;
-  }
-  .act__rule {
-    inline-size: var(--space-8x);
-    block-size: 1px;
-    background-image: repeating-linear-gradient(
-      90deg,
-      var(--color-border-sub) 0, var(--color-border-sub) 4px,
-      transparent 4px, transparent 8px
-    );
-  }
 
   .act__heading { max-inline-size: 15ch; font-size: var(--font-size-heading-large); }
   .act__sub { max-inline-size: 42ch; font-size: var(--font-size-text-large); }
