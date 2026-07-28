@@ -37,28 +37,39 @@ import Footer from '../components/Footer.astro';
     position: relative;
   }
 
-  /* The hero's colour does not stop at the hero. A tall, very low-contrast wash
-     of the same teal and blue runs down behind the first few sections and dies
-     out, so the page reads as one surface that started dark rather than as a
-     dark block with a light document stapled underneath it.
+  /* The hero's colour carries down the WHOLE page rather than stopping at it.
+     Two halves to this, and the first attempt only did one of them.
 
-     It sits at z-index 0 behind the sections, which paint their own opaque
-     backgrounds — so it only shows where a section is transparent, and it is
-     the transition itself that it colours. */
+     The wash: a tall, very low-contrast field of the same teal and blue behind
+     everything, running the full document height.
+
+     The half that was missing: every section paints an OPAQUE background from
+     its data-background-color, so a field sitting behind them showed through
+     precisely nowhere. On this page those backgrounds become 92% opaque, which
+     lets 8% of the field through the entire page. Enough to tint, far too
+     little to touch contrast. Sections keep their own colour and their own
+     boundaries; they just sit on a surface that remembers where the page
+     started. */
   .page-homepage::before {
     content: '';
     position: absolute;
-    inset-inline: 0;
-    inset-block-start: 0;
-    block-size: 220vh;
+    inset: 0;
     z-index: 0;
     pointer-events: none;
     background-image:
       linear-gradient(180deg,
-        rgb(from var(--solace-60) r g b / 0.16) 0%,
-        rgb(from var(--slate-40) r g b / 0.10) 34%,
-        rgb(from var(--solace-30) r g b / 0.06) 62%,
-        transparent 100%);
+        rgb(from var(--solace-60) r g b / 0.30) 0%,
+        rgb(from var(--slate-40) r g b / 0.20) 22%,
+        rgb(from var(--solace-30) r g b / 0.13) 48%,
+        rgb(from var(--solace-30) r g b / 0.08) 74%,
+        rgb(from var(--slate-30) r g b / 0.06) 100%);
   }
   .page-homepage > * { position: relative; z-index: 1; }
+
+  .page-homepage :global([data-background-color]) {
+    background-color: color-mix(in srgb, var(--section-bg-color) 92%, transparent);
+  }
+  /* The footer stays fully opaque. It is the one dark block on the page and a
+     pale tint bleeding into it would grey it. */
+  .page-homepage :global(.footer) { background-color: var(--slate-100); }
 </style>
