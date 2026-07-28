@@ -92,6 +92,34 @@
     }
   }
 
+
+  /* No gradient border on a phone, and this is the black box.
+
+     The rule below paints a FULL RECTANGLE of gradient on ::before and then
+     relies on `mask-composite` to subtract the padding box, leaving a 1px ring.
+     When that subtraction does not apply, what is left is the whole rectangle:
+     a dark 45-degree slab, exactly the size of the card, sitting behind its
+     text at z-index -1. That is the shape in the photograph, to the pixel.
+
+     Safari passes the @supports test because it has `-webkit-mask-composite`,
+     but its legacy keywords are not the standard ones — `source-out` in the old
+     WebKit model does not mean what `subtract` means in the current spec. So
+     the guard says yes and the composite still does not do the job.
+
+     Two rounds of chasing this went to the wrong element: first the figure's
+     blend, then the card's backdrop-filter. Neither was it. The tell was there
+     the whole time in the shape — a rectangle the size of the card, not the
+     size of the figure. I should have measured that against the two candidates
+     before changing anything.
+
+     Below 640px the flat 1px border comes back. It is what every browser
+     without mask-composite already gets, and at this size the difference
+     between a gradient hairline and a flat one is not visible. */
+  @media (max-width: 640px) {
+    .glass::before { display: none; }
+    .glass { border: 1px solid rgb(from var(--white) r g b / 30%); }
+  }
+
   /* ══ ELEVATION UTILITIES ════════════════════════════════════════════════ */
   .elev-xsmall   { box-shadow: var(--elevation-xsmall); }
   .elev-small    { box-shadow: var(--elevation-small); }

@@ -515,34 +515,27 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
      it, which was unreadable anyway. */
   .hero__card--intake,
   .hero__card--brief { display: grid; inline-size: 300px; }
-  @media (max-width: 640px) {
-    .hero__card--intake,
-    .hero__card--brief { inline-size: min(300px, calc(100vw - 44px)); }
-    /* Measured, not guessed: at 393px the stage is 590 tall and the two cards
-       came to 357 + 288 = 645. They cannot both fit, so they overlapped and
-       buried the figure between them. The intake card sheds its two suggested
-       follow-ups here — the least load-bearing rows in it, and the only ones
-       that repeat information the exchange above already carries — which brings
-       it to ~250 and leaves room for a real gap and for her to be visible
-       through it, which is the whole point of putting them over her. */
-    .hero__card--intake .card__suggests { display: none; }
-    /* Above the hem, which is z-index 3. On a desktop the cards sit high enough
-       that the hem never reaches them; on a phone the pre-brief card lives
-       almost entirely inside the fade, so the hem was dissolving its action row
-       into the section below. A product surface should not melt — the figure
-       behind it should, and still does. */
-    .hero__card { z-index: 4; }
-    .hero__card--intake { inset-block-start: 1%;  inset-inline-start: 0; inset-inline-end: auto; }
-    .hero__card--brief  { inset-block-start: 50%; inset-inline-end: 0;   inset-inline-start: auto; }
-  }
+  /* ONE card on a phone, and a small one. Two at 300px on a 393px screen do not
+     leave room for the person they are supposed to be floating over — they
+     covered her completely, which is worse than not showing them at all. The
+     hero is a portrait first; the card is the proof that there is a product
+     behind it. Intake is the one that stays: it is the patient-side moment the
+     headline opens with, and it is the more distinctive surface.
 
-  /* Under 360 the cards narrow to 276 and the copy inside them wraps a line
-     deeper, which puts the pair 28px past what the stage can hold — measured
-     across 320/360/375/393/414/430. Rather than shrink the type or crop a card,
-     the smallest phones get one. The intake card is the one that stays: it is
-     the patient-side moment the headline opens with. */
-  @media (max-width: 360px) {
+     Placed low, so her face and shoulders are clear above it. */
+  @media (max-width: 640px) {
     .hero__card--brief { display: none; }
+    .hero__card--intake {
+      inline-size: min(272px, calc(100vw - 56px));
+      inset-block-start: auto;
+      inset-block-end: 9%;
+      inset-inline-start: 0;
+      inset-inline-end: auto;
+    }
+    .hero__card--intake .card__suggests { display: none; }
+    /* Above the hem, which is z-index 3: a product surface should not dissolve
+       into the section below. The figure behind it should, and does. */
+    .hero__card { z-index: 4; }
   }
 
   @media (min-width: 640.02px) {
