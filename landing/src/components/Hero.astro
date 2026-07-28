@@ -371,7 +371,7 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
     position: absolute;
     inset-inline: 0;
     inset-block-end: 0;
-    block-size: clamp(180px, 24vw, 420px);
+    block-size: clamp(260px, 36vw, 640px);
     /* --neutral-10 by name, NOT --color-bg-secondary. The hero declares
        data-color-scheme="dark", so the semantic token resolves to slate-black
        inside it and the hem faded the dark hero into a slightly different
@@ -399,13 +399,23 @@ const MORPH_SRC: string | null = '/assets/hero/nurse';
   }
   /* Dither. A 400px gradient across 8-bit channels steps roughly every 15px,
      and those steps are visible on a flat wash. The same SVG grain the hero
-     background already uses breaks them up; at 3.5% it is invisible as texture
-     and completely removes the stepping. */
+     background already uses breaks them up.
+
+     It has to be MASKED at both ends, and it was not: a uniform 3.5% overlay
+     with hard edges is itself a 3.5% step, so the cure drew a line exactly
+     where the hem began. Measured, it was the single strongest slope break on
+     the page — removing it dropped the break at that row from 2.85 to 1.0.
+
+     Ramped in and out instead, densest through the middle of the fade, which
+     is also where banding is worst. Zero at both ends means neither the grain
+     nor the gradient can put an edge anywhere. */
   .hero__hem::after {
     content: '';
     position: absolute;
     inset: 0;
-    opacity: 0.035;
+    opacity: 0.06;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 84%, transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 84%, transparent 100%);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
