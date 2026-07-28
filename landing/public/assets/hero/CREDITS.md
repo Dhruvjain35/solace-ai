@@ -169,6 +169,32 @@ Measured: brightness in the band just inside the silhouette fell from 208 to 145
 at p99. `np.maximum.reduce` cannot broadcast (H,W), (1,W) and (H,1) together —
 pairwise `np.maximum` can.
 
+**The rim, fourth and last, and the reason trimming could never finish it.**
+A grey column stood down the outside of her hair on the live page. It survived
+two rounds of better trimming because the rim is not a band OUTBOARD of the
+hair — it is interleaved with it, strand over plate over strand. A scan that
+walks in from the edge and stops at the first hair pixel can never reach plate
+sitting behind that strand, whatever it tests for.
+
+Two things fixed it:
+
+- **Trim on saturation, not brightness.** Brightness fails because the rim falls
+  off rather than ending, and its inner falloff drops below any threshold that
+  does not also eat hair. Measured across the boundary: hair 0.38–1.00, plate
+  0.01–0.15, no overlap anywhere along it. Warm against neutral holds however
+  dim the rim gets. The scrubs are saturated navy, so the walk stops on those
+  too. Limited to y<1060: below that the boundary is the shoulder and the
+  stethoscope bell touches it, and the bell is neutral metal — a saturation walk
+  eats through it exactly as a brightness walk ate through hair.
+- **Suppress the interleaved remainder by what it is.** Bright, neutral, and
+  close to the boundary. Hair is warm and the scrubs navy, so neither qualifies.
+  The cap and the mask are neutral but sit above the zone. The bell is neutral,
+  bright and inside the zone — brightness cannot exclude it (both reach 253) and
+  neither can saturation (both are metal-grey), so height does: the rim only
+  exists where the hair falls, and the hair has ended by y=1040. Every
+  legitimate thing that could be caught is excluded by a different term, which
+  is the only reason a classifier is safe here.
+
 **Consent, unchanged and still unresolved.** This frame depicts an identifiable
 person presented as a healthcare professional, and no model release accompanies
 it. Flagged, not cleared.
