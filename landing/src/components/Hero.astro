@@ -1,6 +1,12 @@
 ---
 import CtaPrimary from './CtaPrimary.astro';
 
+/* The second subject for the scroll morph. Null until a photograph exists that
+   can actually carry it — see the note in the style block below for what the
+   shot has to be. With it null the hero renders exactly as before rather than
+   shipping a broken image, and turning the morph on is this one line. */
+const MORPH_SRC: string | null = null;
+
 /* The background is not an image. It is four coloured lights drifting over a
    near-black base, each its own element so the motion is a GPU transform rather
    than a gradient repaint.
@@ -43,6 +49,13 @@ import CtaPrimary from './CtaPrimary.astro';
         <source srcset="/assets/hero/subject.webp 1x, /assets/hero/subject@2x.webp 2x" type="image/webp" />
         <img src="/assets/hero/subject.webp" alt="" width="862" height="1750" fetchpriority="high" decoding="async" />
       </picture>
+
+      {MORPH_SRC && (
+        <picture class="hero__figure hero__figure--morph">
+          <source srcset={`${MORPH_SRC}.webp 1x, ${MORPH_SRC}@2x.webp 2x`} type="image/webp" />
+          <img src={`${MORPH_SRC}.webp`} alt="" width="862" height="1750" decoding="async" />
+        </picture>
+      )}
 
       {/* Card 1 of 3 — the conversation, mirroring the reference's assistant
           panel: a spoken exchange, an inline source chip, suggested follow-ups
@@ -143,7 +156,6 @@ import CtaPrimary from './CtaPrimary.astro';
     </div>
   </div>
 
-  <p class="hero__disclosure">Solace suggests; the clinician always makes the final call.</p>
 </section>
 
 <style>
@@ -225,6 +237,62 @@ import CtaPrimary from './CtaPrimary.astro';
                        to   { transform: translate3d(-4%,-2%,0) scale(1.14); } }
   @keyframes drift-d { from { transform: translate3d(-3%, 2%,0) scale(1.10); }
                        to   { transform: translate3d( 4%,-3%,0) scale(1.00); } }
+
+  /* ══ THE SCROLL MORPH ═══════════════════════════════════════════════════
+     The second subject is revealed by a soft mask edge travelling up the
+     figure as the hero scrolls out, not by a crossfade.
+
+     That is the whole design decision and it is not a stylistic one. Both
+     subjects are composited with mix-blend-mode: screen, and screen is
+     additive — two screened portraits at 50% opacity do not blend into a
+     third, they both show, and you get a double exposure with two faces in
+     it. A mask has no midpoint where both exist: every pixel belongs to
+     exactly one of them, so the change reads as a transformation instead of
+     a ghost.
+
+     The mask is 240% of the figure with a long ramp, so the edge that crosses
+     the frame is soft over roughly a third of the height. It rides the hero's
+     own view timeline, the same one the header already reads.
+
+     WHAT THE SECOND PHOTOGRAPH HAS TO BE, or none of this works:
+       - shot on TRUE BLACK, because screen takes black to transparent and any
+         other backdrop paints a visible rectangle
+       - the same profile, head turned up and away, at the same scale and
+         eye-line, or the mask edge reveals a face in a different place and it
+         reads as a cut
+       - the same warm directional key against the cool plate
+       - 862x1750 and 1725x3500, to match the existing pair
+     A stock nurse photograph on white or grey cannot be used here at all. */
+  .hero__figure--morph {
+    position: absolute;
+    inset: 0;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 38%);
+            mask-image: linear-gradient(180deg, transparent 0%, #000 38%);
+    -webkit-mask-size: 100% 240%;
+            mask-size: 100% 240%;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    /* Fully masked out at rest. */
+    -webkit-mask-position: 0% 100%;
+            mask-position: 0% 100%;
+  }
+  @keyframes hero-morph {
+    to {
+      -webkit-mask-position: 0% 0%;
+              mask-position: 0% 0%;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hero__figure--morph {
+        animation: hero-morph linear both;
+        animation-timeline: --homepage-hero-section;
+        /* Starts as the hero begins to leave and completes well before it is
+           gone, so the change happens while it is still being looked at. */
+        animation-range: exit 5% exit 65%;
+      }
+    }
+  }
 
   /* Deliberately NO z-index. A z-index here creates a stacking context, and
      mix-blend-mode only blends against a backdrop inside its own context -- the
@@ -490,24 +558,5 @@ import CtaPrimary from './CtaPrimary.astro';
   @keyframes card-in {
     from { opacity: 0; transform: translateY(16px) scale(0.965); }
     to   { opacity: 1; transform: none; }
-  }
-  .hero__disclosure {
-    position: relative;
-    z-index: 3;
-    margin-block-start: var(--space-16x);
-    padding-block: var(--space-8x) var(--space-6x);
-    padding-inline: var(--viewport-padding);
-    text-align: center;
-    font-size: var(--font-size-12);
-    color: rgb(from var(--white) r g b / 0.62);
-  }
-  @media (min-width: 640.02px) {
-    .hero__disclosure {
-      margin-block-start: var(--space-12x);
-      padding-block: 0 var(--space-6x);
-      max-inline-size: 40ch;
-      text-align: start;
-      color: rgb(from var(--white) r g b / 0.55);
-    }
   }
 </style>
