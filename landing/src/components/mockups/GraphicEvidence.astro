@@ -1,0 +1,281 @@
+---
+/* The scribe, seen from the verification side. A 12s film.
+
+   /product shows the note being written. This shows what you do when you do not
+   believe it: click the line, and the exact seconds of audio that produced it
+   play back. A summary you cannot check is a summary you have to trust, and no
+   clinician should have to trust one.
+
+   Same product as act 05, a different claim about it, so the home page and the
+   tour never show the same figure twice.
+
+   Neumorphic rules per materials.css: light from directly above so offsets are
+   Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the offset,
+   real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   a drafted line with a timestamp against it
+     beat 2   2.4s   the cursor goes to the timestamp and clicks
+     beat 3   4.8s   the source opens: waveform, speaker, the seconds it spans
+     beat 4   7.2s   the playhead runs and the words appear underneath it
+     beat 5   9.6s   checked, and the check is recorded
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+import ClipCursor from './ClipCursor.astro';
+
+const CAPTIONS = [
+  'Every drafted line carries the second it came from.',
+  'Do not believe a line? Click the timestamp.',
+  'The exact audio opens underneath it.',
+  'You hear what the patient actually said.',
+  'And the fact that you checked is on the record too.',
+];
+
+/* Fixed bar heights, so the waveform is a captured signal rather than noise. */
+const WAVE = [22, 48, 74, 96, 62, 38, 80, 54, 92, 44, 68, 30, 86, 58, 40, 72, 26, 64, 88, 36, 52, 78, 34, 60];
+---
+
+<div class="ev" data-clip>
+  <div class="ev__head">
+    <span class="ev__title">Visit note</span>
+    <span class="ev__meta">Linked to the recording</span>
+  </div>
+
+  <p class="ev__line">
+    Substernal chest tightness with exertional dyspnoea, worse when lying flat.
+    <span class="ev__stamp">04:12</span>
+  </p>
+
+  <div class="ev__player">
+    <div class="ev__player-head">
+      <span class="ev__who">Patient</span>
+      <span class="ev__span">04:12 &ndash; 04:19</span>
+    </div>
+
+    <span class="ev__wave" aria-hidden="true">
+      {WAVE.map((h, i) => <i class:list={[`ev__b--${i + 1}`]} style={`--h:${h}%`}></i>)}
+      <span class="ev__playhead"></span>
+    </span>
+
+    <p class="ev__quote">&ldquo;It gets worse when I lie down flat.&rdquo;</p>
+  </div>
+
+  <div class="ev__done">
+    <span class="ev__done-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span>Source checked by Dr Alvarez &middot; logged 09:14:22</span>
+  </div>
+
+  <span class="ev__cursor" aria-hidden="true"><ClipCursor /></span>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  .ev {
+    --clip-dur: 12s;
+    position: relative;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .ev__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .ev__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .ev__meta { margin-inline-start: auto; font-size: 3cqw; color: var(--neutral-80); }
+
+  /* Raised: the note is the artefact. */
+  .ev__line {
+    padding: 4cqw 4.2cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.20);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.10),
+      0 8px 20px rgb(from var(--neutral-40) r g b / 0.14);
+    font-size: 3.4cqw;
+    line-height: 1.6;
+    color: var(--neutral-90);
+  }
+  /* The timestamp is a control, so it is drawn as one. */
+  .ev__stamp {
+    display: inline-block;
+    margin-inline-start: 1.4cqw;
+    padding: 0.6cqw 1.8cqw;
+    border-radius: var(--radius-1_5x);
+    background-color: var(--solace-10);
+    border: 1px solid rgb(from var(--solace-60) r g b / 0.34);
+    color: var(--solace-100);
+    font-size: 2.9cqw;
+    font-weight: var(--font-weight-medium);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* Pressed in: the recording is a source you inspect, not a surface you edit. */
+  .ev__player {
+    display: flex; flex-direction: column; gap: 2.8cqw;
+    padding: 3.8cqw 4cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+  }
+  .ev__player-head { display: flex; align-items: baseline; gap: 2.6cqw; font-size: 2.9cqw; }
+  .ev__who {
+    padding: 0.8cqw 2.2cqw;
+    border-radius: 100px;
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    color: var(--neutral-90);
+    font-weight: var(--font-weight-medium);
+  }
+  .ev__span { margin-inline-start: auto; color: var(--neutral-80); font-variant-numeric: tabular-nums; }
+
+  .ev__wave {
+    position: relative;
+    display: flex; align-items: center; gap: 0.9cqw;
+    block-size: 11cqw;
+  }
+  .ev__wave i {
+    flex: 1;
+    max-inline-size: 0.9cqw;
+    block-size: var(--h);
+    border-radius: 0.45cqw;
+    background-color: var(--neutral-30);
+  }
+  /* The playhead is a line, and the bars behind it are already played. */
+  .ev__playhead {
+    position: absolute;
+    inset-block: -1.4cqw;
+    inset-inline-start: 100%;
+    inline-size: 0.5cqw;
+    border-radius: 100px;
+    background-color: var(--solace-80);
+    opacity: 0;
+  }
+
+  .ev__quote { font-size: 3.4cqw; line-height: 1.5; color: var(--neutral-90); font-style: italic; }
+
+  .ev__done {
+    display: flex; align-items: center; gap: 2.6cqw;
+    padding: 2.8cqw 3.4cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--solace-10);
+    border: 1px solid rgb(from var(--solace-60) r g b / 0.28);
+    color: var(--solace-100);
+    font-size: 3cqw;
+  }
+  .ev__done-icon {
+    display: grid; place-items: center;
+    inline-size: 5.4cqw; block-size: 5.4cqw; flex: none;
+    border-radius: 100px;
+    background-color: var(--solace-80);
+    color: var(--white);
+  }
+  .ev__done-icon svg { inline-size: 3.2cqw; block-size: 3.2cqw; }
+
+  /* Parked on the timestamp. The clip brings it in from the corner. */
+  .ev__cursor {
+    position: absolute;
+    inset-block-start: 26cqw;
+    inset-inline-end: 12cqw;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+  @keyframes ev-cursor {
+    0%      { opacity: 0; translate: 14cqw 40cqw; }
+    18%     { opacity: 0; translate: 14cqw 40cqw; }
+    22%     { opacity: 1; translate: 14cqw 40cqw; }
+    30%     { opacity: 1; translate: 0 0; }
+    42%     { opacity: 1; translate: 0 0; }
+    48%     { opacity: 0; translate: 12cqw 36cqw; }
+    100%    { opacity: 0; translate: 14cqw 40cqw; }
+  }
+  @keyframes ev-click {
+    0%, 30%   { opacity: 0; scale: 0.3; }
+    32%       { opacity: 0.55; }
+    38%, 100% { opacity: 0; scale: 1.8; }
+  }
+  @keyframes ev-stamp {
+    0%, 30%  { background-color: var(--solace-10); }
+    34%      { background-color: var(--solace-30); }
+    42%, 96% { background-color: var(--solace-10); }
+    100%     { background-color: var(--solace-10); }
+  }
+  @keyframes ev-player {
+    0%, 38%  { opacity: 0; translate: 0 2cqw; }
+    46%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 2cqw; }
+  }
+  /* Beat 4 — the playhead sweeps and the bars it passes take the accent, which
+     is what makes it read as playback rather than as a filling bar. */
+  @keyframes ev-play {
+    0%, 60%  { opacity: 0; inset-inline-start: 0%; }
+    63%      { opacity: 1; inset-inline-start: 0%; }
+    78%      { opacity: 1; inset-inline-start: 100%; }
+    82%, 96% { opacity: 0; inset-inline-start: 100%; }
+    100%     { opacity: 0; inset-inline-start: 0%; }
+  }
+  @keyframes ev-bar {
+    0%, 62%  { background-color: var(--neutral-30); }
+    80%, 96% { background-color: var(--solace-50); animation-timing-function: steps(1, end); }
+    100%     { background-color: var(--neutral-30); }
+  }
+  @keyframes ev-quote {
+    0%, 66%  { opacity: 0; }
+    73%, 96% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes ev-done {
+    0%, 81%  { opacity: 0; translate: 0 1.8cqw; }
+    88%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.8cqw; }
+  }
+
+  .ev[data-play] .ev__cursor { animation: ev-cursor var(--clip-dur) var(--ease-hero) infinite both; }
+  .ev[data-play] .ev__cursor::after {
+    content: '';
+    position: absolute;
+    inset-block-start: -2.2cqw;
+    inset-inline-start: -2.2cqw;
+    inline-size: 8cqw;
+    block-size: 8cqw;
+    border-radius: 100px;
+    border: 0.55cqw solid var(--solace-60);
+    animation: ev-click var(--clip-dur) var(--ease-hero) infinite both;
+  }
+  .ev[data-play] .ev__stamp    { animation: ev-stamp var(--clip-dur) var(--ease-ui) infinite both; }
+  .ev[data-play] .ev__player   { animation: ev-player var(--clip-dur) var(--ease-hero) infinite both; }
+  .ev[data-play] .ev__playhead { animation: ev-play var(--clip-dur) linear infinite both; }
+  .ev[data-play] .ev__quote    { animation: ev-quote var(--clip-dur) var(--ease-ui) infinite both; }
+  .ev[data-play] .ev__done     { animation: ev-done var(--clip-dur) var(--ease-hero) infinite both; }
+  /* Bars recolour left to right, in step with the playhead crossing them. */
+  .ev[data-play] .ev__wave i { animation: ev-bar var(--clip-dur) var(--ease-ui) infinite both; }
+  .ev[data-play] .ev__wave i:nth-child(1)  { animation-name: ev-bar-1; }
+  .ev[data-play] .ev__wave i:nth-child(6)  { animation-name: ev-bar-6; }
+  .ev[data-play] .ev__wave i:nth-child(12) { animation-name: ev-bar-12; }
+  .ev[data-play] .ev__wave i:nth-child(18) { animation-name: ev-bar-18; }
+  @keyframes ev-bar-1  { 0%, 63% { background-color: var(--neutral-30); } 66%, 96% { background-color: var(--solace-50); animation-timing-function: steps(1, end); } 100% { background-color: var(--neutral-30); } }
+  @keyframes ev-bar-6  { 0%, 66% { background-color: var(--neutral-30); } 69%, 96% { background-color: var(--solace-50); animation-timing-function: steps(1, end); } 100% { background-color: var(--neutral-30); } }
+  @keyframes ev-bar-12 { 0%, 70% { background-color: var(--neutral-30); } 73%, 96% { background-color: var(--solace-50); animation-timing-function: steps(1, end); } 100% { background-color: var(--neutral-30); } }
+  @keyframes ev-bar-18 { 0%, 74% { background-color: var(--neutral-30); } 77%, 96% { background-color: var(--solace-50); animation-timing-function: steps(1, end); } 100% { background-color: var(--neutral-30); } }
+</style>

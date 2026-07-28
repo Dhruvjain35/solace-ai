@@ -1,0 +1,274 @@
+---
+/* Intake, seen from the language side. A 12s film.
+
+   The home page and /product must never show the same figure. /product shows
+   the patient's phone, screen by screen. This shows the thing that phone is
+   actually FOR: the interpreter bottleneck disappearing. Same product, a
+   different fact about it, so the two pages do not read as one page printed
+   twice.
+
+   The number that matters is not "twenty languages" — every translation vendor
+   says that. It is the delay. A phone interpreter takes minutes to reach and
+   the conversation waits; here the reply comes back spoken, in seconds, and the
+   comparison is the whole point of the graphic.
+
+   Neumorphic rules per materials.css: light from directly above so offsets are
+   Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the offset,
+   real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   a patient speaks. The meter is live.
+     beat 2   2.4s   what they said, in their language
+     beat 3   4.8s   what the care team reads, in theirs
+     beat 4   7.2s   the reply goes back spoken, and the clock lands
+     beat 5   9.6s   the same path, nineteen more times
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'A patient speaks in the language they think in.',
+  'Their words are kept, exactly as they said them.',
+  'The care team reads it in theirs, a second later.',
+  'And the answer goes back spoken, not printed.',
+  'Nineteen more languages take the identical path.',
+];
+
+const OTHERS = ['Español', 'Tiếng Việt', 'العربية', '中文', 'Kreyòl', 'Русский', 'हिन्दी', '+13'];
+---
+
+<div class="lang" data-clip>
+  <div class="lang__head">
+    <span class="lang__live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <span class="lang__title">Spoken intake</span>
+    <span class="lang__badge">Tagalog</span>
+  </div>
+
+  <div class="lang__pair">
+    <div class="lang__side lang__side--said">
+      <p class="lang__k">What the patient said</p>
+      <p class="lang__q">Masakit ang dibdib ko simula kaninang umaga.</p>
+    </div>
+
+    <span class="lang__arrow" aria-hidden="true">
+      <svg viewBox="0 0 24 16" fill="none"><path d="M2 8h19M15.4 2.2 21.2 8l-5.8 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+
+    <div class="lang__side lang__side--read">
+      <p class="lang__k">What the care team reads</p>
+      <p class="lang__a">Chest pain since this morning.</p>
+    </div>
+  </div>
+
+  <div class="lang__reply">
+    <span class="lang__reply-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 2.4a2 2 0 0 1 2 2v3.4a2 2 0 0 1-4 0V4.4a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.35"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0M8 11.8v2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>
+    </span>
+    <span class="lang__reply-text">Spoken guidance sent back, in Tagalog</span>
+    <span class="lang__clock">
+      <span class="lang__tick"><span class="lang__strip"><i>2</i><i>4</i><i>5</i><i>6</i><i>7</i><i>7</i></span></span>s
+    </span>
+  </div>
+
+  <div class="lang__grid">
+    {OTHERS.map((name, i) => (
+      <span class:list={['lang__chip', `lang__chip--${i + 1}`]}>{name}</span>
+    ))}
+  </div>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  .lang {
+    --clip-dur: 12s;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .lang__head { display: flex; align-items: center; gap: 2.6cqw; }
+  /* Thin bars, height-modulated. A level meter, never a row of dots. */
+  .lang__live { display: flex; align-items: center; gap: 1cqw; block-size: 5.4cqw; flex: none; }
+  .lang__live i {
+    inline-size: 0.6cqw; border-radius: 0.3cqw;
+    background-color: var(--solace-60);
+    block-size: var(--h);
+  }
+  .lang__live i:nth-child(1) { --h: 34%; --l: 80% } .lang__live i:nth-child(2) { --h: 74%; --l: 28% }
+  .lang__live i:nth-child(3) { --h: 96%; --l: 44% } .lang__live i:nth-child(4) { --h: 52%; --l: 90% }
+  .lang__live i:nth-child(5) { --h: 86%; --l: 32% } .lang__live i:nth-child(6) { --h: 40%; --l: 78% }
+  .lang__live i:nth-child(7) { --h: 66%; --l: 24% } .lang__live i:nth-child(8) { --h: 30%; --l: 64% }
+  .lang__title { font-size: 3.6cqw; font-weight: var(--font-weight-medium); }
+  .lang__badge {
+    margin-inline-start: auto;
+    padding: 1.2cqw 2.8cqw;
+    border-radius: 100px;
+    background-color: var(--solace-80);
+    color: var(--white);
+    font-size: 2.9cqw;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .lang__pair { display: grid; gap: 2.4cqw; align-items: stretch; }
+  @container (min-width: 420px) {
+    .lang__pair { grid-template-columns: 1fr auto 1fr; align-items: center; }
+  }
+
+  /* Pressed on the left: incoming. Raised on the right: the artefact the team
+     works from. The material carries the direction so no arrow has to. */
+  .lang__side { display: flex; flex-direction: column; gap: 1.8cqw; padding: 3.4cqw 3.6cqw; border-radius: var(--radius-3x); }
+  .lang__side--said {
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+  }
+  .lang__side--read {
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.20);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.10),
+      0 8px 20px rgb(from var(--neutral-40) r g b / 0.14);
+  }
+  .lang__k { font-size: 2.8cqw; color: var(--neutral-80); }
+  .lang__q, .lang__a { font-size: 3.4cqw; line-height: 1.45; color: var(--neutral-90); }
+  .lang__a { font-weight: var(--font-weight-medium); }
+
+  .lang__arrow {
+    justify-self: center;
+    display: grid; place-items: center;
+    inline-size: 7cqw; block-size: 7cqw;
+    border-radius: 100px;
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    color: var(--solace-80);
+  }
+  .lang__arrow svg { inline-size: 4cqw; block-size: auto; }
+
+  .lang__reply {
+    display: flex; align-items: center; gap: 2.6cqw;
+    padding: 3cqw 3.4cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--solace-10);
+    border: 1px solid rgb(from var(--solace-60) r g b / 0.28);
+    color: var(--solace-100);
+    font-size: 3.1cqw;
+  }
+  .lang__reply-icon { inline-size: 4.4cqw; block-size: 4.4cqw; flex: none; color: var(--solace-80); }
+  .lang__reply-icon svg { inline-size: 100%; block-size: 100%; }
+  .lang__reply-text { line-height: 1.35; }
+  /* The type size lives on the WINDOW: block-size:1em resolves against the
+     element's own font-size, so a window sized at the parent's scale holding
+     larger digits is a window shorter than its contents, and overflow:hidden
+     shaves the glyphs. */
+  .lang__clock {
+    margin-inline-start: auto;
+    flex: none;
+    display: flex; align-items: baseline; gap: 0.6cqw;
+    font-size: 3.1cqw;
+    line-height: 1;
+    color: var(--solace-80);
+    font-variant-numeric: tabular-nums;
+  }
+  .lang__tick {
+    display: inline-block;
+    font-size: 5cqw;
+    line-height: 1;
+    font-weight: var(--font-weight-semibold);
+    block-size: 1em;
+    overflow: hidden;
+  }
+  .lang__strip { display: block; translate: 0 -83.333%; }
+  .lang__strip i { display: block; block-size: 1em; line-height: 1; font-style: normal; }
+
+  .lang__grid { display: flex; flex-wrap: wrap; gap: 1.6cqw; }
+  .lang__chip {
+    padding: 1.4cqw 2.6cqw;
+    border-radius: 100px;
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    color: var(--neutral-80);
+    font-size: 2.9cqw;
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+  @keyframes lang-said {
+    0%, 21%  { opacity: 0; translate: 0 1.4cqw; }
+    27%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes lang-arrow {
+    0%, 38%  { opacity: 0; scale: 0.6; }
+    44%, 96% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.6; }
+  }
+  @keyframes lang-read {
+    0%, 41%  { opacity: 0; translate: 0 1.4cqw; }
+    47%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes lang-reply {
+    0%, 61%  { opacity: 0; translate: 0 1.6cqw; }
+    67%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  /* Six discrete readings, not a smooth sweep: a latency counter reports
+     measurements, it does not tween between them. */
+  @keyframes lang-clock {
+    from { translate: 0 0; }
+    to   { translate: 0 -83.333%; }
+  }
+  @keyframes lang-chip {
+    0%, 81%  { opacity: 0; scale: 0.88; }
+    88%, 96% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.88; }
+  }
+  @keyframes lang-level {
+    0%, 100% { block-size: var(--h); }
+    50%      { block-size: var(--l); }
+  }
+
+  .lang[data-play] .lang__side--said { animation: lang-said var(--clip-dur) var(--ease-hero) infinite both; }
+  .lang[data-play] .lang__arrow      { animation: lang-arrow var(--clip-dur) var(--ease-hero) infinite both; }
+  .lang[data-play] .lang__side--read { animation: lang-read var(--clip-dur) var(--ease-hero) infinite both; }
+  .lang[data-play] .lang__reply      { animation: lang-reply var(--clip-dur) var(--ease-hero) infinite both; }
+  .lang[data-play] .lang__strip      { animation: lang-clock var(--clip-dur) steps(6, jump-none) infinite both; }
+  /* The chips land in a ripple rather than all at once — nineteen things
+     appearing on one frame reads as a page load, not as a list. */
+  .lang[data-play] .lang__chip { animation: lang-chip var(--clip-dur) var(--ease-hero) infinite both; }
+  .lang[data-play] .lang__chip--1 { animation-duration: calc(var(--clip-dur) * 1); }
+  .lang[data-play] .lang__chip--2 { animation-name: lang-chip-2; }
+  .lang[data-play] .lang__chip--3 { animation-name: lang-chip-3; }
+  .lang[data-play] .lang__chip--4 { animation-name: lang-chip-4; }
+  .lang[data-play] .lang__chip--5 { animation-name: lang-chip-5; }
+  .lang[data-play] .lang__chip--6 { animation-name: lang-chip-6; }
+  .lang[data-play] .lang__chip--7 { animation-name: lang-chip-7; }
+  .lang[data-play] .lang__chip--8 { animation-name: lang-chip-8; }
+  @keyframes lang-chip-2 { 0%, 82% { opacity: 0; scale: 0.88; } 89%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+  @keyframes lang-chip-3 { 0%, 83% { opacity: 0; scale: 0.88; } 90%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+  @keyframes lang-chip-4 { 0%, 84% { opacity: 0; scale: 0.88; } 91%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+  @keyframes lang-chip-5 { 0%, 85% { opacity: 0; scale: 0.88; } 92%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+  @keyframes lang-chip-6 { 0%, 86% { opacity: 0; scale: 0.88; } 93%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+  @keyframes lang-chip-7 { 0%, 87% { opacity: 0; scale: 0.88; } 94%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+  @keyframes lang-chip-8 { 0%, 88% { opacity: 0; scale: 0.88; } 95%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.88; } }
+
+  .lang[data-play] .lang__live i { animation: lang-level var(--_p) ease-in-out infinite alternate; }
+  .lang[data-play] .lang__live i:nth-child(4n + 1) { --_p: 640ms; }
+  .lang[data-play] .lang__live i:nth-child(4n + 2) { --_p: 820ms; }
+  .lang[data-play] .lang__live i:nth-child(4n + 3) { --_p: 560ms; }
+  .lang[data-play] .lang__live i:nth-child(4n + 4) { --_p: 720ms; }
+</style>

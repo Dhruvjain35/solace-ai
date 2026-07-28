@@ -7,21 +7,21 @@
    normally works.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s. Nothing here is a flourish. The only thing that moves is the estimate
-   resolving, because that is the only thing on the screen that is genuinely
-   live, and then the invitation to begin.
+   12.0s, five beats of 2.4s. Nothing here is a flourish: the only things that
+   move are the numbers that are genuinely live and the invitation to begin.
 
-     0.00s   the promise, already on screen. It is not a loading state.
-     0.60s   the queue position lands
-     1.20s   the estimate settles as the board recalculates
-     2.40s   what happens next, spelled out
-     3.30s   the button becomes the obvious thing to do
-     5.58s   dissolve back; 100% equals 0% so the loop has no seam */
+     beat 1   0.0s   the promise, already on screen. Not a loading state.
+     beat 2   2.4s   the queue position lands
+     beat 3   4.8s   the estimate settles as the board recalculates
+     beat 4   7.2s   what is going to happen, in order
+     beat 5   9.6s   only now does it ask for anything
+     11.5s           dissolve; 100% equals 0% so the loop has no seam
+   */
 import MarkPaths from '../brand/MarkPaths.astro';
 import WordPaths from '../brand/WordPaths.astro';
 ---
 
-<div class="wel" data-clip>
+<div class="wel">
   <div class="wel__bar">
     <span>9:41</span>
     <span class="wel__bar-right" aria-hidden="true">
@@ -70,7 +70,7 @@ import WordPaths from '../brand/WordPaths.astro';
 
 <style>
   .wel {
-    --clip-dur: 6s;
+    --clip-dur: 12s;
     inline-size: 100%;
     block-size: 100%;
     display: flex;
@@ -190,8 +190,8 @@ import WordPaths from '../brand/WordPaths.astro';
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
   @keyframes wel-ahead {
-    0%, 8%   { opacity: 0; translate: 0 1.4cqw; }
-    14%, 92% { opacity: 1; translate: 0 0; }
+    0%, 21%  { opacity: 0; translate: 0 1.4cqw; }
+    27%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes wel-estimate {
@@ -199,30 +199,30 @@ import WordPaths from '../brand/WordPaths.astro';
     to   { translate: 0 -83.333%; }
   }
   @keyframes wel-step-a {
-    0%, 26%  { opacity: 0; translate: 0 1.4cqw; }
-    33%, 92% { opacity: 1; translate: 0 0; }
+    0%, 61%  { opacity: 0; translate: 0 1.4cqw; }
+    66%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes wel-step-b {
-    0%, 32%  { opacity: 0; translate: 0 1.4cqw; }
-    39%, 92% { opacity: 1; translate: 0 0; }
+    0%, 66%  { opacity: 0; translate: 0 1.4cqw; }
+    71%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes wel-step-c {
-    0%, 38%  { opacity: 0; translate: 0 1.4cqw; }
-    45%, 92% { opacity: 1; translate: 0 0; }
+    0%, 71%  { opacity: 0; translate: 0 1.4cqw; }
+    76%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes wel-next {
-    0%, 46%  { opacity: 0; }
-    53%, 92% { opacity: 1; }
+    0%, 78%  { opacity: 0; }
+    84%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
   @keyframes wel-ready {
-    0%, 52%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+    0%, 84%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
                            0 2px 6px rgb(from var(--solace-100) r g b / 0.26),
                            0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
-    60%, 92% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+    90%, 96% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
                            0 2px 6px rgb(from var(--solace-100) r g b / 0.26),
                            0 0 0 1.4cqw rgb(from var(--solace-40) r g b / 0.30); }
     100%     { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
@@ -230,13 +230,13 @@ import WordPaths from '../brand/WordPaths.astro';
                            0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
   }
 
-  .wel[data-play] .wel__v--ahead { animation: wel-ahead var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .wel__v--ahead { animation: wel-ahead var(--clip-dur) var(--ease-hero) infinite both; }
   /* Five discrete recalculations, not a smooth countdown: the board publishes a
      new number, it does not tween between two of them. */
-  .wel[data-play] .wel__strip    { animation: wel-estimate var(--clip-dur) steps(6, jump-none) infinite both; }
-  .wel[data-play] .wel__step--a  { animation: wel-step-a var(--clip-dur) var(--ease-hero) infinite both; }
-  .wel[data-play] .wel__step--b  { animation: wel-step-b var(--clip-dur) var(--ease-hero) infinite both; }
-  .wel[data-play] .wel__step--c  { animation: wel-step-c var(--clip-dur) var(--ease-hero) infinite both; }
-  .wel[data-play] .wel__next     { animation: wel-next var(--clip-dur) var(--ease-ui) infinite both; }
-  .wel[data-play] .wel__cta      { animation: wel-ready var(--clip-dur) var(--ease-ui) infinite both; }
+  :global([data-play]) .wel__strip    { animation: wel-estimate var(--clip-dur) steps(6, jump-none) infinite both; }
+  :global([data-play]) .wel__step--a  { animation: wel-step-a var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .wel__step--b  { animation: wel-step-b var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .wel__step--c  { animation: wel-step-c var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .wel__next     { animation: wel-next var(--clip-dur) var(--ease-ui) infinite both; }
+  :global([data-play]) .wel__cta      { animation: wel-ready var(--clip-dur) var(--ease-ui) infinite both; }
 </style>

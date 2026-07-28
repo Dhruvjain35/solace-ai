@@ -14,18 +14,29 @@
    plinth with its own contact shadow, not a drop-shadow on a flat picture.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s. The film exists to show the one thing a still frame cannot: the score
-   CHANGING, and why. A static "2" is a claim. A 3 that becomes a 2 the moment a
-   saturation reading lands is the mechanism.
+   12.0s, five beats of 2.4s, narrated by the caption rail. The film exists to
+   show the one thing a still frame cannot: the score CHANGING, and why. A
+   static "2" is a claim. A 3 that becomes a 2 the moment a saturation reading
+   lands is the mechanism.
 
-     0.00s   the card reads 3 — Urgent, see within 30 minutes
-     0.36s   contributing evidence fills in, strongest first
-     1.20s   the reasons arrive one at a time, under the score
-     2.52s   the saturation row flashes: this reading just came off the monitor
-     3.00s   the safety gate rises into frame
-     3.24s   3 flips to 2, amber to red, and the wait window halves
-     3.90s   hold
-     5.52s   dissolve back to the opening frame — 100% equals 0%, no seam */
+     beat 1   0.0s   the card reads 3 — Urgent, see within 30 minutes
+     beat 2   2.4s   contributing evidence fills in, strongest first
+     beat 3   4.8s   the reasons arrive one at a time, under the score
+     beat 4   7.2s   the saturation row washes red: this reading just came off
+                     the monitor
+     beat 5   9.6s   the safety gate rises, 3 flips to 2, amber to red, and the
+                     wait window halves
+     11.5s           reset, under the dissolve and on the loop boundary
+   */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'A suggested priority, the moment intake ends.',
+  'The evidence behind it — not just a number.',
+  'Every contributing factor, listed and weighted.',
+  'Then a bedside reading lands.',
+  'The rule can raise urgency. It can never lower it.',
+];
 ---
 
 <div class="gfx" data-clip>
@@ -76,11 +87,13 @@
       </span>
     </div>
   </div>
+
+  <ClipCaption steps={CAPTIONS} />
 </div>
 
 <style>
   .gfx {
-    --clip-dur: 6s;
+    --clip-dur: 12s;
     inline-size: 100%;
     padding: 7cqw 6cqw 8cqw;
     border-radius: var(--radius-6x);
@@ -224,81 +237,83 @@
   .gfx__gate-text i { font-style: normal; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.68); }
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════
-     One 6s timeline shared by every rule, so the percentages below are the
-     beat sheet at the top of this file. */
-  /* Three near-identical blocks rather than one parameterised by a custom
-     property: keyframe selectors are literal offsets and cannot take var(),
-     so the stagger has to be written out. */
+     Every offset below is on the shared five-beat grid: 20% per beat, with the
+     visual event landing just inside the beat its caption introduces. Nothing
+     uses animation-delay — delays drift against each other and make a six-part
+     sequence impossible to reason about. */
+
+  /* Beat 2. Three near-identical blocks rather than one parameterised by a
+     custom property: keyframe selectors are literal offsets and cannot take
+     var(), so the stagger has to be written out. */
   @keyframes triage-fill-a {
-    0%, 5%   { inline-size: 0%; }
-    17%, 92% { inline-size: var(--w); }
+    0%, 21%  { inline-size: 0%; }
+    30%, 96% { inline-size: var(--w); }
     100%     { inline-size: 0%; }
   }
   @keyframes triage-fill-b {
-    0%, 9%   { inline-size: 0%; }
-    21%, 92% { inline-size: var(--w); }
+    0%, 24%  { inline-size: 0%; }
+    33%, 96% { inline-size: var(--w); }
     100%     { inline-size: 0%; }
   }
   @keyframes triage-fill-c {
-    0%, 13%  { inline-size: 0%; }
-    25%, 92% { inline-size: var(--w); }
+    0%, 27%  { inline-size: 0%; }
+    36%, 96% { inline-size: var(--w); }
     100%     { inline-size: 0%; }
   }
-  /* The rows come in while the bars are still filling. Held any later and the
-     card sits on a second of empty white, which reads as a rendering fault
-     rather than as a pause. */
+
+  /* Beat 3. */
   @keyframes triage-row {
-    0%, 12%  { opacity: 0; translate: 0 1.6cqw; }
-    18%, 92% { opacity: 1; translate: 0 0; }
+    0%, 41%  { opacity: 0; translate: 0 1.6cqw; }
+    46%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.6cqw; }
   }
   @keyframes triage-row-b {
-    0%, 18%  { opacity: 0; translate: 0 1.6cqw; background-color: transparent; }
-    26%      { opacity: 1; translate: 0 0; background-color: transparent; }
-    /* The reading lands. A single wash, not a repeating pulse. */
-    40%      { background-color: var(--red-0); }
-    48%, 92% { opacity: 1; translate: 0 0; background-color: transparent; }
+    0%, 45%  { opacity: 0; translate: 0 1.6cqw; background-color: transparent; }
+    50%      { opacity: 1; translate: 0 0; background-color: transparent; }
+    /* Beat 4 — the reading lands. One wash, held long enough to read, not a
+       repeating pulse. */
+    64%      { background-color: var(--red-0); }
+    74%      { background-color: var(--red-0); }
+    79%, 96% { opacity: 1; translate: 0 0; background-color: transparent; }
     100%     { opacity: 0; translate: 0 1.6cqw; background-color: transparent; }
   }
   @keyframes triage-row-c {
-    0%, 24%  { opacity: 0; translate: 0 1.6cqw; }
-    30%, 92% { opacity: 1; translate: 0 0; }
+    0%, 49%  { opacity: 0; translate: 0 1.6cqw; }
+    54%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.6cqw; }
   }
-  /* 3 -> 2. The strip's resting place is the second digit, so the from-frame
+
+  /* Beat 5. The strip's resting place is the second digit, so the from-frame
      has to be written out or it would copy the end and never travel. */
   @keyframes triage-flip {
-    0%, 52%  { translate: 0 0; }
-    58%, 93% { translate: 0 -50%; animation-timing-function: steps(1, end); }
+    0%, 84%  { translate: 0 0; }
+    89%, 96% { translate: 0 -50%; animation-timing-function: steps(1, end); }
     100%     { translate: 0 0; }
   }
   @keyframes triage-amber {
-    0%, 52%  { opacity: 1; }
-    58%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 84%  { opacity: 1; }
+    89%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   /* Sequential, never overlapping. Crossfading two different words stacked on
      one another gives you a third word that is neither — "Urgent" ghosting
-     through "High" — which is exactly what this looked like before. The old
-     label is fully gone before the new one starts. */
+     through "High". The old label is fully gone before the new one starts. */
   @keyframes triage-was {
-    0%, 52%  { opacity: 1; }
-    55%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 84%  { opacity: 1; }
+    87%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes triage-now {
-    0%, 55%  { opacity: 0; }
-    58%, 93% { opacity: 1; animation-timing-function: steps(1, end); }
+    0%, 87%  { opacity: 0; }
+    90%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
     100%     { opacity: 0; }
   }
   @keyframes triage-gate {
-    0%, 48%  { opacity: 0; translate: 0 3cqw; }
-    56%, 92% { opacity: 1; translate: 0 0; }
+    0%, 81%  { opacity: 0; translate: 0 3cqw; }
+    87%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 3cqw; }
   }
 
-  /* Each bar owns its in-point, so the evidence resolves strongest-first
-     instead of three bars growing in lockstep. */
   .gfx[data-play] .gfx__bar--a i { animation: triage-fill-a var(--clip-dur) var(--ease-hero) infinite both; }
   .gfx[data-play] .gfx__bar--b i { animation: triage-fill-b var(--clip-dur) var(--ease-hero) infinite both; }
   .gfx[data-play] .gfx__bar--c i { animation: triage-fill-c var(--clip-dur) var(--ease-hero) infinite both; }

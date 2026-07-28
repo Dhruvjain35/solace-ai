@@ -1,0 +1,257 @@
+---
+/* Atlas, seen from inside the EHR. A 12s film.
+
+   /product shows Atlas as its own surface, answering questions. This shows the
+   harder and less obvious half: the same intelligence arriving as a card INSIDE
+   the chart at the moment an order is signed, through CDS Hooks — no new tab,
+   no context switch, no asking anybody to remember a second application exists.
+
+   Same product as act 06, a different claim about it, so the home page and the
+   tour never show the same figure twice.
+
+   Neumorphic rules per materials.css: light from directly above so offsets are
+   Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the offset,
+   real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   an order sitting in the EHR, mid-signature
+     beat 2   2.4s   the hook fires on sign
+     beat 3   4.8s   the card arrives in place, with what it found
+     beat 4   7.2s   a second card: the gap nobody was looking for
+     beat 5   9.6s   accepted, and written back where it came from
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'A clinician signs an order in the chart they already use.',
+  'A standard hook fires. Nothing new to open.',
+  'The card arrives in place, with what Atlas found.',
+  'Then the gap nobody had gone looking for.',
+  'Accepted once, and written straight back.',
+];
+---
+
+<div class="hk" data-clip>
+  <div class="hk__chrome">
+    <span class="hk__app">Your EHR</span>
+    <span class="hk__crumb">Orders &middot; Reyes, Marisol</span>
+  </div>
+
+  <div class="hk__order">
+    <span class="hk__order-k">Signing</span>
+    <span class="hk__order-v">Ibuprofen 600&nbsp;mg, oral, three times daily</span>
+    <span class="hk__sign">
+      <span class="hk__st hk__st--pre" aria-hidden="true">Sign</span>
+      <span class="hk__st hk__st--post">Signed</span>
+    </span>
+  </div>
+
+  <p class="hk__hook">
+    <span class="hk__hook-dot" aria-hidden="true"></span>
+    <span class="hk__hook-pre" aria-hidden="true">Waiting on order-sign</span>
+    <span class="hk__hook-post">order-sign &middot; Solace responded</span>
+  </p>
+
+  <div class="hk__cards">
+    <article class="hk__card hk__card--warn">
+      <p class="hk__card-head">
+        <span class="hk__card-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.6 15 14H1L8 1.6Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 6.2v3.3M8 11.4v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
+        Interaction with an active medicine
+      </p>
+      <p class="hk__card-body">
+        She is on lisinopril, and her last creatinine was two weeks ago. Consider
+        acetaminophen, or recheck renal function first.
+      </p>
+      <p class="hk__card-src">From the chart &middot; not from a rule that fires on everyone</p>
+    </article>
+
+    <article class="hk__card hk__card--gap">
+      <p class="hk__card-head">
+        <span class="hk__card-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.8v3.4l2.2 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </span>
+        Care gap, open 14 months
+      </p>
+      <p class="hk__card-body">
+        Blood-pressure control has not been documented since last March. One
+        reading today closes it.
+      </p>
+      <span class="hk__accept">Accept &mdash; writes to the chart</span>
+    </article>
+  </div>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  .hk {
+    --clip-dur: 12s;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  /* Deliberately plain: this is somebody else's application, and dressing it in
+     Solace's materials would misrepresent where the card actually appears. */
+  .hk__chrome {
+    display: flex; align-items: baseline; gap: 3cqw;
+    padding-block-end: 2.6cqw;
+    border-block-end: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    font-size: 3cqw;
+  }
+  .hk__app { font-weight: var(--font-weight-semibold); color: var(--neutral-90); }
+  .hk__crumb { margin-inline-start: auto; color: var(--neutral-80); }
+
+  .hk__order {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.2cqw 3.6cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+  }
+  .hk__order-k { flex: none; font-size: 2.9cqw; color: var(--neutral-80); }
+  .hk__order-v { font-size: 3.2cqw; font-weight: var(--font-weight-medium); min-inline-size: 0; }
+  .hk__sign { margin-inline-start: auto; display: grid; justify-items: end; flex: none; }
+  .hk__st {
+    grid-area: 1 / 1;
+    padding: 1.2cqw 2.8cqw;
+    border-radius: var(--radius-2x);
+    font-size: 2.8cqw;
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+  .hk__st--pre  { background-color: var(--neutral-10); color: var(--neutral-80); opacity: 0; }
+  .hk__st--post { background-color: var(--solace-10); color: var(--solace-80); }
+
+  .hk__hook {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 2cqw;
+    padding-inline: 1cqw;
+    font-size: 2.9cqw;
+    color: var(--neutral-80);
+    font-variant-numeric: tabular-nums;
+  }
+  /* A steady marker, not a blinker. */
+  .hk__hook-dot {
+    inline-size: 1.6cqw; block-size: 1.6cqw;
+    border-radius: 100px;
+    background-color: var(--solace-60);
+  }
+  .hk__hook-pre, .hk__hook-post { grid-column: 2; grid-row: 1; }
+  .hk__hook-pre { opacity: 0; }
+
+  .hk__cards { display: flex; flex-direction: column; gap: 2.4cqw; }
+  /* Raised, and inset from the EHR chrome, because a hook card is a guest in
+     somebody else's layout. */
+  .hk__card {
+    display: flex; flex-direction: column; gap: 1.8cqw;
+    margin-inline-start: 4cqw;
+    padding: 3.4cqw 3.8cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.20);
+    border-inline-start: 0.9cqw solid var(--neutral-30);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.10),
+      0 8px 20px rgb(from var(--neutral-40) r g b / 0.14);
+  }
+  .hk__card--warn { border-inline-start-color: var(--red-40); }
+  .hk__card--gap  { border-inline-start-color: var(--solace-60); }
+
+  .hk__card-head {
+    display: flex; align-items: center; gap: 2.2cqw;
+    font-size: 3.2cqw;
+    font-weight: var(--font-weight-medium);
+  }
+  .hk__card-icon { inline-size: 4.2cqw; block-size: 4.2cqw; flex: none; }
+  .hk__card--warn .hk__card-icon { color: var(--red-60); }
+  .hk__card--gap  .hk__card-icon { color: var(--solace-80); }
+  .hk__card-icon svg { inline-size: 100%; block-size: 100%; }
+  .hk__card-body { font-size: 3cqw; line-height: 1.5; color: var(--neutral-90); }
+  .hk__card-src { font-size: 2.8cqw; color: var(--neutral-80); }
+
+  .hk__accept {
+    align-self: flex-start;
+    padding: 2cqw 3.2cqw;
+    border-radius: var(--radius-2x);
+    background: linear-gradient(180deg, var(--solace-60) 0%, var(--solace-80) 100%);
+    border: 1px solid var(--solace-90);
+    color: var(--white);
+    font-size: 2.9cqw;
+    font-weight: var(--font-weight-medium);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+      0 2px 5px rgb(from var(--solace-100) r g b / 0.24);
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+  @keyframes hk-sign-pre {
+    0%, 21%  { opacity: 1; }
+    25%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes hk-sign-post {
+    0%, 25%  { opacity: 0; }
+    29%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  @keyframes hk-hook-pre {
+    0%, 28%  { opacity: 1; }
+    32%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes hk-hook-post {
+    0%, 32%  { opacity: 0; }
+    36%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  /* Cards slide in from the leading edge, the way a panel docking into somebody
+     else's layout actually behaves. */
+  @keyframes hk-card-a {
+    0%, 41%  { opacity: 0; translate: -3cqw 0; }
+    48%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: -3cqw 0; }
+  }
+  @keyframes hk-card-b {
+    0%, 61%  { opacity: 0; translate: -3cqw 0; }
+    68%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: -3cqw 0; }
+  }
+  @keyframes hk-accept {
+    0%, 81%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
+                           0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
+    88%, 96% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
+                           0 0 0 1cqw rgb(from var(--solace-40) r g b / 0.32); }
+    100%     { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
+                           0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
+  }
+
+  .hk[data-play] .hk__st--pre    { animation: hk-sign-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .hk[data-play] .hk__st--post   { animation: hk-sign-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .hk[data-play] .hk__hook-pre   { animation: hk-hook-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .hk[data-play] .hk__hook-post  { animation: hk-hook-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .hk[data-play] .hk__card--warn { animation: hk-card-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .hk[data-play] .hk__card--gap  { animation: hk-card-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .hk[data-play] .hk__accept     { animation: hk-accept var(--clip-dur) var(--ease-ui) infinite both; }
+</style>

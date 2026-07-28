@@ -14,14 +14,18 @@
    shade, contrast in the 4-18% band, blur 2-3x the offset, real hairline.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s.
+   12.0s, five beats of 2.4s, narrated by the caption rail. Deliberately
+   unglamorous: three resources written, three audit lines appended. That is the
+   whole product promise of this step, and dressing it up would undercut it.
 
-     0.00s   three resources queued
-     0.72s   the encounter is written, then the coded diagnosis, then the note
-     2.40s   the audit lines append underneath, one per write, each with the
-             clinician who owns it
-     4.20s   the promise, stated once everything behind it is on screen
-     5.58s   dissolve back; 100% equals 0% so the loop has no seam */
+     beat 1   0.0s   three resources queued
+     beat 2   2.4s   the encounter is written, then the coded diagnosis
+     beat 3   4.8s   then the note, as text and as PDF
+     beat 4   7.2s   the audit lines append, one per write, each with the
+                     clinician who owns it
+     beat 5   9.6s   the promise, stated once everything behind it is on screen
+     11.5s           dissolve; 100% equals 0% so the loop has no seam
+   */
 
 const writes = [
   { key: 'a', name: 'Encounter', sub: 'Arrival, triage level, disposition' },
@@ -33,6 +37,15 @@ const audit = [
   { key: 'a', t: '09:14:02', what: 'Atlas read 3 documents', who: 'Dr Alvarez' },
   { key: 'b', t: '09:14:06', what: 'Note written to the chart', who: 'Dr Alvarez' },
   { key: 'c', t: '09:14:06', what: 'Triage raised 3 &rarr; 2', who: 'Bedside vitals' },
+];
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Coded resources, not a PDF stapled to the side of the chart.',
+  'Written through the interfaces your hospital already runs.',
+  'Every write confirmed, one at a time.',
+  'Every AI read and write logged, with a name against it.',
+  'No standing access. The token expires with the session.',
 ];
 ---
 
@@ -74,11 +87,13 @@ const audit = [
   </div>
 
   <p class="ch__foot">Every AI read and every AI write, in the record.</p>
+  <ClipCaption steps={CAPTIONS} />
+
 </div>
 
 <style>
   .ch {
-    --clip-dur: 6s;
+    --clip-dur: 12s;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -150,57 +165,59 @@ const audit = [
   }
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid.
+
      Sequential, never crossfaded: "Queued" and "Written" sit in one grid cell,
      and overlapping their opacities would render a third illegible word. */
   @keyframes ch-queued {
-    0%, 10%  { opacity: 1; }
-    13%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 22%  { opacity: 1; }
+    25%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes ch-queued-b {
-    0%, 19%  { opacity: 1; }
-    22%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 32%  { opacity: 1; }
+    35%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes ch-queued-c {
-    0%, 28%  { opacity: 1; }
-    31%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 42%  { opacity: 1; }
+    45%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes ch-written {
-    0%, 13%  { opacity: 0; }
-    16%, 93% { opacity: 1; }
+    0%, 25%  { opacity: 0; }
+    28%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
   @keyframes ch-written-b {
-    0%, 22%  { opacity: 0; }
-    25%, 93% { opacity: 1; }
+    0%, 35%  { opacity: 0; }
+    38%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
   @keyframes ch-written-c {
-    0%, 31%  { opacity: 0; }
-    34%, 93% { opacity: 1; }
+    0%, 45%  { opacity: 0; }
+    48%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
-  /* Log lines append. They arrive from below, the way a tail does. */
+  /* Beat 4 — the log appends. Lines arrive from below, the way a tail does. */
   @keyframes ch-line-a {
-    0%, 38%  { opacity: 0; translate: 0 1.4cqw; }
-    44%, 93% { opacity: 1; translate: 0 0; }
+    0%, 61%  { opacity: 0; translate: 0 1.4cqw; }
+    66%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes ch-line-b {
-    0%, 45%  { opacity: 0; translate: 0 1.4cqw; }
-    51%, 93% { opacity: 1; translate: 0 0; }
+    0%, 66%  { opacity: 0; translate: 0 1.4cqw; }
+    71%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes ch-line-c {
-    0%, 52%  { opacity: 0; translate: 0 1.4cqw; }
-    58%, 93% { opacity: 1; translate: 0 0; }
+    0%, 71%  { opacity: 0; translate: 0 1.4cqw; }
+    76%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes ch-foot {
-    0%, 66%  { opacity: 0; }
-    73%, 93% { opacity: 1; }
+    0%, 81%  { opacity: 0; }
+    87%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
 

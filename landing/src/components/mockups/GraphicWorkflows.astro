@@ -1,0 +1,368 @@
+---
+/* Workflows — the no-code automation builder. And a 12s film.
+
+   This is the feature nobody else in the category ships and almost nobody on
+   the site knew existed. The engine behind it is real: nine triggers, fourteen
+   actions, per-step branching conditions, a step cap, and a sanitiser that
+   strips every Safe Harbor identifier out of a trigger payload before an action
+   ever sees it.
+
+   That last part is the reason this graphic exists and is drawn the way it is.
+   Anyone can build a rules engine. Building one that can text a patient, post
+   to Slack and call a webhook WITHOUT letting a name or a date of birth leave
+   the building is the hard part, so the PHI gate is not a footnote here — it is
+   its own object in the chain, sitting between the condition and the actions,
+   exactly where it sits in the engine.
+
+   The rule shown is deliberately mundane. A dramatic one would invite the
+   reader to check the clinical logic instead of the mechanism.
+
+   Neumorphic rules per materials.css: light from directly above so offsets are
+   Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the offset,
+   real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   an empty rule. WHEN is chosen from the real trigger list.
+     beat 2   2.4s   a condition narrows it
+     beat 3   4.8s   the actions chain up, one at a time
+     beat 4   7.2s   the toggle goes live
+     beat 5   9.6s   it starts running, and every run lands in the log
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+import ClipCursor from './ClipCursor.astro';
+
+const CAPTIONS = [
+  'Pick what starts the rule. Nine real events, no code.',
+  'Narrow it down to the cases you mean.',
+  'Chain up what should happen next.',
+  'Every payload is stripped of identifiers before it leaves.',
+  'Turn it on, and every run is on the record.',
+];
+---
+
+<div class="wf" data-clip>
+  <div class="wf__head">
+    <span class="wf__title">Workflow builder</span>
+    <span class="wf__state">
+      <span class="wf__st wf__st--pre" aria-hidden="true">Draft</span>
+      <span class="wf__st wf__st--post"><i></i>Live</span>
+    </span>
+  </div>
+
+  <ol class="wf__chain">
+    <li class="wf__step wf__step--when">
+      <span class="wf__k">When</span>
+      <span class="wf__field">
+        <span class="wf__val wf__val--pre" aria-hidden="true">Choose an event</span>
+        <span class="wf__val wf__val--post">Bedside vitals refine a triage level</span>
+      </span>
+    </li>
+
+    <li class="wf__step wf__step--if">
+      <span class="wf__k">And only if</span>
+      <span class="wf__field">
+        <span class="wf__cond">
+          <b>Refined level</b>
+          <em>is at or above</em>
+          <b>the emergent band</b>
+        </span>
+      </span>
+    </li>
+
+    <li class="wf__gate">
+      <span class="wf__gate-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.7 13.6 4v4.2c0 3-2.3 5.4-5.6 6.1-3.3-.7-5.6-3.1-5.6-6.1V4L8 1.7Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M5.6 8.1 7.3 9.8l3.1-3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="wf__gate-text">
+        <b>Identifiers stripped here</b>
+        <i>Actions receive levels, counts and opaque ids. Never a name.</i>
+      </span>
+    </li>
+
+    <li class="wf__step wf__step--do">
+      <span class="wf__k">Then</span>
+      <span class="wf__acts">
+        <span class="wf__act wf__act--a">Page the on-call team</span>
+        <span class="wf__act wf__act--b">Open a task on the board</span>
+        <span class="wf__act wf__act--c">Write the change to the chart</span>
+      </span>
+    </li>
+  </ol>
+
+  <div class="wf__runs">
+    <p class="wf__runs-label">Recent runs</p>
+    <ul class="wf__lines">
+      <li class="wf__line wf__line--a"><span class="wf__t">09:14:06</span><span>3 actions completed</span><span class="wf__ok">Passed</span></li>
+      <li class="wf__line"><span class="wf__t">09:02:41</span><span>Condition not met, skipped</span><span class="wf__skip">Skipped</span></li>
+      <li class="wf__line"><span class="wf__t">08:47:12</span><span>3 actions completed</span><span class="wf__ok">Passed</span></li>
+    </ul>
+  </div>
+
+  <span class="wf__cursor" aria-hidden="true"><ClipCursor /></span>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  .wf {
+    --clip-dur: 12s;
+    position: relative;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .wf__head { display: flex; align-items: center; gap: 3cqw; }
+  .wf__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .wf__state { margin-inline-start: auto; display: grid; justify-items: end; }
+  .wf__st {
+    grid-area: 1 / 1;
+    display: flex; align-items: center; gap: 1.4cqw;
+    padding: 1.2cqw 2.8cqw;
+    border-radius: 100px;
+    font-size: 2.8cqw;
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+  .wf__st--pre  { background-color: var(--neutral-10); color: var(--neutral-80); opacity: 0; }
+  .wf__st--post { background-color: var(--solace-10); color: var(--solace-80); }
+  /* A steady state marker, not a blinker. It says "on", and things that are on
+     do not flash at you. */
+  .wf__st--post i {
+    inline-size: 1.6cqw; block-size: 1.6cqw;
+    border-radius: 100px;
+    background-color: var(--solace-60);
+  }
+
+  .wf__chain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2cqw; }
+
+  .wf__step {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.2cqw 3.6cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+  }
+  /* Fixed width so When / And only if / Then form a real column and the values
+     start on one line rather than stepping in and out. */
+  .wf__k {
+    inline-size: 19cqw;
+    flex: none;
+    font-size: 2.9cqw;
+    color: var(--neutral-80);
+  }
+
+  .wf__field { display: grid; flex: 1; min-inline-size: 0; }
+  .wf__field > * { grid-area: 1 / 1; }
+  /* Pressed: these are inputs, and the inset is what says so without a border
+     or a label. */
+  .wf__val {
+    padding: 2cqw 2.8cqw;
+    border-radius: var(--radius-2x);
+    background-color: var(--neutral-10);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+    font-size: 3.1cqw;
+    line-height: 1.35;
+  }
+  .wf__val--pre  { color: var(--neutral-60); opacity: 0; }
+  .wf__val--post { color: var(--neutral-90); font-weight: var(--font-weight-medium); }
+
+  .wf__cond {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 1.6cqw;
+    padding: 2cqw 2.8cqw;
+    border-radius: var(--radius-2x);
+    background-color: var(--neutral-10);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+    font-size: 3.1cqw;
+  }
+  .wf__cond b {
+    padding: 0.6cqw 1.8cqw;
+    border-radius: var(--radius-1_5x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    font-weight: var(--font-weight-medium);
+  }
+  .wf__cond em { font-style: normal; color: var(--neutral-80); }
+
+  /* The PHI gate sits physically between the condition and the actions,
+     because that is exactly where it sits in the engine. */
+  .wf__gate {
+    display: flex; align-items: center; gap: 3cqw;
+    margin-inline: 6cqw;
+    padding: 2.8cqw 3.4cqw;
+    border-radius: var(--radius-2_5x);
+    background: linear-gradient(180deg, var(--solace-100) 0%, #052a21 100%);
+    color: var(--white);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.14),
+      0 8px 18px rgb(from var(--solace-100) r g b / 0.26);
+  }
+  .wf__gate-icon {
+    display: grid; place-items: center;
+    inline-size: 6.4cqw; block-size: 6.4cqw; flex: none;
+    border-radius: 100px;
+    background-color: rgb(from var(--solace-30) r g b / 0.22);
+    color: var(--solace-20);
+  }
+  .wf__gate-icon svg { inline-size: 3.8cqw; block-size: 3.8cqw; }
+  .wf__gate-text { display: flex; flex-direction: column; gap: 0.4cqw; }
+  .wf__gate-text b { font-size: 3.2cqw; font-weight: var(--font-weight-medium); }
+  .wf__gate-text i { font-style: normal; font-size: 2.8cqw; color: rgb(from var(--white) r g b / 0.68); }
+
+  .wf__acts { display: flex; flex-direction: column; gap: 1.6cqw; flex: 1; min-inline-size: 0; }
+  .wf__act {
+    padding: 2cqw 2.8cqw;
+    border-radius: var(--radius-2x);
+    background-color: var(--solace-10);
+    border: 1px solid rgb(from var(--solace-60) r g b / 0.32);
+    color: var(--solace-100);
+    font-size: 3.1cqw;
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Pressed in: a log is a record you read, never a surface you act on. */
+  .wf__runs {
+    display: flex; flex-direction: column; gap: 1.8cqw;
+    padding: 3.4cqw 3.6cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+  }
+  .wf__runs-label { font-size: 2.9cqw; color: var(--neutral-80); }
+  .wf__lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.4cqw; }
+  .wf__line { display: flex; align-items: baseline; gap: 2.6cqw; font-size: 2.9cqw; color: var(--neutral-90); }
+  .wf__t { flex: none; color: var(--neutral-80); font-variant-numeric: tabular-nums; }
+  .wf__ok   { margin-inline-start: auto; flex: none; color: var(--solace-80); font-weight: var(--font-weight-medium); }
+  .wf__skip { margin-inline-start: auto; flex: none; color: var(--neutral-80); }
+
+  /* Parked over the When field. The clip brings it in from the corner. */
+  .wf__cursor {
+    position: absolute;
+    inset-block-start: 21cqw;
+    inset-inline-start: 44cqw;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+  @keyframes wf-cursor {
+    0%      { opacity: 0; translate: 22cqw 44cqw; }
+    3%      { opacity: 1; translate: 22cqw 44cqw; }
+    9%      { opacity: 1; translate: 0 0; }
+    17%     { opacity: 1; translate: 0 0; }
+    24%     { opacity: 0; translate: 18cqw 40cqw; }
+    100%    { opacity: 0; translate: 22cqw 44cqw; }
+  }
+  @keyframes wf-click {
+    0%, 9%    { opacity: 0; scale: 0.3; }
+    11%       { opacity: 0.55; }
+    17%, 100% { opacity: 0; scale: 1.8; }
+  }
+  /* Sequential, never overlapping: placeholder and value share a cell, and
+     crossfading them would render a third illegible string. */
+  @keyframes wf-when-pre {
+    0%, 11%  { opacity: 1; }
+    14%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes wf-when-post {
+    0%, 14%  { opacity: 0; }
+    18%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  @keyframes wf-if {
+    0%, 22%  { opacity: 0; translate: 0 1.6cqw; }
+    29%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  @keyframes wf-act-a {
+    0%, 42%  { opacity: 0; translate: 0 1.6cqw; }
+    47%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  @keyframes wf-act-b {
+    0%, 47%  { opacity: 0; translate: 0 1.6cqw; }
+    52%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  @keyframes wf-act-c {
+    0%, 52%  { opacity: 0; translate: 0 1.6cqw; }
+    57%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  @keyframes wf-do {
+    0%, 40%  { opacity: 0; }
+    45%, 96% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  /* Beat 4 — the gate. It arrives last of the chain because it is the thing the
+     reader should still be looking at when the caption names it. */
+  @keyframes wf-gate {
+    0%, 62%  { opacity: 0; translate: 0 2cqw; }
+    69%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 2cqw; }
+  }
+  @keyframes wf-draft {
+    0%, 81%  { opacity: 1; }
+    84%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes wf-live {
+    0%, 84%  { opacity: 0; }
+    87%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  /* Only the newest line arrives. The two beneath it were already there — a
+     rule that has been live has a history, and an empty log for ten of the
+     twelve seconds read as a panel that had failed to load. */
+  @keyframes wf-run-a {
+    0%, 87%  { opacity: 0; translate: 0 -1.2cqw; }
+    92%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 -1.2cqw; }
+  }
+
+  .wf[data-play] .wf__cursor { animation: wf-cursor var(--clip-dur) var(--ease-hero) infinite both; }
+  .wf[data-play] .wf__cursor::after {
+    content: '';
+    position: absolute;
+    inset-block-start: -2.2cqw;
+    inset-inline-start: -2.2cqw;
+    inline-size: 8cqw;
+    block-size: 8cqw;
+    border-radius: 100px;
+    border: 0.55cqw solid var(--solace-60);
+    animation: wf-click var(--clip-dur) var(--ease-hero) infinite both;
+  }
+  .wf[data-play] .wf__val--pre   { animation: wf-when-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .wf[data-play] .wf__val--post  { animation: wf-when-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .wf[data-play] .wf__step--if   { animation: wf-if var(--clip-dur) var(--ease-hero) infinite both; }
+  .wf[data-play] .wf__step--do   { animation: wf-do var(--clip-dur) var(--ease-ui) infinite both; }
+  .wf[data-play] .wf__act--a     { animation: wf-act-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .wf[data-play] .wf__act--b     { animation: wf-act-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .wf[data-play] .wf__act--c     { animation: wf-act-c var(--clip-dur) var(--ease-hero) infinite both; }
+  .wf[data-play] .wf__gate       { animation: wf-gate var(--clip-dur) var(--ease-hero) infinite both; }
+  .wf[data-play] .wf__st--pre    { animation: wf-draft var(--clip-dur) var(--ease-ui) infinite both; }
+  .wf[data-play] .wf__st--post   { animation: wf-live var(--clip-dur) var(--ease-ui) infinite both; }
+  .wf[data-play] .wf__line--a    { animation: wf-run-a var(--clip-dur) var(--ease-hero) infinite both; }
+</style>

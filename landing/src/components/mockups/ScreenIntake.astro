@@ -18,25 +18,30 @@
    runs behind the island instead of reading as a rectangle parked under it.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s, looping, restarted from zero every time it enters view. The markup
-   below IS the finished frame; the keyframes rewind it to the opening state and
-   play forward. So no-JS, reduced-motion and print all get a complete screen.
+   12.0s, five beats of 2.4s. The caption rail lives on the stage OUTSIDE the
+   phone, because it narrates the act rather than being part of the app — which
+   is also why this screen no longer carries data-clip itself and reads the
+   attribute off whatever wraps it.
 
-     0.00s   at rest. English selected, one question asked, nothing answered.
-     0.50s   a thumb lands on Tagalog — the tap ring blooms
-     0.72s   the pills swap. The whole visit is now in their language.
-     0.96s   they hold to speak; the level meter is live and the timer runs
-     1.32s   their answer arrives, in their own words
-     2.10s   Solace reads it and asks the ONE follow-up that fits
-     2.76s   the follow-up rule states itself
-     3.00s   hold
-     5.64s   everything transient dissolves, the pills revert, and 100% is
-             pixel-identical to 0% so the loop has no seam */
+   The markup below IS the finished frame; the keyframes rewind it to the
+   opening state and play forward. So no-JS, reduced-motion and print all get a
+   complete screen.
+
+     beat 1   0.0s   at rest. English selected, one question asked, nothing said.
+     beat 2   2.4s   a thumb lands on Tagalog. The whole visit is now in their
+                     language.
+     beat 3   4.8s   they hold to speak; the meter is live, the timer runs, and
+                     their answer arrives in their own words
+     beat 4   7.2s   Solace reads it and asks the ONE follow-up that fits
+     beat 5   9.6s   it reaches the care team before the patient does
+     11.5s           everything transient dissolves and the pills revert, so
+                     100% is pixel-identical to 0% and the loop has no seam
+   */
 import MarkPaths from '../brand/MarkPaths.astro';
 import WordPaths from '../brand/WordPaths.astro';
 ---
 
-<div class="scr" data-clip>
+<div class="scr">
   <div class="scr__bar">
     <span>9:41</span>
     <span class="scr__bar-right" aria-hidden="true">
@@ -76,6 +81,13 @@ import WordPaths from '../brand/WordPaths.astro';
     <span class="scr__time" aria-hidden="true">0:0<span class="scr__tick"><span class="scr__strip"><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i></span></span></span>
   </div>
 
+  <p class="scr__sent">
+    <span class="scr__sent-tick" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    Sent to your care team
+  </p>
+
   <p class="scr__hint">Hold to speak, or type instead</p>
 
   <div class="scr__foot">
@@ -86,7 +98,7 @@ import WordPaths from '../brand/WordPaths.astro';
 
 <style>
   .scr {
-    --clip-dur: 6s;
+    --clip-dur: 12s;
     inline-size: 100%;
     block-size: 100%;
     display: flex;
@@ -193,6 +205,27 @@ import WordPaths from '../brand/WordPaths.astro';
   .scr__strip { display: block; translate: 0 -83.333%; }
   .scr__strip i { display: block; block-size: 1em; line-height: 1; font-style: normal; }
 
+  /* Beat 5. The one thing a patient actually wants confirmed: that telling the
+     story went somewhere. */
+  .scr__sent {
+    display: flex; align-items: center; justify-content: center; gap: 2cqw;
+    padding: 2.4cqw;
+    border-radius: 3cqw;
+    background-color: var(--solace-10);
+    color: var(--solace-100);
+    font-size: 4.2cqw;
+    font-weight: var(--font-weight-medium);
+    opacity: 0;
+  }
+  .scr__sent-tick {
+    display: grid; place-items: center;
+    inline-size: 5cqw; block-size: 5cqw; flex: none;
+    border-radius: 100px;
+    background-color: var(--solace-80);
+    color: var(--white);
+  }
+  .scr__sent-tick svg { inline-size: 3cqw; block-size: 3cqw; }
+
   .scr__hint { text-align: center; font-size: 4.4cqw; color: var(--neutral-60); }
 
   .scr__foot {
@@ -205,25 +238,25 @@ import WordPaths from '../brand/WordPaths.astro';
   .scr__foot span:first-child { color: var(--neutral-90); font-weight: var(--font-weight-medium); }
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════
-     Every rule below shares one 6s timeline, so the percentages ARE the beat
-     sheet above and the choreography can be read straight off them. Nothing
-     here uses animation-delay: delays drift against each other and make a
-     six-part sequence impossible to reason about. */
+     Five beats of 2.4s on the shared grid, so the percentages ARE the beat
+     sheet above. Nothing uses animation-delay: delays drift against each other
+     and make a five-part sequence impossible to reason about. */
   @keyframes intake-tap {
-    0%, 7%    { opacity: 0; scale: 0.35; }
-    9%        { opacity: 0.5; }
-    15%, 100% { opacity: 0; scale: 1.9; }
+    0%, 21%   { opacity: 0; scale: 0.35; }
+    23%       { opacity: 0.5; }
+    29%, 100% { opacity: 0; scale: 1.9; }
   }
   @keyframes intake-select {
-    0%, 11% {
+    0%, 24% {
       background-color: var(--white);
       border-color: var(--neutral-20);
       color: var(--neutral-80);
     }
-    14%, 93% {
+    27%, 96% {
       background-color: var(--solace-80);
       border-color: var(--solace-80);
-      color: var(--white); animation-timing-function: steps(1, end); }
+      color: var(--white); animation-timing-function: steps(1, end);
+    }
     100% {
       background-color: var(--white);
       border-color: var(--neutral-20);
@@ -231,15 +264,16 @@ import WordPaths from '../brand/WordPaths.astro';
     }
   }
   @keyframes intake-deselect {
-    0%, 11% {
+    0%, 24% {
       background-color: var(--solace-80);
       border-color: var(--solace-80);
       color: var(--white);
     }
-    14%, 93% {
+    27%, 96% {
       background-color: var(--white);
       border-color: var(--neutral-20);
-      color: var(--neutral-80); animation-timing-function: steps(1, end); }
+      color: var(--neutral-80); animation-timing-function: steps(1, end);
+    }
     100% {
       background-color: var(--solace-80);
       border-color: var(--solace-80);
@@ -249,42 +283,45 @@ import WordPaths from '../brand/WordPaths.astro';
   /* One shape for every line that arrives: rise, unblur, settle. The two stops
      that differ per line are the in-point and the dissolve. */
   @keyframes intake-answer {
-    0%, 20%   { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
-    28%, 92%  { opacity: 1; translate: 0 0; filter: blur(0); }
-    100%      { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
+    0%, 42%  { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
+    49%, 96% { opacity: 1; translate: 0 0; filter: blur(0); }
+    100%     { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
   }
   @keyframes intake-followup {
-    0%, 34%   { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
-    41%, 92%  { opacity: 1; translate: 0 0; filter: blur(0); }
-    100%      { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
+    0%, 61%  { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
+    68%, 96% { opacity: 1; translate: 0 0; filter: blur(0); }
+    100%     { opacity: 0; translate: 0 2.2cqw; filter: blur(3px); }
   }
   @keyframes intake-note {
-    0%, 44%  { opacity: 0; }
-    50%, 92% { opacity: 1; }
+    0%, 69%  { opacity: 0; }
+    75%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
-  /* Explicit from: the strip's resting position IS the end frame, so an
-     implicit from would copy it and the counter would never move. */
+  @keyframes intake-sent {
+    0%, 82%  { opacity: 0; translate: 0 2cqw; }
+    88%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 2cqw; }
+  }
   @keyframes intake-timer {
     from { translate: 0 0; }
     to   { translate: 0 -83.333%; }
   }
   /* The meter runs on its own short cycle rather than the master timeline —
-     speech is not on the beat, and a 6s waveform would read as decoration. */
+     speech is not on the beat, and a 12s waveform would read as decoration. */
   @keyframes intake-level {
     0%, 100% { block-size: var(--h); }
     50%      { block-size: var(--l); }
   }
 
-  /* ease-ui, not steps: a selection toggle in a real interface transitions
-     over ~180ms, and 11%->14% of 6s is exactly that. */
-  .scr[data-play] .scr__lang--on {
+  /* ease-ui, not steps: a selection toggle in a real interface transitions over
+     a couple of hundred milliseconds, and 24%->27% of 12s is exactly that. */
+  :global([data-play]) .scr__lang--on {
     animation: intake-select var(--clip-dur) var(--ease-ui) infinite both;
   }
-  .scr[data-play] .scr__lang--alt {
+  :global([data-play]) .scr__lang--alt {
     animation: intake-deselect var(--clip-dur) var(--ease-ui) infinite both;
   }
-  .scr[data-play] .scr__lang--on::after {
+  :global([data-play]) .scr__lang--on::after {
     content: '';
     position: absolute;
     inset: -1.6cqw;
@@ -293,27 +330,20 @@ import WordPaths from '../brand/WordPaths.astro';
     animation: intake-tap var(--clip-dur) var(--ease-hero) infinite both;
     pointer-events: none;
   }
-  .scr[data-play] .scr__a {
-    animation: intake-answer var(--clip-dur) var(--ease-hero) infinite both;
-  }
-  .scr[data-play] .scr__q--next {
-    animation: intake-followup var(--clip-dur) var(--ease-hero) infinite both;
-  }
-  .scr[data-play] .scr__follow {
-    animation: intake-note var(--clip-dur) var(--ease-ui) infinite both;
-  }
-  .scr[data-play] .scr__strip {
-    animation: intake-timer var(--clip-dur) steps(6, jump-none) infinite both;
-  }
-  .scr[data-play] .scr__meter i {
+  :global([data-play]) .scr__a       { animation: intake-answer var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .scr__q--next { animation: intake-followup var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .scr__follow  { animation: intake-note var(--clip-dur) var(--ease-ui) infinite both; }
+  :global([data-play]) .scr__sent    { animation: intake-sent var(--clip-dur) var(--ease-hero) infinite both; }
+  :global([data-play]) .scr__strip   { animation: intake-timer var(--clip-dur) steps(6, jump-none) infinite both; }
+  :global([data-play]) .scr__meter i {
     /* Each bar gets a second height and a slightly different period, which is
        what stops twelve bars from breathing in unison like an equaliser toy. */
     animation: intake-level var(--_p) ease-in-out infinite alternate;
   }
-  .scr[data-play] .scr__meter i:nth-child(6n + 1) { --l: 82%; --_p: 620ms; }
-  .scr[data-play] .scr__meter i:nth-child(6n + 2) { --l: 28%; --_p: 780ms; }
-  .scr[data-play] .scr__meter i:nth-child(6n + 3) { --l: 44%; --_p: 540ms; }
-  .scr[data-play] .scr__meter i:nth-child(6n + 4) { --l: 90%; --_p: 700ms; }
-  .scr[data-play] .scr__meter i:nth-child(6n + 5) { --l: 36%; --_p: 860ms; }
-  .scr[data-play] .scr__meter i:nth-child(6n + 6) { --l: 76%; --_p: 600ms; }
+  :global([data-play]) .scr__meter i:nth-child(6n + 1) { --l: 82%; --_p: 620ms; }
+  :global([data-play]) .scr__meter i:nth-child(6n + 2) { --l: 28%; --_p: 780ms; }
+  :global([data-play]) .scr__meter i:nth-child(6n + 3) { --l: 44%; --_p: 540ms; }
+  :global([data-play]) .scr__meter i:nth-child(6n + 4) { --l: 90%; --_p: 700ms; }
+  :global([data-play]) .scr__meter i:nth-child(6n + 5) { --l: 36%; --_p: 860ms; }
+  :global([data-play]) .scr__meter i:nth-child(6n + 6) { --l: 76%; --_p: 600ms; }
 </style>

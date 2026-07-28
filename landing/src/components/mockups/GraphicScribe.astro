@@ -16,20 +16,26 @@
    offset, real hairline on every surface.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s. The whole point is CAUSALITY, so the cut is built around it: the
-   patient says a thing, and a beat later that exact clause appears in the note
-   already carrying its citation. Watch the left and the right light up together
-   at 2.6s — that link is the product.
+   12.0s, five beats of 2.4s, narrated by the caption rail.
 
-     0.00s   room mic live, transcript empty, note empty
-     0.36s   the clinician's question lands
-     1.08s   the patient answers. Their line takes the accent rail.
-     1.80s   the first clause is drafted from what was already said
-     2.52s   "worse when lying flat" writes itself — and the spoken line it came
-             from brightens at the same instant
-     3.36s   the remaining negatives are drafted
-     4.32s   the note is ready for a human to read and sign
-     5.52s   dissolve back; 100% equals 0% so the loop has no seam */
+     beat 1   0.0s   room mic live, transcript empty, note empty
+     beat 2   2.4s   the exchange lands, line by line
+     beat 3   4.8s   the first clause is drafted from what was already said
+     beat 4   7.2s   "worse when lying flat" writes itself, and the spoken line
+                     it came from brightens at the same instant. That link is
+                     the product; the clip is built around this beat.
+     beat 5   9.6s   the note is ready for a human to read and sign
+     11.5s           dissolve; 100% equals 0% so the loop has no seam
+   */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Talk to your patient. Nothing to open, nothing to click.',
+  'The room transcribes itself as you go.',
+  'The note drafts from what was actually said.',
+  'Every clause stays wired to the moment it came from.',
+  'You read it, you sign it. Never the other way round.',
+];
 ---
 
 <div class="scb" data-clip>
@@ -74,11 +80,13 @@
     <span class="scb__forms"><b>24</b> letters and forms filled from the chart</span>
     <span class="scb__sign">Sign &amp; send</span>
   </div>
+
+  <ClipCaption steps={CAPTIONS} />
 </div>
 
 <style>
   .scb {
-    --clip-dur: 6s;
+    --clip-dur: 12s;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -230,64 +238,69 @@
       0 2px 5px rgb(from var(--solace-100) r g b / 0.24);
   }
 
-  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. The pivot is beat 4: the spoken line
+     and the clause it produced light up TOGETHER, which is the only way to show
+     a link rather than assert one. */
   @keyframes scribe-said-a {
-    0%, 5%   { opacity: 0; translate: 0 1.4cqw; }
-    12%, 92% { opacity: 1; translate: 0 0; }
+    0%, 21%  { opacity: 0; translate: 0 1.4cqw; }
+    26%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
-  /* The source line arrives, then brightens again at 44% — the moment its
-     clause lands in the note. Two events on one element, one rail. */
+  /* Arrives in beat 2, then brightens again in beat 4 when its clause lands in
+     the note. Two events, one element, one rail. */
   @keyframes scribe-said-src {
-    0%, 17%  { opacity: 0; translate: 0 1.4cqw; border-inline-start-color: var(--neutral-20); }
-    24%      { opacity: 1; translate: 0 0; border-inline-start-color: var(--neutral-20); }
-    44%      { border-inline-start-color: var(--solace-50); }
-    52%, 92% { opacity: 1; translate: 0 0; border-inline-start-color: var(--solace-40); }
+    0%, 26%  { opacity: 0; translate: 0 1.4cqw; border-inline-start-color: var(--neutral-20); }
+    31%      { opacity: 1; translate: 0 0; border-inline-start-color: var(--neutral-20); }
+    62%      { border-inline-start-color: var(--neutral-20); }
+    67%, 96% { opacity: 1; translate: 0 0; border-inline-start-color: var(--solace-50); }
     100%     { opacity: 0; translate: 0 1.4cqw; border-inline-start-color: var(--neutral-20); }
   }
   @keyframes scribe-said-c {
-    0%, 30%  { opacity: 0; translate: 0 1.4cqw; }
-    37%, 92% { opacity: 1; translate: 0 0; }
+    0%, 31%  { opacity: 0; translate: 0 1.4cqw; }
+    36%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
   @keyframes scribe-said-d {
-    0%, 36%  { opacity: 0; translate: 0 1.4cqw; }
-    43%, 92% { opacity: 1; translate: 0 0; }
+    0%, 35%  { opacity: 0; translate: 0 1.4cqw; }
+    40%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.4cqw; }
   }
-  /* Ink, not slide: a drafted clause appears where it belongs. */
+  @keyframes scribe-idle {
+    0%, 40%  { opacity: 1; }
+    44%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  /* Beat 3 inks the note. Ink, not slide: a drafted clause appears where it
+     belongs rather than flying in from somewhere. */
   @keyframes scribe-ink-a {
-    0%, 28%  { opacity: 0; filter: blur(2px); }
-    34%, 92% { opacity: 1; filter: blur(0); }
+    0%, 43%  { opacity: 0; filter: blur(2px); }
+    49%, 96% { opacity: 1; filter: blur(0); }
     100%     { opacity: 0; filter: blur(2px); }
   }
   @keyframes scribe-ink-b {
-    0%, 41%  { opacity: 0; filter: blur(2px); }
-    47%, 92% { opacity: 1; filter: blur(0); }
+    0%, 62%  { opacity: 0; filter: blur(2px); }
+    68%, 96% { opacity: 1; filter: blur(0); }
     100%     { opacity: 0; filter: blur(2px); }
   }
   @keyframes scribe-ink-c {
-    0%, 55%  { opacity: 0; filter: blur(2px); }
-    61%, 92% { opacity: 1; filter: blur(0); }
+    0%, 52%  { opacity: 0; filter: blur(2px); }
+    58%, 96% { opacity: 1; filter: blur(0); }
     100%     { opacity: 0; filter: blur(2px); }
   }
-  @keyframes scribe-idle {
-    0%, 24%  { opacity: 1; }
-    28%, 92% { opacity: 0; animation-timing-function: steps(1, end); }
-    100%     { opacity: 1; }
-  }
   @keyframes scribe-attr {
-    0%, 62% { opacity: 0; }
-    70%, 92% { opacity: 1; }
-    100%    { opacity: 0; }
+    0%, 70%  { opacity: 0; }
+    76%, 96% { opacity: 1; }
+    100%     { opacity: 0; }
   }
-  /* The one moment the button asks for a human. It settles and stays; it does
-     not throb. */
+  /* Beat 5. The button settles into a ready state and stays there. It does not
+     throb; a control that pulses forever is asking for attention it has not
+     earned. */
   @keyframes scribe-ready {
-    0%, 70%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+    0%, 82%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
                            0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
                            0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
-    78%, 92% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+    89%, 96% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
                            0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
                            0 0 0 0.9cqw rgb(from var(--solace-40) r g b / 0.34); }
     100%     { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
@@ -298,6 +311,8 @@
     from { translate: 0 0; }
     to   { translate: 0 -83.333%; }
   }
+  /* Off the master timeline on purpose: speech is not on the beat, and a 12s
+     waveform would read as decoration rather than as a level meter. */
   @keyframes scribe-level {
     0%, 100% { block-size: var(--h); }
     50%      { block-size: var(--l); }

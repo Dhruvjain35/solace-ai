@@ -16,25 +16,32 @@
    every surface so the shapes survive forced-colors.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.5s — the longest of the set, because this one has the most to say. A
-   clinician asks a question in plain language and gets back an answer that
-   cites itself, including from documents that were never structured data.
+   12.0s, five beats of 2.4s, narrated by the caption rail. The longest story in
+   the set, because this one has the most to say: a clinician asks a question in
+   plain language and gets back an answer that cites itself, including from
+   documents that were never structured data.
 
-     0.00s   an empty field. Cursor parked at the corner.
-     0.30s   it travels to the question box
-     0.90s   click — the placeholder clears
-     1.10s   the question types itself in
-     2.15s   the cursor leaves the frame; the work is Atlas's now
-     2.15s   the receipts tick in first, because that is the real order: a
-             scanned fax, an outside hospital's summary, then structured labs.
-             Two of the three were never in your EHR.
-     3.10s   the answer rises in their place
-     3.65s   the first citation lights, then the second
-     4.35s   "never completed" flashes — the thing nobody would have found
-     4.70s   the open thread is called out
-     5.15s   hold
-     6.05s   dissolve back; 100% equals 0% so the loop has no seam */
+     beat 1   0.0s   an empty field. The cursor crosses to it, clicks, and the
+                     question types itself in.
+     beat 2   2.4s   the receipts tick, one at a time: a scanned fax, an outside
+                     hospital's summary, then structured labs. Two of the three
+                     were never in your EHR.
+     beat 3   4.8s   the answer rises and its citations light up
+     beat 4   7.2s   "never completed" flashes — the thing nobody would have
+                     found without reading all fourteen pages
+     beat 5   9.6s   the open thread is named
+     11.5s           dissolve; 100% equals 0% so the loop has no seam
+   */
 import ClipCursor from './ClipCursor.astro';
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Ask the chart a question in plain language.',
+  'It reads the documents nobody has time to read.',
+  'The answer comes back with its sources attached.',
+  'Including what was never structured data.',
+  'And it names the thread somebody left open.',
+];
 ---
 
 <div class="atl" data-clip>
@@ -113,11 +120,13 @@ import ClipCursor from './ClipCursor.astro';
   <p class="atl__foot">Reads and writes to your EHR. Every one of them logged.</p>
 
   <span class="atl__cursor" aria-hidden="true"><ClipCursor /></span>
+  <ClipCaption steps={CAPTIONS} />
+
 </div>
 
 <style>
   .atl {
-    --clip-dur: 6.5s;
+    --clip-dur: 12s;
     position: relative;
     inline-size: 100%;
     display: flex;
@@ -288,106 +297,110 @@ import ClipCursor from './ClipCursor.astro';
     pointer-events: none;
   }
 
-  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+
+  /* Beat 1 — the cursor crosses to the field and clicks. */
   @keyframes atlas-cursor {
     0%       { opacity: 0; translate: 44cqw 52cqw; }
-    5%       { opacity: 1; translate: 44cqw 52cqw; }
-    13%      { opacity: 1; translate: 0 0; }
-    /* A real hand does not teleport off a button. It lingers, then leaves. */
-    35%      { opacity: 1; translate: 0 0; }
-    44%      { opacity: 0; translate: 40cqw 46cqw; }
+    3%       { opacity: 1; translate: 44cqw 52cqw; }
+    9%       { opacity: 1; translate: 0 0; }
+    /* A real hand does not teleport off a control. It lingers, then leaves. */
+    26%      { opacity: 1; translate: 0 0; }
+    33%      { opacity: 0; translate: 40cqw 46cqw; }
     100%     { opacity: 0; translate: 44cqw 52cqw; }
   }
   @keyframes atlas-click {
-    0%, 13%   { opacity: 0; scale: 0.3; }
-    15%       { opacity: 0.55; }
-    21%, 100% { opacity: 0; scale: 1.8; }
+    0%, 9%    { opacity: 0; scale: 0.3; }
+    11%       { opacity: 0.55; }
+    17%, 100% { opacity: 0; scale: 1.8; }
   }
-  /* The placeholder is fully gone before the first word lands. Overlapping the
-     two put grey placeholder text directly under grey typed text and the field
-     read as double-exposed. */
+  /* The placeholder is fully gone before the first word lands. Overlapping them
+     put grey placeholder text directly under grey typed text and the field read
+     as double-exposed. */
   @keyframes atlas-placeholder {
-    0%, 13%  { opacity: 1; }
-    16%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 9%   { opacity: 1; }
+    12%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes atlas-type-a {
-    0%, 17%  { opacity: 0; }
-    21%, 93% { opacity: 1; }
+    0%, 12%  { opacity: 0; }
+    16%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
   @keyframes atlas-type-b {
-    0%, 22%  { opacity: 0; }
-    26%, 93% { opacity: 1; }
+    0%, 15%  { opacity: 0; }
+    19%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
   @keyframes atlas-type-c {
-    0%, 27%  { opacity: 0; }
-    31%, 93% { opacity: 1; }
+    0%, 18%  { opacity: 0; }
+    22%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
-  /* The documents are in the chart before anyone asks anything, so the rows
-     never animate — only the TICKS do. What the clip shows is Atlas reading
-     each one, which is the actual event, and it means the lower half of the
-     graphic is never a blank reserved space waiting for content.
-
-     Reading happens before answering, which is also the honest order. */
+  /* Beat 2 — the receipts. The documents are in the chart before anyone asks
+     anything, so the ROWS never animate; only the ticks do, because reading
+     them is the actual event. It also means the lower half of the graphic is
+     never a blank space reserved for content that has not arrived. */
   @keyframes atlas-read-a {
-    0%, 33%  { opacity: 0; scale: 0.5; }
-    38%, 93% { opacity: 1; scale: 1; }
+    0%, 22%  { opacity: 0; scale: 0.5; }
+    27%, 96% { opacity: 1; scale: 1; }
     100%     { opacity: 0; scale: 0.5; }
   }
   @keyframes atlas-read-b {
-    0%, 37%  { opacity: 0; scale: 0.5; }
-    42%, 93% { opacity: 1; scale: 1; }
+    0%, 28%  { opacity: 0; scale: 0.5; }
+    33%, 96% { opacity: 1; scale: 1; }
     100%     { opacity: 0; scale: 0.5; }
   }
   @keyframes atlas-read-c {
-    0%, 41%  { opacity: 0; scale: 0.5; }
-    46%, 93% { opacity: 1; scale: 1; }
+    0%, 34%  { opacity: 0; scale: 0.5; }
+    39%, 96% { opacity: 1; scale: 1; }
     100%     { opacity: 0; scale: 0.5; }
   }
   @keyframes atlas-lbl-pre {
-    0%, 44%  { opacity: 1; }
-    47%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 36%  { opacity: 1; }
+    39%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes atlas-lbl-post {
-    0%, 47%  { opacity: 0; }
-    50%, 93% { opacity: 1; animation-timing-function: steps(1, end); }
+    0%, 39%  { opacity: 0; }
+    42%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
     100%     { opacity: 0; }
   }
+  /* Beat 3 — the answer, then its citations. */
   @keyframes atlas-idle {
-    0%, 44%  { opacity: 1; }
-    48%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 40%  { opacity: 1; }
+    44%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes atlas-answer {
-    0%, 47%  { opacity: 0; translate: 0 2.4cqw; }
-    55%, 93% { opacity: 1; translate: 0 0; }
+    0%, 42%  { opacity: 0; translate: 0 2.4cqw; }
+    49%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 2.4cqw; }
   }
   /* Citations arrive as plain text and are then marked — the highlight is the
      act of attribution, so it has to happen visibly after the sentence. */
   @keyframes atlas-cite-a {
-    0%, 56%  { background-color: transparent; color: var(--neutral-90); }
-    60%, 93% { background-color: var(--solace-10); color: var(--solace-100); animation-timing-function: steps(1, end); }
+    0%, 51%  { background-color: transparent; color: var(--neutral-90); }
+    55%, 96% { background-color: var(--solace-10); color: var(--solace-100); animation-timing-function: steps(1, end); }
     100%     { background-color: transparent; color: var(--neutral-90); }
   }
   @keyframes atlas-cite-b {
-    0%, 60%  { background-color: transparent; color: var(--neutral-90); }
-    64%, 93% { background-color: var(--solace-10); color: var(--solace-100); animation-timing-function: steps(1, end); }
+    0%, 55%  { background-color: transparent; color: var(--neutral-90); }
+    59%, 96% { background-color: var(--solace-10); color: var(--solace-100); animation-timing-function: steps(1, end); }
     100%     { background-color: transparent; color: var(--neutral-90); }
   }
+  /* Beat 4 — the finding that was buried in fourteen pages of fax. */
   @keyframes atlas-open {
-    0%, 65%  { background-color: transparent; color: var(--neutral-90); }
-    69%      { background-color: var(--red-10); color: var(--red-90); }
-    74%, 93% { background-color: var(--red-0); color: var(--red-90); animation-timing-function: steps(1, end); }
+    0%, 62%  { background-color: transparent; color: var(--neutral-90); }
+    66%      { background-color: var(--red-10); color: var(--red-90); }
+    72%, 96% { background-color: var(--red-0); color: var(--red-90); animation-timing-function: steps(1, end); }
     100%     { background-color: transparent; color: var(--neutral-90); }
   }
+  /* Beat 5 — the conclusion a human is meant to act on. */
   @keyframes atlas-flag {
-    0%, 72%  { opacity: 0; translate: 0 1.8cqw; }
-    79%, 93% { opacity: 1; translate: 0 0; }
+    0%, 81%  { opacity: 0; translate: 0 1.8cqw; }
+    88%, 96% { opacity: 1; translate: 0 0; }
     100%     { opacity: 0; translate: 0 1.8cqw; }
   }
 
@@ -409,15 +422,15 @@ import ClipCursor from './ClipCursor.astro';
   .atl[data-play] .atl__ph--a        { animation: atlas-type-a var(--clip-dur) var(--ease-ui) infinite both; }
   .atl[data-play] .atl__ph--b        { animation: atlas-type-b var(--clip-dur) var(--ease-ui) infinite both; }
   .atl[data-play] .atl__ph--c        { animation: atlas-type-c var(--clip-dur) var(--ease-ui) infinite both; }
-  .atl[data-play] .atl__idle         { animation: atlas-idle var(--clip-dur) var(--ease-ui) infinite both; }
-  .atl[data-play] .atl__ans          { animation: atlas-answer var(--clip-dur) var(--ease-hero) infinite both; }
-  .atl[data-play] .atl__cite--a      { animation: atlas-cite-a var(--clip-dur) var(--ease-ui) infinite both; }
-  .atl[data-play] .atl__cite--b      { animation: atlas-cite-b var(--clip-dur) var(--ease-ui) infinite both; }
-  .atl[data-play] .atl__mark-open    { animation: atlas-open var(--clip-dur) var(--ease-ui) infinite both; }
   .atl[data-play] .atl__src-row--a .atl__tick { animation: atlas-read-a var(--clip-dur) var(--ease-hero) infinite both; }
   .atl[data-play] .atl__src-row--b .atl__tick { animation: atlas-read-b var(--clip-dur) var(--ease-hero) infinite both; }
   .atl[data-play] .atl__src-row--c .atl__tick { animation: atlas-read-c var(--clip-dur) var(--ease-hero) infinite both; }
   .atl[data-play] .atl__lbl--pre     { animation: atlas-lbl-pre var(--clip-dur) var(--ease-ui) infinite both; }
   .atl[data-play] .atl__lbl--post    { animation: atlas-lbl-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__idle         { animation: atlas-idle var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__ans          { animation: atlas-answer var(--clip-dur) var(--ease-hero) infinite both; }
+  .atl[data-play] .atl__cite--a      { animation: atlas-cite-a var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__cite--b      { animation: atlas-cite-b var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__mark-open    { animation: atlas-open var(--clip-dur) var(--ease-ui) infinite both; }
   .atl[data-play] .atl__flag         { animation: atlas-flag var(--clip-dur) var(--ease-hero) infinite both; }
 </style>

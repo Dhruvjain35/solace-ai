@@ -10,23 +10,32 @@
    shade, contrast in the 4-18% band, blur 2-3x the offset, real hairline.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s.
+   12.0s, five beats of 2.4s, narrated by the caption rail.
 
-     0.00s   the board as arrival order left it. Okonkwo is fourth, a 3.
-     1.32s   a bedside reading lands on him and the chip goes 3 -> 2
-     1.92s   he travels two rows up; the two patients he passes settle down
-             into the slots he left
-     2.80s   the board states what just happened
-     3.40s   hold
-     5.58s   the reorder resets under the dissolve. The row translations use a
-             stepped tail so they snap back exactly ON the loop boundary rather
-             than visibly un-sorting themselves on the way out. */
+     beat 1   0.0s   the board as arrival order left it. Okonkwo is fourth, a 3.
+     beat 2   2.4s   held, so the starting order registers before it changes
+     beat 3   4.8s   a bedside reading lands on him: the row washes and the chip
+                     goes 3 -> 2
+     beat 4   7.2s   he travels two rows up; the two he passes settle into the
+                     slots he left
+     beat 5   9.6s   the board says what it just did, and who still decides
+     11.5s           reset, under the dissolve and on the loop boundary
+   */
 
 const rows = [
   { key: 'a', name: 'Reyes, M.', why: 'Chest tightness, short of breath', level: '2', tone: 'red', wait: '6m' },
   { key: 'b', name: 'Okonkwo, D.', why: 'Abdominal pain, vomiting', level: '2', tone: 'red', wait: '22m' },
   { key: 'c', name: 'Vance, T.', why: 'Ankle injury after a fall', level: '3', tone: 'amber', wait: '14m' },
   { key: 'd', name: 'Bell, R.', why: 'Rash, no fever', level: '4', tone: 'calm', wait: '31m' },
+];
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Everyone waiting, on one board.',
+  'Arrival order is where it starts. It is not where it ends.',
+  'A bedside reading lands on someone who has waited 22 minutes.',
+  'The board carries them to where they belong.',
+  'Sorted by need. Your clinicians still make the call.',
 ];
 ---
 
@@ -59,6 +68,8 @@ const rows = [
     <span class="q__foot-pre" aria-hidden="true">Ordered by arrival</span>
     <span class="q__foot-post">Reordered by need. Your clinicians still make the call.</span>
   </p>
+  <ClipCaption steps={CAPTIONS} />
+
 </div>
 
 <style>
@@ -68,7 +79,7 @@ const rows = [
     --row-h: 15cqw;
     --row-gap: 2.2cqw;
     --pitch: calc(var(--row-h) + var(--row-gap));
-    --clip-dur: 6s;
+    --clip-dur: 12s;
 
     inline-size: 100%;
     display: flex;
@@ -155,46 +166,59 @@ const rows = [
   .q__foot-pre { opacity: 0; }
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid.
+
      The stepped tail on every translate is the whole trick. Interpolating back
-     to the opening position would play the sort in reverse for half a second
-     at the end of each loop; holding through 96% and jumping at 100% puts the
-     reset exactly on the boundary, where it cannot be seen. */
+     to the opening position would play the sort in reverse for a second at the
+     end of each loop; holding through 96% and jumping at 100% puts the reset
+     exactly ON the boundary, where it cannot be seen. */
   @keyframes q-up-two {
-    0%, 22%  { translate: 0 calc(var(--pitch) * 2); }
-    38%, 96% { translate: 0 0; animation-timing-function: steps(1, end); }
+    0%, 61%  { translate: 0 calc(var(--pitch) * 2); }
+    73%, 96% { translate: 0 0; animation-timing-function: steps(1, end); }
     100%     { translate: 0 calc(var(--pitch) * 2); }
   }
   @keyframes q-down-one {
-    0%, 22%  { translate: 0 calc(var(--pitch) * -1); }
-    38%, 96% { translate: 0 0; animation-timing-function: steps(1, end); }
+    0%, 61%  { translate: 0 calc(var(--pitch) * -1); }
+    73%, 96% { translate: 0 0; animation-timing-function: steps(1, end); }
     100%     { translate: 0 calc(var(--pitch) * -1); }
   }
+  /* Beat 3 — the reading arrives and the chip revalues, a beat BEFORE the move,
+     so cause and effect are two separate events rather than one. */
   @keyframes q-flip {
-    0%, 18%  { translate: 0 0; }
-    24%, 96% { translate: 0 -50%; animation-timing-function: steps(1, end); }
+    0%, 43%  { translate: 0 0; }
+    49%, 96% { translate: 0 -50%; animation-timing-function: steps(1, end); }
     100%     { translate: 0 0; }
   }
   @keyframes q-amber {
-    0%, 18%  { opacity: 1; }
-    24%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 43%  { opacity: 1; }
+    49%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
-  /* The moved row lifts off the board while it travels, then sets back down —
-     the shadow is what tells you it is being carried rather than redrawn. */
+  /* The moved row lifts off the board while it travels and sets back down — the
+     shadow is what tells you it is being carried rather than redrawn. */
   @keyframes q-carry {
-    0%, 22%  { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
-    30%      { box-shadow: 0 8px 20px rgb(from var(--neutral-40) r g b / 0.26); }
-    42%, 96% { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
+    0%, 61%  { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
+    67%      { box-shadow: 0 10px 24px rgb(from var(--neutral-40) r g b / 0.28); }
+    76%, 96% { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
     100%     { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
   }
+  /* Beat 3 also washes the row that changed, so the eye knows where to look
+     before anything moves. */
+  @keyframes q-mark {
+    0%, 43%  { background-color: var(--white); }
+    49%      { background-color: var(--red-0); }
+    60%      { background-color: var(--red-0); }
+    68%, 96% { background-color: var(--white); }
+    100%     { background-color: var(--white); }
+  }
   @keyframes q-foot-pre {
-    0%, 42%  { opacity: 1; }
-    47%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 78%  { opacity: 1; }
+    82%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes q-foot-post {
-    0%, 47%  { opacity: 0; }
-    52%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    0%, 82%  { opacity: 0; }
+    86%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
     100%     { opacity: 0; }
   }
 
@@ -205,7 +229,8 @@ const rows = [
     z-index: 1;
     animation:
       q-up-two var(--clip-dur) var(--ease-hero) infinite both,
-      q-carry  var(--clip-dur) var(--ease-ui)   infinite both;
+      q-carry  var(--clip-dur) var(--ease-ui)   infinite both,
+      q-mark   var(--clip-dur) var(--ease-ui)   infinite both;
   }
   .q[data-play] .q__row--c,
   .q[data-play] .q__row--d { animation: q-down-one var(--clip-dur) var(--ease-hero) infinite both; }

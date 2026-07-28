@@ -1,0 +1,236 @@
+---
+/* Triage, seen from the uncertainty side. A 12s film.
+
+   /product shows the score changing and why. This shows the thing underneath
+   it that almost nothing in this category has: the model publishes how sure it
+   is, calibrated, and a wide answer is treated as a reason to involve a person
+   rather than as something to hide behind a confident-looking number.
+
+   That distinction is the entire argument against the Epic sepsis model, and
+   it is worth its own figure. Same product as act 02, a different claim about
+   it, so the home page and the tour never show the same thing twice.
+
+   Neumorphic rules per materials.css: light from directly above so offsets are
+   Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the offset,
+   real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   one number, alone, the way every other model reports it
+     beat 2   2.4s   the set it actually belongs to
+     beat 3   4.8s   what that set is worth, measured on held-out cases
+     beat 4   7.2s   a wide set on a different patient
+     beat 5   9.6s   which is routed to a person rather than published
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Most triage models hand you one number and stop.',
+  'This one hands you the set the answer is actually in.',
+  'Calibrated: the truth lands inside it nine times in ten.',
+  'When the model is unsure, the set gets wider.',
+  'And a wide set goes to a person, not to the board.',
+];
+
+const LEVELS = ['1', '2', '3', '4', '5'];
+---
+
+<div class="cf" data-clip>
+  <div class="cf__head">
+    <span class="cf__title">How sure is it?</span>
+    <span class="cf__pt">Reyes, M.</span>
+  </div>
+
+  <div class="cf__scale">
+    {LEVELS.map((n) => (
+      <span class:list={['cf__lv', `cf__lv--${n}`]}>{n}</span>
+    ))}
+  </div>
+  <p class="cf__legend">
+    <span class="cf__legend-pre" aria-hidden="true">Point estimate</span>
+    <span class="cf__legend-post">90% prediction set</span>
+  </p>
+
+  <div class="cf__cover">
+    <div class="cf__cover-head">
+      <span>Measured coverage on held-out cases</span>
+      <span class="cf__pct">
+        <span class="cf__tick"><span class="cf__strip"><i>0</i><i>34</i><i>61</i><i>78</i><i>87</i><i>90</i></span></span>%
+      </span>
+    </div>
+    <span class="cf__bar"><i></i></span>
+  </div>
+
+  <div class="cf__route">
+    <span class="cf__route-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 10.6V2.4M4.4 6 8 2.4 11.6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.4 12.2v.6a.8.8 0 0 0 .8.8h9.6a.8.8 0 0 0 .8-.8v-.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </span>
+    <span class="cf__route-text">
+      <b>Sent to a clinician before the board sees it</b>
+      <i>An unsure model asks. It does not round to a confident number.</i>
+    </span>
+  </div>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  .cf {
+    --clip-dur: 12s;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .cf__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .cf__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .cf__pt { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-80); }
+
+  .cf__scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2cqw; }
+  .cf__lv {
+    display: grid; place-items: center;
+    padding-block: 4cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+    font-size: 5.4cqw;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: -0.03em;
+    color: var(--neutral-30);
+  }
+  /* The finished frame is the WIDE set — beat 4 is the honest resting state,
+     because a graphic about uncertainty should not settle on the confident
+     answer. */
+  .cf__lv--2, .cf__lv--3 {
+    background: linear-gradient(180deg, var(--solace-10) 0%, var(--solace-20) 100%);
+    border-color: rgb(from var(--solace-60) r g b / 0.4);
+    color: var(--solace-100);
+  }
+
+  .cf__legend { display: grid; font-size: 3cqw; color: var(--neutral-80); }
+  .cf__legend > * { grid-area: 1 / 1; }
+  .cf__legend-pre { opacity: 0; }
+
+  .cf__cover {
+    display: flex; flex-direction: column; gap: 2.4cqw;
+    padding: 3.6cqw 3.8cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+  }
+  .cf__cover-head { display: flex; align-items: baseline; gap: 3cqw; font-size: 3cqw; color: var(--neutral-80); }
+  /* Type size on the WINDOW, not the digits: block-size:1em resolves against
+     the element's own font-size, so a small window holding large digits is
+     shorter than its contents and overflow:hidden shaves the glyphs. */
+  .cf__pct {
+    margin-inline-start: auto;
+    display: flex; align-items: baseline; gap: 0.4cqw;
+    font-size: 3cqw;
+    line-height: 1;
+    color: var(--solace-80);
+    font-variant-numeric: tabular-nums;
+  }
+  .cf__tick {
+    display: inline-block;
+    font-size: 5cqw;
+    line-height: 1;
+    font-weight: var(--font-weight-semibold);
+    block-size: 1em;
+    overflow: hidden;
+  }
+  .cf__strip { display: block; translate: 0 -83.333%; }
+  .cf__strip i { display: block; block-size: 1em; line-height: 1; font-style: normal; }
+
+  .cf__bar { display: block; block-size: 1.6cqw; border-radius: 100px; background-color: var(--white); overflow: hidden; }
+  .cf__bar i { display: block; block-size: 100%; inline-size: 90%; border-radius: 100px; background-color: var(--solace-60); }
+
+  .cf__route {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.2cqw 3.6cqw;
+    border-radius: var(--radius-2_5x);
+    background: linear-gradient(180deg, var(--solace-100) 0%, #052a21 100%);
+    color: var(--white);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.14),
+      0 8px 18px rgb(from var(--solace-100) r g b / 0.26);
+  }
+  .cf__route-icon {
+    display: grid; place-items: center;
+    inline-size: 6.4cqw; block-size: 6.4cqw; flex: none;
+    border-radius: 100px;
+    background-color: rgb(from var(--solace-30) r g b / 0.22);
+    color: var(--solace-20);
+  }
+  .cf__route-icon svg { inline-size: 3.8cqw; block-size: 3.8cqw; }
+  .cf__route-text { display: flex; flex-direction: column; gap: 0.4cqw; }
+  .cf__route-text b { font-size: 3.2cqw; font-weight: var(--font-weight-medium); }
+  .cf__route-text i { font-style: normal; font-size: 2.8cqw; color: rgb(from var(--white) r g b / 0.68); }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. Beats 1-3 run on level 2 alone;
+     beat 4 widens the set to include 3, which is the point of the whole
+     figure and therefore the frame it rests on. */
+  @keyframes cf-single {
+    0%, 21%  { background: var(--white); border-color: rgb(from var(--neutral-40) r g b / 0.18); color: var(--neutral-30); }
+    26%, 96% { background: linear-gradient(180deg, var(--solace-10) 0%, var(--solace-20) 100%);
+               border-color: rgb(from var(--solace-60) r g b / 0.4); color: var(--solace-100);
+               animation-timing-function: steps(1, end); }
+    100%     { background: var(--white); border-color: rgb(from var(--neutral-40) r g b / 0.18); color: var(--neutral-30); }
+  }
+  @keyframes cf-widen {
+    0%, 62%  { background: var(--white); border-color: rgb(from var(--neutral-40) r g b / 0.18); color: var(--neutral-30); }
+    68%, 96% { background: linear-gradient(180deg, var(--solace-10) 0%, var(--solace-20) 100%);
+               border-color: rgb(from var(--solace-60) r g b / 0.4); color: var(--solace-100);
+               animation-timing-function: steps(1, end); }
+    100%     { background: var(--white); border-color: rgb(from var(--neutral-40) r g b / 0.18); color: var(--neutral-30); }
+  }
+  @keyframes cf-legend-pre {
+    0%, 21%  { opacity: 1; }
+    24%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes cf-legend-post {
+    0%, 24%  { opacity: 0; }
+    27%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  @keyframes cf-fill {
+    0%, 41%  { inline-size: 0%; }
+    56%, 96% { inline-size: 90%; }
+    100%     { inline-size: 0%; }
+  }
+  /* Six published measurements, not a tween: a coverage figure is computed on a
+     held-out set, it does not slide. */
+  @keyframes cf-count {
+    from { translate: 0 0; }
+    to   { translate: 0 -83.333%; }
+  }
+  @keyframes cf-route {
+    0%, 81%  { opacity: 0; translate: 0 2cqw; }
+    88%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 2cqw; }
+  }
+
+  .cf[data-play] .cf__lv--2        { animation: cf-single var(--clip-dur) var(--ease-ui) infinite both; }
+  .cf[data-play] .cf__lv--3        { animation: cf-widen var(--clip-dur) var(--ease-ui) infinite both; }
+  .cf[data-play] .cf__legend-pre   { animation: cf-legend-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .cf[data-play] .cf__legend-post  { animation: cf-legend-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .cf[data-play] .cf__bar i        { animation: cf-fill var(--clip-dur) var(--ease-hero) infinite both; }
+  .cf[data-play] .cf__strip        { animation: cf-count var(--clip-dur) steps(6, jump-none) infinite both; }
+  .cf[data-play] .cf__route        { animation: cf-route var(--clip-dur) var(--ease-hero) infinite both; }
+</style>

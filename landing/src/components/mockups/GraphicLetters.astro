@@ -15,17 +15,16 @@
    real hairline on every surface.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
-   6.0s.
+   12.0s, five beats of 2.4s, narrated by the caption rail.
 
-     0.00s   the library on the left, an empty sheet on the right
-     0.42s   the cursor crosses to "Work or school note"
-     0.90s   click — the template takes the selection
-     1.20s   the sheet fills itself in, clause by clause, from the visit
-     3.30s   the clinician's signature strokes across the line. A human signs;
-             the draft is only ever a draft until they do.
-     4.50s   sent
-     5.10s   hold
-     5.58s   dissolve back; 100% equals 0% so the loop has no seam */
+     beat 1   0.0s   the library on the left, an empty sheet on the right
+     beat 2   2.4s   the cursor crosses to "Work or school note" and clicks
+     beat 3   4.8s   the sheet fills itself in, clause by clause, from the visit
+     beat 4   7.2s   the signature strokes across the line. A human signs; the
+                     draft is only ever a draft until they do.
+     beat 5   9.6s   sent
+     11.5s           dissolve; 100% equals 0% so the loop has no seam
+   */
 import ClipCursor from './ClipCursor.astro';
 
 const templates = [
@@ -34,6 +33,15 @@ const templates = [
   'Return to play',
   'Fitness to travel',
   'Medical necessity',
+];
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Two dozen forms, every one of them chart-aware.',
+  'Pick the one you need.',
+  'It writes itself from the visit that just happened.',
+  'The signature line is the one thing it will not fill.',
+  'Signed by a human, then sent.',
 ];
 ---
 
@@ -90,11 +98,13 @@ const templates = [
   </div>
 
   <span class="lt__cursor" aria-hidden="true"><ClipCursor /></span>
+  <ClipCaption steps={CAPTIONS} />
+
 </div>
 
 <style>
   .lt {
-    --clip-dur: 6s;
+    --clip-dur: 12s;
     position: relative;
     inline-size: 100%;
     display: flex;
@@ -215,30 +225,34 @@ const templates = [
     pointer-events: none;
   }
 
-  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
   @keyframes lt-cursor {
     0%      { opacity: 0; translate: 46cqw 22cqw; }
-    5%      { opacity: 1; translate: 46cqw 22cqw; }
-    14%     { opacity: 1; translate: 0 0; }
+    3%      { opacity: 1; translate: 46cqw 22cqw; }
+    9%      { opacity: 1; translate: 46cqw 22cqw; }
+    /* Beat 2 — it crosses to the template and clicks. */
     26%     { opacity: 1; translate: 0 0; }
-    34%     { opacity: 0; translate: 40cqw 18cqw; }
+    38%     { opacity: 1; translate: 0 0; }
+    45%     { opacity: 0; translate: 40cqw 18cqw; }
     100%    { opacity: 0; translate: 46cqw 22cqw; }
   }
   @keyframes lt-click {
-    0%, 14%   { opacity: 0; scale: 0.3; }
-    16%       { opacity: 0.55; }
-    22%, 100% { opacity: 0; scale: 1.8; }
+    0%, 27%   { opacity: 0; scale: 0.3; }
+    29%       { opacity: 0.55; }
+    35%, 100% { opacity: 0; scale: 1.8; }
   }
   @keyframes lt-select {
-    0%, 15%  {
+    0%, 28%  {
       background-color: var(--white);
       border-color: rgb(from var(--neutral-40) r g b / 0.16);
       color: var(--neutral-80);
     }
-    18%, 93% {
+    31%, 96% {
       background-color: var(--solace-10);
       border-color: rgb(from var(--solace-60) r g b / 0.45);
-      color: var(--solace-100); animation-timing-function: steps(1, end); }
+      color: var(--solace-100); animation-timing-function: steps(1, end);
+    }
     100%     {
       background-color: var(--white);
       border-color: rgb(from var(--neutral-40) r g b / 0.16);
@@ -246,40 +260,41 @@ const templates = [
     }
   }
   @keyframes lt-idle {
-    0%, 15%  { opacity: 1; }
-    19%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    0%, 29%  { opacity: 1; }
+    33%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
     100%     { opacity: 1; }
   }
   @keyframes lt-title {
-    0%, 16%  { opacity: 0; }
-    21%, 93% { opacity: 1; }
+    0%, 31%  { opacity: 0; }
+    36%, 96% { opacity: 1; }
     100%     { opacity: 0; }
   }
+  /* Beat 3 — the sheet fills, clause by clause. */
   @keyframes lt-pg-a {
-    0%, 20%  { opacity: 0; filter: blur(2px); }
-    25%, 93% { opacity: 1; filter: blur(0); }
+    0%, 41%  { opacity: 0; filter: blur(2px); }
+    46%, 96% { opacity: 1; filter: blur(0); }
     100%     { opacity: 0; filter: blur(2px); }
   }
   @keyframes lt-pg-b {
-    0%, 26%  { opacity: 0; filter: blur(2px); }
-    33%, 93% { opacity: 1; filter: blur(0); }
+    0%, 46%  { opacity: 0; filter: blur(2px); }
+    52%, 96% { opacity: 1; filter: blur(0); }
     100%     { opacity: 0; filter: blur(2px); }
   }
   @keyframes lt-pg-c {
-    0%, 36%  { opacity: 0; filter: blur(2px); }
-    43%, 93% { opacity: 1; filter: blur(0); }
+    0%, 52%  { opacity: 0; filter: blur(2px); }
+    58%, 96% { opacity: 1; filter: blur(0); }
     100%     { opacity: 0; filter: blur(2px); }
   }
-  /* pathLength="1" makes the dash units fractions of the stroke, so the wipe is
-     exact no matter what the path geometry actually measures. */
+  /* Beat 4 — a human signs. pathLength="1" makes the dash units fractions of
+     the stroke, so the wipe is exact whatever the path geometry measures. */
   @keyframes lt-ink {
-    0%, 52%  { stroke-dashoffset: 1; }
-    72%, 93% { stroke-dashoffset: 0; animation-timing-function: steps(1, end); }
+    0%, 63%  { stroke-dashoffset: 1; }
+    78%, 96% { stroke-dashoffset: 0; animation-timing-function: steps(1, end); }
     100%     { stroke-dashoffset: 1; }
   }
   @keyframes lt-sent {
-    0%, 74%  { opacity: 0; scale: 0.85; }
-    80%, 93% { opacity: 1; scale: 1; }
+    0%, 83%  { opacity: 0; scale: 0.85; }
+    89%, 96% { opacity: 1; scale: 1; }
     100%     { opacity: 0; scale: 0.85; }
   }
 
@@ -295,12 +310,12 @@ const templates = [
     border: 0.55cqw solid var(--solace-60);
     animation: lt-click var(--clip-dur) var(--ease-hero) infinite both;
   }
-  .lt[data-play] .lt__tpl--on   { animation: lt-select var(--clip-dur) var(--ease-ui) infinite both; }
-  .lt[data-play] .lt__idle      { animation: lt-idle var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__tpl--on     { animation: lt-select var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__idle        { animation: lt-idle var(--clip-dur) var(--ease-ui) infinite both; }
   .lt[data-play] .lt__sheet-title { animation: lt-title var(--clip-dur) var(--ease-ui) infinite both; }
-  .lt[data-play] .lt__pg--a     { animation: lt-pg-a var(--clip-dur) var(--ease-ui) infinite both; }
-  .lt[data-play] .lt__pg--b     { animation: lt-pg-b var(--clip-dur) var(--ease-ui) infinite both; }
-  .lt[data-play] .lt__pg--c     { animation: lt-pg-c var(--clip-dur) var(--ease-ui) infinite both; }
-  .lt[data-play] .lt__ink path  { animation: lt-ink var(--clip-dur) linear infinite both; }
-  .lt[data-play] .lt__sent      { animation: lt-sent var(--clip-dur) var(--ease-hero) infinite both; }
+  .lt[data-play] .lt__pg--a       { animation: lt-pg-a var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__pg--b       { animation: lt-pg-b var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__pg--c       { animation: lt-pg-c var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__ink path    { animation: lt-ink var(--clip-dur) linear infinite both; }
+  .lt[data-play] .lt__sent        { animation: lt-sent var(--clip-dur) var(--ease-hero) infinite both; }
 </style>

@@ -1,0 +1,127 @@
+---
+/* The caption rail every product clip carries.
+
+   A silent animation makes the viewer do the work of figuring out what just
+   happened, and most of them will not bother. So each clip narrates itself:
+   five beats, one line of copy each, with a rail that shows how far through
+   the loop you are and how much is left.
+
+   That single decision is what sets the whole system's tempo. Five beats at
+   2.4s is 12s a clip — twice the old length — and the length is not padding,
+   it is the time it takes to READ a beat before the next one starts. Everything
+   inside every graphic is timed to the same five segments, so the caption and
+   the thing it describes can never drift apart.
+
+   The rail is a real progress indicator, not decoration: it is the only way to
+   tell a looping clip from a stuck one.
+
+   Timing, as percentages of the shared 12s:
+     beat 1   0 – 20      beat 2  20 – 40     beat 3  40 – 60
+     beat 4  60 – 80      beat 5  80 – 100
+   Each caption fades out over the 2% before its segment ends and the next
+   fades in over the 2% after, so two lines are never legible at once.
+
+   Exactly five steps. The component throws below that rather than rendering a
+   rail whose segments do not match the graphic timed against it. */
+interface Props {
+  steps: string[];
+  /** Sits on the plinth by default; `inset` tucks it inside a device screen. */
+  variant?: 'plinth' | 'inset';
+}
+const { steps, variant = 'plinth' } = Astro.props;
+
+if (steps.length !== 5) {
+  throw new Error(
+    `ClipCaption takes exactly 5 steps (got ${steps.length}). Every clip in the ` +
+      `system runs a 5-beat, 12s timeline; a different count would desynchronise ` +
+      `the rail from the graphic it narrates.`,
+  );
+}
+---
+
+<div class:list={['cap', `cap--${variant}`]} aria-hidden="true">
+  <span class="cap__rail"><i class="cap__fill"></i></span>
+  <span class="cap__lines">
+    {steps.map((step, i) => <span class:list={['cap__s', `cap__s--${i + 1}`]}>{step}</span>)}
+  </span>
+</div>
+
+<style>
+  .cap {
+    display: flex;
+    flex-direction: column;
+    gap: 2.2cqw;
+    margin-block-start: 1cqw;
+  }
+  .cap--inset { gap: 1.6cqw; margin-block-start: 0; }
+
+  .cap__rail {
+    display: block;
+    block-size: 0.5cqw;
+    border-radius: 100px;
+    background-color: rgb(from var(--neutral-40) r g b / 0.24);
+    overflow: hidden;
+  }
+  .cap--inset .cap__rail { block-size: 0.9cqw; }
+
+  .cap__fill {
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    border-radius: 100px;
+    background-color: var(--solace-60);
+  }
+
+  /* Every line shares one cell so the rail never moves as the copy changes
+     length — a caption strip that reflows between beats reads as a bug. */
+  .cap__lines { display: grid; }
+  .cap__s {
+    grid-area: 1 / 1;
+    font-size: 3cqw;
+    line-height: 1.35;
+    color: var(--neutral-80);
+  }
+  .cap--inset .cap__s { font-size: 4cqw; text-align: center; color: var(--neutral-60); }
+  /* Beat one is the resting caption: it is what a still frame should say. */
+  .cap__s--2, .cap__s--3, .cap__s--4, .cap__s--5 { opacity: 0; }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     :global on the ancestor only — the attribute lives on the graphic root,
+     which belongs to whichever component slotted this in. */
+  @keyframes cap-fill {
+    from { inline-size: 0%; }
+    to   { inline-size: 100%; }
+  }
+  @keyframes cap-s1 {
+    0%, 18%  { opacity: 1; }
+    20%, 96% { opacity: 0; }
+    98%, 100% { opacity: 1; }
+  }
+  @keyframes cap-s2 {
+    0%, 20%  { opacity: 0; }
+    22%, 38% { opacity: 1; }
+    40%, 100% { opacity: 0; }
+  }
+  @keyframes cap-s3 {
+    0%, 40%  { opacity: 0; }
+    42%, 58% { opacity: 1; }
+    60%, 100% { opacity: 0; }
+  }
+  @keyframes cap-s4 {
+    0%, 60%  { opacity: 0; }
+    62%, 78% { opacity: 1; }
+    80%, 100% { opacity: 0; }
+  }
+  @keyframes cap-s5 {
+    0%, 80%  { opacity: 0; }
+    82%, 96% { opacity: 1; }
+    98%, 100% { opacity: 0; }
+  }
+
+  :global([data-play]) .cap__fill { animation: cap-fill var(--clip-dur, 12s) linear infinite both; }
+  :global([data-play]) .cap__s--1 { animation: cap-s1 var(--clip-dur, 12s) var(--ease-ui) infinite both; }
+  :global([data-play]) .cap__s--2 { animation: cap-s2 var(--clip-dur, 12s) var(--ease-ui) infinite both; }
+  :global([data-play]) .cap__s--3 { animation: cap-s3 var(--clip-dur, 12s) var(--ease-ui) infinite both; }
+  :global([data-play]) .cap__s--4 { animation: cap-s4 var(--clip-dur, 12s) var(--ease-ui) infinite both; }
+  :global([data-play]) .cap__s--5 { animation: cap-s5 var(--clip-dur, 12s) var(--ease-ui) infinite both; }
+</style>
