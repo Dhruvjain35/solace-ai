@@ -5,6 +5,7 @@ import GlassPrebrief from '../components/mockups/GlassPrebrief.astro';
 import GlassAuthority from '../components/mockups/GlassAuthority.astro';
 import GlassShift from '../components/mockups/GlassShift.astro';
 import HeroGlass from '../components/mockups/HeroGlass.astro';
+import ActGlyph from '../components/mockups/ActGlyph.astro';
 
 /* Rebuilt dark, on glass.
 
@@ -44,7 +45,7 @@ type Act = {
   chapter: string;
   heading: string;
   sub: string;
-  points: string[];
+  glyph: string;
   mock: 'prebrief' | 'authority' | 'shift';
 };
 
@@ -53,42 +54,27 @@ const acts: Act[] = [
     id: 'prebrief',
     index: '01',
     chapter: 'Before the door opens',
-    heading: 'You know who is behind the door before you open it.',
-    sub: 'One line of story, the two things that must not be missed, and the next thing worth doing. Short enough to read while you are still walking.',
-    points: [
-      'Built from what the patient said, in their own language',
-      'The don’t-miss list, on every patient, not just the interesting ones',
-      'Open threads from previous visits, surfaced rather than buried',
-      'Nothing here is an order. It is a head start, not a decision.',
-    ],
+    heading: 'You know who is behind the door',
+    glyph: 'prebrief',
+    sub: 'One line of story, the two things that must not be missed, and the next thing worth doing. Short enough to read while you walk.',
     mock: 'prebrief',
   },
   {
     id: 'authority',
     index: '02',
     chapter: 'When you disagree',
-    heading: 'You disagree, you change it, and that is the end of it.',
-    sub: 'Changing the level takes one tap. It applies straight away, there is no dialog asking if you are sure, and the change is saved with your name and your reason on it.',
-    points: [
-      'Your level replaces the suggestion the instant you set it',
-      'No confirmation dialog, no justification gate, no friction',
-      'The override and your reason are written to the record',
-      'The override rate is published, and it is how the model gets corrected',
-    ],
+    heading: 'You disagree, you win',
+    glyph: 'authority',
+    sub: 'Changing the level takes one tap and applies straight away. No dialog asks if you are sure, and the change is saved with your name on it.',
     mock: 'authority',
   },
   {
     id: 'shift',
     index: '03',
     chapter: 'What you get back',
-    heading: 'You stop finishing your notes at home.',
-    sub: 'Time with patients goes up a little. We are not going to claim more than that, because you would know it was not true. What actually changes is the typing, the forms, and the work you currently take home.',
-    points: [
-      'Notes drafted from the visit, not from a blank template',
-      'Two dozen letters and forms filled from the chart',
-      'The paperwork is waiting when you stand up, not when you get home',
-      'You still read every word before anything is signed',
-    ],
+    heading: 'You stop working after work',
+    glyph: 'shift',
+    sub: 'Time with patients goes up a little. What really changes is the typing, the forms, and the hour you currently take home.',
     mock: 'shift',
   },
 ];
@@ -166,11 +152,8 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
             <span class="act__rule" aria-hidden="true"></span>
             <span>{act.chapter}</span>
           </p>
-          <h2 id={`act-${act.index}`} class="act__heading">{act.heading}</h2>
+          <h2 id={`act-${act.index}`} class="act__heading">{act.heading}<ActGlyph kind={act.glyph} /></h2>
           <p class="act__sub">{act.sub}</p>
-          <ul class="act__points">
-            {act.points.map((p) => <li>{p}</li>)}
-          </ul>
         </div>
 
         <figure class="act__stage reveal">
@@ -410,32 +393,13 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-heading);
     letter-spacing: var(--letter-spacing-heading);
-    max-inline-size: 20ch;
+    max-inline-size: 15ch;
   }
   .act__sub {
     font-size: var(--font-size-text-large);
     line-height: var(--line-height-open);
-    max-inline-size: 44ch;
+    max-inline-size: 40ch;
     color: var(--color-text-sub);
-  }
-  .act__points { display: grid; gap: var(--space-3x); margin-block-start: var(--space-3x); }
-  .act__points li {
-    position: relative;
-    padding-inline-start: var(--space-7x);
-    font-size: var(--font-size-text-medium);
-    line-height: var(--line-height-open);
-    color: var(--color-text-sub);
-  }
-  /* Hollow circle, never a filled dot. */
-  .act__points li::before {
-    content: '';
-    position: absolute;
-    inset-inline-start: 0;
-    inset-block-start: 0.6em;
-    inline-size: 12px;
-    block-size: 12px;
-    border: 1.5px solid var(--color-icon-soft);
-    border-radius: 50%;
   }
 
   /* No tinted bed here. On /product the figure needs a stage because it is

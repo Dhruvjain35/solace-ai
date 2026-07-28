@@ -12,6 +12,7 @@ import GraphicAtlas from '../components/mockups/GraphicAtlas.astro';
 import GraphicLetters from '../components/mockups/GraphicLetters.astro';
 import GraphicChart from '../components/mockups/GraphicChart.astro';
 import ClipCaption from '../components/mockups/ClipCaption.astro';
+import ActGlyph from '../components/mockups/ActGlyph.astro';
 import HeroGlass from '../components/mockups/HeroGlass.astro';
 
 /* Rebuilt as seven acts.
@@ -47,7 +48,7 @@ type Act = {
   chapter: string;
   heading: string;
   sub: string;
-  points: string[];
+  glyph: string;
   bed: 'paper' | 'slate' | 'ink';
   mock: 'intake' | 'triage' | 'queue' | 'workflows' | 'scribe' | 'atlas' | 'letters' | 'chart';
 };
@@ -57,28 +58,18 @@ const acts: Act[] = [
     id: 'patient-side',
     index: '01',
     chapter: 'In the waiting room',
-    heading: 'Check in from the chair they are already sitting in.',
-    sub: 'A QR code on the wall opens Solace on the patient’s own phone. They tell their story once, in their own language, while they wait.',
-    points: [
-      'No app, no account, nothing to install',
-      'Twenty languages, spoken or typed',
-      'Two or three follow-up questions that fit the story',
-      'One photo fills in the insurance card',
-    ],
+    heading: 'Check in from the waiting room chair',
+    glyph: 'intake',
+    sub: 'A QR code on the wall opens Solace on their own phone. They tell their story once, in their own language, while they wait.',
     bed: 'paper',
     mock: 'intake',
   },
   {
     index: '02',
     chapter: 'In the waiting room',
-    heading: 'A priority that arrives with its reasons attached.',
-    sub: 'The moment intake ends there is a suggested urgency on the screen, and the evidence behind it is sitting right there with it.',
-    points: [
-      'The reasons travel with the score, on every patient',
-      'A safety rule that can raise urgency and never lower it',
-      'Re-scored the moment bedside vitals land',
-      'Your clinicians always make the call',
-    ],
+    heading: 'Urgency you can check',
+    glyph: 'triage',
+    sub: 'A suggested level lands the moment intake ends, with the evidence that produced it sitting right beside it.',
     bed: 'slate',
     mock: 'triage',
   },
@@ -86,14 +77,9 @@ const acts: Act[] = [
     id: 'clinician-side',
     index: '03',
     chapter: 'At the board',
-    heading: 'The queue orders itself by need, not by arrival.',
-    sub: 'Everyone waiting, in one view, sorted by who needs help first — and re-sorted the second a new reading says someone moved.',
-    points: [
-      'One board for everyone in the department',
-      'Re-sorts itself when the evidence changes',
-      'Honest wait times, updated continuously',
-      'Nothing is hidden behind a menu',
-    ],
+    heading: 'The queue sorts itself',
+    glyph: 'queue',
+    sub: 'Everyone waiting, in one view, ordered by who needs help first. It re-sorts the second a new reading changes something.',
     bed: 'ink',
     mock: 'queue',
   },
@@ -101,70 +87,45 @@ const acts: Act[] = [
     id: 'workflows',
     index: '04',
     chapter: 'Behind the board',
-    heading: 'Write the rule once. It runs on every patient after that.',
-    sub: 'Nine real events, branching conditions, fourteen actions. No code, and no identifier ever leaves the building with the payload.',
-    points: [
-      'Triggered by check-in, escalation, a refined level, an abnormal result',
-      'Conditions so a rule fires on the cases you actually mean',
-      'Page a team, open a task, draft a letter, write to the chart',
-      'Every payload stripped of identifiers before an action sees it',
-    ],
+    heading: 'Write the rule once',
+    glyph: 'workflow',
+    sub: 'Nine real events, branching conditions, fourteen actions, no code. No identifier ever leaves with the payload.',
     bed: 'slate',
     mock: 'workflows',
   },
   {
     index: '05',
     chapter: 'In the room',
-    heading: 'The note writes itself while you talk.',
-    sub: 'Have the conversation. The draft builds as you go, and every clause it writes stays attached to the moment it came from.',
-    points: [
-      'Drafted from the visit as it happens',
-      'Each line traces back to what was said',
-      'Edit it once and it learns how you write',
-      'You read it, you sign it, you send it',
-    ],
+    heading: 'The note writes itself',
+    glyph: 'scribe',
+    sub: 'Have the conversation. The draft builds as you go, and every clause stays attached to the moment it came from.',
     bed: 'paper',
     mock: 'scribe',
   },
   {
     index: '06',
     chapter: 'In the room',
-    heading: 'Ask the chart anything, and see where the answer came from.',
-    sub: 'Most of a real history is unstructured and most of it is somebody else’s. Atlas reads the faxes and the outside summaries too, then cites them.',
-    points: [
-      'Scanned documents and outside records, read properly',
-      'Every claim carries its source',
-      'Open threads flagged before you miss them',
-      'Reads and writes to your EHR, all of it logged',
-    ],
+    heading: 'Ask the chart anything',
+    glyph: 'atlas',
+    sub: 'Most of a real history is unstructured and belongs to somebody else. Atlas reads the faxes too, then cites them.',
     bed: 'slate',
     mock: 'atlas',
   },
   {
     index: '07',
     chapter: 'After the visit',
-    heading: 'The paperwork is already drafted when you stand up.',
-    sub: 'Work notes, school notes, FMLA, return to play. Two dozen forms that fill themselves in from the visit that just happened.',
-    points: [
-      'Twenty-four chart-aware templates',
-      'Filled from this visit, not from a blank page',
-      'The signature line is the one thing it will not fill',
-      'Sent to the patient once you sign',
-    ],
+    heading: 'The paperwork is already done',
+    glyph: 'letters',
+    sub: 'Work notes, school notes, FMLA, return to play. Two dozen forms that fill themselves in from the visit.',
     bed: 'paper',
     mock: 'letters',
   },
   {
     index: '08',
     chapter: 'Into the chart',
-    heading: 'It lands in the record coded, and it leaves a trail.',
-    sub: 'Through the same standard interfaces everything else in your hospital uses. As real fields, not a PDF stapled to the side of the chart.',
-    points: [
-      'HL7 and FHIR R4, through your existing interfaces',
-      'Coded resources, not an attachment',
-      'Every AI read and write, in the audit trail',
-      'No standing access — the token expires with the session',
-    ],
+    heading: 'It lands in the chart, coded',
+    glyph: 'chart',
+    sub: 'Through the same interfaces your hospital already runs. As real fields, not a PDF stapled to the side.',
     bed: 'ink',
     mock: 'chart',
   },
@@ -233,11 +194,8 @@ const faqs = [
             <span class="act__rule" aria-hidden="true"></span>
             <span>{act.chapter}</span>
           </p>
-          <h2 id={`act-${act.index}`} class="heading-medium act__heading">{act.heading}</h2>
+          <h2 id={`act-${act.index}`} class="heading-medium act__heading">{act.heading}<ActGlyph kind={act.glyph} /></h2>
           <p class="text-medium text-sub act__sub">{act.sub}</p>
-          <ul class="act__points">
-            {act.points.map((p) => <li class="text-medium">{p}</li>)}
-          </ul>
         </div>
 
         <figure class:list={['act__stage', 'reveal', `act__stage--${act.bed}`]}>
@@ -430,26 +388,9 @@ const faqs = [
     );
   }
 
-  .act__heading { max-inline-size: 18ch; }
-  .act__sub { max-inline-size: 46ch; }
+  .act__heading { max-inline-size: 15ch; font-size: var(--font-size-heading-large); }
+  .act__sub { max-inline-size: 42ch; font-size: var(--font-size-text-large); }
 
-  .act__points {
-    display: grid;
-    gap: var(--space-3x);
-    margin-block-start: var(--space-3x);
-  }
-  .act__points li { position: relative; padding-inline-start: var(--space-7x); }
-  /* Hollow circle, never a filled dot. */
-  .act__points li::before {
-    content: '';
-    position: absolute;
-    inset-inline-start: 0;
-    inset-block-start: 0.55em;
-    inline-size: 12px;
-    block-size: 12px;
-    border: 1.5px solid var(--color-icon-soft);
-    border-radius: 50%;
-  }
 
   /* ── The stage ───────────────────────────────────────────────────────────
      A tinted bed with the product floating on it. The specular sweep across
