@@ -1,129 +1,119 @@
 ---
 import Page from '../layouts/Page.astro';
-import PageHeader from '../components/PageHeader.astro';
 import CtaPrimary from '../components/CtaPrimary.astro';
-import PhoneFrame from '../components/mockups/PhoneFrame.astro';
-import ScreenIntake from '../components/mockups/ScreenIntake.astro';
+import GlassPrebrief from '../components/mockups/GlassPrebrief.astro';
+import GlassAuthority from '../components/mockups/GlassAuthority.astro';
+import GlassShift from '../components/mockups/GlassShift.astro';
 
-/* /clinicians — ported from legacy/src/pages/Clinicians.tsx (713 lines).
-   The legacy page was the forhims category rhythm: white opening statement,
-   drifting phone cards, laptop rigs holding live-DOM product screens, a tile
-   band, a scrubbed gradient paragraph, a dark queue act, a white close.
+/* Rebuilt dark, on glass.
 
-   Rebuilt on the Superhuman system. What changed and why:
-     - Framer Motion is gone. The reveal idiom is reproduced with CSS
-       scroll-driven animations (animation-timeline: view()), which degrade to
-       "already visible" where unsupported.
-     - QueueScreen / EhrScreen / LettersScreen were React components built from
-       lucide icons and Tailwind cqw utilities. They are rebuilt here as plain
-       markup with an Atlas palette mapped onto the primitive tokens, so the
-       app chrome keeps its own light identity even inside the dark section.
-     - Sizes inside the rigs stay in cqw. That is the one unit outside the
-       space scale, and it is load-bearing: it is what makes the mockups scale
-       vector-crisp with the rig rather than breaking apart at small widths. */
+   The page this replaces showed the same wide product panel three times — the
+   Atlas snapshot, the letters workspace, the queue — and every one of them was
+   a light rectangle full of small type. Three of anything is a pattern, and the
+   pattern here was "here is another screenshot", which is the least persuasive
+   thing a page can say to a clinician.
 
-/* Inner SVG markup for the mockup chrome. lucide is not a dependency here, so
-   these are hand-drawn on the same 24-unit grid. Injected with set:html; the
-   parent <svg> carries stroke/fill, so children inherit. */
-const ICON = {
-  activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  shield: '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
-  search: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>',
-  close: '<path d="M18 6 6 18M6 6l12 12"/>',
-  users: '<path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.9"/>',
-  mic: '<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/>',
-  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
-  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.4 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.8 1.1z"/>',
-  workflow: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M6.5 10v4a3 3 0 0 0 3 3H14"/>',
-  slash: '<circle cx="12" cy="12" r="9"/><path d="M6 18 18 6"/>',
-  flask: '<path d="M10 3h4M10 3v6l-5.5 9A2 2 0 0 0 6.2 21h11.6a2 2 0 0 0 1.7-3L14 9V3"/>',
-  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/>',
-  monitor: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
-  printer: '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/>',
-  message: '<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>',
-  messages: '<path d="M14 9a2 2 0 0 1-2 2H7l-3 3V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2z"/><path d="M18 8h1a2 2 0 0 1 2 2v11l-3-3h-6a2 2 0 0 1-2-2v-1"/>',
-  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
-  grip: '<circle cx="9" cy="6" r="1.1"/><circle cx="9" cy="12" r="1.1"/><circle cx="9" cy="18" r="1.1"/><circle cx="15" cy="6" r="1.1"/><circle cx="15" cy="12" r="1.1"/><circle cx="15" cy="18" r="1.1"/>',
+   Two decisions fix it.
+
+   FIRST, the material. materials.css is explicit: glass lives on dark over
+   something worth refracting, neumorphism lives on light over the warm bed, and
+   a surface is never both. /product is the neumorphic page. This is the glass
+   one. That is not decoration — it is what structurally stops the two pages
+   from reading as one page printed twice, which no amount of different copy
+   would have fixed on its own.
+
+   SECOND, the argument. /product answers "what does it do". A clinician is not
+   asking that. They are asking three things, in this order, and the page is now
+   those three things and nothing else:
+
+     What do I see before I walk in?        -> the pre-brief
+     What happens when I disagree with it?  -> the override, and who wins
+     What does this actually give me back?  -> the shift, as hours
+
+   Every figure here appears nowhere else on the site, and each one is a 12s
+   film on the same five-beat grid the rest of the system uses.
+
+   No JavaScript ships from this page. The clips are driven by the observer in
+   Base.astro; the reveals are scroll-driven CSS. Both are inside
+   prefers-reduced-motion guards. */
+
+type Act = {
+  id: string;
+  index: string;
+  chapter: string;
+  heading: string;
+  sub: string;
+  points: string[];
+  mock: 'prebrief' | 'authority' | 'shift';
 };
 
-/* Atlas rail: the admin nav, shared by all three screens. */
-const ADMIN = [
-  { label: 'Ambient scribe', icon: ICON.mic },
-  { label: 'Inbox + admin', icon: ICON.inbox },
-  { label: 'Letters & forms', icon: ICON.file },
-  { label: 'Workflows', icon: ICON.workflow },
+const acts: Act[] = [
+  {
+    id: 'prebrief',
+    index: '01',
+    chapter: 'Before the door opens',
+    heading: 'You have already met them, and you have not walked in yet.',
+    sub: 'One line of story, the two causes that would be unforgivable to miss, and the single next action worth taking. Small enough to read standing up.',
+    points: [
+      'Built from what the patient said, in their own language',
+      'The don’t-miss list, on every patient, not just the interesting ones',
+      'Open threads from previous visits, surfaced rather than buried',
+      'Nothing here is an order. All of it is a head start.',
+    ],
+    mock: 'prebrief',
+  },
+  {
+    id: 'authority',
+    index: '02',
+    chapter: 'When you disagree',
+    heading: 'Every product says the clinician decides. This is what that looks like.',
+    sub: 'The moment you overrule it is the only moment the promise is worth anything — so it takes one tap, it takes effect immediately, and the disagreement is recorded with your reason against it.',
+    points: [
+      'Your level replaces the suggestion the instant you set it',
+      'No confirmation dialog, no justification gate, no friction',
+      'The override and your reason are written to the record',
+      'The override rate is published, and it is how the model gets corrected',
+    ],
+    mock: 'authority',
+  },
+  {
+    id: 'shift',
+    index: '03',
+    chapter: 'What you get back',
+    heading: 'The hour at the kitchen table stops being part of the job.',
+    sub: 'Patient-facing time goes up a little. Anything more than a little would be a claim you could see straight through. What actually moves is the documentation, the forms, and the work that currently happens after the shift ends.',
+    points: [
+      'Notes drafted from the visit, not from a blank template',
+      'Two dozen letters and forms filled from the chart',
+      'The paperwork is waiting when you stand up, not when you get home',
+      'You still read every word before anything is signed',
+    ],
+    mock: 'shift',
+  },
 ];
 
-/* Deterministic QR-looking module grid, carried over verbatim from the legacy
-   AtlasSidebar so the check-in card reads the same. */
-const QR_FINDERS = [[0, 0], [8, 0], [0, 8]];
-const QR_MODULES = [
-  [4, 0], [5, 0], [8, 0], [4, 2], [6, 2], [5, 3], [7, 3], [8, 4], [4, 4],
-  [0, 4], [2, 4], [1, 5], [3, 5], [9, 5], [10, 4], [5, 5], [7, 5], [4, 6],
-  [6, 6], [8, 6], [10, 6], [0, 8], [2, 8], [4, 8], [7, 8], [9, 8], [5, 9],
-  [8, 9], [10, 9], [4, 10], [6, 10], [9, 10],
+/* What Solace will not do. This section exists because a clinician's first
+   question about an AI product is what it will do behind their back, and a page
+   that only lists capabilities never answers it. */
+const limits = [
+  {
+    title: 'It does not order anything.',
+    body: 'Every test, referral and prescription is suggested and stays suggested until a human signs it. There is no auto-order setting, and there is no plan to add one.',
+  },
+  {
+    title: 'It cannot lower an urgency.',
+    body: 'The safety rule is asymmetric by construction. New evidence can raise a level; nothing in the system is able to move one down. That is a property of the code, not a policy.',
+  },
+  {
+    title: 'It does not hide its reasoning.',
+    body: 'Every score arrives with the factors that produced it and a calibrated confidence. When the model is unsure the set gets wider, and a wide set is routed to a person rather than rounded off.',
+  },
+  {
+    title: 'It does not write without leaving a name.',
+    body: 'Every read and every write lands in the audit trail with the clinician it belongs to. If you cannot tell afterwards who did what, the feature is not finished.',
+  },
 ];
 
-/* ── QueueScreen data ──────────────────────────────────────────────────── */
-const STATS = [
-  { label: 'Patients waiting', value: '4', icon: ICON.activity, tint: true },
-  { label: 'Active pain alarms', value: '1', icon: ICON.bell, tint: false },
-  { label: 'Avg wait', value: '41m', icon: ICON.clock, tint: false },
-  { label: 'ML-refined', value: '75%', icon: ICON.shield, tint: false },
-];
-
-const QUEUE = [
-  { name: 'Sriyan', sub: '4m wait · EN', esi: 3, active: true },
-  { name: 'Elena', sub: '12m wait · ES', esi: 2, active: false },
-  { name: 'Wei', sub: '9m wait · ZH', esi: 4, active: false },
-  { name: 'Amira', sub: '16m wait · AR', esi: 3, active: false },
-];
-
-/* ── EhrScreen data ────────────────────────────────────────────────────── */
-const DDX = [
-  { name: 'Spontaneous pneumothorax', mustNotMiss: true, likely: 'MODERATE', icd: 'J93.9' },
-  { name: 'ACS / Myocarditis', mustNotMiss: true, likely: 'MODERATE', icd: 'I24.1' },
-  { name: 'Chest wall pain (MSK)', mustNotMiss: false, likely: 'MODERATE', icd: 'M94.0' },
-  { name: 'Pulmonary embolism', mustNotMiss: true, likely: 'LOW', icd: 'I26.99' },
-  { name: 'Aortic dissection', mustNotMiss: true, likely: 'LOW', icd: 'I71.00' },
-];
-
-const ORDER_SETS = [
-  { icon: ICON.flask, items: ['Troponin (serial)', 'BNP', 'D-dimer', 'CBC', 'BMP'] },
-  { icon: ICON.image, items: ['ECG', 'CXR PA/lateral', 'CT chest PE protocol'] },
-  { icon: ICON.monitor, items: ['Cardiac monitor', 'SpO₂', 'Vitals q15min'] },
-];
-
-/* SHAP attribution rows. Burnt-amber bars push acuity up, green pull down. */
-const DRIVERS = [
-  { name: 'dyspnea_flag', value: '+1.12', width: '92%', up: true },
-  { name: 'pain_score', value: '+0.86', width: '70%', up: true },
-  { name: 'age', value: '−0.42', width: '34%', up: false },
-  { name: 'news2_score', value: '−0.08', width: '8%', up: false },
-  { name: 'temperature_c', value: '−0.02', width: '4%', up: false },
-];
-
-/* ── LettersScreen data ────────────────────────────────────────────────── */
-const TEMPLATES = [
-  { name: 'Work or school note', active: true },
-  { name: 'FMLA certification', active: false },
-  { name: 'Return to play (concussion)', active: false },
-  { name: 'Fitness to travel', active: false },
-  { name: 'Medical necessity', active: false },
-  { name: 'Jury duty excuse', active: false },
-];
-
-/* ── The dark act's snapshot tabs ──────────────────────────────────────── */
-const SNAPSHOT_TABS = [
-  { label: 'Summary', icon: ICON.file },
-  { label: 'Vitals', icon: ICON.activity },
-  { label: 'Transcript', icon: ICON.messages },
-];
-
-/* The scrubbed gradient paragraph. Each word gets its own reveal band. */
 const STATEMENT =
   'It suggests, you decide. Everything the AI reads or writes is saved to the record, and a clinician always makes the final call.';
 const STATEMENT_WORDS = STATEMENT.split(' ');
@@ -131,1837 +121,439 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
 
 <Page
   title="For clinicians: meet the story before the patient"
-  description="Meet the story before the patient. A clear summary, the dangerous causes to rule out and the suggested tests, ready while your patient is still in the waiting room."
+  description="One line of story, the causes that must not be missed and the next action worth taking — ready before you open the door. And when you disagree, you win."
 >
-  <PageHeader
-    eyebrow="For clinicians"
-    title="Meet the story before the patient."
-    lede="A clear summary, the dangerous causes to rule out and the suggested tests, ready while your patient is still in the waiting room."
-  >
-    <div class="header-cta">
-      <CtaPrimary href="/demo" label="Book a demo" />
-    </div>
-  </PageHeader>
-
-  {/* ═══ 1 · Waiting room ═══════════════════════════════════════════════ */}
-  <section data-background-color="primary-default" aria-labelledby="waiting-heading">
-    <div class="container page-section waiting">
-      <div class="waiting__copy reveal">
-        <p class="eyebrow">Before you walk in</p>
-        <div class="dashed" aria-hidden="true"></div>
-        <h2 id="waiting-heading" class="heading-large">It starts in the waiting room.</h2>
-        <p class="waiting__lead">
-          <strong>Your patient tells their story once,</strong> on their own phone, in their own
-          language. Medications, allergies and history land as a clean record, not a wall of loose
-          notes.
-        </p>
-        <p class="text-medium text-sub waiting__tail">
-          By the time you open the chart, it reads like a colleague already took the history for
-          you.
-        </p>
+  <!-- ══ Hero ═════════════════════════════════════════════════════════════ -->
+  <section class="hero" data-color-scheme="dark" aria-labelledby="hero-heading">
+    <div class="hero__mesh" aria-hidden="true"></div>
+    <div class="container hero__inner">
+      <p class="hero__eyebrow">For clinicians</p>
+      <h1 id="hero-heading" class="hero__title">Meet the story before the patient.</h1>
+      <p class="hero__lede">
+        Solace does the reading, the typing and the paperwork. It never does the
+        deciding &mdash; and on the one occasion that distinction matters, you win
+        without having to argue with a dialog box.
+      </p>
+      <div class="hero__cta">
+        <CtaPrimary href="/demo" label="Book a demo" />
+        <a class="arrow" href="/product">
+          <span>See the whole product</span>
+          <svg viewBox="0 0 20 14.17" fill="none" aria-hidden="true">
+            <circle cx="2" cy="7.08" r="1.6" fill="currentColor" />
+            <path d="M6.5 7.08h11M13.4 2.2l4.9 4.88-4.9 4.89" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
       </div>
+    </div>
+  </section>
 
-      <!-- One device, live DOM. This was two soft 560px captures cropped by a
-           gradient card; the real shell renders the screen as vector text, and
-           a single phone reads as the patient's own phone rather than as a
-           product shot. -->
-      <figure class="waiting__stage reveal">
-        <div class="waiting__device">
-          <PhoneFrame width="clamp(216px, 26vw, 292px)"><ScreenIntake /></PhoneFrame>
+  <!-- ══ Three acts ═══════════════════════════════════════════════════════ -->
+  {acts.map((act, i) => (
+    <section
+      id={act.id}
+      class:list={['act', i % 2 === 1 && 'act--flip']}
+      data-color-scheme="dark"
+      aria-labelledby={`act-${act.index}`}
+    >
+      <div class="act__mesh" aria-hidden="true"></div>
+      <div class="container act__inner">
+        <div class="act__copy reveal">
+          <p class="act__chapter">
+            <span class="act__index">{act.index}</span>
+            <span class="act__rule" aria-hidden="true"></span>
+            <span>{act.chapter}</span>
+          </p>
+          <h2 id={`act-${act.index}`} class="act__heading">{act.heading}</h2>
+          <p class="act__sub">{act.sub}</p>
+          <ul class="act__points">
+            {act.points.map((p) => <li>{p}</li>)}
+          </ul>
         </div>
-      </figure>
-    </div>
-  </section>
 
-  {/* ═══ 2 · Atlas showcase — the EHR patient snapshot ══════════════════ */}
-  <section id="atlas" data-background-color="secondary-default" aria-labelledby="atlas-heading">
-    <div class="container page-section">
-      <div class="showcase__head reveal">
-        <p class="eyebrow">Solace Atlas</p>
-        <div class="dashed" aria-hidden="true"></div>
-        <h2 id="atlas-heading" class="heading-medium">
-          Open the chart and the work is already started.
-        </h2>
-        <p class="text-medium text-sub showcase__sub">
-          The summary on top, the causes to rule out under it, the tests ready to order. Review it,
-          change it, make it yours.
+        <figure class="act__stage reveal">
+          <span class="act__ghost" aria-hidden="true">{act.index}</span>
+          <div class="act__mock">
+            {act.mock === 'prebrief' && <GlassPrebrief />}
+            {act.mock === 'authority' && <GlassAuthority />}
+            {act.mock === 'shift' && <GlassShift />}
+          </div>
+        </figure>
+      </div>
+    </section>
+  ))}
+
+  <!-- ══ What it will not do ══════════════════════════════════════════════ -->
+  <section id="limits" class="limits" data-color-scheme="dark" aria-labelledby="limits-heading">
+    <div class="limits__mesh" aria-hidden="true"></div>
+    <div class="container page-section limits__inner">
+      <div class="limits__head reveal">
+        <p class="act__chapter"><span class="act__rule" aria-hidden="true"></span><span>The short version</span></p>
+        <h2 id="limits-heading" class="limits__title">What it will not do.</h2>
+        <p class="limits__sub">
+          Capability lists are easy to write and impossible to check. These four
+          constraints are worth more than the list, because they are the ones
+          that hold when nobody is watching.
         </p>
       </div>
 
-      <figure class="rig reveal">
-        <div class="rig__shell" aria-hidden="true">
-          <div class="rig__screen">
-            <div class="atlas">
-              {/* ── rail ── */}
-              <div class="atlas__rail">
-                <div class="atlas__brand">
-                  <span class="atlas__mark">S</span>
-                  <span class="atlas__word">solace</span>
-                </div>
-                <p class="atlas__railkicker">Atlas</p>
-
-                <div class="atlas__user">
-                  <span class="atlas__avatar">C</span>
-                  <span class="atlas__userbody">
-                    <span class="atlas__username">Dr. Chen</span>
-                    <span class="atlas__userrole">Chief</span>
-                  </span>
-                  <span class="atlas__signout">Sign out</span>
-                </div>
-
-                <p class="atlas__navlabel">Queue</p>
-                <div class="atlas__navrow atlas__navrow--on">Waiting <span>4</span></div>
-                <div class="atlas__navrow">All <span>6</span></div>
-
-                <p class="atlas__navlabel">Admin</p>
-                <div class="atlas__admin">
-                  {ADMIN.map((item) => (
-                    <div class="atlas__adminrow">
-                      <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={item.icon} />
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-
-                <div class="atlas__qr">
-                  <svg aria-hidden="true" class="atlas__qrglyph" viewBox="0 0 11 11">
-                    {QR_FINDERS.map(([x, y]) => (
-                      <>
-                        <rect x={x} y={y} width="3" height="3" />
-                        <rect x={x + 1} y={y + 1} width="1" height="1" class="atlas__qrhole" />
-                      </>
-                    ))}
-                    {QR_MODULES.map(([x, y]) => <rect x={x} y={y} width="1" height="1" />)}
-                  </svg>
-                  <p class="atlas__qrnote">Patients scan to check in</p>
-                </div>
-              </div>
-
-              {/* ── main ── */}
-              <div class="atlas__main">
-                <div class="atlas__card atlas__card--full">
-                  <div class="atlas__cardhead">
-                    <svg aria-hidden="true" class="atlas__i atlas__i--soft" viewBox="0 0 24 24" fill="currentColor" stroke="none" set:html={ICON.grip} />
-                    <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.activity} />
-                    <span class="atlas__cardtitle">Patient snapshot</span>
-                    <span class="atlas__cardmeta">Sriyan · 4m wait · EN</span>
-                    <svg aria-hidden="true" class="atlas__i atlas__i--end" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.close} />
-                  </div>
-
-                  <div class="atlas__split">
-                    {/* left: acuity, pre-brief, workup, dispo */}
-                    <div class="atlas__pane">
-                      <div class="atlas__acuity">
-                        <p class="atlas__label">Triage acuity</p>
-                        <div class="atlas__acuityrow">
-                          <span>
-                            <span class="atlas__acuitymini">Provisional · on intake</span>
-                            <span class="atlas__acuitybig">ESI 3 <span class="atlas__acuitypct">98%</span></span>
-                          </span>
-                          <span class="atlas__acuityarrow">→</span>
-                          <span>
-                            <span class="atlas__acuitymini">Refined · vitals pending</span>
-                            <span class="atlas__acuitynote">take vitals to refine</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p class="atlas__label">Pre-brief</p>
-                        <p class="atlas__prebrief">
-                          19yo M c/o acute-onset chest tightness and sharp back pain following
-                          basketball practice 1 hour ago, now worsening, with associated dyspnea;
-                          denies trauma; reports pain 7–10/10. Hx asthma on steroids; allergies:
-                          peanuts (moderate), sulfa (anaphylaxis).
-                        </p>
-                      </div>
-
-                      <div>
-                        <div class="atlas__labelrow">
-                          <p class="atlas__label">Workup order set (AI draft)</p>
-                          <span class="atlas__accept">Accept all (11)</span>
-                        </div>
-                        <div class="atlas__orders">
-                          {ORDER_SETS.map((set) => (
-                            <div class="atlas__orderrow">
-                              <svg aria-hidden="true" class="atlas__i atlas__i--muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={set.icon} />
-                              <div class="atlas__chips">
-                                {set.items.map((item) => <span class="atlas__chip">{item}</span>)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div class="atlas__dispo">
-                        <span class="atlas__dispotag">◉ OBSERVE</span>
-                        <span class="atlas__dispometa">· obs unit · ~6h LOS</span>
-                      </div>
-
-                      <div>
-                        <p class="atlas__label">Patient&rsquo;s words</p>
-                        <p class="atlas__quote">
-                          &ldquo;I have a tight feeling in my chest and sharp back pain. It started
-                          after basketball practice an hour ago and is getting worse.&rdquo;
-                        </p>
-                      </div>
-
-                      <div>
-                        <p class="atlas__label">Risk scores</p>
-                        <p class="atlas__risk">
-                          Awaiting bedside vitals. Enter HR, BP, RR and SpO₂ and the system refines
-                          the triage score automatically.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* right: differential, attribution, actions */}
-                    <div class="atlas__pane atlas__pane--split">
-                      <div>
-                        <div class="atlas__labelrow">
-                          <p class="atlas__label">Differential diagnosis (AI draft)</p>
-                          <span class="atlas__count">9 entries</span>
-                        </div>
-                        <div class="atlas__ddx">
-                          {DDX.map((d) => (
-                            <div class="atlas__ddxrow">
-                              <span class="atlas__ddxname">{d.name}</span>
-                              {d.mustNotMiss && (
-                                <span class="atlas__mnm">
-                                  <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" set:html={ICON.slash} />
-                                  Must not miss
-                                </span>
-                              )}
-                              <span class:list={['atlas__likely', d.likely === 'MODERATE' && 'atlas__likely--mod']}>
-                                {d.likely}
-                              </span>
-                              <span class="atlas__icd">{d.icd}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p class="atlas__label">What drove this ESI</p>
-                        <div class="atlas__drivers">
-                          {DRIVERS.map((f) => (
-                            <div class="atlas__driver">
-                              <span class="atlas__drivername">{f.name}</span>
-                              <span class="atlas__track">
-                                <span class:list={['atlas__bar', f.up ? 'atlas__bar--up' : 'atlas__bar--down']} style={`width:${f.width}`}></span>
-                              </span>
-                              <span class="atlas__drivervalue">{f.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div class="atlas__actions">
-                        <span class="atlas__btn">
-                          <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.printer} />
-                          Print notes
-                        </span>
-                        <span class="atlas__btn">
-                          <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.message} />
-                          Text discharge
-                        </span>
-                        <span class="atlas__btn atlas__btn--primary">Mark seen</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="rig__deck" aria-hidden="true"></div>
-        <figcaption class="rig__cap">
-<span class="visually-hidden">
-            Solace Atlas patient snapshot: a clear summary, the dangerous causes to rule out and the
-            suggested tests.
-          </span>
-        </figcaption>
-      </figure>
+      <ul class="limits__grid">
+        {limits.map((limit) => (
+          <li class="limits__card glass reveal">
+            <h3 class="limits__card-title">{limit.title}</h3>
+            <p class="limits__card-body">{limit.body}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   </section>
 
-  {/* ═══ 3 · Feature tiles ══════════════════════════════════════════════ */}
-  <section data-background-color="primary-default" aria-labelledby="tiles-heading">
+  <!-- ══ Statement ════════════════════════════════════════════════════════ -->
+  <section class="say" data-color-scheme="dark" aria-labelledby="say-heading">
     <div class="container page-section">
-      <h2 id="tiles-heading" class="visually-hidden">What Solace Atlas does for clinicians</h2>
-
-      <div class="tiles">
-        <article class="tile tile--ink reveal" data-color-scheme="dark">
-          <div class="tile__top">
-            <p class="tile__kicker">The snapshot</p>
-            <div class="tile__bars" aria-hidden="true">
-              <span style="width:92%"></span>
-              <span style="width:72%"></span>
-              <span style="width:48%"></span>
-            </div>
-          </div>
-          <div class="tile__foot">
-            <h3 class="tile__title">The whole story, one glance.</h3>
-            <p class="tile__sub">what your patient said, summed up before you walk in.</p>
-          </div>
-        </article>
-
-        <article class="tile tile--green reveal" data-color-scheme="dark">
-          <div class="tile__top">
-            <p class="tile__kicker">The watch-list</p>
-            <ul class="tile__watch">
-              <li><span class="tile__watchname">Collapsed lung</span><span class="tile__flag">must not miss</span></li>
-              <li><span class="tile__watchname">Blood clot</span><span class="tile__flag">must not miss</span></li>
-            </ul>
-          </div>
-          <div class="tile__foot">
-            <h3 class="tile__title">Dangerous causes, never buried.</h3>
-            <p class="tile__sub">the ones to rule out, flagged on every patient.</p>
-          </div>
-        </article>
-
-        <article class="tile tile--paper reveal">
-          <div class="tile__top">
-            <p class="tile__kicker">Ready to order</p>
-            <div class="tile__tests">
-              <span class="tile__test">ECG</span>
-              <span class="tile__test">Chest X-ray</span>
-              <span class="tile__test">Blood tests</span>
-              <span class="tile__test">Heart monitor</span>
-              <span class="tile__more">+ 7 more</span>
-            </div>
-          </div>
-          <div class="tile__foot">
-            <h3 class="tile__title">Tests, suggested.</h3>
-            <p class="tile__sub">accept the ones you agree with, skip the rest.</p>
-          </div>
-        </article>
-
-        <article class="tile tile--mint reveal">
-          <div class="tile__top">
-            <p class="tile__kicker">After the visit</p>
-            <div class="tile__letter" aria-hidden="true">
-              <span class="tile__line" style="width:66%"></span>
-              <span class="tile__line" style="width:50%"></span>
-              <span class="tile__line" style="width:60%"></span>
-              <span class="tile__send">Sign and send</span>
-            </div>
-          </div>
-          <div class="tile__foot">
-            <h3 class="tile__title">Letters and replies, drafted.</h3>
-            <p class="tile__sub">you read, you sign, you send.</p>
-          </div>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  {/* ═══ 4 · Letters and forms ══════════════════════════════════════════ */}
-  <section data-background-color="secondary-default" aria-labelledby="letters-heading">
-    <div class="container page-section">
-      <div class="showcase__head reveal">
-        <p class="eyebrow">Letters and forms</p>
-        <div class="dashed" aria-hidden="true"></div>
-        <h2 id="letters-heading" class="heading-medium">
-          Twenty-four letters and forms, filled from the chart.
-        </h2>
-        <p class="text-medium text-sub showcase__sub">You read, you sign, you send.</p>
-      </div>
-
-      <figure class="rig rig--short reveal">
-        <div class="rig__shell" aria-hidden="true">
-          <div class="rig__screen">
-            <div class="atlas atlas--letters">
-              <div class="atlas__rail">
-                <div class="atlas__brand">
-                  <span class="atlas__mark">S</span>
-                  <span class="atlas__word">solace</span>
-                </div>
-                <p class="atlas__railkicker">Atlas</p>
-
-                <div class="atlas__user">
-                  <span class="atlas__avatar">C</span>
-                  <span class="atlas__userbody">
-                    <span class="atlas__username">Dr. Chen</span>
-                    <span class="atlas__userrole">Chief</span>
-                  </span>
-                  <span class="atlas__signout">Sign out</span>
-                </div>
-
-                <p class="atlas__navlabel">Queue</p>
-                <div class="atlas__navrow atlas__navrow--on">Waiting <span>4</span></div>
-                <div class="atlas__navrow">All <span>6</span></div>
-
-                <p class="atlas__navlabel">Admin</p>
-                <div class="atlas__admin">
-                  {ADMIN.map((item) => (
-                    <div class:list={['atlas__adminrow', item.label === 'Letters & forms' && 'atlas__adminrow--on']}>
-                      <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={item.icon} />
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-
-                <div class="atlas__qr">
-                  <svg aria-hidden="true" class="atlas__qrglyph" viewBox="0 0 11 11">
-                    {QR_FINDERS.map(([x, y]) => (
-                      <>
-                        <rect x={x} y={y} width="3" height="3" />
-                        <rect x={x + 1} y={y + 1} width="1" height="1" class="atlas__qrhole" />
-                      </>
-                    ))}
-                    {QR_MODULES.map(([x, y]) => <rect x={x} y={y} width="1" height="1" />)}
-                  </svg>
-                  <p class="atlas__qrnote">Patients scan to check in</p>
-                </div>
-              </div>
-
-              <div class="atlas__main">
-                <div class="atlas__card atlas__card--full">
-                  <div class="atlas__cardhead">
-                    <svg aria-hidden="true" class="atlas__i atlas__i--soft" viewBox="0 0 24 24" fill="currentColor" stroke="none" set:html={ICON.grip} />
-                    <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.file} />
-                    <span class="atlas__cardtitle">Letters &amp; forms</span>
-                    <span class="atlas__cardmeta">Sriyan · drafted from today&rsquo;s visit</span>
-                    <svg aria-hidden="true" class="atlas__i atlas__i--end" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.close} />
-                  </div>
-
-                  <div class="atlas__split atlas__split--letters">
-                    <div class="atlas__pane">
-                      <div>
-                        <p class="atlas__label">24 templates, chart-aware</p>
-                        <div class="atlas__templates">
-                          {TEMPLATES.map((t) => (
-                            <div class:list={['atlas__template', t.active && 'atlas__template--on']}>
-                              {t.name}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="atlas__pane">
-                      <div class="atlas__labelrow">
-                        <p class="atlas__label">Draft preview</p>
-                        <span class="atlas__hint">review before signing</span>
-                      </div>
-                      <div class="atlas__letter">
-                        <p class="atlas__lettertitle">Work or school note</p>
-                        <div class="atlas__letterbody">
-                          <p>To whom it may concern,</p>
-                          <p>
-                            Sriyan was evaluated in our emergency department today for chest
-                            tightness and back pain after exercise. He was assessed, observed and
-                            discharged in stable condition.
-                          </p>
-                          <p>
-                            He may return to school on Monday. Please excuse his absence today and
-                            tomorrow. No contact sports or strenuous exercise for 48 hours.
-                          </p>
-                          <p class="atlas__lettermeta">
-                            Drafted by Solace from the visit record. Valid only once reviewed and
-                            signed by the treating clinician.
-                          </p>
-                        </div>
-                        <div class="atlas__letteractions">
-                          <span class="atlas__btn">Edit draft</span>
-                          <span class="atlas__btn atlas__btn--primary atlas__btn--auto">
-                            <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.pen} />
-                            Sign and send
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="rig__deck" aria-hidden="true"></div>
-        <figcaption class="rig__cap">
-<span class="visually-hidden">
-            Solace Atlas letters and forms: a chart-aware template library beside a drafted work or
-            school note waiting to be signed.
-          </span>
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
-  {/* ═══ 5 · The statement ══════════════════════════════════════════════ */}
-  <section data-background-color="primary-default" aria-labelledby="statement-heading">
-    <div class="container statement">
-      <h2 id="statement-heading" class="visually-hidden">How Solace treats clinical judgement</h2>
-      <p class="statement__text">
+      <h2 id="say-heading" class="visually-hidden">How Solace treats clinical judgement</h2>
+      <p class="say__text">
         <span class="visually-hidden">{STATEMENT}</span>
-        <span class="statement__words" aria-hidden="true">
-          {STATEMENT_WORDS.map((word, i) => (
-            <span class="statement__word" style={`--i:${i}`}><span class="statement__ink">{word}</span>{' '}</span>
+        <span aria-hidden="true">
+          {STATEMENT_WORDS.map((word, i, all) => (
+            <>
+              <span class="scrub"><span class="scrub__ink">{word}</span></span>
+              {i < all.length - 1 ? ' ' : ''}
+            </>
           ))}
         </span>
       </p>
     </div>
   </section>
 
-  {/* ═══ 6 · Dark act — one tap away, and the live queue ════════════════ */}
-  <section id="queue" class="dark" data-color-scheme="dark" aria-labelledby="queue-heading">
-    <div class="container page-section dark__inner">
-      <h2 id="queue-heading" class="dark__mega reveal">Less typing. More medicine.</h2>
-
-      <div class="dark__card reveal">
-        <h3 class="dark__cardtitle">Everything about this patient, one tap away.</h3>
-        <p class="dark__cardsub">
-          The summary, the vitals and the full conversation. Open one, read it, move on.
-        </p>
-
-        <div class="snap">
-<div class="snap__head">
-            <img
-              class="snap__face"
-              src="/assets/faces/patient-elena.jpg"
-              alt=""
-              width="128"
-              height="128"
-              loading="lazy"
-              decoding="async"
-            />
-            <span class="snap__id">
-              <span class="snap__name">Elena R. · 34</span>
-              <span class="snap__meta">Bay 3 · 12 min wait</span>
-            </span>
-            <span class="snap__badge">ESI 2 · Urgent</span>
-          </div>
-
-          <div class="snap__tabs" role="tablist" aria-label="Patient snapshot" data-snap-tabs>
-            {SNAPSHOT_TABS.map((t, i) => (
-              <button
-                type="button"
-                class="snap__tab"
-                role="tab"
-                id={`snap-tab-${i}`}
-                aria-controls={`snap-panel-${i}`}
-                aria-selected={i === 0 ? 'true' : 'false'}
-                tabindex={i === 0 ? 0 : -1}
-              >
-                <svg class="snap__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={t.icon} />
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <div class="snap__body">
-            <div class="snap__panel" role="tabpanel" id="snap-panel-0" aria-labelledby="snap-tab-0">
-              34F, severe right-upper-quadrant pain radiating to the shoulder. Three hours, with
-              nausea. No fever.
-            </div>
-            <div class="snap__panel" role="tabpanel" id="snap-panel-1" aria-labelledby="snap-tab-1">
-              <span class="snap__vitals">HR 104 · BP 138/86 · SpO₂ 98% · Temp 100.4°F</span>
-            </div>
-            <div class="snap__panel" role="tabpanel" id="snap-panel-2" aria-labelledby="snap-tab-2">
-              <span class="snap__quote">
-                &ldquo;The pain comes in waves and nothing I take touches it.&rdquo;
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <p class="dark__lede reveal">
-        The live queue shows who needs help first, with wait times that update every 15 seconds.
-        When a patient presses My pain got worse, your team knows right away.
+  <!-- ══ Close ════════════════════════════════════════════════════════════ -->
+  <section class="close" data-color-scheme="dark" aria-labelledby="close-heading">
+    <div class="close__mesh" aria-hidden="true"></div>
+    <div class="container page-section close__inner">
+      <h2 id="close-heading" class="close__heading reveal">Bring it to your team.</h2>
+      <p class="close__sub reveal">
+        Thirty minutes, your own department&rsquo;s numbers, and an honest answer
+        about what it would and would not change.
       </p>
-
-      {/* ── QueueScreen ── */}
-      <figure class="rig reveal">
-        <div class="rig__shell" aria-hidden="true">
-          <div class="rig__screen">
-            <div class="atlas">
-              <div class="atlas__rail">
-                <div class="atlas__brand">
-                  <span class="atlas__mark">S</span>
-                  <span class="atlas__word">solace</span>
-                </div>
-                <p class="atlas__railkicker">Atlas</p>
-
-                <div class="atlas__user">
-                  <span class="atlas__avatar">C</span>
-                  <span class="atlas__userbody">
-                    <span class="atlas__username">Dr. Chen</span>
-                    <span class="atlas__userrole">Chief</span>
-                  </span>
-                  <span class="atlas__signout">Sign out</span>
-                </div>
-
-                <p class="atlas__navlabel">Queue</p>
-                <div class="atlas__navrow atlas__navrow--on">Waiting <span>4</span></div>
-                <div class="atlas__navrow">All <span>6</span></div>
-
-                <p class="atlas__navlabel">Admin</p>
-                <div class="atlas__admin">
-                  {ADMIN.map((item) => (
-                    <div class="atlas__adminrow">
-                      <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={item.icon} />
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-
-                <div class="atlas__qr">
-                  <svg aria-hidden="true" class="atlas__qrglyph" viewBox="0 0 11 11">
-                    {QR_FINDERS.map(([x, y]) => (
-                      <>
-                        <rect x={x} y={y} width="3" height="3" />
-                        <rect x={x + 1} y={y + 1} width="1" height="1" class="atlas__qrhole" />
-                      </>
-                    ))}
-                    {QR_MODULES.map(([x, y]) => <rect x={x} y={y} width="1" height="1" />)}
-                  </svg>
-                  <p class="atlas__qrnote">Patients scan to check in</p>
-                </div>
-              </div>
-
-              <div class="atlas__main atlas__main--queue">
-                <div class="atlas__stats">
-                  {STATS.map((s) => (
-                    <div class="atlas__stat">
-                      <span class:list={['atlas__staticon', s.tint && 'atlas__staticon--on']}>
-                        <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={s.icon} />
-                      </span>
-                      <span>
-                        <span class="atlas__label">{s.label}</span>
-                        <span class="atlas__statvalue">{s.value}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div class="atlas__search">
-                  <div class="atlas__searchbar">
-                    <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.search} />
-                    Search patients to tag…
-                  </div>
-                  <span class="atlas__tagchip">
-                    Sriyan
-                    <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" set:html={ICON.close} />
-                  </span>
-                </div>
-
-                <div class="atlas__wshead">
-                  <span>
-                    <span class="atlas__wstitle">My workspace</span>
-                    <span class="atlas__wssub">Active patient · Sriyan</span>
-                  </span>
-                  <span class="atlas__add">
-                    <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" set:html={ICON.plus} />
-                    Add feature
-                  </span>
-                </div>
-
-                <div class="atlas__wsgrid">
-                  <div class="atlas__wscol">
-                    <div class="atlas__card">
-                      <div class="atlas__cardhead">
-                        <svg aria-hidden="true" class="atlas__i atlas__i--soft" viewBox="0 0 24 24" fill="currentColor" stroke="none" set:html={ICON.grip} />
-                        <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.users} />
-                        <span class="atlas__cardtitle">Live queue</span>
-                        <svg aria-hidden="true" class="atlas__i atlas__i--end" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.close} />
-                      </div>
-                      <div class="atlas__queue">
-                        {QUEUE.map((p) => (
-                          <div class:list={['atlas__qrow', p.active && 'atlas__qrow--on']}>
-                            <span class:list={['atlas__esi', `atlas__esi--${p.esi}`]}>{p.esi}</span>
-                            <span>
-                              <span class="atlas__qname">{p.name}</span>
-                              <span class="atlas__qsub">{p.sub}</span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div class="atlas__card atlas__card--grow">
-                      <div class="atlas__cardhead">
-                        <svg aria-hidden="true" class="atlas__i atlas__i--soft" viewBox="0 0 24 24" fill="currentColor" stroke="none" set:html={ICON.grip} />
-                        <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.mic} />
-                        <span class="atlas__cardtitle">Ambient scribe</span>
-                        <svg aria-hidden="true" class="atlas__i atlas__i--end" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.close} />
-                      </div>
-                      <div class="atlas__scribe">
-                        <p class="atlas__scribetitle">Encounter for Sriyan</p>
-                        <p class="atlas__scribesub">
-                          Captures the bedside conversation in chunks, then finalizes an
-                          evidence-linked SOAP note.
-                        </p>
-                        <div class="atlas__scriberow">
-                          <p class="atlas__label">Recording session</p>
-                          <span class="atlas__chunks">
-                            Chunks <span class="atlas__count-pill">0</span>
-                          </span>
-                        </div>
-                        <span class="atlas__record">
-                          <span class="atlas__reddot" aria-hidden="true"></span>
-                          Start session
-                        </span>
-                        <p class="atlas__scribenote">
-                          No active session. Start one to capture the encounter hands-free.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="atlas__card">
-                    <div class="atlas__cardhead">
-                      <svg aria-hidden="true" class="atlas__i atlas__i--soft" viewBox="0 0 24 24" fill="currentColor" stroke="none" set:html={ICON.grip} />
-                      <svg aria-hidden="true" class="atlas__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.activity} />
-                      <span class="atlas__cardtitle">Patient snapshot</span>
-                      <svg aria-hidden="true" class="atlas__i atlas__i--end" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.close} />
-                    </div>
-                    <div class="atlas__pane atlas__pane--pad">
-                      <p class="atlas__cardmeta">4m wait · EN</p>
-
-                      <div class="atlas__acuity">
-                        <p class="atlas__label">Triage acuity</p>
-                        <div class="atlas__acuityrow">
-                          <span>
-                            <span class="atlas__acuitymini">Provisional · on intake</span>
-                            <span class="atlas__acuitybig">ESI 3 <span class="atlas__acuitypct">98%</span></span>
-                          </span>
-                          <span class="atlas__acuityarrow">→</span>
-                          <span>
-                            <span class="atlas__acuitymini">Refined · vitals pending</span>
-                            <span class="atlas__acuitynote">take vitals to refine</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p class="atlas__label">Pre-brief</p>
-                        <p class="atlas__prebrief">
-                          19yo M c/o acute-onset chest tightness and sharp back pain following
-                          basketball practice 1 hour ago, now worsening, with associated dyspnea;
-                          denies trauma; reports pain 7–10/10. Hx asthma on steroids; allergies:
-                          peanuts (moderate), sulfa (anaphylaxis). Photo: none.
-                        </p>
-                      </div>
-
-                      <div>
-                        <p class="atlas__label">Scribe note (AI draft)</p>
-                        <div class="atlas__note">
-                          <p>CC: Chest tightness and sharp back pain post-basketball.</p>
-                          <p>
-                            HPI: 19yo M c/o tight chest and sharp back pain onset ~1hr ago after
-                            basketball practice, progressive worsening. Denies trauma/fall. Reports
-                            SOB at present.
-                          </p>
-                          <p>ROS: SOB pos. HA, N/V, abd pain neg.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="rig__deck" aria-hidden="true"></div>
-        <figcaption class="rig__cap">
-<span class="visually-hidden">
-            Solace Atlas workspace: the live patient queue, wait times and pain alerts.
-          </span>
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
-  {/* ═══ 7 · Close ══════════════════════════════════════════════════════ */}
-  <section data-background-color="tertiary-default" aria-labelledby="close-heading">
-    <div class="container page-section close">
-      <h2 id="close-heading" class="display-small close__heading reveal">Bring Atlas to your team.</h2>
-      <p class="text-large text-sub close__body reveal">
-        Connects to your hospital systems through HL7 and FHIR. HIPAA-grade on AWS, with a public
-        model card for every AI we ship. A clinician always makes the final call.
-      </p>
-      <div class="close__actions reveal">
+      <div class="close__cta reveal">
         <CtaPrimary href="/demo" label="Book a demo" />
-        <a class="cta-secondary" href="https://solaceaidemo.vercel.app" target="_blank" rel="noreferrer">
-          Try the Patient Flow
+        <a class="arrow" href="/pricing">
+          <span>See pricing</span>
+          <svg viewBox="0 0 20 14.17" fill="none" aria-hidden="true">
+            <circle cx="2" cy="7.08" r="1.6" fill="currentColor" />
+            <path d="M6.5 7.08h11M13.4 2.2l4.9 4.88-4.9 4.89" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
         </a>
       </div>
     </div>
   </section>
 </Page>
 
-<script>
-  /* Tabs are state, not animation. The fade on panel swap is CSS. */
-  const bar = document.querySelector<HTMLElement>('[data-snap-tabs]');
-  if (bar) {
-    const tabs = Array.from(bar.querySelectorAll<HTMLButtonElement>('.snap__tab'));
-    const panels = tabs.map((t) =>
-      document.getElementById(t.getAttribute('aria-controls') || ''),
-    );
-
-    /* Panels ship visible so the copy survives with JS off; the tab UI only
-       exists once we are here to drive it. */
-    const select = (i: number, focus = false) => {
-      tabs.forEach((tab, n) => {
-        const on = n === i;
-        tab.setAttribute('aria-selected', on ? 'true' : 'false');
-        tab.tabIndex = on ? 0 : -1;
-        panels[n]?.toggleAttribute('hidden', !on);
-      });
-      if (focus) tabs[i].focus();
-    };
-
-    select(0);
-
-    tabs.forEach((tab, i) => {
-      tab.addEventListener('click', () => select(i));
-      tab.addEventListener('keydown', (e) => {
-        const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
-        if (!keys.includes(e.key)) return;
-        e.preventDefault();
-        const last = tabs.length - 1;
-        const next =
-          e.key === 'ArrowLeft' ? (i === 0 ? last : i - 1)
-          : e.key === 'ArrowRight' ? (i === last ? 0 : i + 1)
-          : e.key === 'Home' ? 0
-          : last;
-        select(next, true);
-      });
-    });
-  }
-</script>
-
 <style>
-  /* ══════════════════════════════════════════════════════════════════════
-     PAGE-LEVEL PRIMITIVES
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .header-cta { margin-block-start: var(--space-4x); }
-
-  /* 4-on / 4-off dashed rule under an eyebrow, same as Suite. */
-  .dashed {
-    inline-size: min(100%, 320px);
-    block-size: 1px;
-    background-image: repeating-linear-gradient(
-      90deg,
-      var(--color-border-sub) 0, var(--color-border-sub) 4px,
-      transparent 4px, transparent 8px
-    );
-  }
-
-
-  /* The legacy page was built on a Framer fade-up. This is that idiom in CSS.
-     Where scroll-driven animations are unsupported, content is simply
-     already visible, which is the correct fallback. */
-  @keyframes reveal-in {
-    from { opacity: 0; translate: 0 28px; }
-    to   { opacity: 1; translate: 0 0; }
-  }
-  @supports (animation-timeline: view()) {
-    @media (prefers-reduced-motion: no-preference) {
-      .reveal {
-        animation: reveal-in linear both;
-        animation-timeline: view();
-        animation-range: entry 8% entry 62%;
-      }
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     1 · WAITING ROOM
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .waiting { display: flex; flex-direction: column; gap: var(--space-12x); }
-  @media (min-width: 1080.02px) {
-    .waiting { flex-direction: row; align-items: center; gap: var(--space-16x); }
-    .waiting > * { flex: 1 1 0; min-inline-size: 0; }
-  }
-
-  .waiting__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
-
-  .waiting__lead {
-    margin-block-start: var(--space-2x);
-    max-inline-size: 34ch;
-    font-size: var(--font-size-text-large);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-sub);
-  }
-  @media (min-width: 1080.02px) { .waiting__lead { font-size: var(--font-size-24); } }
-  .waiting__lead strong { font-weight: inherit; color: var(--color-text-base); }
-
-  .waiting__tail { max-inline-size: 36ch; }
-
-  /* A tinted bed with the device floating on it — the same stage material the
-     seven acts on /product use, so the two pages read as one system. */
-  .waiting__stage {
+  /* ══ THE MESH ═══════════════════════════════════════════════════════════
+     Glass needs something behind it or it is a grey box with a border. So every
+     section carries a radial mesh — four soft lights over the slate bed, rotated
+     differently per section so no two read as the same backdrop. Pure CSS: zero
+     bytes, and it cannot pixelate the way a mesh image would. */
+  .hero, .act, .limits, .close, .say {
     position: relative;
     overflow: hidden;
-    margin: 0;
-    display: grid;
-    place-items: center;
-    padding: var(--space-10x) var(--space-5x);
-    border-radius: var(--radius-8x);
-    border: 1px solid rgb(from var(--neutral-40) r g b / 18%);
-    background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 55%), transparent 72%),
-      linear-gradient(158deg, var(--solace-10) 0%, var(--solace-20) 52%, #a0d7c4 100%);
+    background-color: var(--slate-black);
   }
-  @media (min-width: 640.02px) {
-    .waiting__stage { padding: var(--space-12x) var(--space-8x); }
+  .hero__mesh, .act__mesh, .limits__mesh, .close__mesh {
+    position: absolute;
+    inset: -25%;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 42% 38% at 18% 22%, rgb(from var(--solace-60) r g b / 0.30), transparent 70%),
+      radial-gradient(ellipse 38% 34% at 82% 12%, rgb(from var(--slate-40) r g b / 0.24), transparent 68%),
+      radial-gradient(ellipse 46% 40% at 68% 84%, rgb(from var(--solace-90) r g b / 0.44), transparent 72%),
+      radial-gradient(ellipse 34% 30% at 12% 88%, rgb(from var(--slate-60) r g b / 0.22), transparent 70%);
   }
-  .waiting__device { position: relative; }
+  .act__mesh { rotate: 24deg; }
+  .limits__mesh { rotate: -16deg; }
+  .close__mesh { rotate: 42deg; }
 
-  /* ══════════════════════════════════════════════════════════════════════
-     SHOWCASE HEADS
-     ══════════════════════════════════════════════════════════════════════ */
+  .arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2x);
+    color: var(--solace-20);
+    font-weight: var(--font-weight-medium);
+  }
+  .arrow span { text-decoration: underline; text-underline-offset: 3px; }
+  .arrow svg { inline-size: 16px; transition: translate var(--motion-duration-slow) var(--ease-ui); }
+  .arrow:hover svg { translate: 4px; }
 
-  .showcase__head {
+  /* ══ HERO ═══════════════════════════════════════════════════════════════ */
+  .hero__inner {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-4x);
-    max-inline-size: 62ch;
-    padding-block-end: var(--space-12x);
-  }
-  @media (min-width: 640.02px) { .showcase__head { padding-block-end: var(--space-16x); } }
-  .showcase__sub { max-inline-size: 54ch; }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     THE RIG — the machine the Atlas screens sit inside
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .rig {
-    position: relative;
-    margin: 0 auto;
-    inline-size: 100%;
-    max-inline-size: 1040px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .rig__shell {
-    inline-size: 100%;
-    padding: var(--space-2_5x);
-    border-radius: var(--radius-3_5x);
-    background: linear-gradient(180deg, var(--neutral-95) 0%, var(--neutral-100) 100%);
-    box-shadow:
-      inset 0 0 0 1px rgb(from var(--white) r g b / 0.10),
-      var(--elevation-large);
-  }
-
-  .rig__screen {
-    position: relative;
-    aspect-ratio: 16 / 10;
-    overflow: hidden;
-    border-radius: var(--radius-2x);
-    background-color: var(--neutral-5);
-    container-type: inline-size;
-  }
-  .rig--short .rig__screen { aspect-ratio: 16 / 9; }
-  /* Panel glow off the top edge of the display. */
-  .rig__screen::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image: linear-gradient(180deg, rgb(from var(--white) r g b / 0.05) 0, transparent 45%);
-  }
-
-  /* The deck overhangs the lid, which is what makes the rig read as a machine
-     rather than a floating rectangle. The overhang is expressed as an absolute
-     amount, NOT a percentage: a percentage of a 1040px rig is wider than the
-     page gutter and pushes the whole document sideways. */
-  .rig__deck {
-    inline-size: calc(100% + var(--space-6x));
-    block-size: 14px;
-    border-start-start-radius: var(--radius-0_5x);
-    border-start-end-radius: var(--radius-0_5x);
-    border-end-start-radius: var(--radius-4x);
-    border-end-end-radius: var(--radius-4x);
-    background: linear-gradient(180deg, var(--neutral-80) 0%, var(--neutral-95) 55%, var(--neutral-100) 100%);
-    box-shadow: inset 0 1px 0 0 rgb(from var(--white) r g b / 0.15);
-  }
-  @media (min-width: 640.02px) { .rig__deck { inline-size: calc(100% + var(--space-10x)); } }
-
-  .rig__cap {
-    position: absolute;
-    inset-block-start: var(--space-5x);
-    inset-inline-end: var(--space-5x);
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     ATLAS — the clinician terminal, rebuilt as markup.
-
-     Every colour is a local alias over a PRIMITIVE token, never a semantic
-     one. That is deliberate: primitives do not flip with the colour scheme,
-     so the app chrome keeps its light identity inside the dark section.
-
-     Sizes are cqw against .rig__screen so the whole terminal scales as one
-     piece. This is the only place on the page that leaves the space scale.
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .atlas {
-    --atlas-page: var(--neutral-5);
-    --atlas-rail: var(--neutral-10);
-    --atlas-surface: var(--white);
-    --atlas-ink: var(--neutral-100);
-    --atlas-muted: var(--neutral-60);
-    --atlas-primary: var(--slate-80);
-    --atlas-active: var(--solace-20);
-    --atlas-line: rgb(from var(--neutral-60) r g b / 0.24);
-    --atlas-chip: var(--neutral-10);
-    --atlas-alert: var(--red-80);
-    --atlas-up: var(--orange-80);
-    --atlas-down: var(--solace-80);
-    --atlas-mid: var(--yellow-80);
-
-    display: flex;
-    inline-size: 100%;
-    block-size: 100%;
-    background-color: var(--atlas-page);
-    color: var(--atlas-ink);
-    font-family: var(--font-family-sans);
-    font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-default);
-    letter-spacing: var(--letter-spacing-base);
-    text-align: start;
-  }
-
-  .atlas p { margin: 0; }
-  .atlas__i { inline-size: 1em; block-size: 1em; flex: none; }
-  .atlas__i--soft { color: var(--atlas-muted); opacity: 0.6; }
-  .atlas__i--muted { color: var(--atlas-muted); }
-  .atlas__i--end { margin-inline-start: auto; color: var(--atlas-muted); }
-
-  /* ── rail ─────────────────────────────────────────────────────────── */
-  .atlas__rail {
-    display: flex;
-    flex-direction: column;
-    inline-size: 19%;
-    flex: none;
-    padding: 1.2cqw;
-    background-color: var(--atlas-rail);
-    border-inline-end: 1px solid var(--atlas-line);
-  }
-
-  .atlas__brand { display: flex; align-items: center; gap: 0.6cqw; }
-  .atlas__mark {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 2.2cqw;
-    block-size: 2.2cqw;
-    border: 0.16cqw solid var(--atlas-primary);
-    border-radius: 0.55cqw;
-    color: var(--atlas-primary);
-    font-size: 1.3cqw;
-    font-weight: var(--font-weight-bold);
-  }
-  .atlas__word {
-    color: var(--atlas-primary);
-    font-size: 1.7cqw;
-    font-weight: var(--font-weight-semibold);
-  }
-  .atlas__railkicker {
-    margin-block-start: 0.3cqw;
-    color: var(--atlas-muted);
-    font-size: 0.62cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-  }
-
-  .atlas__user {
-    display: flex;
-    align-items: center;
-    gap: 0.7cqw;
-    margin-block-start: 1cqw;
-    padding: 0.7cqw;
-    border-radius: 0.85cqw;
-    background-color: var(--atlas-surface);
-  }
-  .atlas__avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    inline-size: 2.4cqw;
-    block-size: 2.4cqw;
-    border-radius: 50%;
-    background-color: var(--atlas-primary);
+    gap: var(--space-5x);
+    padding-block: var(--space-24x) var(--space-20x);
     color: var(--white);
-    font-size: 1cqw;
-    font-weight: var(--font-weight-semibold);
   }
-  .atlas__userbody { display: flex; flex-direction: column; min-inline-size: 0; flex: 1 1 auto; }
-  .atlas__username { font-size: 1cqw; font-weight: var(--font-weight-semibold); }
-  .atlas__userrole {
-    color: var(--atlas-muted);
-    font-size: 0.6cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+  @media (min-width: 640.02px) {
+    .hero__inner { padding-block: var(--space-32x) var(--space-24x); }
   }
-  .atlas__signout {
-    flex: none;
-    color: var(--atlas-muted);
-    font-size: 0.55cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .atlas__navlabel {
-    margin-block-start: 1.2cqw;
-    color: var(--atlas-muted);
-    font-size: 0.62cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-  .atlas__navrow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.65cqw 0.9cqw;
-    color: var(--atlas-muted);
-    font-size: 0.95cqw;
+  .hero__eyebrow {
+    font-size: var(--font-size-text-small);
     font-weight: var(--font-weight-medium);
+    color: var(--solace-20);
   }
-  .atlas__navrow--on {
-    margin-block-start: 0.5cqw;
-    border-radius: 0.85cqw;
-    background-color: var(--atlas-active);
-    color: var(--atlas-primary);
-  }
-  .atlas__navrow span { opacity: 0.7; }
-
-  .atlas__admin { display: flex; flex-direction: column; gap: 0.15cqw; margin-block-start: 0.4cqw; }
-  .atlas__adminrow {
-    display: flex;
-    align-items: center;
-    gap: 0.7cqw;
-    padding: 0.55cqw 0.9cqw;
-    border-radius: 0.6cqw;
-    color: var(--atlas-muted);
-    font-size: 0.92cqw;
+  .hero__title {
+    font-size: var(--font-size-display-medium);
     font-weight: var(--font-weight-medium);
-  }
-  .atlas__adminrow--on { background-color: var(--atlas-surface); color: var(--atlas-ink); }
-
-  .atlas__qr {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-block-start: auto;
-    padding: 1cqw;
-    border-radius: 0.85cqw;
-    background-color: var(--atlas-surface);
-  }
-  .atlas__qrglyph { inline-size: 55%; block-size: auto; fill: var(--atlas-ink); }
-  .atlas__qrhole { fill: var(--atlas-surface); }
-  .atlas__qrnote { margin-block-start: 0.7cqw; color: var(--atlas-muted); font-size: 0.72cqw; text-align: center; }
-
-  /* ── main column ──────────────────────────────────────────────────── */
-  .atlas__main { display: flex; flex-direction: column; flex: 1 1 auto; min-inline-size: 0; overflow: hidden; padding: 1.3cqw; }
-  .atlas__main--queue { gap: 1cqw; }
-
-  .atlas__label {
-    color: var(--atlas-muted);
-    font-size: 0.6cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-  .atlas__labelrow { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6cqw; }
-  .atlas__accept { color: var(--atlas-primary); font-size: 0.78cqw; font-weight: var(--font-weight-semibold); }
-  .atlas__count { color: var(--atlas-muted); font-size: 0.75cqw; }
-  .atlas__hint { color: var(--atlas-muted); font-size: 0.75cqw; font-style: italic; }
-
-  /* Cards */
-  .atlas__card {
-    display: flex;
-    flex-direction: column;
-    min-block-size: 0;
-    overflow: hidden;
-    border: 1px solid var(--atlas-line);
-    border-radius: 1.1cqw;
-    background-color: var(--atlas-surface);
-  }
-  .atlas__card--full { flex: 1 1 auto; }
-  .atlas__card--grow { flex: 1 1 auto; }
-
-  .atlas__cardhead {
-    display: flex;
-    align-items: center;
-    gap: 0.7cqw;
-    padding: 0.7cqw 1cqw;
-    border-block-end: 1px solid var(--atlas-line);
-    background-color: rgb(from var(--atlas-chip) r g b / 0.5);
-    font-size: 0.95cqw;
-  }
-  .atlas__cardtitle { font-weight: var(--font-weight-semibold); }
-  .atlas__cardmeta { color: var(--atlas-muted); font-size: 0.8cqw; }
-
-  .atlas__split { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.1cqw; flex: 1 1 auto; min-block-size: 0; overflow: hidden; padding: 1.1cqw; }
-  .atlas__split--letters { grid-template-columns: 36% 1fr; }
-
-  .atlas__pane { display: flex; flex-direction: column; gap: 0.9cqw; min-block-size: 0; overflow: hidden; }
-  .atlas__pane--split { justify-content: space-between; }
-  .atlas__pane--pad { padding: 1cqw; gap: 0.8cqw; }
-
-  /* Acuity */
-  .atlas__acuity { padding: 0.9cqw; border: 1px solid var(--atlas-line); border-radius: 1.3cqw; }
-  .atlas__acuityrow { display: flex; align-items: center; gap: 1cqw; margin-block-start: 0.5cqw; }
-  .atlas__acuityrow > span { display: flex; flex-direction: column; }
-  .atlas__acuitymini {
-    color: var(--atlas-muted);
-    font-size: 0.55cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .atlas__acuitybig { font-size: 1.7cqw; font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); }
-  .atlas__acuitypct { color: var(--atlas-muted); font-size: 0.8cqw; font-weight: var(--font-weight-regular); }
-  .atlas__acuityarrow { color: var(--atlas-muted); font-size: 1cqw; }
-  .atlas__acuitynote { color: var(--atlas-muted); font-size: 0.9cqw; font-style: italic; }
-
-  .atlas__prebrief {
-    margin-block-start: 0.4cqw;
-    padding: 0.9cqw;
-    border-radius: 0.85cqw;
-    background-color: rgb(from var(--atlas-active) r g b / 0.45);
-    font-size: 0.88cqw;
-    line-height: var(--line-height-open);
-  }
-
-  /* Order set */
-  .atlas__orders {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6cqw;
-    margin-block-start: 0.5cqw;
-    padding: 0.9cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 0.85cqw;
-  }
-  .atlas__orderrow { display: flex; align-items: center; gap: 0.6cqw; font-size: 0.95cqw; }
-  .atlas__chips { display: flex; flex-wrap: wrap; gap: 0.4cqw; }
-  .atlas__chip {
-    padding: 0.35cqw 0.7cqw;
-    border-radius: 0.45cqw;
-    background-color: var(--atlas-chip);
-    font-size: 0.78cqw;
-    font-weight: var(--font-weight-medium);
-  }
-
-  .atlas__dispo { display: flex; align-items: center; gap: 0.7cqw; }
-  .atlas__dispotag {
-    padding: 0.4cqw 0.8cqw;
-    border-radius: 0.45cqw;
-    background-color: rgb(from var(--atlas-up) r g b / 0.15);
-    color: var(--atlas-up);
-    font-size: 0.85cqw;
-    font-weight: var(--font-weight-bold);
-  }
-  .atlas__dispometa { color: var(--atlas-muted); font-size: 0.85cqw; }
-
-  .atlas__quote {
-    margin-block-start: 0.4cqw;
-    color: var(--atlas-muted);
-    font-size: 0.88cqw;
-    font-style: italic;
-    line-height: var(--line-height-open);
-  }
-  .atlas__risk {
-    margin-block-start: 0.4cqw;
-    padding: 0.9cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 0.85cqw;
-    color: var(--atlas-muted);
-    font-size: 0.85cqw;
-    font-style: italic;
-    line-height: var(--line-height-open);
-  }
-
-  /* Differential */
-  .atlas__ddx { display: flex; flex-direction: column; gap: 0.45cqw; margin-block-start: 0.5cqw; }
-  .atlas__ddxrow {
-    display: flex;
-    align-items: center;
-    gap: 0.6cqw;
-    padding: 0.55cqw 0.8cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 0.85cqw;
-  }
-  .atlas__ddxname {
-    flex: 1 1 auto;
-    min-inline-size: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.88cqw;
-    font-weight: var(--font-weight-semibold);
-  }
-  .atlas__mnm {
-    display: flex;
-    align-items: center;
-    gap: 0.3cqw;
-    flex: none;
-    padding: 0.25cqw 0.5cqw;
-    border-radius: 0.3cqw;
-    background-color: var(--atlas-alert);
-    color: var(--white);
-    font-size: 0.58cqw;
-    font-weight: var(--font-weight-bold);
-    text-transform: uppercase;
-  }
-  .atlas__likely {
-    flex: none;
-    padding: 0.25cqw 0.6cqw;
-    border-radius: var(--radius-full);
-    background-color: var(--atlas-chip);
-    color: var(--atlas-muted);
-    font-size: 0.58cqw;
-    font-weight: var(--font-weight-semibold);
-    text-transform: uppercase;
-  }
-  .atlas__likely--mod { background-color: rgb(from var(--atlas-up) r g b / 0.15); color: var(--atlas-up); }
-  .atlas__icd { flex: none; color: var(--atlas-muted); font-size: 0.72cqw; letter-spacing: normal; }
-
-  /* SHAP attribution */
-  .atlas__drivers { display: flex; flex-direction: column; gap: 0.45cqw; margin-block-start: 0.5cqw; }
-  .atlas__driver { display: flex; align-items: center; gap: 0.7cqw; letter-spacing: normal; }
-  .atlas__drivername { inline-size: 32%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75cqw; }
-  .atlas__track { flex: 1 1 auto; block-size: 0.9cqw; overflow: hidden; border-radius: 0.25cqw; background-color: var(--atlas-chip); }
-  .atlas__bar { display: block; block-size: 100%; border-radius: 0.25cqw; }
-  .atlas__bar--up { background-color: var(--atlas-up); }
-  .atlas__bar--down { background-color: var(--atlas-down); }
-  .atlas__drivervalue { inline-size: 3.4cqw; text-align: end; font-size: 0.75cqw; }
-
-  /* Actions */
-  .atlas__actions { display: flex; align-items: center; gap: 0.6cqw; margin-block-start: auto; }
-  .atlas__btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45cqw;
-    padding: 0.55cqw 0.9cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 0.45cqw;
-    background-color: var(--atlas-chip);
-    font-size: 0.85cqw;
-    font-weight: var(--font-weight-semibold);
-  }
-  .atlas__btn--primary {
-    flex: 1 1 auto;
-    border-color: transparent;
-    background-color: var(--atlas-primary);
-    color: var(--white);
-    font-size: 0.95cqw;
-    font-weight: var(--font-weight-medium);
-  }
-  .atlas__btn--auto { flex: none; }
-
-  /* ── QueueScreen-only pieces ──────────────────────────────────────── */
-  .atlas__stats { display: flex; gap: 0.9cqw; }
-  .atlas__stat {
-    display: flex;
-    align-items: center;
-    gap: 0.8cqw;
-    flex: 1 1 0;
-    padding: 0.8cqw 1cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 1.3cqw;
-    background-color: var(--atlas-surface);
-  }
-  .atlas__stat > span:last-child { display: flex; flex-direction: column; }
-  .atlas__staticon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    inline-size: 2.5cqw;
-    block-size: 2.5cqw;
-    border-radius: 50%;
-    background-color: var(--atlas-chip);
-    color: var(--atlas-primary);
-    font-size: 1.1cqw;
-  }
-  .atlas__staticon--on { background-color: var(--atlas-active); }
-  .atlas__statvalue { font-size: 1.5cqw; font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); }
-
-  .atlas__search { padding: 0.7cqw; border: 1px solid var(--atlas-line); border-radius: 1.1cqw; background-color: var(--atlas-surface); }
-  .atlas__searchbar {
-    display: flex;
-    align-items: center;
-    gap: 0.7cqw;
-    block-size: 2.6cqw;
-    padding-inline: 1cqw;
-    border-radius: var(--radius-full);
-    background-color: var(--atlas-chip);
-    color: var(--atlas-muted);
-    font-size: 0.95cqw;
-  }
-  .atlas__tagchip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5cqw;
-    margin-block-start: 0.6cqw;
-    padding: 0.35cqw 0.9cqw;
-    border-radius: var(--radius-full);
-    background-color: var(--atlas-primary);
-    color: var(--white);
-    font-size: 0.8cqw;
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .atlas__wshead { display: flex; align-items: flex-end; justify-content: space-between; gap: 1cqw; }
-  .atlas__wshead > span:first-child { display: flex; flex-direction: column; }
-  .atlas__wstitle { font-size: 1.25cqw; font-weight: var(--font-weight-semibold); }
-  .atlas__wssub { color: var(--atlas-muted); font-size: 0.9cqw; }
-  .atlas__add {
-    display: flex;
-    align-items: center;
-    gap: 0.45cqw;
-    padding: 0.6cqw 1.1cqw;
-    border-radius: var(--radius-full);
-    background-color: var(--atlas-primary);
-    color: var(--white);
-    font-size: 0.9cqw;
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .atlas__wsgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1cqw; flex: 1 1 auto; min-block-size: 0; }
-  .atlas__wscol { display: flex; flex-direction: column; gap: 1cqw; min-block-size: 0; }
-
-  .atlas__queue { display: flex; flex-direction: column; gap: 0.45cqw; padding: 0.7cqw; }
-  .atlas__qrow { display: flex; align-items: center; gap: 0.8cqw; padding: 0.55cqw 0.8cqw; border-radius: 1.3cqw; }
-  .atlas__qrow--on {
-    background-color: rgb(from var(--atlas-active) r g b / 0.55);
-    box-shadow: inset 0 0 0 1px rgb(from var(--atlas-primary) r g b / 0.4);
-  }
-  .atlas__qrow > span:last-child { display: flex; flex-direction: column; }
-  .atlas__esi {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    inline-size: 2.4cqw;
-    block-size: 2.4cqw;
-    border-radius: 50%;
-    color: var(--white);
-    font-size: 1.05cqw;
-    font-weight: var(--font-weight-bold);
-  }
-  .atlas__esi--2 { background-color: var(--atlas-up); }
-  .atlas__esi--3 { background-color: var(--atlas-mid); }
-  .atlas__esi--4 { background-color: var(--atlas-muted); }
-  .atlas__qname { font-size: 1cqw; font-weight: var(--font-weight-semibold); }
-  .atlas__qsub { color: var(--atlas-muted); font-size: 0.78cqw; }
-
-  .atlas__scribe { display: flex; flex-direction: column; align-items: flex-start; flex: 1 1 auto; min-block-size: 0; padding: 1cqw; }
-  .atlas__scribetitle { font-size: 1.05cqw; font-weight: var(--font-weight-semibold); }
-  .atlas__scribesub { margin-block-start: 0.3cqw; color: var(--atlas-muted); font-size: 0.82cqw; }
-  .atlas__scriberow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    inline-size: 100%;
-    margin-block-start: 0.9cqw;
-    padding-block-start: 0.8cqw;
-    border-block-start: 1px solid var(--atlas-line);
-  }
-  .atlas__chunks { display: flex; align-items: center; gap: 0.5cqw; color: var(--atlas-muted); font-size: 0.8cqw; }
-  .atlas__count-pill {
-    padding: 0.2cqw 0.6cqw;
-    border-radius: 0.4cqw;
-    background-color: var(--atlas-chip);
-    color: var(--atlas-ink);
-    font-size: 0.85cqw;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: normal;
-  }
-  .atlas__record {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5cqw;
-    margin-block-start: 0.7cqw;
-    padding: 0.55cqw 1cqw;
-    border-radius: 0.45cqw;
-    background-color: var(--atlas-alert);
-    color: var(--white);
-    font-size: 0.9cqw;
-    font-weight: var(--font-weight-medium);
-  }
-  .atlas__reddot { inline-size: 0.55cqw; block-size: 0.55cqw; border-radius: 50%; background-color: var(--white); }
-  .atlas__scribenote { margin-block-start: 0.6cqw; color: var(--atlas-muted); font-size: 0.78cqw; }
-
-  .atlas__note {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35cqw;
-    margin-block-start: 0.4cqw;
-    padding: 0.9cqw;
-    border-radius: 0.85cqw;
-    background-color: var(--atlas-chip);
-    font-size: 0.85cqw;
-    line-height: var(--line-height-open);
-  }
-
-  /* ── LettersScreen-only pieces ────────────────────────────────────── */
-  .atlas__templates { display: flex; flex-direction: column; gap: 0.45cqw; margin-block-start: 0.5cqw; }
-  .atlas__template {
-    padding: 0.65cqw 0.9cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 0.85cqw;
-    color: var(--atlas-muted);
-    font-size: 0.9cqw;
-    font-weight: var(--font-weight-medium);
-  }
-  .atlas__template--on {
-    border-color: transparent;
-    background-color: rgb(from var(--atlas-active) r g b / 0.55);
-    color: var(--atlas-ink);
-    box-shadow: inset 0 0 0 1px rgb(from var(--atlas-primary) r g b / 0.4);
-  }
-
-  .atlas__letter {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-block-size: 0;
-    margin-block-start: 0.5cqw;
-    padding: 1.2cqw;
-    border: 1px solid var(--atlas-line);
-    border-radius: 0.85cqw;
-    background-color: var(--atlas-surface);
-  }
-  .atlas__lettertitle { color: var(--atlas-primary); font-size: 0.95cqw; font-weight: var(--font-weight-semibold); }
-  .atlas__letterbody {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6cqw;
-    margin-block-start: 0.8cqw;
-    font-size: 0.88cqw;
-    line-height: var(--line-height-open);
-  }
-  .atlas__lettermeta { color: var(--atlas-muted); }
-  .atlas__letteractions { display: flex; align-items: center; gap: 0.6cqw; margin-block-start: auto; padding-block-start: 0.9cqw; }
-
-  /* The letters workspace carries about half the content of the snapshot, so
-     at the shared scale it reads as an empty page. Shorter display, larger
-     type: same design, sized for what is actually on it. */
-  .atlas--letters .atlas__templates { gap: 0.6cqw; }
-  .atlas--letters .atlas__template { padding: 0.9cqw 1.1cqw; font-size: 1.05cqw; }
-  .atlas--letters .atlas__lettertitle { font-size: 1.2cqw; }
-  .atlas--letters .atlas__letterbody { gap: 0.9cqw; margin-block-start: 1.1cqw; font-size: 1.05cqw; }
-  .atlas--letters .atlas__letter { padding: 1.6cqw; }
-  .atlas--letters .atlas__btn { font-size: 1cqw; padding: 0.65cqw 1.1cqw; }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     3 · FEATURE TILES
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .tiles { display: grid; grid-template-columns: 1fr; gap: var(--space-2_5x); }
-  @media (min-width: 640.02px)  { .tiles { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1080.02px) {
-    .tiles { grid-template-columns: repeat(4, 1fr); align-items: start; }
-    /* the alternating drop that the drifting columns used to imply */
-    .tiles > :nth-child(2n) { margin-block-start: var(--space-12x); }
-  }
-
-  .tile {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: var(--space-8x);
-    /* 340px has no token on the space scale; it is a picture size, not rhythm. */
-    min-block-size: 340px;
-    padding: var(--space-6x);
-    border-radius: var(--radius-6x);
-    overflow: hidden;
-  }
-  @media (min-width: 640.02px) { .tile { min-block-size: 380px; } }
-
-  /* data-color-scheme recomputes the text tokens, but `color` itself still
-     inherits from the light section. The dark tiles have to claim it. */
-  .tile--ink   { background-color: var(--neutral-100); color: var(--color-text-base); }
-  .tile--green { background-color: var(--solace-100); color: var(--color-text-base); }
-  .tile--paper { background-color: var(--color-bg-tertiary); box-shadow: inset 0 0 0 1px var(--color-border-sub); }
-  .tile--mint  { background-image: linear-gradient(166deg, var(--solace-10) 0%, var(--solace-20) 100%); }
-
-  .tile__kicker {
-    color: var(--color-text-sub);
-    font-size: var(--font-size-12);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-  .tile__title {
-    font-size: var(--font-size-26);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-default);
-    letter-spacing: var(--letter-spacing-heading);
-  }
-  .tile__sub { margin-block-start: var(--space-2x); color: var(--color-text-sub); font-size: var(--font-size-14); }
-
-  .tile__bars { display: flex; flex-direction: column; gap: var(--space-2_5x); margin-block-start: var(--space-6x); }
-  .tile__bars span { block-size: 8px; border-radius: var(--radius-full); background-color: var(--color-faded-light); }
-
-  .tile__watch { display: flex; flex-direction: column; gap: var(--space-2x); margin-block-start: var(--space-5x); }
-  .tile__watch li {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2x);
-    padding: var(--space-2x) var(--space-4x);
-    border-radius: var(--radius-full);
-    background-color: var(--color-transparent-hover);
-    box-shadow: inset 0 0 0 1px var(--color-border-soft);
-  }
-  .tile__watchname { font-size: var(--font-size-14); font-weight: var(--font-weight-medium); }
-  .tile__flag {
-    margin-inline-start: auto;
-    padding: var(--space-0_5x) var(--space-2x);
-    border-radius: var(--radius-full);
-    background-color: var(--red-80);
-    color: var(--white);
-    font-size: var(--font-size-10);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .tile__tests { display: flex; flex-wrap: wrap; gap: var(--space-2x); margin-block-start: var(--space-5x); }
-  .tile__test {
-    padding: var(--space-1_5x) var(--space-4x);
-    border-radius: var(--radius-full);
-    background-color: var(--white);
-    box-shadow: inset 0 0 0 1px var(--color-border-sub);
-    font-size: var(--font-size-14);
-    font-weight: var(--font-weight-medium);
-  }
-  .tile__more { padding: var(--space-1_5x) var(--space-2x); color: var(--color-text-sub); font-size: var(--font-size-14); font-weight: var(--font-weight-medium); }
-
-  .tile__letter {
-    inline-size: 82%;
-    margin: var(--space-5x) auto 0;
-    padding: var(--space-4x);
-    border-radius: var(--radius-4x);
-    background-color: var(--white);
-    rotate: -3deg;
-    box-shadow: var(--elevation-medium);
-  }
-  .tile__line { display: block; block-size: 6px; border-radius: var(--radius-full); background-color: rgb(from var(--neutral-100) r g b / 0.15); }
-  .tile__line + .tile__line { margin-block-start: var(--space-2x); }
-  .tile__send {
-    display: inline-block;
-    margin-block-start: var(--space-3x);
-    padding: var(--space-1x) var(--space-3x);
-    border-radius: var(--radius-full);
-    background-color: var(--neutral-100);
-    color: var(--white);
-    font-size: var(--font-size-10);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     5 · THE STATEMENT
-     Word-by-word scrub, rebuilt on a view() timeline. Each word owns a slice
-     of the section's pass across the viewport. The gradient is applied per
-     word because background-clip: text does not survive being split.
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .statement { padding-block: var(--space-24x); }
-  @media (min-width: 1080.02px) { .statement { padding-block: var(--space-40x); } }
-
-  .statement__text {
-    max-inline-size: 24ch;
-    font-size: clamp(calc(34 / var(--rem) * 1rem), calc(18 / var(--rem) * 1rem + 2.5vw), calc(64 / var(--rem) * 1rem));
-    font-weight: var(--font-weight-medium);
-    line-height: 1.18;
-    letter-spacing: var(--letter-spacing-heading);
-  }
-
-  .statement__ink {
-    background-image: linear-gradient(124deg, var(--solace-60) 10.62%, var(--slate-40) 49.7%, var(--slate-60) 89.61%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-  }
-
-  /* Deliberately NOT inline-block: a trailing space inside an inline-block is
-     trimmed off the end of the box, which welds the words together. Opacity
-     animates on an inline box perfectly well. */
-  .statement__word { display: inline; }
-
-  @keyframes word-in {
-    from { opacity: 0.42; }  /* unrevealed state must still clear 3:1 */
-    to   { opacity: 1; }
-  }
-  @supports (animation-timeline: view()) {
-    @media (prefers-reduced-motion: no-preference) {
-      .statement__word {
-        animation: word-in linear both;
-        animation-timeline: view();
-        animation-range: cover calc(18% + var(--i) * 1.5%) cover calc(32% + var(--i) * 1.5%);
-      }
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     6 · DARK ACT
-     ══════════════════════════════════════════════════════════════════════ */
-
-  .dark { background-color: var(--slate-90); color: var(--color-text-base); }
-  .dark__inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-16x); }
-  @media (min-width: 640.02px) { .dark__inner { gap: var(--space-20x); } }
-
-  .dark__mega {
-    max-inline-size: 10ch;
-    font-size: clamp(calc(52 / var(--rem) * 1rem), calc(12 / var(--rem) * 1rem + 6.25vw), calc(136 / var(--rem) * 1rem));
-    font-weight: var(--font-weight-medium);
-    line-height: 1.02;
+    line-height: var(--line-height-display);
     letter-spacing: var(--letter-spacing-display);
-    text-align: center;
+    max-inline-size: 16ch;
   }
-
-  .dark__card {
+  .hero__lede {
+    font-size: var(--font-size-text-large);
+    line-height: var(--line-height-open);
+    max-inline-size: 54ch;
+    color: rgb(from var(--white) r g b / 0.82);
+  }
+  .hero__cta {
+    margin-block-start: var(--space-4x);
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: center;
-    inline-size: 100%;
-    padding: var(--space-12x) var(--space-6x);
-    border-radius: var(--radius-12x);
-    text-align: center;
-    background-image:
-      radial-gradient(80% 60% at 50% 0%, rgb(from var(--solace-50) r g b / 0.18), rgb(from var(--solace-50) r g b / 0) 65%),
-      linear-gradient(157deg, var(--solace-100) 0%, var(--slate-black) 55%, var(--neutral-100) 100%);
+    gap: var(--space-6x);
   }
-  @media (min-width: 1080.02px) { .dark__card { padding: var(--space-24x); } }
 
-  .dark__cardtitle {
-    max-inline-size: 24ch;
-    font-size: var(--font-size-heading-medium);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-default);
-    letter-spacing: var(--letter-spacing-heading);
-  }
-  .dark__cardsub { max-inline-size: 44ch; margin-block-start: var(--space-5x); color: var(--color-text-sub); font-size: var(--font-size-text-medium); }
-  .dark__lede { max-inline-size: 62ch; color: var(--color-text-sub); font-size: var(--font-size-text-medium); text-align: center; }
-
-  /* ── snapshot card ────────────────────────────────────────────────── */
-  .snap {
+  /* ══ ACTS ═══════════════════════════════════════════════════════════════ */
+  .act__inner {
     position: relative;
-    inline-size: 100%;
-    max-inline-size: 512px;
-    margin-block-start: var(--space-12x);
-    overflow: hidden;
-    border-radius: var(--radius-6x);
-    background-color: var(--color-transparent-hover);
-    box-shadow: inset 0 0 0 1px var(--color-border-soft);
-    text-align: start;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    display: grid;
+    gap: var(--space-10x);
+    align-items: center;
+    padding-block: var(--space-16x);
+    color: var(--white);
+  }
+  @media (min-width: 640.02px) { .act__inner { padding-block: var(--space-20x); } }
+  @media (min-width: 1080.02px) {
+    .act__inner {
+      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+      gap: var(--space-16x);
+      padding-block: var(--space-24x);
+    }
+    /* Sides alternate so the eye crosses the page. DOM order never changes, so
+       the reading order stays copy-then-figure throughout. */
+    .act--flip .act__copy { order: 2; }
+    .act--flip .act__stage { order: 1; }
   }
 
-  /* Bottom-right: the top-right corner already belongs to the ESI badge. */
-
-  .snap__head {
+  .act__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
+  .act__chapter {
     display: flex;
     align-items: center;
     gap: var(--space-3x);
-    padding: var(--space-4x) var(--space-6x);
-    border-block-end: 1px solid var(--color-border-soft);
-  }
-  .snap__face {
-    inline-size: 44px;
-    block-size: 44px;
-    flex: none;
-    border-radius: 50%;
-    object-fit: cover;
-    box-shadow: 0 0 0 2px var(--color-border-soft);
-  }
-  .snap__id { display: flex; flex-direction: column; min-inline-size: 0; flex: 1 1 auto; }
-  .snap__name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--font-size-16);
+    font-size: var(--font-size-text-small);
     font-weight: var(--font-weight-medium);
+    color: rgb(from var(--white) r g b / 0.76);
   }
-  .snap__meta { color: var(--color-text-disabled); font-size: var(--font-size-12); }
-  .snap__badge {
-    flex: none;
-    padding: var(--space-1_5x) var(--space-3x);
-    border-radius: var(--radius-full);
-    background-color: rgb(from var(--red-80) r g b / 0.2);
-    box-shadow: inset 0 0 0 1px rgb(from var(--red-80) r g b / 0.45);
-    color: var(--red-20);
-    font-size: var(--font-size-12);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  .act__index { color: var(--solace-20); font-variant-numeric: tabular-nums; }
+  .act__rule {
+    inline-size: var(--space-8x);
+    block-size: 1px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgb(from var(--white) r g b / 0.4) 0, rgb(from var(--white) r g b / 0.4) 4px,
+      transparent 4px, transparent 8px
+    );
   }
-
-  .snap__tabs { display: flex; gap: var(--space-2x); padding: var(--space-5x) var(--space-6x) 0; }
-  .snap__tab {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2x);
-    padding: var(--space-2x) var(--space-4x);
-    border-radius: var(--radius-full);
-    background-color: var(--color-transparent-hover);
-    color: var(--color-text-soft);
-    font-size: var(--font-size-14);
+  .act__heading {
+    font-size: var(--font-size-heading-medium);
     font-weight: var(--font-weight-medium);
-    letter-spacing: normal;
-    transition:
-      background-color var(--motion-duration-base) var(--ease-ui),
-      color var(--motion-duration-base) var(--ease-ui);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+    max-inline-size: 20ch;
   }
-  .snap__tab:hover { background-color: var(--color-transparent-active); color: var(--color-text-base); }
-  .snap__tab[aria-selected='true'] { background-color: var(--white); color: var(--neutral-90); }
-  .snap__i { inline-size: 15px; block-size: 15px; flex: none; }
-
-  .snap__body { padding: var(--space-5x) var(--space-6x) var(--space-7x); }
-  .snap__panel {
-    min-block-size: 3.5em;
-    color: var(--color-text-sub);
-    font-size: var(--font-size-16);
+  .act__sub {
+    font-size: var(--font-size-text-medium);
     line-height: var(--line-height-open);
+    max-inline-size: 48ch;
+    color: rgb(from var(--white) r g b / 0.8);
   }
-  .snap__vitals { font-size: var(--font-size-14); letter-spacing: 0.02em; }
-  .snap__quote { font-style: italic; }
-
-  @keyframes panel-in {
-    from { opacity: 0; translate: 0 8px; }
-    to   { opacity: 1; translate: 0 0; }
+  .act__points { display: grid; gap: var(--space-3x); margin-block-start: var(--space-3x); }
+  .act__points li {
+    position: relative;
+    padding-inline-start: var(--space-7x);
+    font-size: var(--font-size-text-small);
+    line-height: var(--line-height-open);
+    color: rgb(from var(--white) r g b / 0.88);
   }
-  @media (prefers-reduced-motion: no-preference) {
-    .snap__panel:not([hidden]) { animation: panel-in var(--motion-duration-slow) var(--ease-hero) both; }
+  /* Hollow circle, never a filled dot. */
+  .act__points li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.6em;
+    inline-size: 12px;
+    block-size: 12px;
+    border: 1.5px solid rgb(from var(--solace-30) r g b / 0.7);
+    border-radius: 50%;
   }
 
-  /* ══════════════════════════════════════════════════════════════════════
-     7 · CLOSE
-     ══════════════════════════════════════════════════════════════════════ */
+  /* No tinted bed here. On /product the figure needs a stage because it is
+     opaque; glass needs the mesh itself to refract, so covering the mesh with a
+     card would destroy the material. The stage is only the band that holds the
+     act number. */
+  .act__stage {
+    position: relative;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    padding-block-start: var(--space-16x);
+  }
+  .act__ghost {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: var(--space-2x);
+    font-size: clamp(48px, 6vw, 88px);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-display);
+    font-variant-numeric: tabular-nums;
+    color: rgb(from var(--white) r g b / 0.18);
+    pointer-events: none;
+  }
+  /* The graphics measure themselves in cqw, and an element cannot be its own
+     query container — so the container has to be this wrapper. */
+  .act__mock {
+    position: relative;
+    container-type: inline-size;
+    inline-size: 100%;
+    max-inline-size: 560px;
+  }
 
-  .close { display: flex; flex-direction: column; align-items: center; gap: var(--space-6x); text-align: center; }
-  .close__heading { max-inline-size: 16ch; }
-  .close__body { max-inline-size: 48ch; }
-  .close__actions {
+  /* ══ LIMITS ═════════════════════════════════════════════════════════════ */
+  .limits__inner { position: relative; display: flex; flex-direction: column; gap: var(--space-14x); color: var(--white); }
+  .limits__head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
+  .limits__title {
+    font-size: var(--font-size-heading-large);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+  }
+  .limits__sub {
+    font-size: var(--font-size-text-medium);
+    line-height: var(--line-height-open);
+    max-inline-size: 56ch;
+    color: rgb(from var(--white) r g b / 0.8);
+  }
+
+  .limits__grid { display: grid; gap: var(--space-5x); }
+  @media (min-width: 640.02px) { .limits__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1080.02px) { .limits__grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .limits__card {
+    --_tint: var(--solace-100);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3x);
+    padding: var(--space-7x);
+    border-radius: var(--radius-5x);
+  }
+  .limits__card-title {
+    font-size: var(--font-size-text-medium);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+  }
+  .limits__card-body {
+    font-size: var(--font-size-text-small);
+    line-height: var(--line-height-open);
+    color: rgb(from var(--white) r g b / 0.8);
+  }
+
+  /* ══ STATEMENT ══════════════════════════════════════════════════════════ */
+  .say__text {
+    position: relative;
+    font-size: var(--font-size-display-small);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-display);
+    max-inline-size: 22ch;
+  }
+  .scrub { display: inline-block; opacity: 1; }
+  /* background-clip has to sit on the word, because the opacity that scrubs
+     lives on its parent and would not fade a gradient painted by an ancestor.
+     Per-word clipping restarts the ramp inside every word, which reads as candy
+     stripes; anchoring to the viewport makes all the words sample one ramp. */
+  .scrub__ink {
+    -webkit-background-clip: text;
+    background-clip: text;
+    background-attachment: fixed;
+    color: transparent;
+    background-image: linear-gradient(
+      123.97deg,
+      var(--solace-30) 10.62%,
+      #b5d8cd 55%,
+      var(--solace-10) 89.61%
+    );
+  }
+
+  /* ══ CLOSE ══════════════════════════════════════════════════════════════ */
+  .close__inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-5x);
+    color: var(--white);
+  }
+  .close__heading {
+    font-size: var(--font-size-display-small);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-display);
+    max-inline-size: 16ch;
+  }
+  .close__sub {
+    font-size: var(--font-size-text-large);
+    line-height: var(--line-height-open);
+    max-inline-size: 50ch;
+    color: rgb(from var(--white) r g b / 0.82);
+  }
+  .close__cta {
+    margin-block-start: var(--space-4x);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: var(--space-3x);
-    margin-block-start: var(--space-4x);
+    gap: var(--space-6x);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .snap__tab { transition: none; }
+  /* ══ SCROLL MOTION ══════════════════════════════════════════════════════
+     Scroll-driven CSS, no JavaScript. Everything is behind a reduced-motion
+     guard and a support query, so the page is fully legible without either. */
+  @keyframes cl-reveal {
+    from { opacity: 0; translate: 0 var(--space-7x); }
+    to   { opacity: 1; translate: 0 0; }
+  }
+  @keyframes cl-scrub {
+    from { opacity: 0.16; }
+    to   { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .reveal {
+        animation: cl-reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 5% entry 90%;
+      }
+      /* Each word owns its own timeline, so the paragraph lights up line by
+         line as it rises through the viewport. */
+      .scrub {
+        animation: cl-scrub linear both;
+        animation-timeline: view();
+        animation-range: cover 32% cover 58%;
+      }
+    }
   }
 </style>

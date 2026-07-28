@@ -59,7 +59,7 @@ if (steps.length !== 5) {
     display: block;
     block-size: 0.5cqw;
     border-radius: 100px;
-    background-color: rgb(from var(--neutral-40) r g b / 0.24);
+    background-color: var(--color-border-sub);
     overflow: hidden;
   }
   .cap--inset .cap__rail { block-size: 0.9cqw; }
@@ -69,7 +69,7 @@ if (steps.length !== 5) {
     block-size: 100%;
     inline-size: 100%;
     border-radius: 100px;
-    background-color: var(--solace-60);
+    background-color: var(--color-primary-base);
   }
 
   /* Every line shares one cell so the rail never moves as the copy changes
@@ -79,9 +79,9 @@ if (steps.length !== 5) {
     grid-area: 1 / 1;
     font-size: 3cqw;
     line-height: 1.35;
-    color: var(--neutral-80);
+    color: var(--color-text-sub);
   }
-  .cap--inset .cap__s { font-size: 4cqw; text-align: center; color: var(--neutral-60); }
+  .cap--inset .cap__s { font-size: 4cqw; text-align: center; color: var(--color-text-sub); }
   /* Beat one is the resting caption: it is what a still frame should say. */
   .cap__s--2, .cap__s--3, .cap__s--4, .cap__s--5 { opacity: 0; }
 

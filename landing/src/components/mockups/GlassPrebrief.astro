@@ -1,0 +1,188 @@
+---
+/* The pre-brief — what is on screen in the four seconds before you open the
+   door. Glass, on dark, and a 12s film.
+
+   Deliberately NOT the Atlas panel from /product. That one answers a question
+   you asked. This one is the thing you did not ask for and get anyway: one line
+   of story, the two causes that would end a career if missed, and the single
+   next action worth taking. It is small on purpose — a pre-brief you have to
+   scroll is not a pre-brief.
+
+   Material: glass, not neumorphism. Per materials.css the two never mix, and
+   glass needs something behind it to refract, which is why this only ever
+   appears on the dark mesh sections of /clinicians. That split is also what
+   stops this page and the product tour from reading as the same page twice.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   a name and a room. Nothing else yet.
+     beat 2   2.4s   the story, in one line
+     beat 3   4.8s   the two things that must not be missed
+     beat 4   7.2s   the one action worth taking now
+     beat 5   9.6s   and the reminder that none of it is a decision
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Four seconds before you open the door.',
+  'The story, in one line you can hold in your head.',
+  'The two causes that must not be missed.',
+  'And the one thing worth doing right now.',
+  'None of it is a decision. All of it is a head start.',
+];
+---
+
+<div class="pb glass" data-clip>
+  <div class="pb__head">
+    <span class="pb__name">Reyes, Marisol &middot; 47</span>
+    <span class="pb__room">Room 4 &middot; waiting 6 min</span>
+  </div>
+
+  <p class="pb__story">
+    Chest tightness since this morning, worse lying flat, short of breath on the
+    stairs. Two visits for the same thing in eighteen months.
+  </p>
+
+  <div class="pb__watch">
+    <p class="pb__k">Must not miss</p>
+    <ul class="pb__list">
+      <li class="pb__w pb__w--a"><span>Acute coronary syndrome</span><em>ECG within 10 min</em></li>
+      <li class="pb__w pb__w--b"><span>Pulmonary embolism</span><em>Wells 4 &middot; moderate</em></li>
+    </ul>
+  </div>
+
+  <div class="pb__next">
+    <span class="pb__next-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M2 8.6 6 12.4 14 3.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="pb__next-text">
+      <b>The stress echo from November was never done</b>
+      <i>It is the open thread from the last visit.</i>
+    </span>
+  </div>
+
+  <p class="pb__foot">Suggested, never ordered. You decide, and the record says so.</p>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  /* .glass supplies the sweep, the tint and the 12px backdrop blur; everything
+     here is layout and the one thing glass cannot do for itself, which is
+     decide how much of the mesh behind it should show through. */
+  .pb {
+    --clip-dur: 12s;
+    --_tint: var(--solace-100);
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    color: var(--white);
+  }
+
+  .pb__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .pb__name { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .pb__room { margin-inline-start: auto; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+
+  .pb__story {
+    font-size: 3.6cqw;
+    line-height: 1.55;
+    color: rgb(from var(--white) r g b / 0.92);
+  }
+
+  .pb__k { font-size: 2.9cqw; color: rgb(from var(--white) r g b / 0.66); }
+  .pb__watch { display: flex; flex-direction: column; gap: 2cqw; }
+  .pb__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.8cqw; }
+  .pb__w {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 2.8cqw 3.4cqw;
+    border-radius: var(--radius-2_5x);
+    /* A second, denser sheet of glass rather than a solid fill — a solid card
+       inside a glass panel kills the refraction that makes the panel read as
+       glass at all. */
+    background: linear-gradient(180deg,
+      rgb(from var(--white) r g b / 0.14) 0%,
+      rgb(from var(--white) r g b / 0.06) 100%);
+    border: 1px solid rgb(from var(--white) r g b / 0.18);
+    border-inline-start: 0.8cqw solid var(--red-30);
+    font-size: 3.2cqw;
+  }
+  .pb__w em {
+    margin-inline-start: auto;
+    flex: none;
+    font-style: normal;
+    font-size: 2.9cqw;
+    color: rgb(from var(--white) r g b / 0.68);
+  }
+
+  .pb__next {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.2cqw 3.6cqw;
+    border-radius: var(--radius-2_5x);
+    background: linear-gradient(180deg,
+      rgb(from var(--solace-40) r g b / 0.26) 0%,
+      rgb(from var(--solace-40) r g b / 0.12) 100%);
+    border: 1px solid rgb(from var(--solace-30) r g b / 0.38);
+  }
+  .pb__next-icon {
+    display: grid; place-items: center;
+    inline-size: 6.4cqw; block-size: 6.4cqw; flex: none;
+    border-radius: 100px;
+    background-color: rgb(from var(--solace-30) r g b / 0.24);
+    color: var(--solace-20);
+  }
+  .pb__next-icon svg { inline-size: 3.6cqw; block-size: 3.6cqw; }
+  .pb__next-text { display: flex; flex-direction: column; gap: 0.4cqw; }
+  .pb__next-text b { font-size: 3.2cqw; font-weight: var(--font-weight-medium); }
+  .pb__next-text i { font-style: normal; font-size: 2.8cqw; color: rgb(from var(--white) r g b / 0.7); }
+
+  .pb__foot {
+    padding-block-start: 2.8cqw;
+    border-block-start: 1px solid rgb(from var(--white) r g b / 0.16);
+    font-size: 2.9cqw;
+    color: rgb(from var(--white) r g b / 0.66);
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+  @keyframes pb-story {
+    0%, 21%  { opacity: 0; translate: 0 1.4cqw; filter: blur(3px); }
+    28%, 96% { opacity: 1; translate: 0 0; filter: blur(0); }
+    100%     { opacity: 0; translate: 0 1.4cqw; filter: blur(3px); }
+  }
+  @keyframes pb-k {
+    0%, 38%  { opacity: 0; }
+    43%, 96% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes pb-w-a {
+    0%, 41%  { opacity: 0; translate: 0 1.6cqw; }
+    47%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  @keyframes pb-w-b {
+    0%, 47%  { opacity: 0; translate: 0 1.6cqw; }
+    53%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.6cqw; }
+  }
+  @keyframes pb-next {
+    0%, 61%  { opacity: 0; translate: 0 2cqw; }
+    68%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 2cqw; }
+  }
+  @keyframes pb-foot {
+    0%, 81%  { opacity: 0; }
+    88%, 96% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+
+  .pb[data-play] .pb__story { animation: pb-story var(--clip-dur) var(--ease-hero) infinite both; }
+  .pb[data-play] .pb__k     { animation: pb-k var(--clip-dur) var(--ease-ui) infinite both; }
+  .pb[data-play] .pb__w--a  { animation: pb-w-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .pb[data-play] .pb__w--b  { animation: pb-w-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .pb[data-play] .pb__next  { animation: pb-next var(--clip-dur) var(--ease-hero) infinite both; }
+  .pb[data-play] .pb__foot  { animation: pb-foot var(--clip-dur) var(--ease-ui) infinite both; }
+</style>

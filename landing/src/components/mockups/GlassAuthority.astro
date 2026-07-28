@@ -1,0 +1,252 @@
+---
+/* Who decides. Glass, on dark, and a 12s film.
+
+   Every AI health product says "the clinician makes the final call". Almost
+   none of them show you what happens when the clinician disagrees, which is the
+   only moment the claim is actually worth anything.
+
+   So this graphic is a disagreement. The model says one thing, the clinician
+   says another, the clinician's answer is the one that ships, and the
+   difference is written down with a name against it — which is also what makes
+   the override log a training signal rather than an apology.
+
+   Material: glass on dark. Never mixed with the neumorphism on /product.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   12.0s, five beats of 2.4s, narrated by the caption rail.
+
+     beat 1   0.0s   the suggestion, on its own
+     beat 2   2.4s   the clinician disagrees
+     beat 3   4.8s   their answer is the one that takes effect
+     beat 4   7.2s   the difference is recorded, with a reason
+     beat 5   9.6s   and it counts: the override rate is published
+     11.5s           dissolve; 100% equals 0% so the loop has no seam */
+import ClipCaption from './ClipCaption.astro';
+
+const CAPTIONS = [
+  'Solace suggests a level. That is all it does.',
+  'You disagree. That takes one tap.',
+  'Your answer is the one that takes effect. Immediately.',
+  'The disagreement is written down, with your reason.',
+  'And it is counted, published, and used to correct the model.',
+];
+---
+
+<div class="au glass" data-clip>
+  <div class="au__head">
+    <span class="au__title">Who decided</span>
+    <span class="au__pt">Okonkwo, D.</span>
+  </div>
+
+  <div class="au__pair">
+    <div class="au__side au__side--ai">
+      <p class="au__k">Solace suggested</p>
+      <p class="au__v">3</p>
+      <p class="au__note">Urgent</p>
+    </div>
+
+    <span class="au__vs" aria-hidden="true">
+      <svg viewBox="0 0 24 16" fill="none"><path d="M2 8h19M15.4 2.2 21.2 8l-5.8 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+
+    <div class="au__side au__side--human">
+      <p class="au__k">Dr Alvarez set</p>
+      <p class="au__v">2</p>
+      <p class="au__note">Emergent</p>
+    </div>
+  </div>
+
+  <p class="au__effect">
+    <span class="au__effect-pre" aria-hidden="true">Awaiting review</span>
+    <span class="au__effect-post">In effect on the board &middot; 09:14:31</span>
+  </p>
+
+  <div class="au__log">
+    <p class="au__k">Written to the record</p>
+    <ul class="au__lines">
+      <li class="au__line au__line--a"><b>Override</b>Level raised by the treating clinician</li>
+      <li class="au__line au__line--b"><b>Reason</b>&ldquo;Looks worse than the numbers do.&rdquo;</li>
+      <li class="au__line au__line--c"><b>Signed</b>Dr Alvarez &middot; 09:14:31</li>
+    </ul>
+  </div>
+
+  <div class="au__rate">
+    <span class="au__rate-text">Clinicians overrode Solace this month</span>
+    <span class="au__rate-v">
+      <span class="au__tick"><span class="au__strip"><i>0</i><i>3</i><i>6</i><i>8</i><i>10</i><i>11</i></span></span>%
+    </span>
+  </div>
+
+  <ClipCaption steps={CAPTIONS} />
+</div>
+
+<style>
+  .au {
+    --clip-dur: 12s;
+    --_tint: var(--solace-100);
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    color: var(--white);
+  }
+
+  .au__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .au__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .au__pt { margin-inline-start: auto; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+
+  .au__pair { display: grid; gap: 2.4cqw; align-items: center; }
+  @container (min-width: 420px) { .au__pair { grid-template-columns: 1fr auto 1fr; } }
+
+  .au__side {
+    display: flex; flex-direction: column; gap: 1cqw;
+    padding: 3.6cqw 3.8cqw;
+    border-radius: var(--radius-3x);
+    border: 1px solid rgb(from var(--white) r g b / 0.18);
+  }
+  /* The suggestion is quieter than the decision. The material carries the
+     hierarchy so no label has to say "this one counts". */
+  .au__side--ai {
+    background: linear-gradient(180deg,
+      rgb(from var(--white) r g b / 0.10) 0%,
+      rgb(from var(--white) r g b / 0.04) 100%);
+  }
+  .au__side--human {
+    background: linear-gradient(180deg,
+      rgb(from var(--solace-40) r g b / 0.28) 0%,
+      rgb(from var(--solace-40) r g b / 0.12) 100%);
+    border-color: rgb(from var(--solace-30) r g b / 0.42);
+  }
+  .au__k { font-size: 2.9cqw; color: rgb(from var(--white) r g b / 0.66); }
+  .au__v {
+    font-size: 9cqw;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .au__side--ai .au__v { color: rgb(from var(--white) r g b / 0.66); }
+  .au__side--human .au__v { color: var(--white); }
+  .au__note { font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+
+  .au__vs {
+    justify-self: center;
+    display: grid; place-items: center;
+    inline-size: 7cqw; block-size: 7cqw;
+    border-radius: 100px;
+    background-color: rgb(from var(--white) r g b / 0.12);
+    border: 1px solid rgb(from var(--white) r g b / 0.2);
+    color: var(--solace-20);
+  }
+  .au__vs svg { inline-size: 4cqw; block-size: auto; }
+
+  .au__effect { display: grid; font-size: 3cqw; color: var(--solace-20); }
+  .au__effect > * { grid-area: 1 / 1; }
+  .au__effect-pre { color: rgb(from var(--white) r g b / 0.6); opacity: 0; }
+
+  .au__log { display: flex; flex-direction: column; gap: 2cqw; }
+  .au__lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.6cqw; }
+  .au__line {
+    display: flex; align-items: baseline; gap: 2.6cqw;
+    font-size: 3cqw;
+    line-height: 1.4;
+    color: rgb(from var(--white) r g b / 0.9);
+  }
+  .au__line b {
+    inline-size: 17cqw;
+    flex: none;
+    font-weight: var(--font-weight-medium);
+    color: rgb(from var(--white) r g b / 0.62);
+  }
+
+  .au__rate {
+    display: flex; align-items: center; gap: 3cqw;
+    padding-block-start: 3cqw;
+    border-block-start: 1px solid rgb(from var(--white) r g b / 0.16);
+    font-size: 3cqw;
+    color: rgb(from var(--white) r g b / 0.72);
+  }
+  /* The type size lives on the WINDOW: block-size:1em resolves against the
+     element's own font-size, so a window sized at the parent's scale holding
+     larger digits is shorter than its contents and overflow:hidden shaves the
+     glyphs. */
+  .au__rate-v {
+    margin-inline-start: auto;
+    flex: none;
+    display: flex; align-items: baseline; gap: 0.4cqw;
+    font-size: 3cqw;
+    line-height: 1;
+    color: var(--solace-20);
+    font-variant-numeric: tabular-nums;
+  }
+  .au__tick {
+    display: inline-block;
+    font-size: 5.4cqw;
+    line-height: 1;
+    font-weight: var(--font-weight-semibold);
+    block-size: 1em;
+    overflow: hidden;
+  }
+  .au__strip { display: block; translate: 0 -83.333%; }
+  .au__strip i { display: block; block-size: 1em; line-height: 1; font-style: normal; }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Five beats of 2.4s on the shared grid. */
+  @keyframes au-human {
+    0%, 21%  { opacity: 0; translate: 2cqw 0; }
+    28%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 2cqw 0; }
+  }
+  @keyframes au-vs {
+    0%, 22%  { opacity: 0; scale: 0.6; }
+    29%, 96% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.6; }
+  }
+  @keyframes au-pre {
+    0%, 41%  { opacity: 1; }
+    45%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes au-post {
+    0%, 45%  { opacity: 0; }
+    49%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  @keyframes au-line-a {
+    0%, 61%  { opacity: 0; translate: 0 1.2cqw; }
+    66%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.2cqw; }
+  }
+  @keyframes au-line-b {
+    0%, 66%  { opacity: 0; translate: 0 1.2cqw; }
+    71%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.2cqw; }
+  }
+  @keyframes au-line-c {
+    0%, 71%  { opacity: 0; translate: 0 1.2cqw; }
+    76%, 96% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.2cqw; }
+  }
+  @keyframes au-rate {
+    0%, 81%  { opacity: 0; }
+    87%, 96% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  /* Six published figures, not a tween: an override rate is counted, not slid
+     between two values. */
+  @keyframes au-count {
+    from { translate: 0 0; }
+    to   { translate: 0 -83.333%; }
+  }
+
+  .au[data-play] .au__side--human { animation: au-human var(--clip-dur) var(--ease-hero) infinite both; }
+  .au[data-play] .au__vs          { animation: au-vs var(--clip-dur) var(--ease-hero) infinite both; }
+  .au[data-play] .au__effect-pre  { animation: au-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .au[data-play] .au__effect-post { animation: au-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .au[data-play] .au__line--a     { animation: au-line-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .au[data-play] .au__line--b     { animation: au-line-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .au[data-play] .au__line--c     { animation: au-line-c var(--clip-dur) var(--ease-hero) infinite both; }
+  .au[data-play] .au__rate        { animation: au-rate var(--clip-dur) var(--ease-ui) infinite both; }
+  .au[data-play] .au__strip       { animation: au-count var(--clip-dur) steps(6, jump-none) infinite both; }
+</style>
