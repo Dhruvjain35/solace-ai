@@ -98,7 +98,7 @@ import WordPaths from '../brand/WordPaths.astro';
 
 <style>
   .scr {
-    --clip-dur: 12s;
+    --clip-dur: 10s;
     inline-size: 100%;
     block-size: 100%;
     display: flex;
@@ -162,16 +162,17 @@ import WordPaths from '../brand/WordPaths.astro';
     align-self: flex-start;
     padding: 3cqw 3.6cqw;
     border-radius: 4cqw 4cqw 4cqw 1.2cqw;
-    background-color: var(--solace-10);
-    color: var(--solace-100);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
+    color: var(--neutral-100);
     font-size: 5cqw;
     line-height: 1.42;
+    box-shadow: 0 1px 2px rgb(from var(--neutral-100) r g b / 0.05);
   }
 
   /* A live level meter: thin bars, height-modulated. Never a row of dots —
      they are 1.1cqw wide against an 8cqw well, so they cannot read as one. */
   .scr__rec {
-    margin-block-start: auto;
     display: flex; align-items: center; gap: 3cqw;
     padding: 3.2cqw 4cqw;
     border-radius: 4cqw;
@@ -211,8 +212,9 @@ import WordPaths from '../brand/WordPaths.astro';
     display: flex; align-items: center; justify-content: center; gap: 2cqw;
     padding: 2.4cqw;
     border-radius: 3cqw;
-    background-color: var(--solace-10);
-    color: var(--solace-100);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
+    color: var(--neutral-90);
     font-size: 4.2cqw;
     font-weight: var(--font-weight-medium);
     opacity: 0;
@@ -229,6 +231,9 @@ import WordPaths from '../brand/WordPaths.astro';
   .scr__hint { text-align: center; font-size: 4.4cqw; color: var(--neutral-60); }
 
   .scr__foot {
+    /* The slack collects here, at the bottom edge, rather than as a hole in the
+       middle of the screen. */
+    margin-block-start: auto;
     display: flex; align-items: center; justify-content: space-between;
     padding-block-start: 3cqw;
     border-block-start: 0.5cqw solid var(--neutral-20);

@@ -1,11 +1,31 @@
 ---
 import Logo from './Logo.astro';
 
+/* The product menu. This replaces a four-column wall of forty short lines on
+   /product that nobody was going to read — a list that long stops being
+   information and becomes texture. A menu is the right shape for it: you scan
+   nine things, pick the one you came for, and land on the part of the page that
+   explains it properly.
+
+   CSS-only. It opens on hover and on focus-within, so a keyboard tab into the
+   Product link opens it and the next tab lands on the first item. No JS, and
+   nothing to go wrong on a slow connection. */
 const nav = [
-  { label: 'Product', href: '/product' },
   { label: 'For clinicians', href: '/clinicians' },
   { label: 'Integrations', href: '/integrations' },
   { label: 'Pricing', href: '/pricing' },
+];
+
+const menu = [
+  { label: 'Patient intake', sub: 'Their own phone, their own language, no app', href: '/product#patient-side' },
+  { label: 'Triage', sub: 'A level, the evidence for it, and how sure it is', href: '/product#act-02' },
+  { label: 'The live board', sub: 'Sorted by need, re-sorted when the evidence moves', href: '/product#clinician-side' },
+  { label: 'Workflows', sub: 'Rules you write once, run on every patient after', href: '/product#workflows' },
+  { label: 'Ambient scribe', sub: 'The note drafts while you talk, and cites the room', href: '/product#act-05' },
+  { label: 'Atlas', sub: 'Ask the chart. Get an answer with its sources', href: '/product#act-06' },
+  { label: 'Letters and forms', sub: 'Two dozen documents, filled from the visit', href: '/product#act-07' },
+  { label: 'Into the chart', sub: 'Coded write-back through HL7 and FHIR, all logged', href: '/product#act-08' },
+  { label: 'Phone agent', sub: 'The same intake by voice, for anyone without a phone', href: '/product#phone' },
 ];
 ---
 
@@ -16,6 +36,26 @@ const nav = [
     </a>
 
     <nav class="site-header__nav" aria-label="Primary">
+      <div class="menu">
+        <a class="menu__trigger" href="/product">
+          Product
+          <svg class="menu__chev" viewBox="0 0 12 8" fill="none" aria-hidden="true">
+            <path d="M1.5 2 6 6.2 10.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <div class="menu__panel">
+          <div class="menu__grid">
+            {menu.map((item) => (
+              <a class="menu__item" href={item.href}>
+                <span class="menu__label">{item.label}</span>
+                <span class="menu__sub">{item.sub}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {nav.map((item) => <a href={item.href}>{item.label}</a>)}
     </nav>
 
@@ -27,6 +67,83 @@ const nav = [
 </header>
 
 <style>
+  /* ══ PRODUCT MENU ═══════════════════════════════════════════════════════ */
+  .menu { position: relative; display: flex; align-items: center; }
+  .menu__trigger { display: inline-flex; align-items: center; gap: var(--space-1_5x); }
+  .menu__chev {
+    inline-size: 10px;
+    transition: rotate var(--motion-duration-base) var(--ease-ui);
+  }
+  .menu:hover .menu__chev,
+  .menu:focus-within .menu__chev { rotate: 180deg; }
+
+  .menu__panel {
+    position: absolute;
+    inset-block-start: calc(100% + var(--space-4x));
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    inline-size: min(92vw, 680px);
+    padding: var(--space-4x);
+    border-radius: var(--radius-5x);
+    /* Glass, on its own: the menu opens over both the light pages and the dark
+       one, so it carries enough of its own surface to be legible on either. */
+    background:
+      linear-gradient(210deg, rgb(from var(--white) r g b / 0.9) 0, transparent 38%),
+      linear-gradient(180deg, rgb(from var(--white) r g b / 0.97) 0, rgb(from var(--neutral-5) r g b / 0.95) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 24px 56px rgb(from var(--neutral-40) r g b / 0.26);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: var(--neutral-100);
+
+    /* Closed. visibility is what keeps the links out of the tab order while
+       shut — opacity alone would leave nine focusable items in a panel nobody
+       can see. */
+    opacity: 0;
+    visibility: hidden;
+    translate: -50% var(--space-2x);
+    transition:
+      opacity var(--motion-duration-base) var(--ease-ui),
+      translate var(--motion-duration-base) var(--ease-ui),
+      visibility 0s linear var(--motion-duration-base);
+  }
+  .menu:hover .menu__panel,
+  .menu:focus-within .menu__panel {
+    opacity: 1;
+    visibility: visible;
+    translate: -50% 0;
+    transition-delay: 0s;
+  }
+  /* The gap between trigger and panel would drop the hover on the way down. */
+  .menu::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline: -20%;
+    block-size: var(--space-5x);
+  }
+
+  .menu__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-1x); }
+  @media (max-width: 720px) { .menu__grid { grid-template-columns: 1fr; } }
+
+  .menu__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0_5x);
+    padding: var(--space-3x) var(--space-4x);
+    border-radius: var(--radius-3x);
+    transition: background-color var(--motion-duration-fast) var(--ease-ui);
+  }
+  .menu__item:hover { background-color: rgb(from var(--neutral-40) r g b / 0.12); }
+  .menu__label { font-size: var(--font-size-16); font-weight: var(--font-weight-medium); color: var(--neutral-100); }
+  .menu__sub { font-size: var(--font-size-14); line-height: var(--line-height-open); color: rgb(from var(--neutral-100) r g b / 0.66); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu__panel, .menu__chev, .menu__item { transition: none; }
+  }
+
   /* The header reads the hero's own scroll progress through a named view
      timeline. No scroll listener, no IntersectionObserver, no JS at all.
      Both animated properties are registered, so they interpolate. */

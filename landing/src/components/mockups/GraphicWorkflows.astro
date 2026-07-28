@@ -107,7 +107,7 @@ const CAPTIONS = [
 
 <style>
   .wf {
-    --clip-dur: 12s;
+    --clip-dur: 9.5s;
     position: relative;
     inline-size: 100%;
     display: flex;
@@ -137,7 +137,11 @@ const CAPTIONS = [
     white-space: nowrap;
   }
   .wf__st--pre  { background-color: var(--neutral-10); color: var(--neutral-80); opacity: 0; }
-  .wf__st--post { background-color: var(--solace-10); color: var(--solace-80); }
+  .wf__st--post {
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    color: var(--solace-80);
+  }
   /* A steady state marker, not a blinker. It says "on", and things that are on
      do not flash at you. */
   .wf__st--post i {
@@ -227,12 +231,16 @@ const CAPTIONS = [
   .wf__gate-text i { font-style: normal; font-size: 2.8cqw; color: rgb(from var(--white) r g b / 0.68); }
 
   .wf__acts { display: flex; flex-direction: column; gap: 1.6cqw; flex: 1; min-inline-size: 0; }
+  /* An action is a row in a chain, so it is drawn as a row: a white surface,
+     a hairline, and a leading rule in the brand colour that reads as a
+     connector rather than as a highlight. */
   .wf__act {
     padding: 2cqw 2.8cqw;
     border-radius: var(--radius-2x);
-    background-color: var(--solace-10);
-    border: 1px solid rgb(from var(--solace-60) r g b / 0.32);
-    color: var(--solace-100);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
+    border-inline-start: 0.7cqw solid var(--solace-60);
+    color: var(--neutral-90);
     font-size: 3.1cqw;
     font-weight: var(--font-weight-medium);
   }

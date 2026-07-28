@@ -12,6 +12,7 @@ import GraphicAtlas from '../components/mockups/GraphicAtlas.astro';
 import GraphicLetters from '../components/mockups/GraphicLetters.astro';
 import GraphicChart from '../components/mockups/GraphicChart.astro';
 import ClipCaption from '../components/mockups/ClipCaption.astro';
+import HeroGlass from '../components/mockups/HeroGlass.astro';
 
 /* Rebuilt as seven acts.
 
@@ -47,7 +48,7 @@ type Act = {
   heading: string;
   sub: string;
   points: string[];
-  bed: 'teal' | 'sand' | 'mist' | 'deep';
+  bed: 'paper' | 'slate' | 'ink';
   mock: 'intake' | 'triage' | 'queue' | 'workflows' | 'scribe' | 'atlas' | 'letters' | 'chart';
 };
 
@@ -64,7 +65,7 @@ const acts: Act[] = [
       'Two or three follow-up questions that fit the story',
       'One photo fills in the insurance card',
     ],
-    bed: 'teal',
+    bed: 'paper',
     mock: 'intake',
   },
   {
@@ -78,7 +79,7 @@ const acts: Act[] = [
       'Re-scored the moment bedside vitals land',
       'Your clinicians always make the call',
     ],
-    bed: 'mist',
+    bed: 'slate',
     mock: 'triage',
   },
   {
@@ -93,7 +94,7 @@ const acts: Act[] = [
       'Honest wait times, updated continuously',
       'Nothing is hidden behind a menu',
     ],
-    bed: 'sand',
+    bed: 'ink',
     mock: 'queue',
   },
   {
@@ -108,7 +109,7 @@ const acts: Act[] = [
       'Page a team, open a task, draft a letter, write to the chart',
       'Every payload stripped of identifiers before an action sees it',
     ],
-    bed: 'teal',
+    bed: 'slate',
     mock: 'workflows',
   },
   {
@@ -122,7 +123,7 @@ const acts: Act[] = [
       'Edit it once and it learns how you write',
       'You read it, you sign it, you send it',
     ],
-    bed: 'mist',
+    bed: 'paper',
     mock: 'scribe',
   },
   {
@@ -136,7 +137,7 @@ const acts: Act[] = [
       'Open threads flagged before you miss them',
       'Reads and writes to your EHR, all of it logged',
     ],
-    bed: 'teal',
+    bed: 'slate',
     mock: 'atlas',
   },
   {
@@ -150,7 +151,7 @@ const acts: Act[] = [
       'The signature line is the one thing it will not fill',
       'Sent to the patient once you sign',
     ],
-    bed: 'sand',
+    bed: 'paper',
     mock: 'letters',
   },
   {
@@ -164,7 +165,7 @@ const acts: Act[] = [
       'Every AI read and write, in the audit trail',
       'No standing access — the token expires with the session',
     ],
-    bed: 'deep',
+    bed: 'ink',
     mock: 'chart',
   },
 ];
@@ -175,58 +176,6 @@ const INTAKE_CAPTIONS = [
   'Answer out loud, in your own words.',
   'Follow-ups adapt to what you just said.',
   'It reaches the care team before the patient does.',
-];
-
-/* Everything that is real but does not warrant two thousand pixels of its own.
-   Sourced from the service modules that exist in the backend rather than from a
-   wishlist — each line here maps to a module by name. Eight acts plus a wall is
-   the right shape: the acts carry the story, the wall carries the surface area,
-   and neither has to pretend to be the other. */
-const surface = [
-  {
-    group: 'Clinical reasoning',
-    items: [
-      'Ranked differential with calibrated prediction sets',
-      'Don’t-miss red flags surfaced on every encounter',
-      'Risk calculators filled from the visit, not by hand',
-      'Validated screeners extracted and scored',
-      'Early-warning and sepsis scoring',
-      'Interaction, allergy and dosing checks in context',
-    ],
-  },
-  {
-    group: 'Documents and inbox',
-    items: [
-      'Inbound faxes read and filed as structured records',
-      'Portal messages drafted from the chart, sent by a human',
-      'Refill requests triaged before they reach anyone',
-      'Abnormal results turned into plain-language messages',
-      'Referral letters written with the relevant history attached',
-      'Discharge instructions in the patient’s own language',
-    ],
-  },
-  {
-    group: 'Coverage and revenue',
-    items: [
-      'Insurance card read from a photo',
-      'Eligibility checked before the visit, not after',
-      'Visit level and diagnosis codes suggested with their rationale',
-      'Risk-adjustment gaps surfaced from prior notes',
-      'Prior-authorisation packets assembled from the encounter',
-      'Denial appeals drafted against the stated reason',
-    ],
-  },
-  {
-    group: 'Trust and governance',
-    items: [
-      'Model cards, bias audits and override logs, published',
-      'Every AI read and write in the audit trail',
-      'Identifiers stripped before any payload leaves',
-      'Care gaps surfaced at the encounter, not in a report',
-      'Social-needs screening with closed-loop referral',
-      'Recommendations cited to open primary sources',
-    ],
-  },
 ];
 
 const megaText =
@@ -261,15 +210,18 @@ const faqs = [
   description="The complete Solace journey. Every step a patient takes on their own phone, and everything the care team sees before the room is ready."
 >
   <PageHeader
-    eyebrow="How it works"
     title="From the front door to the chart."
-    lede="Seven moments, in the order they happen. Every screen below is the real interface, running."
-  />
+    lede="Eight moments, in the order they happen. Every screen below is the real interface, running."
+  >
+    <div class="page-hero-figure">
+      <HeroGlass tone="light" variant="intake" />
+    </div>
+  </PageHeader>
 
   <!-- ══ THE SEVEN ACTS ═══════════════════════════════════════════════════ -->
   {acts.map((act, i) => (
     <section
-      id={act.id}
+      id={act.id ?? `act-${act.index}`}
       class:list={['act', i % 2 === 1 && 'act--flip']}
       data-background-color={i % 2 === 1 ? 'secondary-default' : 'primary-default'}
       aria-labelledby={`act-${act.index}`}
@@ -315,31 +267,6 @@ const faqs = [
       </div>
     </section>
   ))}
-
-  <!-- ══ The rest of the surface ══════════════════════════════════════════ -->
-  <section id="everything" data-background-color="primary-default" aria-labelledby="surface-heading">
-    <div class="container page-section surface">
-      <div class="surface__head reveal">
-        <p class="act__chapter"><span class="act__rule" aria-hidden="true"></span><span>And the rest of it</span></p>
-        <h2 id="surface-heading" class="heading-medium">Eight acts is the story. This is the surface area.</h2>
-        <p class="text-medium text-sub surface__sub">
-          The parts that never get a demo because they are not dramatic — and
-          are most of what a day actually consists of.
-        </p>
-      </div>
-
-      <div class="surface__grid">
-        {surface.map((column) => (
-          <div class="surface__col reveal">
-            <h3 class="surface__group">{column.group}</h3>
-            <ul class="surface__list">
-              {column.items.map((item) => <li>{item}</li>)}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
 
   <!-- ══ Mega statement ═══════════════════════════════════════════════════ -->
   <section data-background-color="primary-default">
@@ -444,6 +371,8 @@ const faqs = [
 </Page>
 
 <style>
+  .page-hero-figure { margin-block-start: var(--space-8x); display: flex; justify-content: center; }
+
   /* ══ ACTS ═══════════════════════════════════════════════════════════════ */
   .act__inner {
     display: grid;
@@ -530,36 +459,32 @@ const faqs = [
     /* The top padding is not breathing room, it is a band: the act number
        lives there. Sat over the figure it was covered on every act but the
        first, which is the whole reason it now gets its own strip. */
-    padding: var(--space-16x) var(--space-5x) var(--space-10x);
+    padding: var(--space-20x) var(--space-5x) var(--space-10x);
     border-radius: var(--radius-8x);
     border: 1px solid rgb(from var(--neutral-40) r g b / 18%);
   }
   @media (min-width: 640.02px) {
-    .act__stage { padding: var(--space-20x) var(--space-8x) var(--space-12x); }
+    .act__stage { padding: var(--space-24x) var(--space-8x) var(--space-12x); }
   }
 
-  .act__stage--teal {
+  /* Three beds, none of them tinted with the brand colour. The mint stage was
+     the single biggest source of the light-green-shape look, and a product
+     figure does not need its background to be on-brand — the figure is. */
+  .act__stage--paper {
     background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 55%), transparent 72%),
-      linear-gradient(158deg, var(--solace-10) 0%, var(--solace-20) 52%, #a0d7c4 100%);
-  }
-  .act__stage--sand {
-    background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 70%), transparent 72%),
+      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 72%), transparent 72%),
       linear-gradient(158deg, var(--neutral-5) 0%, var(--neutral-10) 50%, var(--neutral-20) 100%);
   }
-  /* Deeper than the other two beds by design: mist lands on the white sections,
-     where slate-0 was so close to the page that the stage lost its edge. */
-  .act__stage--mist {
+  .act__stage--slate {
     background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 55%), transparent 72%),
+      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 52%), transparent 72%),
       linear-gradient(158deg, var(--slate-10) 0%, var(--slate-20) 58%, #9db4bd 100%);
   }
-  .act__stage--deep {
+  .act__stage--ink {
     background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--solace-60) r g b / 26%), transparent 72%),
-      linear-gradient(158deg, var(--solace-90) 0%, var(--solace-100) 55%, var(--slate-black) 100%);
-    border-color: rgb(from var(--slate-black) r g b / 40%);
+      radial-gradient(ellipse 58% 46% at 24% 8%, rgb(from var(--slate-40) r g b / 32%), transparent 74%),
+      linear-gradient(158deg, var(--slate-90) 0%, var(--slate-100) 52%, var(--slate-black) 100%);
+    border-color: rgb(from var(--slate-black) r g b / 55%);
   }
 
   /* The act number, set large and low-contrast in the corner. Editorial
@@ -569,8 +494,8 @@ const faqs = [
      warm taupe is the only thing with anything to push against. */
   .act__ghost {
     position: absolute;
-    inset-block-start: var(--space-4x);
-    inset-inline-end: var(--space-6x);
+    inset-block-start: var(--space-5x);
+    inset-inline-end: var(--space-7x);
     font-size: clamp(44px, 5.4vw, 78px);
     font-weight: var(--font-weight-medium);
     line-height: 1;
@@ -579,8 +504,8 @@ const faqs = [
     color: rgb(from var(--white) r g b / 88%);
     pointer-events: none;
   }
-  .act__stage--sand .act__ghost { color: rgb(from var(--neutral-40) r g b / 52%); }
-  .act__stage--deep .act__ghost { color: rgb(from var(--solace-30) r g b / 42%); }
+  .act__stage--paper .act__ghost { color: rgb(from var(--neutral-40) r g b / 50%); }
+  .act__stage--ink .act__ghost { color: rgb(from var(--white) r g b / 20%); }
 
   /* The graphics measure themselves in cqw, and an element cannot be its own
      query container — so the container has to be this wrapper, sized to the
@@ -595,7 +520,7 @@ const faqs = [
      inside the screen — it narrates the act, it is not app chrome. */
   .act__device {
     /* The clip root for this act, so it owns the tempo the caption reads. */
-    --clip-dur: 12s;
+    --clip-dur: 10s;
     position: relative;
     inline-size: 100%;
     max-inline-size: 420px;
@@ -604,31 +529,6 @@ const faqs = [
     flex-direction: column;
     align-items: center;
     gap: var(--space-6x);
-  }
-
-  /* ══ The surface wall ═══════════════════════════════════════════════════ */
-  .surface { display: flex; flex-direction: column; gap: var(--space-14x); }
-  .surface__head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
-  .surface__head h2 { max-inline-size: 22ch; }
-  .surface__sub { max-inline-size: 52ch; }
-
-  .surface__grid { display: grid; gap: var(--space-10x); }
-  @media (min-width: 640.02px)  { .surface__grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-10x) var(--space-8x); } }
-  @media (min-width: 1080.02px) { .surface__grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-8x); } }
-
-  .surface__col { display: flex; flex-direction: column; gap: var(--space-4x); }
-  .surface__group {
-    padding-block-end: var(--space-3x);
-    border-block-end: 1px solid var(--color-border-sub);
-    font-size: var(--font-size-text-small);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-primary-base);
-  }
-  .surface__list { display: grid; gap: var(--space-3x); }
-  .surface__list li {
-    font-size: var(--font-size-text-small);
-    line-height: var(--line-height-open);
-    color: var(--color-text-sub);
   }
 
   /* ══ Scrubbed statement ═════════════════════════════════════════════════ */
@@ -770,9 +670,15 @@ const faqs = [
   /* ══ SCROLL MOTION ══════════════════════════════════════════════════════
      Scroll-driven CSS, no JavaScript. Everything is behind a reduced-motion
      guard and a support query, so the page is fully legible without either. */
+  /* Not a fade. Content is revealed by a wipe — a clip edge travelling up the
+     block while it rises the last few pixels into place — so the words are
+     opaque the whole way and the motion reads as material moving rather than as
+     a page still loading. A scroll-triggered opacity fade is the single most
+     over-used effect on the web and it makes everything it touches feel
+     identical; this costs the same and does not. */
   @keyframes hiw-reveal {
-    from { opacity: 0; translate: 0 var(--space-7x); }
-    to   { opacity: 1; translate: 0 0; }
+    from { clip-path: inset(18% 0 0 0); translate: 0 var(--space-5x); }
+    to   { clip-path: inset(0 0 0 0);   translate: 0 0; }
   }
   @keyframes hiw-scrub {
     from { opacity: 0.16; }
@@ -788,7 +694,7 @@ const faqs = [
       .reveal {
         animation: hiw-reveal linear both;
         animation-timeline: view();
-        animation-range: entry 5% entry 90%;
+        animation-range: entry 10% entry 65%;
       }
       /* Each word owns its own timeline, so the paragraph lights up line by
          line as it rises through the viewport. */

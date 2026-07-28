@@ -76,7 +76,7 @@ const WAVE = [22, 48, 74, 96, 62, 38, 80, 54, 92, 44, 68, 30, 86, 58, 40, 72, 26
 
 <style>
   .ev {
-    --clip-dur: 12s;
+    --clip-dur: 9.5s;
     position: relative;
     inline-size: 100%;
     display: flex;
@@ -116,9 +116,9 @@ const WAVE = [22, 48, 74, 96, 62, 38, 80, 54, 92, 44, 68, 30, 86, 58, 40, 72, 26
     margin-inline-start: 1.4cqw;
     padding: 0.6cqw 1.8cqw;
     border-radius: var(--radius-1_5x);
-    background-color: var(--solace-10);
-    border: 1px solid rgb(from var(--solace-60) r g b / 0.34);
-    color: var(--solace-100);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
+    color: var(--solace-80);
     font-size: 2.9cqw;
     font-weight: var(--font-weight-medium);
     font-variant-numeric: tabular-nums;
@@ -176,9 +176,10 @@ const WAVE = [22, 48, 74, 96, 62, 38, 80, 54, 92, 44, 68, 30, 86, 58, 40, 72, 26
     display: flex; align-items: center; gap: 2.6cqw;
     padding: 2.8cqw 3.4cqw;
     border-radius: var(--radius-2_5x);
-    background-color: var(--solace-10);
-    border: 1px solid rgb(from var(--solace-60) r g b / 0.28);
-    color: var(--solace-100);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
+    border-inline-start: 0.7cqw solid var(--solace-60);
+    color: var(--neutral-90);
     font-size: 3cqw;
   }
   .ev__done-icon {
@@ -216,10 +217,10 @@ const WAVE = [22, 48, 74, 96, 62, 38, 80, 54, 92, 44, 68, 30, 86, 58, 40, 72, 26
     38%, 100% { opacity: 0; scale: 1.8; }
   }
   @keyframes ev-stamp {
-    0%, 30%  { background-color: var(--solace-10); }
-    34%      { background-color: var(--solace-30); }
-    42%, 96% { background-color: var(--solace-10); }
-    100%     { background-color: var(--solace-10); }
+    0%, 30%  { background-color: var(--white); }
+    34%      { background-color: var(--solace-20); }
+    42%, 96% { background-color: var(--white); }
+    100%     { background-color: var(--white); }
   }
   @keyframes ev-player {
     0%, 38%  { opacity: 0; translate: 0 2cqw; }

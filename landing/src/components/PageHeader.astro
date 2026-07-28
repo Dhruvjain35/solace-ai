@@ -1,17 +1,19 @@
 ---
+/* Centred. Left-aligned copy with nothing on the right left two thirds of the
+   fold empty on every page that used this, which is what made the heroes look
+   unfinished rather than spacious. The eyebrow is gone too: a small grey label
+   above a headline adds nothing a visitor did not already know from the nav. */
 export interface Props {
-  eyebrow?: string;
   title: string;
   lede?: string;
   /** Tightens the block for legal and utility pages. */
   compact?: boolean;
 }
-const { eyebrow, title, lede, compact = false } = Astro.props;
+const { title, lede, compact = false } = Astro.props;
 ---
 
 <section data-background-color="secondary-default">
   <div class:list={['container', 'page-header', compact && 'page-header--compact']}>
-    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
     <h1 class={compact ? 'display-small' : 'display-medium'}>{title}</h1>
     {lede && <p class="text-large text-sub page-header__lede">{lede}</p>}
     <slot />
@@ -22,8 +24,9 @@ const { eyebrow, title, lede, compact = false } = Astro.props;
   .page-header {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-4x);
+    align-items: center;
+    text-align: center;
+    gap: var(--space-5x);
     padding-block: var(--space-16x) var(--space-16x);
   }
   @media (min-width: 640.02px) {
@@ -35,5 +38,5 @@ const { eyebrow, title, lede, compact = false } = Astro.props;
   }
 
   .page-header h1 { max-inline-size: 20ch; }
-  .page-header__lede { max-inline-size: 62ch; }
+  .page-header__lede { max-inline-size: 58ch; }
 </style>

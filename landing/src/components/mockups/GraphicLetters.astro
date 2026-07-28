@@ -104,7 +104,7 @@ const CAPTIONS = [
 
 <style>
   .lt {
-    --clip-dur: 12s;
+    --clip-dur: 9.5s;
     position: relative;
     inline-size: 100%;
     display: flex;
@@ -150,10 +150,12 @@ const CAPTIONS = [
     font-size: 3cqw;
     color: var(--neutral-80);
   }
+  /* Selection is carried by a leading rule and weight, not by a wash. */
   .lt__tpl--on {
-    background-color: var(--solace-10);
-    border-color: rgb(from var(--solace-60) r g b / 0.45);
-    color: var(--solace-100);
+    background-color: var(--white);
+    border-color: rgb(from var(--neutral-40) r g b / 0.24);
+    border-inline-start: 0.7cqw solid var(--solace-60);
+    color: var(--neutral-100);
     font-weight: var(--font-weight-medium);
   }
 
@@ -210,7 +212,8 @@ const CAPTIONS = [
     flex: none;
     padding: 1.2cqw 2.6cqw;
     border-radius: 100px;
-    background-color: var(--solace-10);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
     color: var(--solace-80);
     font-size: 2.7cqw;
     font-weight: var(--font-weight-medium);

@@ -1,0 +1,239 @@
+---
+/* The hero composition. Glass fragments, not a product screenshot.
+
+   Superhuman's hero is a calendar card with a search pill floating over it and
+   two soft shapes behind — fragments of the product, arranged, rather than a
+   full screen shrunk down. That is the right idea and it is worth copying: a
+   whole screen at hero size is unreadable, so it becomes texture, and texture
+   is what makes a hero feel like a stock template.
+
+   So this is three fragments a person can actually read at a glance, laid on
+   two soft shapes. It shows nothing that appears anywhere else on the site, and
+   it is small enough that every word in it is legible.
+
+   Motion: the fragments drift. No fades — a hero that fades in on load is the
+   single most over-used effect on the web, and it also means the first thing a
+   visitor sees is nothing. These are present immediately and simply float, on
+   long offset cycles so the composition never repeats a pose.
+*/
+interface Props {
+  /** `dark` for glass on a mesh; `light` for the warm neutral pages. */
+  tone?: 'dark' | 'light';
+  /** Which three fragments to show. The two variants share nothing, because no
+      figure on this site appears twice. */
+  variant?: 'board' | 'intake';
+}
+const { tone = 'dark', variant = 'board' } = Astro.props;
+
+const FRAGMENTS = {
+  board: {
+    rows: [
+      { lv: '2', tone: '2', name: 'Reyes, M.', why: 'Chest tightness', meta: '6m' },
+      { lv: '3', tone: '3', name: 'Vance, T.', why: 'Ankle injury', meta: '14m' },
+      { lv: '4', tone: '4', name: 'Bell, R.', why: 'Rash, no fever', meta: '31m' },
+    ],
+    pill: 'Raised to 2 — new saturation reading',
+    noteK: 'Drafted from the room',
+    noteA: 'Substernal chest tightness, ',
+    noteB: 'worse lying flat',
+    noteC: '.',
+  },
+  intake: {
+    rows: [
+      { lv: 'TL', tone: 'lang', name: 'Tagalog', why: 'Spoken, not typed', meta: '7s' },
+      { lv: 'ES', tone: 'lang', name: 'Español', why: 'Spoken, not typed', meta: '6s' },
+      { lv: 'VI', tone: 'lang', name: 'Tiếng Việt', why: 'Spoken, not typed', meta: '7s' },
+    ],
+    pill: 'Answered in the language they think in',
+    noteK: 'Read by the care team',
+    noteA: 'Chest pain since this morning, ',
+    noteB: 'worse on the stairs',
+    noteC: '.',
+  },
+} as const;
+
+const f = FRAGMENTS[variant];
+---
+
+<div class:list={['hg', `hg--${tone}`]} aria-hidden="true">
+  <span class="hg__shape hg__shape--a"></span>
+  <span class="hg__shape hg__shape--b"></span>
+
+  <div class="hg__card hg__card--queue">
+    {f.rows.map((r, i) => (
+      <div class:list={['hg__row', i === 2 && 'hg__row--dim']}>
+        <span class:list={['hg__lv', `hg__lv--${r.tone}`]}>{r.lv}</span>
+        <span class="hg__who"><b>{r.name}</b><i>{r.why}</i></span>
+        <span class="hg__wait">{r.meta}</span>
+      </div>
+    ))}
+  </div>
+
+  <div class="hg__card hg__card--pill">
+    <span class="hg__pill-icon">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V3.6M4.4 7.2 8 3.6l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span>{f.pill}</span>
+  </div>
+
+  <div class="hg__card hg__card--note">
+    <p class="hg__note-k">{f.noteK}</p>
+    <p class="hg__note-b">{f.noteA}<span>{f.noteB}</span>{f.noteC}</p>
+  </div>
+</div>
+
+<style>
+  .hg {
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: 520px;
+    aspect-ratio: 5 / 4;
+    container-type: inline-size;
+  }
+
+  /* The two soft shapes are what the glass has to refract. Without them the
+     fragments are just outlined boxes. */
+  .hg__shape {
+    position: absolute;
+    z-index: 0;
+    border-radius: 22%;
+    filter: blur(2px);
+  }
+  .hg__shape--a {
+    inset-block-start: 4%;
+    inset-inline-end: 2%;
+    inline-size: 46%;
+    block-size: 52%;
+    rotate: 8deg;
+  }
+  .hg__shape--b {
+    inset-block-end: 4%;
+    inset-inline-start: 0%;
+    inline-size: 38%;
+    block-size: 40%;
+    rotate: -12deg;
+  }
+  .hg--dark .hg__shape--a { background: linear-gradient(150deg, rgb(from var(--solace-50) r g b / 0.34), rgb(from var(--slate-40) r g b / 0.08)); }
+  .hg--dark .hg__shape--b { background: linear-gradient(150deg, rgb(from var(--slate-30) r g b / 0.2), rgb(from var(--solace-60) r g b / 0.06)); }
+  .hg--light .hg__shape--a { background: linear-gradient(150deg, var(--slate-10), var(--neutral-10)); }
+  .hg--light .hg__shape--b { background: linear-gradient(150deg, var(--neutral-10), var(--neutral-20)); }
+
+  .hg__card {
+    position: absolute;
+    z-index: 1;
+    border-radius: var(--radius-4x);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .hg--dark .hg__card {
+    background:
+      linear-gradient(210deg, rgb(from var(--white) r g b / 0.16) 0, transparent 34%),
+      linear-gradient(180deg, rgb(from var(--slate-100) r g b / 0.9) 0, rgb(from var(--slate-black) r g b / 0.84) 100%);
+    border: 1px solid rgb(from var(--white) r g b / 0.2);
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.34);
+    color: var(--white);
+  }
+  .hg--light .hg__card {
+    background:
+      linear-gradient(210deg, rgb(from var(--white) r g b / 0.9) 0, transparent 40%),
+      linear-gradient(180deg, rgb(from var(--white) r g b / 0.95) 0, rgb(from var(--white) r g b / 0.88) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    box-shadow: 0 18px 40px rgb(from var(--neutral-40) r g b / 0.22);
+    color: var(--neutral-100);
+  }
+
+  /* ── The queue fragment ────────────────────────────────────────────────── */
+  .hg__card--queue {
+    inset-block-start: 21%;
+    inset-inline-start: 0%;
+    inline-size: 62%;
+    display: flex;
+    flex-direction: column;
+    gap: 3cqw;
+    padding: 4.6cqw;
+  }
+  .hg__row { display: flex; align-items: center; gap: 3cqw; }
+  .hg__row--dim { opacity: 0.56; }
+  .hg__lv {
+    display: grid; place-items: center;
+    inline-size: 8cqw; block-size: 8cqw; flex: none;
+    border-radius: var(--radius-2x);
+    font-size: 4cqw;
+    font-weight: var(--font-weight-semibold);
+    color: var(--white);
+  }
+  .hg__lv--2 { background: linear-gradient(180deg, var(--red-40), var(--red-80)); }
+  .hg__lv--3 { background: linear-gradient(180deg, var(--orange-30), var(--orange-80)); }
+  .hg__lv--4 { background: linear-gradient(180deg, var(--neutral-30), var(--neutral-60)); }
+  /* Language codes, not acuity levels — same slot, different meaning, so they
+     get the brand colour rather than a severity ramp. */
+  .hg__lv--lang {
+    background: linear-gradient(180deg, var(--solace-60), var(--solace-90));
+    font-size: 3.2cqw;
+    letter-spacing: -0.01em;
+  }
+  .hg__who { display: flex; flex-direction: column; gap: 0.2cqw; min-inline-size: 0; }
+  .hg__who b { font-size: 3.2cqw; font-weight: var(--font-weight-medium); }
+  .hg__who i { font-style: normal; font-size: 2.7cqw; opacity: 0.72; }
+  .hg__wait { margin-inline-start: auto; font-size: 2.9cqw; opacity: 0.72; font-variant-numeric: tabular-nums; }
+
+  /* ── The floating pill, the one thing in front of everything ───────────── */
+  .hg__card--pill {
+    inset-block-start: 2%;
+    inset-inline-end: 0%;
+    inline-size: 56%;
+    display: flex;
+    align-items: center;
+    gap: 2.6cqw;
+    padding: 3.4cqw 4cqw;
+    border-radius: 100px;
+    font-size: 3cqw;
+    line-height: 1.3;
+    z-index: 3;
+  }
+  .hg__pill-icon {
+    display: grid; place-items: center;
+    inline-size: 6cqw; block-size: 6cqw; flex: none;
+    border-radius: 100px;
+    color: var(--solace-30);
+  }
+  .hg--light .hg__pill-icon { color: var(--solace-80); }
+  .hg__pill-icon svg { inline-size: 4cqw; block-size: 4cqw; }
+
+  /* ── The note fragment ─────────────────────────────────────────────────── */
+  .hg__card--note {
+    inset-block-end: 2%;
+    inset-inline-end: 2%;
+    inline-size: 58%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6cqw;
+    padding: 4.2cqw;
+    z-index: 2;
+  }
+  .hg__note-k { font-size: 2.7cqw; opacity: 0.7; }
+  .hg__note-b { font-size: 3.2cqw; line-height: 1.45; }
+  /* Marked with a rule under the words, never a filled block behind them. */
+  .hg__note-b span {
+    border-block-end: 0.5cqw solid var(--solace-50);
+    padding-block-end: 0.2cqw;
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* ══ DRIFT ══════════════════════════════════════════════════════════════
+     Present from the first frame, then floating. Three different periods and
+     three different amplitudes, none of them a whole multiple of another, so
+     the composition never returns to the same pose twice in a sitting. */
+  @keyframes hg-float-a { 0%, 100% { translate: 0 0; rotate: 0deg; } 50% { translate: 0 -1.4%; rotate: -0.4deg; } }
+  @keyframes hg-float-b { 0%, 100% { translate: 0 0; rotate: 0deg; } 50% { translate: 0.8% 1.8%; rotate: 0.6deg; } }
+  @keyframes hg-float-c { 0%, 100% { translate: 0 0; rotate: 0deg; } 50% { translate: -0.6% -2.2%; rotate: 0.5deg; } }
+  @keyframes hg-drift-shape { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2.5%; } }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hg__card--queue { animation: hg-float-a 9s ease-in-out infinite; }
+    .hg__card--pill  { animation: hg-float-c 7s ease-in-out infinite; }
+    .hg__card--note  { animation: hg-float-b 11s ease-in-out infinite; }
+    .hg__shape--a    { animation: hg-drift-shape 13s ease-in-out infinite; }
+    .hg__shape--b    { animation: hg-drift-shape 17s ease-in-out infinite reverse; }
+  }
+</style>

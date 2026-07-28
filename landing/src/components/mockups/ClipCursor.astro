@@ -1,21 +1,26 @@
 ---
 /* The pointer used inside product clips.
 
+   Redrawn to the real thing. The previous one was a thin hollow triangle that
+   read as an arrowhead rather than a cursor; this is the standard desktop
+   pointer — the notched tail on the right edge is the detail that makes it
+   recognisable, and it is the part the old one was missing.
+
    Appearance only. Every clip owns its own path and its own click ring, drawn
    on the positioned wrapper it sits in — a shared cursor that also carried its
    choreography would have to know about every graphic it appears in.
 
-   Drawn rather than imaged: it has to stay crisp at whatever size the graphic
-   renders at, and it has to pick up the drop shadow that separates it from a
+   Drawn rather than imaged so it stays crisp at whatever size the graphic
+   renders at, and so it can carry the drop shadow that separates it from a
    white card underneath. */
 ---
 
-<svg class="cur" viewBox="0 0 14 20" fill="none" aria-hidden="true">
+<svg class="cur" viewBox="0 0 20 28" fill="none" aria-hidden="true">
   <path
-    d="M1.2 1.1 12.4 11.6H6.9l-1.6.2-.4 1.5-1.7 5.4Z"
+    d="M2.4 1.6 17.2 15.1h-6.5l-1 .3 3.1 7.4-3 1.3-3.1-7.4-4.3 4.2Z"
     fill="var(--white)"
     stroke="var(--neutral-100)"
-    stroke-width="1.3"
+    stroke-width="1.5"
     stroke-linejoin="round"
   />
 </svg>
@@ -23,8 +28,8 @@
 <style>
   .cur {
     display: block;
-    inline-size: 4.6cqw;
+    inline-size: 4.4cqw;
     block-size: auto;
-    filter: drop-shadow(0 1px 2px rgb(from var(--neutral-100) r g b / 0.28));
+    filter: drop-shadow(0 1px 3px rgb(from var(--neutral-100) r g b / 0.32));
   }
 </style>

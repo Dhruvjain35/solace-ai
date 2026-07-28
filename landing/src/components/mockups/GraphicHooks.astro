@@ -89,7 +89,7 @@ const CAPTIONS = [
 
 <style>
   .hk {
-    --clip-dur: 12s;
+    --clip-dur: 9.5s;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -136,7 +136,11 @@ const CAPTIONS = [
     white-space: nowrap;
   }
   .hk__st--pre  { background-color: var(--neutral-10); color: var(--neutral-80); opacity: 0; }
-  .hk__st--post { background-color: var(--solace-10); color: var(--solace-80); }
+  .hk__st--post {
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    color: var(--solace-80);
+  }
 
   .hk__hook {
     display: grid;

@@ -4,6 +4,7 @@ import CtaPrimary from '../components/CtaPrimary.astro';
 import GlassPrebrief from '../components/mockups/GlassPrebrief.astro';
 import GlassAuthority from '../components/mockups/GlassAuthority.astro';
 import GlassShift from '../components/mockups/GlassShift.astro';
+import HeroGlass from '../components/mockups/HeroGlass.astro';
 
 /* Rebuilt dark, on glass.
 
@@ -52,13 +53,13 @@ const acts: Act[] = [
     id: 'prebrief',
     index: '01',
     chapter: 'Before the door opens',
-    heading: 'You have already met them, and you have not walked in yet.',
-    sub: 'One line of story, the two causes that would be unforgivable to miss, and the single next action worth taking. Small enough to read standing up.',
+    heading: 'You know who is behind the door before you open it.',
+    sub: 'One line of story, the two things that must not be missed, and the next thing worth doing. Short enough to read while you are still walking.',
     points: [
       'Built from what the patient said, in their own language',
       'The don’t-miss list, on every patient, not just the interesting ones',
       'Open threads from previous visits, surfaced rather than buried',
-      'Nothing here is an order. All of it is a head start.',
+      'Nothing here is an order. It is a head start, not a decision.',
     ],
     mock: 'prebrief',
   },
@@ -66,8 +67,8 @@ const acts: Act[] = [
     id: 'authority',
     index: '02',
     chapter: 'When you disagree',
-    heading: 'Every product says the clinician decides. This is what that looks like.',
-    sub: 'The moment you overrule it is the only moment the promise is worth anything — so it takes one tap, it takes effect immediately, and the disagreement is recorded with your reason against it.',
+    heading: 'You disagree, you change it, and that is the end of it.',
+    sub: 'Changing the level takes one tap. It applies straight away, there is no dialog asking if you are sure, and the change is saved with your name and your reason on it.',
     points: [
       'Your level replaces the suggestion the instant you set it',
       'No confirmation dialog, no justification gate, no friction',
@@ -80,8 +81,8 @@ const acts: Act[] = [
     id: 'shift',
     index: '03',
     chapter: 'What you get back',
-    heading: 'The hour at the kitchen table stops being part of the job.',
-    sub: 'Patient-facing time goes up a little. Anything more than a little would be a claim you could see straight through. What actually moves is the documentation, the forms, and the work that currently happens after the shift ends.',
+    heading: 'You stop finishing your notes at home.',
+    sub: 'Time with patients goes up a little. We are not going to claim more than that, because you would know it was not true. What actually changes is the typing, the forms, and the work you currently take home.',
     points: [
       'Notes drafted from the visit, not from a blank template',
       'Two dozen letters and forms filled from the chart',
@@ -127,12 +128,11 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   <section class="hero" data-color-scheme="dark" aria-labelledby="hero-heading">
     <div class="hero__mesh" aria-hidden="true"></div>
     <div class="container hero__inner">
-      <p class="hero__eyebrow">For clinicians</p>
       <h1 id="hero-heading" class="hero__title">Meet the story before the patient.</h1>
       <p class="hero__lede">
-        Solace does the reading, the typing and the paperwork. It never does the
-        deciding &mdash; and on the one occasion that distinction matters, you win
-        without having to argue with a dialog box.
+        Solace reads the chart, writes the note and fills the forms. It does not
+        decide anything. When you disagree with it, you change it in one tap and
+        your answer is the one that counts.
       </p>
       <div class="hero__cta">
         <CtaPrimary href="/demo" label="Book a demo" />
@@ -143,6 +143,10 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
             <path d="M6.5 7.08h11M13.4 2.2l4.9 4.88-4.9 4.89" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
+      </div>
+
+      <div class="hero__figure">
+        <HeroGlass tone="dark" />
       </div>
     </div>
   </section>
@@ -231,7 +235,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     <div class="container page-section close__inner">
       <h2 id="close-heading" class="close__heading reveal">Bring it to your team.</h2>
       <p class="close__sub reveal">
-        Thirty minutes, your own department&rsquo;s numbers, and an honest answer
+        Thirty minutes, your own department&rsquo;s numbers, and a straight answer
         about what it would and would not change.
       </p>
       <div class="close__cta reveal">
@@ -254,24 +258,46 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
      section carries a radial mesh — four soft lights over the slate bed, rotated
      differently per section so no two read as the same backdrop. Pure CSS: zero
      bytes, and it cannot pixelate the way a mesh image would. */
+  /* The bed is a deep teal-slate, not black. Near-black with a couple of green
+     blobs on it reads as an unlit room; the whole page felt like a mistake
+     rather than a decision. This is the same hue family as the brand, lifted
+     far enough off zero that the glass has a colour to refract and the type has
+     something warmer than pure black behind it.
+
+     Two layers do the work. A wide, low-contrast aurora gives the page its
+     depth, and a 1px grid at 3% gives it structure — the same
+     engineering-drawing motif the light pages use for their gutters, which is
+     what keeps the dark page recognisably part of the same site. */
   .hero, .act, .limits, .close, .say {
     position: relative;
     overflow: hidden;
-    background-color: var(--slate-black);
+    background-color: #0c1a1d;
   }
   .hero__mesh, .act__mesh, .limits__mesh, .close__mesh {
     position: absolute;
-    inset: -25%;
+    inset: -30%;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 42% 38% at 18% 22%, rgb(from var(--solace-60) r g b / 0.30), transparent 70%),
-      radial-gradient(ellipse 38% 34% at 82% 12%, rgb(from var(--slate-40) r g b / 0.24), transparent 68%),
-      radial-gradient(ellipse 46% 40% at 68% 84%, rgb(from var(--solace-90) r g b / 0.44), transparent 72%),
-      radial-gradient(ellipse 34% 30% at 12% 88%, rgb(from var(--slate-60) r g b / 0.22), transparent 70%);
+      radial-gradient(ellipse 58% 50% at 22% 18%, rgb(from var(--solace-50) r g b / 0.22), transparent 68%),
+      radial-gradient(ellipse 54% 46% at 84% 30%, rgb(from var(--slate-40) r g b / 0.20), transparent 66%),
+      radial-gradient(ellipse 64% 52% at 62% 92%, rgb(from var(--solace-80) r g b / 0.30), transparent 70%);
   }
-  .act__mesh { rotate: 24deg; }
-  .limits__mesh { rotate: -16deg; }
-  .close__mesh { rotate: 42deg; }
+  .hero::after, .act::after, .limits::after, .close::after, .say::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(90deg, rgb(from var(--white) r g b / 0.03) 1px, transparent 1px),
+      linear-gradient(0deg,  rgb(from var(--white) r g b / 0.03) 1px, transparent 1px);
+    background-size: 96px 96px;
+    /* Fades out toward the middle so it frames the content instead of sitting
+       behind the type. */
+    mask-image: radial-gradient(ellipse 78% 66% at 50% 50%, transparent 30%, #000 100%);
+  }
+  .act__mesh { rotate: 18deg; }
+  .limits__mesh { rotate: -12deg; }
+  .close__mesh { rotate: 34deg; }
 
   .arrow {
     display: inline-flex;
@@ -285,34 +311,40 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   .arrow:hover svg { translate: 4px; }
 
   /* ══ HERO ═══════════════════════════════════════════════════════════════ */
+  /* Centred, with the composition under it. Left-aligned copy with nothing on
+     the right left two thirds of the fold empty, which is what made the hero
+     look unfinished rather than spacious. */
   .hero__inner {
     position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     gap: var(--space-5x);
-    padding-block: var(--space-24x) var(--space-20x);
+    padding-block: var(--space-20x) var(--space-16x);
     color: var(--white);
   }
   @media (min-width: 640.02px) {
-    .hero__inner { padding-block: var(--space-32x) var(--space-24x); }
+    .hero__inner { padding-block: var(--space-24x) var(--space-20x); }
   }
-  .hero__eyebrow {
-    font-size: var(--font-size-text-small);
-    font-weight: var(--font-weight-medium);
-    color: var(--solace-20);
+  .hero__figure {
+    margin-block-start: var(--space-10x);
+    inline-size: 100%;
+    display: flex;
+    justify-content: center;
   }
   .hero__title {
     font-size: var(--font-size-display-medium);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-display);
     letter-spacing: var(--letter-spacing-display);
-    max-inline-size: 16ch;
+    max-inline-size: 18ch;
   }
   .hero__lede {
     font-size: var(--font-size-text-large);
     line-height: var(--line-height-open);
-    max-inline-size: 54ch;
+    max-inline-size: 56ch;
     color: rgb(from var(--white) r g b / 0.82);
   }
   .hero__cta {
@@ -320,12 +352,14 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: var(--space-6x);
   }
 
   /* ══ ACTS ═══════════════════════════════════════════════════════════════ */
   .act__inner {
     position: relative;
+    z-index: 1;
     display: grid;
     gap: var(--space-10x);
     align-items: center;
@@ -406,12 +440,12 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     margin: 0;
     display: grid;
     place-items: center;
-    padding-block-start: var(--space-16x);
+    padding-block-start: var(--space-20x);
   }
   .act__ghost {
     position: absolute;
     inset-block-start: 0;
-    inset-inline-end: var(--space-2x);
+    inset-inline-end: 0;
     font-size: clamp(48px, 6vw, 88px);
     font-weight: var(--font-weight-medium);
     line-height: 1;
@@ -430,7 +464,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   }
 
   /* ══ LIMITS ═════════════════════════════════════════════════════════════ */
-  .limits__inner { position: relative; display: flex; flex-direction: column; gap: var(--space-14x); color: var(--white); }
+  .limits__inner { position: relative; z-index: 1; display: flex; flex-direction: column; gap: var(--space-14x); color: var(--white); }
   .limits__head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
   .limits__title {
     font-size: var(--font-size-heading-large);
@@ -472,6 +506,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   /* ══ STATEMENT ══════════════════════════════════════════════════════════ */
   .say__text {
     position: relative;
+    z-index: 1;
     font-size: var(--font-size-display-small);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-display);
@@ -499,6 +534,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   /* ══ CLOSE ══════════════════════════════════════════════════════════════ */
   .close__inner {
     position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -531,9 +567,15 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   /* ══ SCROLL MOTION ══════════════════════════════════════════════════════
      Scroll-driven CSS, no JavaScript. Everything is behind a reduced-motion
      guard and a support query, so the page is fully legible without either. */
+  /* Not a fade. Content is revealed by a wipe — a clip edge travelling up the
+     block while it rises the last few pixels into place — so the words are
+     opaque the whole way and the motion reads as material moving rather than as
+     a page still loading. A scroll-triggered opacity fade is the single most
+     over-used effect on the web and it makes everything it touches feel
+     identical; this costs the same and does not. */
   @keyframes cl-reveal {
-    from { opacity: 0; translate: 0 var(--space-7x); }
-    to   { opacity: 1; translate: 0 0; }
+    from { clip-path: inset(18% 0 0 0); translate: 0 var(--space-5x); }
+    to   { clip-path: inset(0 0 0 0);   translate: 0 0; }
   }
   @keyframes cl-scrub {
     from { opacity: 0.16; }
@@ -545,7 +587,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
       .reveal {
         animation: cl-reveal linear both;
         animation-timeline: view();
-        animation-range: entry 5% entry 90%;
+        animation-range: entry 10% entry 65%;
       }
       /* Each word owns its own timeline, so the paragraph lights up line by
          line as it rises through the viewport. */

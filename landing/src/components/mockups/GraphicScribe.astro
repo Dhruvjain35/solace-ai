@@ -86,7 +86,7 @@ const CAPTIONS = [
 
 <style>
   .scb {
-    --clip-dur: 12s;
+    --clip-dur: 9.5s;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -183,7 +183,8 @@ const CAPTIONS = [
     margin-inline-start: auto;
     padding: 0.9cqw 2.4cqw;
     border-radius: 100px;
-    background-color: var(--solace-10);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
     color: var(--solace-80);
     font-size: 2.7cqw;
   }
@@ -207,11 +208,12 @@ const CAPTIONS = [
   /* .scb__ph carries no styling of its own on purpose. The phrases stay in
      flow while hidden, so the paragraph never reflows as it fills — the note
      grows by inking in, not by pushing lines around. */
+  /* Cited text is marked the way a person marks text: a rule under it. A
+     filled block behind the words is the tell of a template. */
   .scb__cited {
-    background-color: var(--solace-10);
-    border-block-end: 0.5cqw solid var(--solace-40);
-    border-radius: 0.8cqw 0.8cqw 0 0;
-    padding: 0 0.6cqw;
+    border-block-end: 0.55cqw solid var(--solace-50);
+    padding-block-end: 0.3cqw;
+    font-weight: var(--font-weight-medium);
   }
   .scb__attr { font-size: 3cqw; color: var(--neutral-80); }
 

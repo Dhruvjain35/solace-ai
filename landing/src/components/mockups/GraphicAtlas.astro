@@ -126,7 +126,7 @@ const CAPTIONS = [
 
 <style>
   .atl {
-    --clip-dur: 12s;
+    --clip-dur: 9.5s;
     position: relative;
     inline-size: 100%;
     display: flex;
@@ -215,18 +215,19 @@ const CAPTIONS = [
       0 8px 20px rgb(from var(--neutral-40) r g b / 0.14);
   }
   .atl__ans p { font-size: 3.5cqw; line-height: 1.62; color: var(--neutral-90); }
+  /* Cited text is marked the way a person marks text: a rule under it. */
   .atl__cite {
-    padding: 0.2cqw 1.1cqw;
-    border-radius: 0.9cqw;
-    background-color: var(--solace-10);
-    color: var(--solace-100);
+    border-block-end: 0.5cqw solid var(--solace-50);
+    padding-block-end: 0.3cqw;
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
   .atl__ans mark {
-    background-color: var(--red-0);
+    background-color: transparent;
+    border-block-end: 0.5cqw solid var(--red-40);
+    padding-block-end: 0.3cqw;
     color: var(--red-90);
-    border-radius: 0.9cqw;
-    padding: 0.2cqw 1.1cqw;
+    font-weight: var(--font-weight-medium);
   }
 
   /* The flag belongs to the answer, so it lives inside the answer card. As a
@@ -275,7 +276,8 @@ const CAPTIONS = [
     display: grid; place-items: center;
     inline-size: 5.6cqw; block-size: 5.6cqw; flex: none;
     border-radius: 100px;
-    background-color: var(--solace-10);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
     color: var(--solace-80);
   }
   .atl__tick svg { inline-size: 3.2cqw; block-size: 3.2cqw; }
