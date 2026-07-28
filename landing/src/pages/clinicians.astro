@@ -200,7 +200,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   </section>
 
   <!-- ══ Close ════════════════════════════════════════════════════════════ -->
-  <section class="close" data-color-scheme="light" aria-labelledby="close-heading">
+  <section class="close" data-color-scheme="dark" aria-labelledby="close-heading">
     <div class="container page-section close__inner">
       <h2 id="close-heading" class="close__heading reveal">Bring it to your team.</h2>
       <p class="close__sub reveal">
@@ -480,6 +480,44 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   }
 
   /* ══ CLOSE ══════════════════════════════════════════════════════════════ */
+  /* The close carries a photograph: still water at dawn, the only landscape on
+     the site and the only one it gets.
+
+     Light ink on a dark veil, not the reverse. The first attempt veiled the
+     plate with WHITE and put dark ink over it, which could never work — the
+     photograph has near-black mountains in it, and any veil strong enough to
+     bring #292827 to AA over those pixels erased the photograph. Measured the
+     other way round: the brightest pixel through the band is 242, so a 0.62
+     black veil puts the worst case at 92 and white text at 6.69:1, past AA
+     with the plate still clearly there.
+
+     The page closes dark, which gives it an ending rather than a stop. */
+  .close {
+    background-image:
+      linear-gradient(180deg,
+        rgb(from var(--slate-black) r g b / 0.34) 0%,
+        rgb(from var(--slate-black) r g b / 0.62) 26%,
+        rgb(from var(--slate-black) r g b / 0.62) 74%,
+        rgb(from var(--slate-black) r g b / 0.88) 100%),
+      url('/assets/photos/dawn.webp');
+    background-size: auto, cover;
+    background-position: center, center 50%;
+    background-repeat: no-repeat, no-repeat;
+  }
+  @keyframes close-plate {
+    from { background-position: center, center 32%; }
+    to   { background-position: center, center 68%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .close {
+        animation: close-plate linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
+  }
+
   .close__inner {
     position: relative;
     z-index: 1;
@@ -491,6 +529,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     color: var(--color-text-base);
   }
   .close__heading {
+    color: var(--white);
     font-size: var(--font-size-display-small);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-display);
@@ -498,6 +537,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     max-inline-size: 16ch;
   }
   .close__sub {
+    color: rgb(from var(--white) r g b / 0.88);
     font-size: var(--font-size-text-large);
     line-height: var(--line-height-open);
     max-inline-size: 50ch;
