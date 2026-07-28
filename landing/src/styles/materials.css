@@ -45,6 +45,33 @@
     -webkit-backdrop-filter: blur(12px);
   }
 
+  /* On a phone, glass stops sampling the backdrop.
+
+     `backdrop-filter` has to snapshot whatever is painted beneath it, and
+     beneath these cards is the hero figure, which is a `mix-blend-mode: screen`
+     layer inside an isolated group. iOS resolves that snapshot as the group's
+     contents over black and paints the result as an opaque dark rectangle — the
+     black box reported in the hero, photographed on a real device after it could
+     not be reproduced in either desktop engine.
+
+     So the blur is dropped below 640px and the tint carries the material on its
+     own, a little heavier to make up for the missing blur. It is still glass:
+     translucent, lit from the top left, showing what is behind it. It simply
+     does not ask the compositor a question that has a wrong answer on the one
+     platform that matters most here. It is also the single most expensive thing
+     on the page to composite while scrolling, which a phone was paying for. */
+  @media (max-width: 640px) {
+    .glass {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background:
+        linear-gradient(210deg, rgb(from var(--white) r g b / 16%) 0, transparent 30%),
+        linear-gradient(180deg,
+          rgb(from var(--_tint) r g b / 58%) 0,
+          rgb(from var(--_tint) r g b / 48%) 100%);
+    }
+  }
+
   /* Gradient border. Replaces the flat border where mask-composite exists. */
   @supports ((-webkit-mask-composite: source-out) or (mask-composite: subtract)) {
     .glass { border: none; }
