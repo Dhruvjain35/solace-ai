@@ -1,0 +1,631 @@
+---
+import PhoneFrame from './mockups/PhoneFrame.astro';
+import ScreenIntake from './mockups/ScreenIntake.astro';
+import GraphicTriage from './mockups/GraphicTriage.astro';
+import GraphicQueue from './mockups/GraphicQueue.astro';
+import GraphicWorkflows from './mockups/GraphicWorkflows.astro';
+import GraphicScribe from './mockups/GraphicScribe.astro';
+import GraphicAtlas from './mockups/GraphicAtlas.astro';
+import GraphicLetters from './mockups/GraphicLetters.astro';
+import GraphicChart from './mockups/GraphicChart.astro';
+import ClipCaption from './mockups/ClipCaption.astro';
+
+/* THE DECK — the eight acts as one pinned sequence.
+
+   What this replaces was eight alternating rows: copy left, figure right, then
+   the mirror, seven more times. Every row was correct and the whole page read
+   as a list, because that is what an alternating grid is. Scrolling it felt
+   like paging through a document.
+
+   Here the eight acts occupy ONE screen. The stage pins, and each act is a card
+   that rises from below the fold, lands, and is then pushed back into depth by
+   the next one. You are not scrolling past eight things; you are dealing eight
+   cards onto one table, and the ones already played stay visible behind the
+   live one so the sequence has a memory of itself.
+
+   Three depth tiers, and three nested elements to carry them, because
+   `translate`/`rotate`/`scale` are single-valued: one element cannot run two
+   animations that both want `scale` without the second silently winning. So the
+   card owns its arrival, tier one owns the first push back, tier two owns the
+   second. They compose multiplicatively, which is exactly the accumulation a
+   deck needs.
+
+   ── The timeline ────────────────────────────────────────────────────────────
+   Everything hangs off ONE view timeline declared on the tall section, and each
+   layer takes a slice of it via `animation-range`. The slices are computed here
+   rather than guessed, because the pinned window is not the whole timeline: a
+   view timeline runs from "top edge enters the bottom of the viewport" to
+   "bottom edge leaves the top", so it is (H + V) long while the stage is only
+   pinned for (H - V) of it.
+
+     H = N·S + 1  viewport heights   (deck height, including the pin tail)
+     D = H + 1                       (the cover range)
+     pin starts at 1/D, ends at H/D, and each act owns S/D of it.
+
+   Expressed in viewport heights those ratios are constants, so one set of
+   percentages is correct at every window size. Verified by screenshot sweep,
+   not by arithmetic alone.
+
+   ── Why not JavaScript ──────────────────────────────────────────────────────
+   A scroll listener driving eight transforms runs on the main thread and gives
+   up frames to anything else the page is doing. Scroll-driven CSS animations
+   run off it. The only script involved is the cue observer in Base.astro, which
+   does not move anything — it decides which act's film is playing, because in a
+   pinned stage all eight are on screen at once and the observer that normally
+   starts a clip when it appears would start all eight together and leave every
+   one of them joined halfway through a scene. */
+
+type Act = {
+  id?: string;
+  index: string;
+  heading: string;
+  sub: string;
+  bed: 'paper' | 'slate' | 'ink';
+  mock: 'intake' | 'triage' | 'queue' | 'workflows' | 'scribe' | 'atlas' | 'letters' | 'chart';
+  /* Height over width of the graphic itself, measured in the browser rather
+     than guessed. It is the only number the card needs in order to give a
+     figure every pixel it can have without pushing it off the bottom edge.
+     If a graphic is redrawn taller, this is the line that has to move with it —
+     and if it is not, the figure clips rather than overflowing. */
+  ratio: number;
+};
+
+const acts: Act[] = [
+  {
+    id: 'patient-side',
+    index: '01',
+    heading: 'Check in from the waiting room chair',
+    sub: 'A QR code on the wall opens Solace on their own phone. They tell their story once, in their own language, while they wait.',
+    bed: 'paper',
+    mock: 'intake',
+    ratio: 1.222,
+  },
+  {
+    index: '02',
+    heading: 'See why it picked that level',
+    sub: 'A suggested level lands the moment intake ends, with the evidence that produced it sitting right beside it.',
+    bed: 'slate',
+    mock: 'triage',
+    ratio: 1.351,
+  },
+  {
+    id: 'clinician-side',
+    index: '03',
+    heading: 'The queue sorts itself',
+    sub: 'Everyone waiting, in one view, ordered by who needs help first. It re-sorts the second a new reading changes something.',
+    bed: 'ink',
+    mock: 'queue',
+    ratio: 1.126,
+  },
+  {
+    id: 'workflows',
+    index: '04',
+    heading: 'Write the rule once',
+    sub: 'Nine real events, branching conditions, fourteen actions, no code. No identifier ever leaves with the payload.',
+    bed: 'slate',
+    mock: 'workflows',
+    ratio: 1.705,
+  },
+  {
+    index: '05',
+    heading: 'The note writes itself',
+    sub: 'Have the conversation. The draft builds as you go, and every clause stays attached to the moment it came from.',
+    bed: 'paper',
+    mock: 'scribe',
+    ratio: 1.241,
+  },
+  {
+    index: '06',
+    heading: 'Ask the chart anything',
+    sub: 'Most of a real history is unstructured and belongs to somebody else. Atlas reads the faxes too, then cites them.',
+    bed: 'slate',
+    mock: 'atlas',
+    ratio: 1.806,
+  },
+  {
+    index: '07',
+    heading: 'The paperwork is already done',
+    sub: 'Work notes, school notes, FMLA, return to play. Two dozen forms that fill themselves in from the visit.',
+    bed: 'paper',
+    mock: 'letters',
+    ratio: 1.337,
+  },
+  {
+    index: '08',
+    heading: 'It writes back to your EHR',
+    sub: 'Through the same interfaces your hospital already runs. As real coded fields, not a PDF attached to the chart.',
+    bed: 'ink',
+    mock: 'chart',
+    ratio: 1.323,
+  },
+];
+
+const INTAKE_CAPTIONS = [
+  'Scan the code on the wall. No app, no account.',
+  'Choose from twenty languages.',
+  'Answer out loud, in your own words.',
+  'Follow-ups adapt to what you just said.',
+  'It reaches the care team before the patient does.',
+];
+
+/* ── Geometry ──────────────────────────────────────────────────────────────
+   S is how much scrolling one act is worth. Below about 0.7 the cards trip
+   over each other; above about 1.1 the pin outstays its welcome. */
+const N = acts.length;
+const S = 0.9;
+const H = N * S + 1;
+const D = H + 1;
+const p0 = 1 / D;
+const w = S / D;
+
+const pct = (v: number) => `${(Math.min(Math.max(v, 0), 1) * 100).toFixed(4)}%`;
+
+const cards = acts.map((act, i) => {
+  /* A is where act i is fully landed and alone on top. Everything else is
+     expressed as an offset from it in units of its own window. */
+  const A = p0 + i * w;
+  return {
+    act,
+    i,
+    /* An act only recedes if there is another act coming to push it. The last
+       card never goes back, the second last only makes tier one, and so on —
+       which is also what stops any of this animating while the section is
+       already leaving the viewport. */
+    tier1: i <= N - 2,
+    tier2: i <= N - 3,
+    retire: i <= N - 4,
+    vars: [
+      `--z:${i + 1}`,
+      `--ratio:${act.ratio}`,
+      `--rise-a:${pct(i === 0 ? 0 : A - 0.62 * w)}`,
+      `--rise-b:${pct(A - 0.04 * w)}`,
+      `--head-a:${pct(A - 0.5 * w)}`,
+      `--head-b:${pct(A + 0.02 * w)}`,
+      `--sub-a:${pct(A - 0.38 * w)}`,
+      `--sub-b:${pct(A + 0.14 * w)}`,
+      `--t1-a:${pct(A + 0.38 * w)}`,
+      `--t1-b:${pct(A + 0.96 * w)}`,
+      `--t2-a:${pct(A + 1.38 * w)}`,
+      `--t2-b:${pct(A + 1.96 * w)}`,
+      `--dim-a:${pct(A + 0.38 * w)}`,
+      `--dim-b:${pct(A + 1.96 * w)}`,
+      `--off-a:${pct(A + 2.38 * w)}`,
+      `--off-b:${pct(A + 2.96 * w)}`,
+    ].join(';'),
+  };
+});
+
+const deckVars = [
+  `--deck-h:${H}`,
+  `--act-scroll:${S * 100}vh`,
+  `--pin-a:${pct(p0)}`,
+  `--pin-b:${pct(p0 + N * w)}`,
+].join(';');
+---
+
+<section class="deck" style={deckVars} data-clip-gate aria-label="How Solace works, act by act">
+  {/* The cues are the only thing in this section that occupies real scroll
+      height with a job. Each one spans exactly the run where its act is the
+      live card, and sits half a viewport lower so it crosses the centre line at
+      the right moment. Base.astro observes them against a zero-height root and
+      hands `data-play` to the matching card, so one film runs at a time and
+      every one of them starts at its first frame. */}
+  <div class="deck__cues" aria-hidden="true">
+    {cards.map(({ i }) => (
+      <span class="deck__cue" style={`--i:${i}`} data-cue={i}></span>
+    ))}
+  </div>
+
+  <div class="deck__stage">
+    <div class="deck__progress" aria-hidden="true"><span class="deck__progress-fill"></span></div>
+
+    <div class="deck__cards">
+      {cards.map(({ act, i, tier1, tier2, retire, vars }) => (
+        <article
+          class:list={['deck__card', `deck__card--${act.bed}`]}
+          id={act.id ?? `act-${act.index}`}
+          style={vars}
+          data-tier1={tier1 ? '' : undefined}
+          data-tier2={tier2 ? '' : undefined}
+          data-retire={retire ? '' : undefined}
+          data-card={i}
+          data-color-scheme={act.bed === 'ink' ? 'dark' : 'light'}
+          aria-labelledby={`act-${act.index}`}
+        >
+          <div class="deck__tier1">
+            <div class="deck__tier2">
+              <div class="deck__panel">
+                <span class="deck__scrim" aria-hidden="true"></span>
+                <span class="deck__sheen" aria-hidden="true"></span>
+
+                <div class="deck__copy">
+                  <span class="deck__ghost" aria-hidden="true">{act.index}</span>
+                  <h2 id={`act-${act.index}`} class="deck__heading">{act.heading}</h2>
+                  <p class="deck__sub">{act.sub}</p>
+                </div>
+
+                <div class="deck__figure">
+                  {act.mock === 'intake' ? (
+                    <div class="deck__device" data-clip>
+                      <PhoneFrame width="clamp(200px, 15vw, 248px)"><ScreenIntake /></PhoneFrame>
+                      <ClipCaption steps={INTAKE_CAPTIONS} />
+                    </div>
+                  ) : (
+                    <div class="deck__mock">
+                      {act.mock === 'triage' && <GraphicTriage />}
+                      {act.mock === 'workflows' && <GraphicWorkflows />}
+                      {act.mock === 'queue' && <GraphicQueue />}
+                      {act.mock === 'scribe' && <GraphicScribe />}
+                      {act.mock === 'atlas' && <GraphicAtlas />}
+                      {act.mock === 'letters' && <GraphicLetters />}
+                      {act.mock === 'chart' && <GraphicChart />}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ══ FLOW MODE ══════════════════════════════════════════════════════════
+     What every browser gets first, and what narrow windows and reduced motion
+     keep: eight panels in a column. No pinning, no absolute positioning, no
+     timeline. The pinned build below is layered on top of this and only inside
+     a viewport query, a motion query and a support query, so nothing about the
+     page depends on it existing. */
+  .deck { position: relative; }
+  .deck__cues { display: none; }
+
+  .deck__cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6x);
+    padding-block: var(--space-12x);
+  }
+
+  .deck__panel {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    gap: var(--space-8x);
+    align-content: center;
+    padding: var(--space-14x) var(--space-6x) var(--space-10x);
+    border-radius: var(--radius-8x);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 18%);
+    color: var(--card-ink);
+  }
+  @media (min-width: 640.02px) {
+    .deck__panel { padding: var(--space-16x) var(--space-10x) var(--space-12x); }
+  }
+
+  /* Three beds, none of them tinted with the brand colour. A product figure
+     does not need its background to be on-brand — the figure is. Arriving one
+     after another they also give the sequence a rhythm no single bed could:
+     sand, mist, ink, mist, sand, mist, sand, ink. */
+  .deck__card--paper {
+    --card-ink: var(--neutral-90);
+    --card-sub: var(--neutral-80);
+    --card-ghost: rgb(from var(--neutral-40) r g b / 46%);
+  }
+  .deck__card--paper .deck__panel {
+    background-image:
+      radial-gradient(ellipse 62% 52% at 24% 8%, rgb(from var(--white) r g b / 76%), transparent 72%),
+      linear-gradient(158deg, var(--neutral-5) 0%, var(--neutral-10) 50%, var(--neutral-20) 100%);
+  }
+  .deck__card--slate {
+    --card-ink: var(--neutral-90);
+    --card-sub: var(--slate-60);
+    --card-ghost: rgb(from var(--white) r g b / 84%);
+  }
+  .deck__card--slate .deck__panel {
+    background-image:
+      radial-gradient(ellipse 62% 52% at 24% 8%, rgb(from var(--white) r g b / 56%), transparent 72%),
+      linear-gradient(158deg, var(--slate-10) 0%, var(--slate-20) 58%, #9db4bd 100%);
+  }
+  .deck__card--ink {
+    --card-ink: var(--white);
+    --card-sub: rgb(from var(--white) r g b / 74%);
+    --card-ghost: rgb(from var(--white) r g b / 22%);
+  }
+  .deck__card--ink .deck__panel {
+    background-image:
+      radial-gradient(ellipse 58% 48% at 22% 6%, rgb(from var(--slate-40) r g b / 34%), transparent 74%),
+      linear-gradient(158deg, var(--slate-90) 0%, var(--slate-100) 52%, var(--slate-black) 100%);
+    border-color: rgb(from var(--slate-black) r g b / 55%);
+  }
+
+  .deck__copy { display: flex; flex-direction: column; gap: var(--space-4x); }
+
+  /* Two columns as soon as there is room, pinned or not, so a wide window under
+     reduced motion still gets a page rather than a column of full width cards. */
+  @media (min-width: 1080.02px) {
+    .deck__panel { grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr); align-items: center; }
+  }
+  .deck__heading {
+    font-size: var(--font-size-heading-large);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+    max-inline-size: 16ch;
+    color: var(--card-ink);
+  }
+  .deck__sub {
+    font-size: var(--font-size-text-large);
+    line-height: var(--line-height-open);
+    max-inline-size: 42ch;
+    color: var(--card-sub);
+  }
+
+  /* The act number, set large and low contrast at the head of the copy.
+     It was in the panel's top corner, which worked on the one act whose figure
+     is a narrow phone and was covered by the figure on the other seven. Above
+     the heading it is furniture that cannot collide with anything, and it gives
+     the copy column a vertical anchor the figure already has. */
+  .deck__ghost {
+    display: block;
+    margin-block-end: calc(-1 * var(--space-2x));
+    font-size: clamp(40px, 4.4vw, 76px);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-display);
+    font-variant-numeric: tabular-nums;
+    color: var(--card-ghost);
+    pointer-events: none;
+  }
+
+  .deck__figure { display: grid; place-items: center; min-inline-size: 0; }
+  /* The graphics measure themselves in cqw, and an element cannot be its own
+     query container — so the container has to be this wrapper, sized to the
+     graphic rather than to the padded panel. */
+  .deck__mock {
+    position: relative;
+    container-type: inline-size;
+    inline-size: 100%;
+    max-inline-size: 640px;
+  }
+  .deck__device {
+    /* The clip root for this act, so it owns the tempo its caption reads. */
+    --clip-dur: 10s;
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: 400px;
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-6x);
+  }
+
+  .deck__scrim,
+  .deck__sheen { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+  .deck__scrim { background-color: var(--slate-black); }
+
+  .deck__progress { display: none; }
+
+  /* ══ PINNED MODE ════════════════════════════════════════════════════════
+     From here down, only where there is room for a two column card, only where
+     motion is welcome, and only where scroll-driven timelines exist.
+
+     The height bound is not caution, it is measured. A pinned card can only be
+     as tall as the window, and these figures are portrait: the tallest of them
+     needs 673px of it. Below roughly 780px of viewport the text inside a figure
+     starts rewrapping to more lines as the figure narrows, so its height climbs
+     while the space for it falls and the two cross. Short windows get the
+     column, which has no such ceiling. */
+  @media (min-width: 1080.02px) and (min-height: 780px) and (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .deck {
+        block-size: calc(var(--deck-h) * 100vh);
+        view-timeline-name: --deck;
+        view-timeline-axis: block;
+      }
+
+      .deck__cues { display: block; position: absolute; inset: 0; pointer-events: none; }
+      .deck__cue {
+        position: absolute;
+        inset-inline: 0;
+        block-size: var(--act-scroll);
+        inset-block-start: calc(var(--i) * var(--act-scroll) + 50vh);
+      }
+
+      .deck__stage {
+        position: sticky;
+        inset-block-start: 0;
+        block-size: 100vh;
+        /* clip, not hidden. `overflow: hidden` would make this element a scroll
+           container, and a sticky element inside a scroll container sticks to
+           that container rather than to the viewport, which means it never
+           sticks at all. `clip` does the clipping without the scroll box. */
+        overflow: clip;
+        /* Cards arrive tilted and settle flat. Perspective has to live on the
+           parent or every card gets its own vanishing point and the stack
+           stops looking like one object seen from one place. */
+        perspective: 2200px;
+        perspective-origin: 50% 42%;
+      }
+
+      .deck__cards {
+        --card-pad: clamp(26px, 2.6vw, 38px);
+        position: absolute;
+        /* The top inset is not margin, it is the stack. Receded cards move up
+           and shrink from their top edge, so the run above the live card is
+           exactly where the two behind it show. Too little and the deck has no
+           visible memory; too much and the live card loses the height its
+           figure needs. */
+        inset-block: 12vh 4vh;
+        inset-inline: var(--viewport-padding);
+        max-inline-size: 1240px;
+        margin-inline: auto;
+        display: block;
+        padding-block: 0;
+        transform-style: preserve-3d;
+      }
+
+      .deck__card {
+        /* The height a figure has to live inside, turned into the width it is
+           therefore allowed. Every graphic sizes its own type off its width, so
+           without this the tall ones run off the bottom of the card and the
+           short ones leave half the panel empty.
+
+           It has to be declared HERE and not on the wrapper: a custom property
+           is substituted where it is written, and `--ratio` only exists from
+           this element down. Declared one level up it silently resolves to
+           nothing, `inline-size` falls back to `auto`, and an inline-size
+           container in an `auto` track has no intrinsic width — which is a
+           figure that is not merely wrong but completely gone. */
+        --fit: calc((84vh - 2 * var(--card-pad)) / var(--ratio));
+        position: absolute;
+        inset: 0;
+        z-index: var(--z);
+        transform-origin: 50% 118%;
+        animation: deck-rise linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--rise-a) cover var(--rise-b);
+      }
+      .deck__tier1,
+      .deck__tier2 { block-size: 100%; transform-origin: 50% 0%; }
+
+      .deck__card[data-tier1] .deck__tier1 {
+        animation: deck-back-1 linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--t1-a) cover var(--t1-b);
+      }
+      .deck__card[data-tier2] .deck__tier2 {
+        animation: deck-back-2 linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--t2-a) cover var(--t2-b);
+      }
+
+      .deck__panel {
+        block-size: 100%;
+        /* The figure track takes exactly the width its graphic is allowed and
+           no more, and the pair is centred. A fixed fraction left a tall,
+           narrow graphic floating in the middle of an empty half-card. */
+        grid-template-columns: minmax(0, 0.8fr) auto;
+        justify-content: center;
+        align-items: center;
+        align-content: normal;
+        gap: clamp(28px, 3vw, 56px);
+        padding: var(--card-pad);
+        box-shadow:
+          0 2px 6px hsl(210 24% 20% / 8%),
+          0 26px 60px -18px hsl(210 24% 20% / 26%);
+      }
+      /* Once a card is two deep it is completely behind the two in front of it,
+         so it stops being drawn. Nothing about the look changes; what changes is
+         that six occluded panels are no longer being composited every frame. */
+      .deck__card[data-retire] .deck__panel {
+        animation: deck-retire linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--off-a) cover var(--off-b);
+      }
+
+      /* Each act carries the aspect ratio of its own graphic, so the width is
+         capped by whichever axis binds first. */
+      .deck__figure { align-self: center; }
+      .deck__mock { inline-size: min(660px, var(--fit)); }
+      .deck__device { inline-size: min(420px, var(--fit)); }
+
+      /* The copy lands a beat after the card does, and the line lands a beat
+         after the heading. Not a fade: a clip edge travels up the block while
+         it rises the last few pixels, so the words are opaque the whole way. */
+      .deck__heading {
+        animation: deck-line linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--head-a) cover var(--head-b);
+      }
+      .deck__sub {
+        animation: deck-line linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--sub-a) cover var(--sub-b);
+      }
+
+      /* Depth, as light rather than as blur. A blur on eight stacked panels is
+         eight full-size filter passes a frame; a flat scrim over the same area
+         costs one composite and reads the same at this scale. */
+      .deck__card[data-tier1] .deck__scrim {
+        animation: deck-dim linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--dim-a) cover var(--dim-b);
+      }
+
+      /* One specular pass across the panel as it lands, which is the thing that
+         makes a rectangle read as a physical card rather than a coloured div. */
+      .deck__sheen {
+        background-image: linear-gradient(
+          104deg,
+          transparent 38%,
+          rgb(from var(--white) r g b / 30%) 50%,
+          transparent 62%
+        );
+        opacity: 1;
+        translate: -130% 0;
+        animation: deck-sheen linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--rise-a) cover var(--rise-b);
+      }
+
+      /* Scroll feedback for a pin this long. A hairline at the left edge with a
+         fill that tracks the run, so the stage never feels stuck. */
+      .deck__progress {
+        display: block;
+        position: absolute;
+        inset-block: 32vh;
+        inset-inline-start: max(calc((100% - 1240px) / 2 - 24px), 14px);
+        inline-size: 2px;
+        border-radius: 2px;
+        background-color: rgb(from var(--neutral-40) r g b / 24%);
+        overflow: hidden;
+      }
+      .deck__progress-fill {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background-image: linear-gradient(180deg, var(--solace-30), var(--solace-60));
+        transform-origin: 50% 0%;
+        scale: 1 0;
+        animation: deck-progress linear both;
+        animation-timeline: --deck;
+        animation-range: cover var(--pin-a) cover var(--pin-b);
+      }
+    }
+  }
+
+  @keyframes deck-rise {
+    from { translate: 0 84vh; rotate: x 10deg; }
+    to   { translate: 0 0;    rotate: x 0deg; }
+  }
+  @keyframes deck-back-1 {
+    from { translate: 0 0;      scale: 1;    rotate: x 0deg; }
+    to   { translate: 0 -2.2vh; scale: 0.945; rotate: x 4deg; }
+  }
+  @keyframes deck-back-2 {
+    from { translate: 0 0;      scale: 1; }
+    to   { translate: 0 -1.7vh; scale: 0.955; }
+  }
+  @keyframes deck-line {
+    from { clip-path: inset(0 0 24% 0); translate: 0 var(--space-4x); }
+    to   { clip-path: inset(0 0 0 0);   translate: 0 0; }
+  }
+  @keyframes deck-dim {
+    from { opacity: 0; }
+    to   { opacity: 0.46; }
+  }
+  @keyframes deck-sheen {
+    from { translate: -130% 0; }
+    to   { translate: 140% 0; }
+  }
+  @keyframes deck-retire {
+    from { visibility: visible; }
+    to   { visibility: hidden; }
+  }
+  @keyframes deck-progress {
+    from { scale: 1 0; }
+    to   { scale: 1 1; }
+  }
+</style>

@@ -1,9 +1,7 @@
 ---
 import Page from '../layouts/Page.astro';
 import CtaPrimary from '../components/CtaPrimary.astro';
-import GlassPrebrief from '../components/mockups/GlassPrebrief.astro';
-import GlassAuthority from '../components/mockups/GlassAuthority.astro';
-import GlassShift from '../components/mockups/GlassShift.astro';
+import ClinicianTraverse from '../components/ClinicianTraverse.astro';
 import HeroGlass from '../components/mockups/HeroGlass.astro';
 
 /* Rebuilt dark, on glass.
@@ -37,42 +35,6 @@ import HeroGlass from '../components/mockups/HeroGlass.astro';
    No JavaScript ships from this page. The clips are driven by the observer in
    Base.astro; the reveals are scroll-driven CSS. Both are inside
    prefers-reduced-motion guards. */
-
-type Act = {
-  id: string;
-  index: string;
-  chapter: string;
-  heading: string;
-  sub: string;
-  mock: 'prebrief' | 'authority' | 'shift';
-};
-
-const acts: Act[] = [
-  {
-    id: 'prebrief',
-    index: '01',
-    chapter: 'Before the door opens',
-    heading: 'You know who is behind the door',
-    sub: 'One line of story, the two things that must not be missed, and the next thing worth doing. Short enough to read while you walk.',
-    mock: 'prebrief',
-  },
-  {
-    id: 'authority',
-    index: '02',
-    chapter: 'When you disagree',
-    heading: 'You can always overrule it',
-    sub: 'Changing the level takes one tap and applies straight away. No dialog asks if you are sure, and the change is saved with your name on it.',
-    mock: 'authority',
-  },
-  {
-    id: 'shift',
-    index: '03',
-    chapter: 'What you get back',
-    heading: 'Stop finishing notes at home',
-    sub: 'Time with patients goes up a little. What really changes is the typing, the forms, and the hour you currently take home.',
-    mock: 'shift',
-  },
-];
 
 /* What Solace will not do. This section exists because a clinician's first
    question about an AI product is what it will do behind their back, and a page
@@ -113,31 +75,8 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     </div>
   </section>
 
-  <!-- ══ Three acts ═══════════════════════════════════════════════════════ -->
-  {acts.map((act, i) => (
-    <section
-      id={act.id}
-      class:list={['act', i % 2 === 1 && 'act--flip']}
-      data-color-scheme="light"
-      aria-labelledby={`act-${act.index}`}
-    >
-        <div class="container act__inner">
-        <div class="act__copy reveal">
-          <h2 id={`act-${act.index}`} class="act__heading">{act.heading}</h2>
-          <p class="act__sub">{act.sub}</p>
-        </div>
-
-        <figure class="act__stage reveal">
-          <span class="act__ghost" aria-hidden="true">{act.index}</span>
-          <div class="act__mock">
-            {act.mock === 'prebrief' && <GlassPrebrief />}
-            {act.mock === 'authority' && <GlassAuthority />}
-            {act.mock === 'shift' && <GlassShift />}
-          </div>
-        </figure>
-      </div>
-    </section>
-  ))}
+  <!-- ══ The traverse ═════════════════════════════════════════════════════ -->
+  <ClinicianTraverse />
 
   <!-- ══ Statement ════════════════════════════════════════════════════════ -->
   <section class="say" data-color-scheme="light" aria-labelledby="say-heading">
@@ -230,7 +169,11 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         rgb(233 246 240 / 0.52) 86%,
         rgb(255 255 255) 100%);
   }
-  .hero, .act, .close, .say {
+  /* The traverse is deliberately absent from this list. It pins a sticky
+     stage, and `overflow: hidden` on an ancestor turns that ancestor into a
+     scroll container, which is what a sticky element then sticks to — so it
+     would never stick to the viewport at all. It does its own clipping. */
+  .hero, .close, .say {
     position: relative;
     overflow: hidden;
     background-color: transparent;
@@ -291,76 +234,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     align-items: center;
     justify-content: center;
     gap: var(--space-6x);
-  }
-
-  /* ══ ACTS ═══════════════════════════════════════════════════════════════ */
-  .act__inner {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    gap: var(--space-10x);
-    align-items: center;
-    padding-block: var(--space-16x);
-    color: var(--color-text-base);
-  }
-  @media (min-width: 640.02px) { .act__inner { padding-block: var(--space-20x); } }
-  @media (min-width: 1080.02px) {
-    .act__inner {
-      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr);
-      gap: var(--space-12x);
-      padding-block: var(--space-24x);
-    }
-    /* Sides alternate so the eye crosses the page. DOM order never changes, so
-       the reading order stays copy-then-figure throughout. */
-    .act--flip .act__copy { order: 2; }
-    .act--flip .act__stage { order: 1; }
-  }
-
-  .act__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
-  .act__heading {
-    font-size: var(--font-size-heading-large);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-heading);
-    letter-spacing: var(--letter-spacing-heading);
-    max-inline-size: 15ch;
-  }
-  .act__sub {
-    font-size: var(--font-size-text-large);
-    line-height: var(--line-height-open);
-    max-inline-size: 40ch;
-    color: var(--color-text-sub);
-  }
-
-  /* No tinted bed here. On /product the figure needs a stage because it is
-     opaque; glass needs the mesh itself to refract, so covering the mesh with a
-     card would destroy the material. The stage is only the band that holds the
-     act number. */
-  .act__stage {
-    position: relative;
-    margin: 0;
-    display: grid;
-    place-items: center;
-    padding-block-start: var(--space-20x);
-  }
-  .act__ghost {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-end: 0;
-    font-size: clamp(56px, 7vw, 104px);
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
-    letter-spacing: var(--letter-spacing-display);
-    font-variant-numeric: tabular-nums;
-    color: rgb(from var(--neutral-40) r g b / 0.42);
-    pointer-events: none;
-  }
-  /* The graphics measure themselves in cqw, and an element cannot be its own
-     query container — so the container has to be this wrapper. */
-  .act__mock {
-    position: relative;
-    container-type: inline-size;
-    inline-size: 100%;
-    max-inline-size: 640px;
   }
 
   /* ══ STATEMENT ══════════════════════════════════════════════════════════ */

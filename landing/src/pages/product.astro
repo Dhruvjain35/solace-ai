@@ -2,132 +2,26 @@
 import Page from '../layouts/Page.astro';
 import PageHeader from '../components/PageHeader.astro';
 import CtaPrimary from '../components/CtaPrimary.astro';
-import PhoneFrame from '../components/mockups/PhoneFrame.astro';
-import ScreenIntake from '../components/mockups/ScreenIntake.astro';
-import GraphicTriage from '../components/mockups/GraphicTriage.astro';
-import GraphicQueue from '../components/mockups/GraphicQueue.astro';
-import GraphicWorkflows from '../components/mockups/GraphicWorkflows.astro';
-import GraphicScribe from '../components/mockups/GraphicScribe.astro';
-import GraphicAtlas from '../components/mockups/GraphicAtlas.astro';
-import GraphicLetters from '../components/mockups/GraphicLetters.astro';
-import GraphicChart from '../components/mockups/GraphicChart.astro';
-import ClipCaption from '../components/mockups/ClipCaption.astro';
+import ProductDeck from '../components/ProductDeck.astro';
 import HeroGlass from '../components/mockups/HeroGlass.astro';
 
-/* Rebuilt as seven acts.
+/* The eight acts live in ProductDeck, as one pinned sequence rather than eight
+   rows. What was here before was an alternating grid: copy left, figure right,
+   then the mirror, seven more times. Every row was correct and the whole thing
+   read as a list, because that is what an alternating grid is.
 
-   The page this replaces was a column of numbered rows with screenshots of the
-   demo video dropped between them. Eleven steps in a single stack, each one a
-   line of text, and the pictures were captures — fixed resolution, locked to
-   whatever copy happened to be on screen the day they were taken.
+   Motion on this page is two layers and no framework:
 
-   The structure here is Superhuman's product idiom: one idea per act, copy on
-   one side, the product on the other, sides alternating so the eye crosses the
-   page instead of running down a gutter. Every figure is live DOM and every one
-   of them is a short looping film, so each act shows the thing WORKING rather
-   than a still of it having worked.
-
-   Motion, in two layers and no framework:
-
-     - The clips are CSS keyframes on a shared per-graphic timeline, started and
-       restarted by the observer in Base.astro. This is the layer framer-motion
-       would normally own; it is keyframes because a scripted animation library
-       cannot beat CSS at a six-second loop that has to run in twelve places on
-       one page without dropping frames.
-     - The reveals are scroll-driven `animation-timeline: view()`, which is what
-       framer-motion's whileInView does, natively and with nothing to download.
+     - The clips are CSS keyframes on a shared per-graphic timeline, started by
+       the cue observer in Base.astro so one act's film runs at a time and each
+       one starts at its first frame.
+     - Everything that responds to scrolling is `animation-timeline`, which is
+       what a scroll library would give you, natively and with nothing to
+       download.
 
    Both are inside prefers-reduced-motion guards, and the static frame of every
    graphic is its finished state — so with motion off the page is complete, not
    empty. */
-
-type Act = {
-  id?: string;
-  index: string;
-  chapter: string;
-  heading: string;
-  sub: string;
-  bed: 'paper' | 'slate' | 'ink';
-  mock: 'intake' | 'triage' | 'queue' | 'workflows' | 'scribe' | 'atlas' | 'letters' | 'chart';
-};
-
-const acts: Act[] = [
-  {
-    id: 'patient-side',
-    index: '01',
-    chapter: 'In the waiting room',
-    heading: 'Check in from the waiting room chair',
-    sub: 'A QR code on the wall opens Solace on their own phone. They tell their story once, in their own language, while they wait.',
-    bed: 'paper',
-    mock: 'intake',
-  },
-  {
-    index: '02',
-    chapter: 'In the waiting room',
-    heading: 'See why it picked that level',
-    sub: 'A suggested level lands the moment intake ends, with the evidence that produced it sitting right beside it.',
-    bed: 'slate',
-    mock: 'triage',
-  },
-  {
-    id: 'clinician-side',
-    index: '03',
-    chapter: 'At the board',
-    heading: 'The queue sorts itself',
-    sub: 'Everyone waiting, in one view, ordered by who needs help first. It re-sorts the second a new reading changes something.',
-    bed: 'ink',
-    mock: 'queue',
-  },
-  {
-    id: 'workflows',
-    index: '04',
-    chapter: 'Behind the board',
-    heading: 'Write the rule once',
-    sub: 'Nine real events, branching conditions, fourteen actions, no code. No identifier ever leaves with the payload.',
-    bed: 'slate',
-    mock: 'workflows',
-  },
-  {
-    index: '05',
-    chapter: 'In the room',
-    heading: 'The note writes itself',
-    sub: 'Have the conversation. The draft builds as you go, and every clause stays attached to the moment it came from.',
-    bed: 'paper',
-    mock: 'scribe',
-  },
-  {
-    index: '06',
-    chapter: 'In the room',
-    heading: 'Ask the chart anything',
-    sub: 'Most of a real history is unstructured and belongs to somebody else. Atlas reads the faxes too, then cites them.',
-    bed: 'slate',
-    mock: 'atlas',
-  },
-  {
-    index: '07',
-    chapter: 'After the visit',
-    heading: 'The paperwork is already done',
-    sub: 'Work notes, school notes, FMLA, return to play. Two dozen forms that fill themselves in from the visit.',
-    bed: 'paper',
-    mock: 'letters',
-  },
-  {
-    index: '08',
-    chapter: 'Into the chart',
-    heading: 'It writes back to your EHR',
-    sub: 'Through the same interfaces your hospital already runs. As real coded fields, not a PDF attached to the chart.',
-    bed: 'ink',
-    mock: 'chart',
-  },
-];
-
-const INTAKE_CAPTIONS = [
-  'Scan the code on the wall. No app, no account.',
-  'Choose from twenty languages.',
-  'Answer out loud, in your own words.',
-  'Follow-ups adapt to what you just said.',
-  'It reaches the care team before the patient does.',
-];
 
 const megaText =
   'Calm, understandable emergency care has never been easier. And when everyone can see the line, the waiting room finally makes sense, to the people running it and the people sitting in it.';
@@ -169,47 +63,8 @@ const faqs = [
     </div>
   </PageHeader>
 
-  <!-- ══ THE SEVEN ACTS ═══════════════════════════════════════════════════ -->
-  {acts.map((act, i) => (
-    <section
-      id={act.id ?? `act-${act.index}`}
-      class:list={['act', i % 2 === 1 && 'act--flip']}
-      data-background-color={i % 2 === 1 ? 'secondary-default' : 'primary-default'}
-      aria-labelledby={`act-${act.index}`}
-    >
-      <div class="container act__inner">
-        <div class="act__copy reveal">
-          <h2 id={`act-${act.index}`} class="heading-medium act__heading">{act.heading}</h2>
-          <p class="text-medium text-sub act__sub">{act.sub}</p>
-        </div>
-
-        <figure class:list={['act__stage', 'reveal', `act__stage--${act.bed}`]}>
-          <span class="act__ghost" aria-hidden="true">{act.index}</span>
-
-          {/* On the phone act, data-clip sits on the WRAPPER rather than on the
-              screen inside the aperture, so one observer drives the device and
-              the caption narrating it. Two observers could start a frame apart
-              and the caption would describe the wrong beat. */}
-          {act.mock === 'intake' ? (
-            <div class="act__device" data-clip>
-              <PhoneFrame width="clamp(216px, 24vw, 280px)"><ScreenIntake /></PhoneFrame>
-              <ClipCaption steps={INTAKE_CAPTIONS} />
-            </div>
-          ) : (
-            <div class="act__mock">
-              {act.mock === 'triage'  && <GraphicTriage />}
-              {act.mock === 'workflows' && <GraphicWorkflows />}
-              {act.mock === 'queue'   && <GraphicQueue />}
-              {act.mock === 'scribe'  && <GraphicScribe />}
-              {act.mock === 'atlas'   && <GraphicAtlas />}
-              {act.mock === 'letters' && <GraphicLetters />}
-              {act.mock === 'chart'   && <GraphicChart />}
-            </div>
-          )}
-        </figure>
-      </div>
-    </section>
-  ))}
+  <!-- ══ THE DECK ═════════════════════════════════════════════════════════ -->
+  <ProductDeck />
 
   <!-- ══ Mega statement ═══════════════════════════════════════════════════ -->
   <section data-background-color="primary-default">
@@ -318,126 +173,6 @@ const faqs = [
     inline-size: 100%;
     display: flex;
     justify-content: center;
-  }
-
-  /* ══ ACTS ═══════════════════════════════════════════════════════════════ */
-  .act__inner {
-    display: grid;
-    gap: var(--space-10x);
-    align-items: center;
-    padding-block: var(--space-16x);
-  }
-  @media (min-width: 640.02px) {
-    .act__inner { padding-block: var(--space-20x); }
-  }
-  @media (min-width: 1080.02px) {
-    .act__inner {
-      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
-      gap: var(--space-16x);
-      padding-block: var(--space-24x);
-    }
-    /* Sides alternate so the eye crosses the page instead of running down one
-       gutter for seven screens. The DOM order never changes — only the visual
-       column — so the reading order stays copy-then-figure throughout. */
-    .act--flip .act__copy  { order: 2; }
-    .act--flip .act__stage { order: 1; }
-  }
-
-  .act__copy {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-4x);
-  }
-
-
-  .act__heading { max-inline-size: 15ch; font-size: var(--font-size-heading-large); }
-  .act__sub { max-inline-size: 42ch; font-size: var(--font-size-text-large); }
-
-
-  /* ── The stage ───────────────────────────────────────────────────────────
-     A tinted bed with the product floating on it. The specular sweep across
-     the top-left is what stops a flat two-stop gradient from reading as a
-     coloured rectangle. */
-  .act__stage {
-    position: relative;
-    overflow: hidden;
-    margin: 0;
-    display: grid;
-    place-items: center;
-    /* The top padding is not breathing room, it is a band: the act number
-       lives there. Sat over the figure it was covered on every act but the
-       first, which is the whole reason it now gets its own strip. */
-    padding: var(--space-20x) var(--space-5x) var(--space-10x);
-    border-radius: var(--radius-8x);
-    border: 1px solid rgb(from var(--neutral-40) r g b / 18%);
-  }
-  @media (min-width: 640.02px) {
-    .act__stage { padding: var(--space-24x) var(--space-8x) var(--space-12x); }
-  }
-
-  /* Three beds, none of them tinted with the brand colour. The mint stage was
-     the single biggest source of the light-green-shape look, and a product
-     figure does not need its background to be on-brand — the figure is. */
-  .act__stage--paper {
-    background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 72%), transparent 72%),
-      linear-gradient(158deg, var(--neutral-5) 0%, var(--neutral-10) 50%, var(--neutral-20) 100%);
-  }
-  .act__stage--slate {
-    background-image:
-      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 52%), transparent 72%),
-      linear-gradient(158deg, var(--slate-10) 0%, var(--slate-20) 58%, #9db4bd 100%);
-  }
-  .act__stage--ink {
-    background-image:
-      radial-gradient(ellipse 58% 46% at 24% 8%, rgb(from var(--slate-40) r g b / 32%), transparent 74%),
-      linear-gradient(158deg, var(--slate-90) 0%, var(--slate-100) 52%, var(--slate-black) 100%);
-    border-color: rgb(from var(--slate-black) r g b / 55%);
-  }
-
-  /* The act number, set large and low-contrast in the corner. Editorial
-     furniture: it gives the bed a second plane without adding an object. */
-  /* Sized to the band it sits in, never taller than it. Each bed gets its own
-     ink: white reads on teal, mist and deep but disappears into sand, where a
-     warm taupe is the only thing with anything to push against. */
-  .act__ghost {
-    position: absolute;
-    inset-block-start: var(--space-5x);
-    inset-inline-end: var(--space-7x);
-    font-size: clamp(44px, 5.4vw, 78px);
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
-    letter-spacing: var(--letter-spacing-display);
-    font-variant-numeric: tabular-nums;
-    color: rgb(from var(--white) r g b / 88%);
-    pointer-events: none;
-  }
-  .act__stage--paper .act__ghost { color: rgb(from var(--neutral-40) r g b / 50%); }
-  .act__stage--ink .act__ghost { color: rgb(from var(--white) r g b / 20%); }
-
-  /* The graphics measure themselves in cqw, and an element cannot be its own
-     query container — so the container has to be this wrapper, sized to the
-     graphic rather than to the padded stage. */
-  .act__mock {
-    position: relative;
-    container-type: inline-size;
-    inline-size: 100%;
-    max-inline-size: 600px;
-  }
-  /* The phone act's caption sits under the device on the stage rather than
-     inside the screen — it narrates the act, it is not app chrome. */
-  .act__device {
-    /* The clip root for this act, so it owns the tempo the caption reads. */
-    --clip-dur: 10s;
-    position: relative;
-    inline-size: 100%;
-    max-inline-size: 420px;
-    container-type: inline-size;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-6x);
   }
 
   /* ══ Scrubbed statement ═════════════════════════════════════════════════ */

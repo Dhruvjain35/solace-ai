@@ -67,8 +67,17 @@ const ogURL = new URL(ogImage, Astro.site);
 
          Without JS, or under reduced motion, the graphic is simply its finished
          state — which is the state every one of them is authored in. */
-      const clips = document.querySelectorAll('[data-clip]');
-      if (clips.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const motionOK = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* A clip inside a pinned stage cannot be gated by its own box. Every card
+         in the deck and every act in the traverse is on screen for the whole
+         pin, so this observer would start all of them at once and leave every
+         one joined halfway through a scene. Those sections mark themselves and
+         are handled below instead. */
+      const gated = (el: Element) => el.closest('[data-clip-gate]') !== null;
+      const clips = [...document.querySelectorAll('[data-clip]')].filter((c) => !gated(c));
+
+      if (clips.length && motionOK) {
         const io = new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
@@ -82,6 +91,74 @@ const ogURL = new URL(ogImage, Astro.site);
           { rootMargin: '-12% 0px -12% 0px', threshold: 0 },
         );
         clips.forEach((clip) => io.observe(clip));
+      }
+
+      /* CUE RUNNER — which act in a pinned stage is the live one.
+
+         A pinned section lays out one cue per act: a block spanning exactly the
+         scroll that act owns, pushed half a viewport down the page so it crosses
+         the centre line while its act is the one you are looking at. Collapsing
+         the root to that centre line with a -50%/-50% inset means the cues tile
+         it, so exactly one is intersecting at any moment and no arithmetic is
+         needed to work out which.
+
+         Pinning is itself conditional — it needs the width, the motion
+         preference and scroll-driven timelines — and when it is off the cards
+         are an ordinary column again, where a cue would be nowhere near its
+         act. So when any of those conditions fail this falls back to watching
+         the clips directly, which is the correct behaviour for a column. */
+      const gates = document.querySelectorAll<HTMLElement>('[data-clip-gate]');
+      if (gates.length && motionOK) {
+        const pinnable = matchMedia('(min-width: 1080.02px)');
+        const supported = CSS.supports('animation-timeline', 'view()');
+        let live: IntersectionObserver | null = null;
+
+        const wire = () => {
+          live?.disconnect();
+          live = null;
+          const pinned = supported && pinnable.matches;
+
+          for (const gate of gates) {
+            const cards = gate.querySelectorAll<HTMLElement>('[data-card]');
+            const cues = gate.querySelectorAll<HTMLElement>('[data-cue]');
+            for (const card of cards) card.querySelector('[data-clip]')?.removeAttribute('data-play');
+
+            if (!pinned) {
+              live ??= new IntersectionObserver(
+                (entries) => {
+                  for (const entry of entries) {
+                    if (entry.isIntersecting) entry.target.setAttribute('data-play', '');
+                    else entry.target.removeAttribute('data-play');
+                  }
+                },
+                { rootMargin: '-12% 0px -12% 0px', threshold: 0 },
+              );
+              gate.querySelectorAll('[data-clip]').forEach((clip) => live!.observe(clip));
+              continue;
+            }
+
+            live ??= new IntersectionObserver(
+              (entries) => {
+                for (const entry of entries) {
+                  const owner = (entry.target as HTMLElement).closest('[data-clip-gate]');
+                  const index = (entry.target as HTMLElement).dataset.cue;
+                  const clip = owner?.querySelector(`[data-card="${index}"] [data-clip]`);
+                  if (!clip) continue;
+                  if (entry.isIntersecting) clip.setAttribute('data-play', '');
+                  else clip.removeAttribute('data-play');
+                }
+              },
+              { rootMargin: '-50% 0px -50% 0px', threshold: 0 },
+            );
+            cues.forEach((cue) => live!.observe(cue));
+          }
+        };
+
+        wire();
+        /* Crossing the breakpoint swaps a column for a pinned stage, which
+           moves every cue. Re-wiring is cheaper than trying to keep both
+           interpretations alive at once. */
+        pinnable.addEventListener('change', wire);
       }
     </script>
   </body>

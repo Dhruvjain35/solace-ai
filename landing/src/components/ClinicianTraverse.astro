@@ -1,0 +1,429 @@
+---
+import GlassPrebrief from './mockups/GlassPrebrief.astro';
+import GlassAuthority from './mockups/GlassAuthority.astro';
+import GlassShift from './mockups/GlassShift.astro';
+
+/* THE TRAVERSE — the three clinician acts as one pinned sideways run.
+
+   /product deals cards into depth. If this page did the same thing with three
+   cards instead of eight it would read as the same page twice, which is the
+   failure the whole rebuild exists to avoid. So this one moves on the other
+   axis: the stage pins and vertical scrolling drives the acts HORIZONTALLY
+   past a fixed vanishing point, each one turning to face you as it arrives and
+   turning away as it leaves.
+
+   Same primitive, opposite axis, opposite material. The deck is opaque panels
+   stacking in Z on a neutral bed. This is unbacked glass sliding in X across
+   the page's own gradient field, because materials.css is explicit that glass
+   needs something worth refracting behind it and a plate under these figures
+   would destroy the thing that makes them work.
+
+   Three planes move at three rates within every act — the index behind, the
+   figure at rail speed, the copy slightly ahead — which is what stops a
+   horizontal slider from reading as a flat filmstrip on rails.
+
+   ── The timeline ────────────────────────────────────────────────────────────
+   One view timeline on the tall section; every layer takes a slice of it.
+
+     H = (N-1)·S + 1  viewport heights   (section height, including the pin tail)
+     D = H + 1                           (the cover range)
+     pin runs from 1/D to H/D, act i is centred at 1/D + i·S/D.
+
+   S is capped at 1 for a reason: each act's turn spans one full window either
+   side of its centre, and the first act's turn therefore starts S/D before the
+   pin does. Any larger and that start goes negative, which no amount of
+   clamping fixes — it would just put act one's face at the wrong scroll
+   position for the whole run. */
+
+type Act = {
+  id: string;
+  index: string;
+  heading: string;
+  sub: string;
+  mock: 'prebrief' | 'authority' | 'shift';
+  /* Height over width of the graphic, measured rather than guessed. A panel is
+     exactly one viewport tall, so this is what stops a figure running off the
+     bottom of a short window. */
+  ratio: number;
+};
+
+const acts: Act[] = [
+  {
+    id: 'prebrief',
+    index: '01',
+    heading: 'You know who is behind the door',
+    sub: 'One line of story, the two things that must not be missed, and the next thing worth doing. Short enough to read while you walk.',
+    mock: 'prebrief',
+    ratio: 1.114,
+  },
+  {
+    id: 'authority',
+    index: '02',
+    heading: 'You can always overrule it',
+    sub: 'Changing the level takes one tap and applies straight away. No dialog asks if you are sure, and the change is saved with your name on it.',
+    mock: 'authority',
+    ratio: 1.132,
+  },
+  {
+    id: 'shift',
+    index: '03',
+    heading: 'Stop finishing notes at home',
+    sub: 'Time with patients goes up a little. What really changes is the typing, the forms, and the hour you currently take home.',
+    mock: 'shift',
+    ratio: 0.705,
+  },
+];
+
+const N = acts.length;
+const S = 0.95;
+/* Each act is a little narrower than the stage, which is the only reason the
+   ones either side of it are visible at all. At full stage width the
+   neighbours sit exactly one screen away and the run reads as a slideshow;
+   pulled in to 88% they show an edge, and the turn has something to happen
+   against. The rail therefore starts half the difference to the right rather
+   than at zero, and every step is one act width instead of one screen. */
+const F = 0.88;
+const H = (N - 1) * S + 1;
+const D = H + 1;
+const p0 = 1 / D;
+const w = S / D;
+
+const pct = (v: number) => `${(Math.min(Math.max(v, 0), 1) * 100).toFixed(4)}%`;
+
+const panels = acts.map((act, i) => {
+  const C = p0 + i * w;
+  return {
+    act,
+    i,
+    /* One symmetric window either side of centre, so a single three-keyframe
+       animation covers approach, face and departure with the middle keyframe
+       landing exactly on centre. Two animations would need two elements and
+       would meet in the middle at whatever value they happened to hold. */
+    vars: [`--ratio:${act.ratio}`, `--face-a:${pct(C - w)}`, `--face-b:${pct(C + w)}`].join(';'),
+  };
+});
+
+const trvVars = [
+  `--panels:${N}`,
+  `--trv-h:${H}`,
+  `--act-scroll:${S * 100}vh`,
+  `--rail-w:${N * F}`,
+  `--rail-a:${(((1 - F) / (2 * N * F)) * 100).toFixed(4)}%`,
+  `--rail-b:${(((1 - F) / (2 * N * F)) * 100 - ((N - 1) / N) * 100).toFixed(4)}%`,
+  `--pin-a:${pct(p0)}`,
+  `--pin-b:${pct(p0 + (N - 1) * w)}`,
+  `--cue-lead:${(0.5 - S / 2) * 100}vh`,
+].join(';');
+---
+
+<section class="trv" style={trvVars} data-clip-gate aria-label="What Solace gives a clinician">
+  {/* Each cue spans the run where its act is the one facing you, offset half a
+      viewport so it crosses the centre line at the right moment. Base.astro
+      observes them and hands the film to the matching act, because all three
+      are on screen for the whole pin and an observer watching the figures
+      themselves would start all three at once. */}
+  <div class="trv__cues" aria-hidden="true">
+    {panels.map(({ i }) => (
+      <span class="trv__cue" style={`--i:${i}`} data-cue={i}></span>
+    ))}
+  </div>
+
+  <div class="trv__stage">
+    <div class="trv__rail">
+      {panels.map(({ act, i, vars }) => (
+        <article
+          class="trv__panel"
+          id={act.id}
+          style={vars}
+          data-card={i}
+          aria-labelledby={`act-${act.index}`}
+        >
+          <span class="trv__veil" aria-hidden="true"></span>
+          <span class="trv__ghost" aria-hidden="true">{act.index}</span>
+
+          <div class="trv__inner">
+            <div class="trv__copy">
+              <h2 id={`act-${act.index}`} class="trv__heading">{act.heading}</h2>
+              <p class="trv__sub">{act.sub}</p>
+            </div>
+
+            <div class="trv__figure">
+              <div class="trv__mock">
+                {act.mock === 'prebrief' && <GlassPrebrief />}
+                {act.mock === 'authority' && <GlassAuthority />}
+                {act.mock === 'shift' && <GlassShift />}
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <div class="trv__progress" aria-hidden="true"><span class="trv__progress-fill"></span></div>
+  </div>
+</section>
+
+<style>
+  /* ══ FLOW MODE ══════════════════════════════════════════════════════════
+     Three acts in a column, which is what narrow windows, reduced motion and
+     anything without scroll-driven timelines get. The pinned run below is
+     layered on top of this and nothing depends on it. */
+  .trv { position: relative; }
+  .trv__cues,
+  .trv__progress { display: none; }
+
+  .trv__rail { display: flex; flex-direction: column; gap: var(--space-8x); }
+
+  .trv__panel { position: relative; padding-block: var(--space-14x); }
+
+  .trv__inner {
+    display: grid;
+    gap: var(--space-10x);
+    align-items: center;
+    inline-size: 100%;
+    max-inline-size: 1180px;
+    margin-inline: auto;
+    padding-inline: var(--viewport-padding);
+  }
+
+  .trv__copy { display: flex; flex-direction: column; gap: var(--space-4x); }
+  .trv__heading {
+    font-size: var(--font-size-heading-large);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+    max-inline-size: 15ch;
+    color: var(--color-text-base);
+  }
+  .trv__sub {
+    font-size: var(--font-size-text-large);
+    line-height: var(--line-height-open);
+    max-inline-size: 40ch;
+    color: var(--color-text-sub);
+  }
+
+  /* In a column it is a heading mark above the act. Pinned, it becomes the
+     slowest of the three planes and moves behind the copy — which is why it is
+     a direct child of the panel and not of the copy: `.trv__inner` carries the
+     near plane's transform, and a transform makes an element the containing
+     block for everything absolute inside it. Nested there, the index would
+     travel with the plane it is supposed to be moving against. */
+  .trv__ghost {
+    display: block;
+    inline-size: 100%;
+    max-inline-size: 1180px;
+    margin-inline: auto;
+    margin-block-end: var(--space-2x);
+    padding-inline: var(--viewport-padding);
+    font-size: clamp(52px, 9vw, 84px);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-display);
+    font-variant-numeric: tabular-nums;
+    color: rgb(from var(--neutral-40) r g b / 26%);
+    pointer-events: none;
+  }
+
+  /* Two columns as soon as there is room, whether or not the pinned run is
+     available. Without this, a wide window under reduced motion gets a column
+     of full width acts, which is a worse page than the one it is standing in
+     for. */
+  @media (min-width: 1080.02px) {
+    .trv__inner {
+      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr);
+      gap: var(--space-12x);
+    }
+  }
+
+  .trv__figure { display: grid; place-items: center; min-inline-size: 0; }
+  /* The graphics measure themselves in cqw, and an element cannot be its own
+     query container — so the container has to be this wrapper. */
+  .trv__mock {
+    position: relative;
+    container-type: inline-size;
+    inline-size: 100%;
+    max-inline-size: 660px;
+  }
+
+  .trv__veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background-color: var(--white);
+  }
+
+  /* ══ PINNED MODE ════════════════════════════════════════════════════════
+     A pinned panel is exactly one window tall, so there is a height below which
+     an act is cramped rather than composed. These three figures are the shorter
+     ones on the site and clear 620px, so the bound is set where the composition
+     stops breathing rather than where it breaks. */
+  @media (min-width: 1080.02px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .trv {
+        block-size: calc(var(--trv-h) * 100vh);
+        view-timeline-name: --trv;
+        view-timeline-axis: block;
+      }
+
+      .trv__cues { display: block; position: absolute; inset: 0; pointer-events: none; }
+      .trv__cue {
+        position: absolute;
+        inset-inline: 0;
+        block-size: var(--act-scroll);
+        inset-block-start: calc(var(--i) * var(--act-scroll) + var(--cue-lead));
+      }
+
+      .trv__stage {
+        position: sticky;
+        inset-block-start: 0;
+        block-size: 100vh;
+        /* clip rather than hidden: `overflow: hidden` makes this a scroll
+           container, and a sticky element inside one sticks to that container
+           instead of to the viewport, so it never sticks at all. */
+        overflow: clip;
+        display: grid;
+        align-items: center;
+        /* One vanishing point for the whole run. On the stage, so every act
+           turns about the same axis rather than each carrying its own camera. */
+        perspective: 1500px;
+        perspective-origin: 50% 50%;
+      }
+
+      /* Widths in percent, never vw. A rail measured in vw is wider than its
+         own stage by exactly the scrollbar, and the translate that centres each
+         act would drift by that much every step. */
+      .trv__rail {
+        flex-direction: row;
+        gap: 0;
+        inline-size: calc(100% * var(--rail-w));
+        transform-style: preserve-3d;
+        translate: 0 0;
+        animation: trv-travel linear both;
+        animation-timeline: --trv;
+        animation-range: cover var(--pin-a) cover var(--pin-b);
+      }
+
+      .trv__panel {
+        flex: none;
+        inline-size: calc(100% / var(--panels));
+        block-size: 100vh;
+        display: grid;
+        align-items: center;
+        padding-block: 0;
+        transform-origin: 50% 50%;
+        animation: trv-face linear both;
+        animation-timeline: --trv;
+        animation-range: cover var(--face-a) cover var(--face-b);
+      }
+
+      .trv__inner {
+        grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+        gap: clamp(40px, 4vw, 88px);
+        max-inline-size: 1220px;
+        /* Slightly ahead of the rail. Three planes at three rates is the
+           difference between a scene moving past you and a strip of images. */
+        animation: trv-near linear both;
+        animation-timeline: --trv;
+        animation-range: cover var(--face-a) cover var(--face-b);
+      }
+
+      /* Behind the copy, not behind the figure. On the right it was covered by
+         the graphic on every act; on the left it is the back plane the copy
+         sits in front of, which is what the slowest of the three rates is for. */
+      .trv__ghost {
+        position: absolute;
+        z-index: -1;
+        inline-size: auto;
+        max-inline-size: none;
+        margin: 0;
+        padding: 0;
+        line-height: 0.86;
+        inset-block-start: 16vh;
+        inset-inline-start: max(calc((100% - 1220px) / 2), var(--viewport-padding));
+        font-size: clamp(120px, 13vw, 250px);
+        animation: trv-far linear both;
+        animation-timeline: --trv;
+        animation-range: cover var(--face-a) cover var(--face-b);
+      }
+
+      .trv__mock { inline-size: min(680px, calc(84vh / var(--ratio))); }
+
+      /* A white wash, not a dark one. This page is a pale field and the acts
+         are glass on it, so the ones off centre should look like they have gone
+         into the haze rather than had a shadow thrown over them. */
+      /* Feathered. A flat rectangle of white at 62% has an edge, and under a
+         26 degree turn that edge reads as a diagonal seam ruled across the
+         page. The mask takes it to nothing before it reaches the panel bounds,
+         so what is left is haze with no boundary to find. */
+      .trv__veil {
+        inset: 0 -2vw;
+        -webkit-mask-image: radial-gradient(ellipse 66% 58% at 50% 50%, #000 0%, #000 42%, transparent 100%);
+                mask-image: radial-gradient(ellipse 66% 58% at 50% 50%, #000 0%, #000 42%, transparent 100%);
+        animation: trv-veil linear both;
+        animation-timeline: --trv;
+        animation-range: cover var(--face-a) cover var(--face-b);
+      }
+
+      /* Horizontal, because the run is horizontal. The deck's is vertical for
+         the same reason. */
+      .trv__progress {
+        display: block;
+        position: absolute;
+        inset-block-end: 7vh;
+        inset-inline: 50%;
+        translate: -50% 0;
+        inline-size: min(320px, 26vw);
+        block-size: 2px;
+        border-radius: 2px;
+        background-color: rgb(from var(--neutral-40) r g b / 22%);
+        overflow: hidden;
+      }
+      .trv__progress-fill {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background-image: linear-gradient(90deg, var(--solace-30), var(--solace-60));
+        transform-origin: 0% 50%;
+        scale: 0 1;
+        animation: trv-progress linear both;
+        animation-timeline: --trv;
+        animation-range: cover var(--pin-a) cover var(--pin-b);
+      }
+    }
+  }
+
+  /* Positive rotateY brings an element's LEFT edge toward the viewer, so an act
+     still off to the right is turned in toward the centre and an act that has
+     passed is turned away from it. Both ends also pull inward a little, which
+     is what keeps the neighbours peeking at the edges of the stage instead of
+     leaving it empty. */
+  @keyframes trv-face {
+    0%   { translate: -11% 0; rotate: y 26deg;  scale: 0.84; }
+    50%  { translate: 0 0;     rotate: y 0deg;   scale: 1; }
+    100% { translate: 11% 0;   rotate: y -26deg; scale: 0.84; }
+  }
+  @keyframes trv-near {
+    0%   { translate: 4vw 0; }
+    50%  { translate: 0 0; }
+    100% { translate: -4vw 0; }
+  }
+  @keyframes trv-far {
+    0%   { translate: -11vw 0; }
+    50%  { translate: 0 0; }
+    100% { translate: 11vw 0; }
+  }
+  @keyframes trv-veil {
+    0%   { opacity: 0.62; }
+    50%  { opacity: 0; }
+    100% { opacity: 0.62; }
+  }
+  @keyframes trv-travel {
+    from { translate: var(--rail-a) 0; }
+    to   { translate: var(--rail-b) 0; }
+  }
+  @keyframes trv-progress {
+    from { scale: 0 1; }
+    to   { scale: 1 1; }
+  }
+</style>
