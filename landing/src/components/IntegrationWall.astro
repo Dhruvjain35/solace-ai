@@ -102,7 +102,7 @@ const railB = [...unitB, ...unitB, ...unitB];
     color: var(--color-text-base);
   }
 
-  .wall__rails { display: flex; flex-direction: column; gap: var(--space-4x); }
+  .wall__rails { display: flex; flex-direction: column; gap: 0; }
 
   /* Each rail is wider than the viewport on purpose and the section clips it,
      so vendors enter and leave rather than sitting in a box. The mask stops
@@ -112,6 +112,13 @@ const railB = [...unitB, ...unitB, ...unitB];
     align-items: center;
     gap: var(--space-4x);
     inline-size: max-content;
+    /* A mask clips paint to the element's border box, and each chip's shadow
+       (0 6px 16px) reaches 22px past it. The mask was slicing every shadow off
+       flat along the rail's edge, which read as a straight line under the row
+       and made the ovals look cut off at the bottom. The padding gives the
+       shadows room inside the masked box; the mask runs horizontally, so
+       vertical space costs it nothing. */
+    padding-block: var(--space-6x);
     -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
             mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
   }

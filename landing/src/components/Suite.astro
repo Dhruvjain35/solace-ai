@@ -266,6 +266,26 @@ const panels = [
       linear-gradient(162deg, #d6eef7 0%, #c0dff1 58%, #a6cbe8 100%);
   }
 
+  /* The field itself moves. Two things at once and neither on a clock: the
+     background slowly drifts across its own box as the panel travels the
+     viewport, and it scales fractionally. It is the difference between a
+     printed gradient and a lit one — the hero taught the page that light in
+     this world moves, and four still fields underneath it read as flat by
+     comparison. */
+  @keyframes suite-field {
+    from { background-position: 0% 0%, 100% 0%, 50% 100%, 0% 0%; scale: 1.06; }
+    to   { background-position: 12% 14%, 88% 12%, 44% 88%, 0% 0%; scale: 1; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .suite__figure {
+        animation: suite-field linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
+  }
+
   /* Grain. Same SVG turbulence the hero uses, so the two read as one material,
      and without it a field this wide bands in 8-bit. */
   .suite__figure::after {

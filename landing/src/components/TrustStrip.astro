@@ -25,7 +25,7 @@ const facts = [
 ];
 ---
 
-<section data-background-color="primary-default" aria-labelledby="trust-heading">
+<section class="trust-section" data-background-color="primary-default" aria-labelledby="trust-heading">
   <div class="container page-section trust">
     <div class="trust__head">
       <h2 id="trust-heading" class="heading-medium">Let your security team kick the tires.</h2>
@@ -48,6 +48,18 @@ const facts = [
 </section>
 
 <style>
+  /* The security section sat on flat white between two coloured neighbours and
+     fell out of the page. A wide, quiet brand field puts it back in — quiet
+     because this is the section a security reviewer reads, and it should look
+     careful rather than sold. */
+  .trust-section {
+    position: relative;
+    background-image:
+      radial-gradient(ellipse 60% 90% at 4% 0%,   rgb(from var(--solace-30) r g b / 0.22), transparent 62%),
+      radial-gradient(ellipse 66% 96% at 98% 92%, rgb(from var(--slate-20) r g b / 0.30), transparent 66%);
+  }
+  .trust-section > * { position: relative; z-index: 1; }
+
   .trust__head {
     display: flex;
     flex-direction: column;

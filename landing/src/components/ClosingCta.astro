@@ -12,12 +12,52 @@
 </section>
 
 <style>
+  /* The last thing anyone sees on this page, and it was a flat three-stop
+     ramp. It is now a lit field on the hero's own recipe — layered radial
+     lights over the ramp, grain so a band this wide does not step, and the
+     whole thing drifting as the section crosses the viewport.
+
+     Deliberately the most saturated moment on the page. Everything above it
+     has been building toward asking, so this is the one place where turning
+     the colour all the way up is the right answer rather than decoration. */
   .closing {
-    background-image: linear-gradient(270deg, #0b6b53 9.04%, #7ccbb2 84.36%, #e7f4ef 100%);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image:
+      radial-gradient(ellipse 70% 120% at 6% 8%,   rgb(from var(--solace-30) r g b / 0.75), transparent 66%),
+      radial-gradient(ellipse 64% 130% at 52% 104%, rgb(from var(--solace-50) r g b / 0.60), transparent 68%),
+      radial-gradient(ellipse 58% 120% at 96% 20%,  #0a5f4a 0%, transparent 70%),
+      linear-gradient(270deg, #0b6b53 9.04%, #7ccbb2 84.36%, #e7f4ef 100%);
     color: var(--neutral-90);
+  }
+  .closing::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.05;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  @keyframes closing-drift {
+    from { background-position: 0% 0%, 50% 100%, 100% 0%, 0% 0%; }
+    to   { background-position: 14% 10%, 40% 88%, 86% 12%, 0% 0%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .closing {
+        animation: closing-drift linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
   }
 
   .closing__inner {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
