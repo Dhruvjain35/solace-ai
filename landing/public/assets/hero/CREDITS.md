@@ -123,6 +123,37 @@ and nothing else is touched, weighted by how far red already leads blue. A flat
 per-channel gain lands identically on the mask and the scrubs and turns both a
 yellow-grey.
 
+**Two edges the matte could not fix, found on the live site.**
+
+The first was never a matte problem at all. Registration puts the plate at
+x = -216 on an 862-wide canvas, so the canvas border cuts straight through her
+cap at source x=205 and leaves a hard vertical line down the full height of the
+figure. No amount of keying touches that — it is the frame. Every border now
+gets a smoothstep falloff (left 200px, right 120px, bottom 190px), smoothstep
+rather than linear because a linear ramp has a slope discontinuity at each end
+and a slope discontinuity across a wide gradient reads as a line even with no
+value step. The left ramp costs the cap's outer third, which reads as lighting.
+
+The second took three attempts because the diagnostic kept lying. The hair edge
+needed a wide feather and was getting 4px:
+
+1. Widened the dark-side feather 34 -> 95px. Nothing changed.
+2. Found why: `dark` came from a plain blur of the frame, which averages in the
+   bright plate sitting just outside the silhouette. At the hair edge — the one
+   place the wide feather exists for — it reported "bright" and handed back the
+   crisp setting. Normalised the blur by the mask so it measures her, not her
+   against the backdrop. Better, still a hard edge in patches.
+3. Found the real cause by measuring a luminance profile across the boundary
+   rather than looking at it: values of 129, 238, 162 sitting immediately before
+   a drop to 0. Those are plate rim that survived INSIDE the silhouette, in
+   patches the scanline trim cannot reach because they are not one contiguous
+   run in from the border. So the brightness test was working correctly and
+   asking the wrong question — it protected the pixels that most needed to go.
+
+The feather is now keyed to position on that side, not brightness: past her jaw
+everything is hair or plate pretending to be hair, and neither wants a crisp
+edge. Jaw, cap and mask sit left of the ramp and keep theirs.
+
 **Consent, unchanged and still unresolved.** This frame depicts an identifiable
 person presented as a healthcare professional, and no model release accompanies
 it. Flagged, not cleared.
