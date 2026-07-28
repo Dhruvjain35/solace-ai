@@ -1,0 +1,75 @@
+---
+import Page from '../layouts/Page.astro';
+
+/* This page exists because of what launch mode does to the rest of the site.
+   Ten marketing pages were parked, so every one of their URLs now 404s — and
+   some of them have been linked and indexed. Vercel's stock 404 is a bare white
+   page with no way back, which is a poor thing to hand somebody who followed a
+   link that used to work. */
+---
+
+<Page
+  title="Page not found"
+  description="That page is not here. Solace is opening to emergency departments a few at a time — join the waitlist."
+>
+  <section class="nf" data-background-color="secondary-default" aria-labelledby="nf-heading">
+    <div class="container page-section nf__inner">
+      <p class="nf__code" aria-hidden="true">404</p>
+      <h1 id="nf-heading" class="display-small nf__title">That page is not here.</h1>
+      <p class="text-large text-sub nf__lede">
+        Most of this site is closed while we open to departments a few at a
+        time. There is one thing to do in the meantime.
+      </p>
+      <div class="nf__actions">
+        <a class="cta-primary" href="/waitlist">
+          <span class="cta-primary__label">Join the waitlist</span>
+          <span class="cta-primary__chip" aria-hidden="true">
+            <svg aria-hidden="true" class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M2 8h11M9 4l4 4-4 4"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+        </a>
+        <a class="cta-secondary" href="/">Back to the homepage</a>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .nf__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-5x);
+    min-block-size: 52vh;
+    justify-content: center;
+  }
+  .nf__code {
+    font-size: clamp(64px, 9vw, 132px);
+    font-weight: var(--font-weight-medium);
+    line-height: 0.9;
+    letter-spacing: var(--letter-spacing-display);
+    font-variant-numeric: tabular-nums;
+    /* Full --neutral-40, not a tint of it. Large text still has to clear 3:1,
+       and aria-hidden does not exempt it — contrast is about what the eye can
+       resolve, not what a screen reader announces. At 34% it measured 1.39:1;
+       at full strength it is 3.02:1 on this bed, which is the palest this
+       numeral is allowed to be. */
+    color: var(--neutral-40);
+  }
+  .nf__title { max-inline-size: 16ch; }
+  .nf__lede { max-inline-size: 44ch; }
+  .nf__actions {
+    margin-block-start: var(--space-3x);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4x);
+  }
+</style>

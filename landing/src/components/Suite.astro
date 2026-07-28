@@ -21,13 +21,16 @@ import GraphicLanguages from './mockups/GraphicLanguages.astro';
 import GraphicConfidence from './mockups/GraphicConfidence.astro';
 import GraphicEvidence from './mockups/GraphicEvidence.astro';
 import GraphicHooks from './mockups/GraphicHooks.astro';
+/* The panels used to end on a "read more" link into /product. There is no
+   /product any more, so they end on the figure — which is what they were
+   demonstrating in the first place. The section's own call to action is the one
+   at the top of it. */
 const panels = [
   {
     id: 'suite-intake',
     tab: 'Intake',
     heading: 'Everyone speaks their own language',
     sub: 'They talk the way they think. Their exact words are kept, the team reads it in English, and the answer goes back spoken.',
-    link: { label: 'See the patient flow', href: '/product#patient-side' },
     mock: 'languages',
     tone: 'dawn',
   },
@@ -36,7 +39,6 @@ const panels = [
     tab: 'Triage',
     heading: 'It tells you when it is unsure',
     sub: 'Most triage models hand you one number and stop. This one publishes the set the answer is actually in, and a wide set goes to a person.',
-    link: { label: 'How the score works', href: '/product#patient-side' },
     mock: 'confidence',
     tone: 'dusk',
   },
@@ -45,7 +47,6 @@ const panels = [
     tab: 'Ambient Scribe',
     heading: 'A note you can check',
     sub: 'The note drafts while you talk. Click any line and the exact seconds of audio that produced it play back.',
-    link: { label: 'See what it drafts', href: '/product#patient-side' },
     mock: 'evidence',
     tone: 'field',
   },
@@ -54,7 +55,6 @@ const panels = [
     tab: 'Atlas',
     heading: 'It appears inside your EHR',
     sub: 'A standard hook fires when you sign an order and the card arrives in place. No new tab, nothing extra to remember.',
-    link: { label: 'Bring Atlas to your team', href: '/clinicians' },
     mock: 'hooks',
     tone: 'tide',
   },
@@ -65,7 +65,7 @@ const panels = [
   <div class="container page-section suite">
     <div class="suite__head">
       <h2 id="suite-heading" class="heading-large">The whole front door.</h2>
-      <a class="cta-secondary" href="/demo">See the full flow</a>
+      <a class="cta-secondary" href="/waitlist">Join the waitlist</a>
     </div>
 
     <div class="suite__tabs" role="tablist" aria-label="Solace suite" data-suite-tabs>
@@ -84,13 +84,6 @@ const panels = [
             <div class="suite__copy">
               <h3 class="heading-medium suite__heading">{p.heading}</h3>
               <p class="text-medium text-sub">{p.sub}</p>
-              <a class="arrow-link" href={p.link.href}>
-                <span>{p.link.label}</span>
-                <svg viewBox="0 0 20 14.17" fill="none" aria-hidden="true">
-                  <circle cx="2" cy="7.08" r="1.6" fill="currentColor" />
-                  <path d="M6.5 7.08h11M13.4 2.2l4.9 4.88-4.9 4.89" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </a>
             </div>
 
             <figure class:list={['suite__figure', `suite__figure--${p.tone}`]}>

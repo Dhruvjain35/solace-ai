@@ -10,23 +10,10 @@ import Logo from './Logo.astro';
    CSS-only. It opens on hover and on focus-within, so a keyboard tab into the
    Product link opens it and the next tab lands on the first item. No JS, and
    nothing to go wrong on a slow connection. */
-const nav = [
-  { label: 'For clinicians', href: '/clinicians' },
-  { label: 'Integrations', href: '/integrations' },
-  { label: 'Pricing', href: '/pricing' },
-];
-
-const menu = [
-  { label: 'Patient intake', sub: 'Their own phone, their own language, no app', href: '/product#patient-side' },
-  { label: 'Triage', sub: 'A level, the evidence for it, and how sure it is', href: '/product#act-02' },
-  { label: 'The live board', sub: 'Sorted by need, re-sorted when the evidence moves', href: '/product#clinician-side' },
-  { label: 'Workflows', sub: 'Rules you write once, run on every patient after', href: '/product#workflows' },
-  { label: 'Ambient scribe', sub: 'The note drafts while you talk, and cites the room', href: '/product#act-05' },
-  { label: 'Atlas', sub: 'Ask the chart. Get an answer with its sources', href: '/product#act-06' },
-  { label: 'Letters and forms', sub: 'Two dozen documents, filled from the visit', href: '/product#act-07' },
-  { label: 'Into the chart', sub: 'Coded write-back through HL7 and FHIR, all logged', href: '/product#act-08' },
-  { label: 'Phone agent', sub: 'The same intake by voice, for anyone without a phone', href: '/product#phone' },
-];
+/* The nav and product-menu data used to live here. Both are gone rather than
+   left unused: every entry pointed into src/pages-parked/, and a dropdown of
+   404s is worse than no dropdown. Restoring them means restoring the pages —
+   see src/pages-parked/README.md. */
 ---
 
 <header class="site-header" data-global-header>
@@ -35,33 +22,14 @@ const menu = [
       <Logo />
     </a>
 
-    <nav class="site-header__nav" aria-label="Primary">
-      <div class="menu">
-        <a class="menu__trigger" href="/product">
-          Product
-          <svg class="menu__chev" viewBox="0 0 12 8" fill="none" aria-hidden="true">
-            <path d="M1.5 2 6 6.2 10.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </a>
-
-        <div class="menu__panel">
-          <div class="menu__grid">
-            {menu.map((item) => (
-              <a class="menu__item" href={item.href}>
-                <span class="menu__label">{item.label}</span>
-                <span class="menu__sub">{item.sub}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {nav.map((item) => <a href={item.href}>{item.label}</a>)}
-    </nav>
+    {/* No nav. There are four pages on this site and three of them are the
+        landing page, the waitlist and the legal pair — a menu bar would be
+        pointing at 404s. The pill is the only thing to do here, so it is the
+        only thing offered. The full nav is still in git history and comes back
+        with the pages in src/pages-parked/. */}
 
     <div class="site-header__actions">
-      <a href="/contact" class="site-header__link">Contact sales</a>
-      <a href="/demo" class="site-header__pill">Book a demo</a>
+      <a href="/waitlist" class="site-header__pill">Join the waitlist</a>
     </div>
   </div>
 </header>

@@ -1,0 +1,261 @@
+---
+import Page from '../layouts/Page.astro';
+
+/* The waitlist, and for now the only thing on this site you can do.
+
+   It is built from the demo page's form rather than something new, because that
+   form already handles the case that matters: /api/lead answers 501 until a
+   delivery channel is configured, and when it does the page composes a mail
+   draft instead of pretending the signup landed. A waitlist that silently drops
+   the first fifty people is worse than no waitlist.
+
+   Everything asked for here is something a reply actually needs. Role and
+   organisation decide who picks the conversation up; nothing else is collected,
+   which is also what the line under the button says. */
+
+const fields = [
+  { name: 'name',  label: 'Full name',    type: 'text',  placeholder: 'Dr. Jordan Lee',   autocomplete: 'name',         required: true },
+  { name: 'email', label: 'Work email',   type: 'email', placeholder: 'you@hospital.org', autocomplete: 'email',        required: true },
+  { name: 'org',   label: 'Organization', type: 'text',  placeholder: 'North Texas ED',   autocomplete: 'organization', required: true },
+];
+
+const roles = [
+  'Physician',
+  'Nurse or nurse practitioner',
+  'Department or clinical lead',
+  'Operations or administration',
+  'IT, informatics or security',
+  'Something else',
+];
+
+const promises = [
+  'Early access as departments come online, in the order people joined',
+  'One email when there is something real to show, and none in between',
+  'A straight answer about what it would and would not change on your floor',
+];
+---
+
+<Page
+  title="Join the Solace waitlist"
+  description="Solace is opening to emergency departments a few at a time. Join the waitlist and we will come to you in order, with your own department's numbers."
+>
+  <section class="wl" data-background-color="secondary-default" aria-labelledby="wl-heading">
+    <div class="container page-section">
+      <div class="wl__grid">
+        <div class="wl__copy">
+          <h1 id="wl-heading" class="display-medium wl__title">
+            We are opening a few departments at a time.
+          </h1>
+          <p class="text-large text-sub wl__lede">
+            Solace is not generally available yet. Tell us where you work and we
+            will come to you in order, with a walkthrough on a workflow that
+            looks like yours.
+          </p>
+          <ul class="wl__list">
+            {promises.map((line) => <li class="text-medium">{line}</li>)}
+          </ul>
+        </div>
+
+        <div class="wl__panel neu-panel">
+          <form class="lead" data-lead-form>
+            {fields.map((field) => (
+              <div class="lead__field">
+                <label class="lead__label text-small weight-medium" for={`wl-${field.name}`}>
+                  {field.label}
+                </label>
+                <div class="lead__well neu-inset">
+                  <input
+                    class="lead__input"
+                    id={`wl-${field.name}`}
+                    name={field.name}
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    autocomplete={field.autocomplete}
+                    required={field.required}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div class="lead__field">
+              <label class="lead__label text-small weight-medium" for="wl-role">Your role</label>
+              <div class="lead__well neu-inset">
+                <select class="lead__input lead__select" id="wl-role" name="role" required>
+                  <option value="">Select one</option>
+                  {roles.map((role) => <option value={role}>{role}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Bots fill hidden fields; people never see this one. The handler
+                accepts and drops anything that arrives with it set. */}
+            <div class="lead__trap" aria-hidden="true">
+              <label for="wl-website">Leave this blank</label>
+              <input id="wl-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <button type="submit" class="cta-primary lead__submit">
+              <span class="cta-primary__label">Join the waitlist</span>
+              <span class="cta-primary__chip" aria-hidden="true">
+                <svg aria-hidden="true" class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M2 8h11M9 4l4 4-4 4"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+
+            <p class="text-small text-sub lead__note">
+              We use this to reply and for nothing else. No newsletter, no
+              sharing it on. See the <a href="/privacy">privacy policy</a>.
+            </p>
+          </form>
+
+          <div class="lead__sent" data-lead-sent role="status" tabindex="-1" hidden>
+            <svg class="lead__check" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M4 12.5 9.5 18 20 6.5"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <p class="heading-xsmall">You are on the list.</p>
+            <p class="text-small text-sub lead__sent-note">
+              We will be in touch as departments open up. If your email client
+              opened instead, hit send to finish.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<script>
+  // Confirm first, deliver second. The panel swaps the moment you submit, and a
+  // mail draft is the backstop when /api/lead has no channel configured or the
+  // network fails, so a signup is never quietly lost.
+  const form = document.querySelector<HTMLFormElement>('[data-lead-form]');
+  const sent = document.querySelector<HTMLElement>('[data-lead-sent]');
+
+  if (form && sent) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const data = new FormData(form);
+      const lead = {
+        name: String(data.get('name') ?? ''),
+        email: String(data.get('email') ?? ''),
+        org: String(data.get('org') ?? ''),
+        role: String(data.get('role') ?? ''),
+        website: String(data.get('website') ?? ''),
+        source: 'waitlist',
+      };
+
+      form.hidden = true;
+      sent.hidden = false;
+      sent.focus();
+
+      let ok = false;
+      try {
+        const response = await fetch('/api/lead', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(lead),
+        });
+        ok = response.ok;
+      } catch {
+        ok = false;
+      }
+
+      if (!ok) {
+        const body = [
+          lead.name && `Name: ${lead.name}`,
+          `Work email: ${lead.email}`,
+          lead.org && `Organization: ${lead.org}`,
+          lead.role && `Role: ${lead.role}`,
+          '',
+          'Please add me to the Solace waitlist.',
+        ]
+          .filter(Boolean)
+          .join('\n');
+        window.location.href =
+          `mailto:contacthelp.solace@gmail.com?subject=${encodeURIComponent('Solace waitlist')}` +
+          `&body=${encodeURIComponent(body)}`;
+      }
+    });
+  }
+</script>
+
+<style>
+  .wl__grid { display: flex; flex-direction: column; gap: var(--space-10x); }
+  @media (min-width: 1080.02px) {
+    .wl__grid { flex-direction: row; align-items: center; gap: var(--space-16x); }
+    .wl__grid > * { flex: 1 1 0; min-inline-size: 0; }
+  }
+
+  .wl__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5x); }
+  .wl__title { max-inline-size: 15ch; }
+  .wl__lede { max-inline-size: 46ch; }
+
+  .wl__list { display: flex; flex-direction: column; gap: var(--space-3x); max-inline-size: 46ch; }
+  .wl__list li {
+    position: relative;
+    padding-inline-start: var(--space-6x);
+    color: var(--color-text-sub);
+  }
+  /* A rule, not a bullet and not a dot. The site has no dots in it anywhere. */
+  .wl__list li::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0.72em;
+    inset-inline-start: 0;
+    inline-size: var(--space-3x);
+    block-size: 1px;
+    background-color: var(--color-border-base);
+  }
+
+  .wl__panel { padding: var(--space-8x); border-radius: var(--radius-6x); }
+  @media (min-width: 640.02px) { .wl__panel { padding: var(--space-10x); } }
+
+  .lead { display: flex; flex-direction: column; gap: var(--space-5x); }
+  .lead__field { display: flex; flex-direction: column; gap: var(--space-2x); }
+  .lead__label { color: var(--color-text-base); }
+
+  .lead__well { border-radius: var(--radius-3x); padding: var(--space-1x); }
+  .lead__input {
+    inline-size: 100%;
+    padding: var(--space-3x) var(--space-4x);
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: var(--font-size-text-medium);
+    color: var(--color-text-base);
+  }
+  .lead__input::placeholder { color: var(--color-text-disabled); }
+  .lead__input:focus-visible { outline: 2px solid var(--color-primary-base); outline-offset: 2px; border-radius: var(--radius-2x); }
+  /* The native arrow is the one control on the page that cannot be restyled
+     into the system, so the select keeps it and matches everything else. */
+  .lead__select { appearance: auto; cursor: pointer; }
+
+  .lead__trap { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .lead__submit { margin-block-start: var(--space-2x); align-self: flex-start; }
+  .lead__note { max-inline-size: 42ch; }
+  .lead__note a { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* `display: flex` is a stronger declaration than the user-agent rule that
+     makes [hidden] display:none, so without this the confirmation renders
+     underneath the form from first paint. */
+  .lead__sent[hidden] { display: none; }
+  .lead__sent { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3x); }
+  .lead__sent:focus-visible { outline: none; }
+  .lead__check { inline-size: 32px; block-size: 32px; color: var(--color-primary-base); }
+  .lead__sent-note { max-inline-size: 40ch; }
+</style>

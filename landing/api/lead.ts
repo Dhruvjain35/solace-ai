@@ -5,7 +5,8 @@
  *
  *   LEAD_WEBHOOK_URL   Slack / Discord / Zapier incoming webhook (simplest)
  *   RESEND_API_KEY     send the lead as email via Resend
- *   LEAD_TO_EMAIL      destination for the Resend email (default hello@solace.health)
+ *   LEAD_TO_EMAIL      destination for the Resend email (default contacthelp.solace@gmail.com)
+ *   LEAD_FROM_EMAIL    verified Resend sender (default waitlist@mysolaceclinic.com)
  *
  * With nothing configured it returns 501 so the client falls back to a mailto
  * compose — the lead is never silently dropped.
@@ -68,7 +69,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
 
   const webhook = process.env.LEAD_WEBHOOK_URL;
   const resendKey = process.env.RESEND_API_KEY;
-  const to = process.env.LEAD_TO_EMAIL || 'hello@solace.health';
+  const to = process.env.LEAD_TO_EMAIL || 'contacthelp.solace@gmail.com';
   let delivered = false;
 
   try {
@@ -85,7 +86,9 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         method: 'POST',
         headers: { authorization: `Bearer ${resendKey}`, 'content-type': 'application/json' },
         body: JSON.stringify({
-          from: 'Solace Leads <leads@solace.health>',
+          // Resend will only send from a domain verified on the account.
+          // mysolaceclinic.com is ours; solace.health was never.
+          from: process.env.LEAD_FROM_EMAIL || 'Solace <waitlist@mysolaceclinic.com>',
           to: [to],
           reply_to: email,
           subject: `New ${source} lead${org ? ` — ${org}` : ''}`,

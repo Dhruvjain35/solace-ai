@@ -5,32 +5,19 @@ import WordPaths from './brand/WordPaths.astro';
 /* The old footer pointed 8 links at 2 destinations: all four "Product" links
    went to /product (which redirects to /) and all four "Use cases" links went
    to /clinicians. These point at the real anchors that now exist. */
+/* Cut to what exists. Everything that pointed at a product page now points at
+   nothing, because those pages are parked in src/pages-parked/ and their URLs
+   404. A footer full of dead links is worse than a short footer. */
 const columns = [
   {
-    title: 'Product',
+    title: 'Solace',
     links: [
-      { label: 'Smart Patient Intake', href: '/#suite-intake' },
-      { label: 'Triage', href: '/#suite-triage' },
-      { label: 'Ambient Scribe', href: '/#suite-scribe' },
-      { label: 'Atlas', href: '/#suite-atlas' },
-      { label: 'Phone agent', href: '/product#phone' },
-    ],
-  },
-  {
-    title: 'Company',
-    links: [
-      { label: 'About', href: '/company' },
-      { label: 'Product', href: '/product' },
-      { label: 'Integrations', href: '/integrations' },
-      { label: 'Pricing', href: '/pricing' },
-      { label: 'Contact', href: '/contact' },
+      { label: 'Join the waitlist', href: '/waitlist' },
     ],
   },
   {
     title: 'Legal',
     links: [
-      { label: 'Security', href: '/security' },
-      { label: 'HIPAA', href: '/hipaa' },
       { label: 'Privacy', href: '/privacy' },
       { label: 'Terms', href: '/terms' },
     ],
@@ -39,7 +26,6 @@ const columns = [
     title: 'Connect',
     links: [
       { label: 'LinkedIn', href: 'https://www.linkedin.com/company/solace-health' },
-      { label: 'X', href: 'https://x.com' },
     ],
   },
 ];
