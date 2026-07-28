@@ -1,7 +1,5 @@
 # Solace — Security Architecture
 
-**Prepared for UOE Summer of Code 2026 judges.**
-
 Solace handles real patient health information. This document details every security control in the system — from the network edge to the database row — and maps each one to the relevant HIPAA technical safeguard.
 
 ---
