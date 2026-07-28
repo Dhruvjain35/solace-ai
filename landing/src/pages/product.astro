@@ -261,7 +261,7 @@ const faqs = [
   <!-- ══ Closing band ═════════════════════════════════════════════════════ -->
   <section data-background-color="primary-default" aria-labelledby="closing-heading">
     <div class="container page-section">
-      <div class="band">
+      <div class="band" data-color-scheme="dark">
         <div class="band__copy">
           <h2 id="closing-heading" class="band__heading reveal">
             Every patient knows where they stand.
@@ -495,13 +495,14 @@ const faqs = [
     padding-inline: var(--space-6x);
     padding-block: var(--space-16x);
     text-align: center;
-    background-image: linear-gradient(
-      160deg,
-      var(--solace-10) 0%,
-      var(--solace-20) 50%,
-      #a0d7c4 100%
-    );
-    color: var(--neutral-90);
+    /* A photograph, not a ramp. Dark plate, light ink — the band was the last
+       thing on the page and it was three stops of mint. */
+    background-image:
+      linear-gradient(180deg, rgb(from var(--slate-black) r g b / 0.42), rgb(from var(--slate-black) r g b / 0.62)),
+      image-set(url('/assets/photos/aurora.webp') 1x);
+    background-size: cover;
+    background-position: center;
+    color: var(--white);
   }
   @media (min-width: 640.02px) {
     .band { padding-inline: var(--space-10x); padding-block: var(--space-24x); }
@@ -515,7 +516,23 @@ const faqs = [
     letter-spacing: var(--letter-spacing-display);
     max-inline-size: 18ch;
   }
-  .band__sub { margin-block-start: var(--space-6x); max-inline-size: 44ch; color: var(--neutral-80); }
+  .band__sub { margin-block-start: var(--space-6x); max-inline-size: 44ch; color: rgb(from var(--white) r g b / 0.86); }
+
+  /* The plate travels while the band crosses. Big enough to notice — the whole
+     complaint about this page was that nothing moved. */
+  @keyframes band-plate {
+    from { background-position: center 30%; background-size: 128%; }
+    to   { background-position: center 70%; background-size: 112%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .band {
+        animation: band-plate linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
+  }
   .band__actions {
     margin-block-start: var(--space-9x);
     display: flex;

@@ -1,13 +1,21 @@
 ---
-/* Visual is a graded sky plate from the same pipeline as the hero, so the two
-   read as one world. See public/assets/hero/CREDITS.md. */
+/* The visual is a photograph of two hands cupping warm light on black.
+
+   It replaces a cloudscape, and the swap is the point: the section says calm
+   should be standard care, and a sky says calm without saying care. Hands
+   holding a light say both, and they do it without a stock clinician in a
+   corridor — which would have said neither and looked like filler.
+
+   Shot on near-black, so it screens into this section the way the hero subject
+   screens into the top of the page rather than sitting in a box on top of it.
+   See public/assets/photos/CREDITS.md. */
 ---
 
 <section class="manifesto" data-color-scheme="dark" aria-labelledby="manifesto-heading">
   <div class="container page-section manifesto__inner">
     <picture class="manifesto__visual">
-      <source srcset="/assets/hero/manifesto.webp 1x, /assets/hero/manifesto@2x.webp 2x" type="image/webp" />
-      <img src="/assets/hero/manifesto.webp" alt="" width="800" height="658" loading="lazy" decoding="async" />
+      <source srcset="/assets/photos/hands@1x.webp 1x, /assets/photos/hands.webp 2x" type="image/webp" />
+      <img src="/assets/photos/hands.webp" alt="" width="1600" height="1067" loading="lazy" decoding="async" />
     </picture>
 
     <div class="manifesto__copy">
@@ -48,20 +56,34 @@
   /* Same graded sky pipeline as the hero, so the two plates read as one
      world. Replaces the CSS-only fallback, which was three overlapping blurs
      and looked like a placeholder next to a photographic hero. */
+  /* No frame and no shadow. The plate is on black, so a radius and a box
+     shadow would draw a rectangle around something that has no edges — the
+     mask lets it dissolve into the section instead. */
+  /* Screened, not framed. The plate is shot on near-black, so screen takes its
+     background to nothing for free and the hands appear to be lit BY the
+     section rather than pasted into it — the same compositing the hero uses on
+     its subject, which is why the two now read as one world.
+
+     The mask has to reach transparent well before the edges or the rectangle
+     survives. At 42%/100% the top edge was still around half opacity and the
+     straight line was plainly visible. */
   .manifesto__visual {
     display: block;
-    border-radius: var(--radius-5x);
     overflow: hidden;
-    box-shadow: var(--elevation-medium);
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(ellipse 78% 76% at 48% 52%, #000 18%, transparent 76%);
+            mask-image: radial-gradient(ellipse 78% 76% at 48% 52%, #000 18%, transparent 76%);
   }
   .manifesto__visual img { display: block; inline-size: 100%; }
 
   /* Parallax, bound to the section's own travel rather than a clock, so it
      tracks the scroll in both directions. A still plate in a box was the one
      thing on the page that did not respond to being scrolled past at all. */
+  /* A real move, not a nudge. It arrives pushed down and oversized and settles
+     as the section crosses — big enough to notice, slow enough not to shout. */
   @keyframes manifesto-drift {
-    from { scale: 1.12; translate: 0 -3%; }
-    to   { scale: 1.12; translate: 0 3%; }
+    from { scale: 1.26; translate: 0 7%; }
+    to   { scale: 1.04; translate: 0 -4%; }
   }
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: view()) {
