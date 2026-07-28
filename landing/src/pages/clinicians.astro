@@ -282,10 +282,23 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 62% 26% at 14% 12%, rgb(196 190 240 / 0.34), transparent 72%),
-      radial-gradient(ellipse 54% 22% at 92% 30%, rgb(178 206 236 / 0.30), transparent 70%),
-      radial-gradient(ellipse 70% 24% at 60% 62%, rgb(from var(--solace-30) r g b / 0.34), transparent 72%),
-      radial-gradient(ellipse 78% 26% at 30% 96%, rgb(from var(--solace-30) r g b / 0.40), transparent 74%);
+      /* Two very large off-axis lights. Each fades to its OWN hue at zero
+         alpha rather than to `transparent` — `transparent` is rgba(0,0,0,0),
+         so a fade to it interpolates through black and leaves a grey halo
+         around every stop. */
+      radial-gradient(128% 46% at 4% 12%, rgb(196 190 240 / 0.42), rgb(196 190 240 / 0) 74%),
+      radial-gradient(120% 44% at 98% 66%, rgb(from var(--solace-30) r g b / 0.44), rgb(from var(--solace-30) r g b / 0) 76%),
+      /* The through-line. This is the piece that was missing: without a wash
+         running the full height there were white gaps between the coloured
+         zones, and a white gap between two tints is a band, which is exactly
+         what looked like a seam at every section boundary. */
+      linear-gradient(180deg,
+        rgb(255 255 255) 0%,
+        rgb(241 239 251 / 0.58) 16%,
+        rgb(236 243 247 / 0.52) 40%,
+        rgb(230 244 238 / 0.58) 64%,
+        rgb(233 246 240 / 0.52) 86%,
+        rgb(255 255 255) 100%);
   }
   .hero, .act, .limits, .close, .say {
     position: relative;
