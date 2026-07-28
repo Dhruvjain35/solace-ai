@@ -63,3 +63,48 @@ is the obvious next candidate.
   how clean the matte was. That is a wrong-photo problem, not a compositing one.
 - `photo-1560837616-fee1f3d8753a` cloudscape and its three parallax cuts,
   replaced by the CSS gradient field.
+
+
+## The scroll morph — added 2026-07-27
+
+**nurse.webp / nurse@2x.webp** — the same subject in scrubs, supplied by the
+client as a generated frame (1024x1536, with a usable alpha channel already in
+the PNG). It is the same face and the same head angle, which is the only reason
+a morph works at all: two different people revealed through a moving edge read
+as a cut, not a change.
+
+Built by `scratchpad/build3.mjs`, in this order and for these reasons:
+
+1. **Denoise 0.6px at source resolution.** The frame carries heavy generation
+   grain. Left in, it survives the 1.93x upscale and costs megabytes, because
+   noise is incompressible. It also slightly feathers the alpha edge, which
+   helps the hair sit into the plate the way the original's does.
+2. **Register to the original.** Scale and offset came from a whole-frame
+   normalised cross-correlation (`scratchpad/reg2.mjs`): width 1974, offset
+   (-326, +19), NCC 0.697. Two earlier attempts failed and are worth recording:
+   a skin-mask bounding box disagreed with itself (scale 2.50 by width, 1.56 by
+   height) because the "warm skin" test also catches lit hair, and a template
+   NCC that called sharp inside the offset loop would have run for hours.
+3. **Composite over pure black, then grade.** Grading while still transparent
+   multiplies un-premultiplied edge pixels and fringes the hair.
+4. **Grade chromaticity, not exposure.** Matching the original's lit-region mean
+   outright needs R x1.43 and clips every skin highlight. G x0.831 and B x0.549
+   against R puts both frames on the same colour axis and leaves highlights
+   alone. Measured lit means: original R228.8 G148.1 B75.2, nurse R160.2 G124.8
+   B95.9.
+5. **Smoothstep fade from 62% down.** The source ends at 85% of the canvas;
+   without it the morph reveals a hard horizontal cut across her torso. The
+   original needs no equivalent because its torso is black all the way down.
+
+One bug worth remembering: compositing an RGBA crop onto an RGB canvas promotes
+the raw buffer to FOUR channels. The fade loop indexed in threes and scrambled
+every pixel. It did not look obviously broken, but the WebP came out at 3MB
+instead of 183KB, because scrambled pixels are noise. The file size is what
+caught it.
+
+Result: 87KB and 183KB, against 81KB and 310KB for the original pair.
+
+**Likeness note.** This frame depicts the same identifiable person as
+subject.webp, who has no model release. The generated uniform makes her appear
+to be a healthcare professional. That is a client-supplied asset and a client
+decision; it is recorded here because it is not obvious from the file.

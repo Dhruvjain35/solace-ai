@@ -1,11 +1,10 @@
 ---
 import CtaPrimary from './CtaPrimary.astro';
 
-/* The second subject for the scroll morph. Null until a photograph exists that
-   can actually carry it — see the note in the style block below for what the
-   shot has to be. With it null the hero renders exactly as before rather than
-   shipping a broken image, and turning the morph on is this one line. */
-const MORPH_SRC: string | null = null;
+/* The second subject for the scroll morph. Same person, in scrubs, registered
+   onto the first frame so the change reads as one figure rather than two.
+   See public/assets/hero/CREDITS.md for how it was built. */
+const MORPH_SRC: string | null = '/assets/hero/nurse';
 
 /* The background is not an image. It is four coloured lights drifting over a
    near-black base, each its own element so the motion is a GPU transform rather
@@ -263,19 +262,52 @@ const MORPH_SRC: string | null = null;
        - the same warm directional key against the cool plate
        - 862x1750 and 1725x3500, to match the existing pair
      A stock nurse photograph on white or grey cannot be used here at all. */
+  /* The mask is three times the height of the figure, so the window onto it is
+     one third. The polarity has to be read carefully, and having it backwards
+     is what made her visible before a single pixel of scroll:
+
+       mask-position 0% 100%  -> the mask's BOTTOM third fills the window, which
+                                 is the transparent band. Nurse hidden.
+       mask-position 0%   0%  -> the mask's TOP third fills the window, which is
+                                 the opaque band. Nurse fully revealed.
+
+     The ramp sits between 40% and 60% of the mask, so the edge crossing the
+     frame is about 60% of the figure's height: soft enough that no hard line is
+     ever visible, tight enough that it still reads as an edge travelling rather
+     than a dissolve. */
+  /* Both figures are masked, with COMPLEMENTARY ramps. This is the part that
+     matters and it is not optional: screen is additive, so if the first figure
+     stayed fully opaque while the second faded in on top of it, every pixel
+     where both are partly present would come out BRIGHTER than either alone.
+     That is what put a pale doubled outline down her jaw and shoulder.
+
+     With complementary masks the two alphas sum to one at every point in the
+     sweep, so there is no region where the composite is carrying more light
+     than a single figure would. */
   .hero__figure--morph {
     position: absolute;
     inset: 0;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 38%);
-            mask-image: linear-gradient(180deg, transparent 0%, #000 38%);
-    -webkit-mask-size: 100% 240%;
-            mask-size: 100% 240%;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 60%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 60%, transparent 100%);
+    -webkit-mask-size: 100% 300%;
+            mask-size: 100% 300%;
     -webkit-mask-repeat: no-repeat;
             mask-repeat: no-repeat;
-    /* Fully masked out at rest. */
     -webkit-mask-position: 0% 100%;
             mask-position: 0% 100%;
   }
+  /* The inverse mask on the outgoing figure. Same geometry, opposite band. */
+  .hero__stage:has(.hero__figure--morph) .hero__figure:not(.hero__figure--morph) {
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 40%, #000 60%, #000 100%);
+            mask-image: linear-gradient(180deg, transparent 0%, transparent 40%, #000 60%, #000 100%);
+    -webkit-mask-size: 100% 300%;
+            mask-size: 100% 300%;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-position: 0% 100%;
+            mask-position: 0% 100%;
+  }
+
   @keyframes hero-morph {
     to {
       -webkit-mask-position: 0% 0%;
@@ -283,13 +315,24 @@ const MORPH_SRC: string | null = null;
     }
   }
   @media (prefers-reduced-motion: no-preference) {
-    @supports (animation-timeline: view()) {
+    @supports (animation-timeline: scroll()) {
       .hero__figure--morph {
         animation: hero-morph linear both;
-        animation-timeline: --homepage-hero-section;
-        /* Starts as the hero begins to leave and completes well before it is
-           gone, so the change happens while it is still being looked at. */
-        animation-range: exit 5% exit 65%;
+        /* The document's own scroll, not the hero's view timeline. A view
+           timeline measures how far a section has travelled THROUGH the
+           viewport, and the hero starts already covering it, so at scrollTop
+           zero its progress is not zero and the morph would be part-done
+           before the page is touched. scroll(root) is zero at zero, which is
+           what "as I start scrolling" actually means. */
+        animation-timeline: scroll(root block);
+        animation-range: 0 640px;
+      }
+      /* Driven by the same keyframes on the same timeline, so the two ramps
+         cannot drift apart by even a frame. */
+      .hero__stage:has(.hero__figure--morph) .hero__figure:not(.hero__figure--morph) {
+        animation: hero-morph linear both;
+        animation-timeline: scroll(root block);
+        animation-range: 0 640px;
       }
     }
   }
