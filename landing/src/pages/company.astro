@@ -2,6 +2,8 @@
 import Page from '../layouts/Page.astro';
 import PageHeader from '../components/PageHeader.astro';
 import CtaPrimary from '../components/CtaPrimary.astro';
+import PhoneFrame from '../components/mockups/PhoneFrame.astro';
+import ScreenWelcome from '../components/mockups/ScreenWelcome.astro';
 
 /* Ported from legacy/src/pages/Company.tsx.
    Scene order is preserved exactly: mega opening, mission scrub, the welcome
@@ -114,17 +116,13 @@ const numbers = [
         </p>
       </div>
 
-      <figure class="promise__figure neu-well">
-        <span class="promise__shot">
-          <img
-            src="/assets/screens/welcome.webp"
-            alt="The Solace welcome screen on a patient's phone, headed “You’re not waiting alone.”"
-            width="1179"
-            height="2556"
-            loading="lazy"
-            decoding="async"
-          />
-</span>
+      <!-- Live DOM in the real device shell. This was a 560px capture scaled
+           into a well; the screen the copy above is about deserves to be the
+           actual screen, sharp at any density. -->
+      <figure class="promise__figure">
+        <div class="promise__device">
+          <PhoneFrame width="clamp(220px, 30vw, 300px)"><ScreenWelcome /></PhoneFrame>
+        </div>
       </figure>
     </div>
   </section>
@@ -258,23 +256,25 @@ const numbers = [
     );
   }
 
-  /* The screenshot is a full 1179x2556 phone capture, so it is capped by
-     height and centred in a recessed well rather than sized by width. */
+  /* The same tinted stage the acts on /how-it-works use, so a device looks the
+     same wherever it appears on the site. */
   .promise__figure {
+    position: relative;
+    overflow: hidden;
     margin: 0;
-    display: flex;
-    justify-content: center;
-    padding: var(--space-8x) var(--space-6x);
+    display: grid;
+    place-items: center;
+    padding: var(--space-10x) var(--space-5x);
+    border-radius: var(--radius-8x);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 18%);
+    background-image:
+      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 55%), transparent 72%),
+      linear-gradient(158deg, var(--solace-10) 0%, var(--solace-20) 52%, #a0d7c4 100%);
   }
-  .promise__shot { position: relative; display: inline-block; line-height: 0; max-inline-size: 100%; }
-  .promise__figure img {
-    inline-size: auto;
-    max-inline-size: 100%;
-    max-block-size: 520px;
-    object-fit: contain;
-    border-radius: var(--radius-4x);
-    box-shadow: var(--elevation-medium);
+  @media (min-width: 640.02px) {
+    .promise__figure { padding: var(--space-12x) var(--space-8x); }
   }
+  .promise__device { position: relative; }
 
   /* ── Beliefs ─────────────────────────────────────────────────────────── */
   .beliefs { display: flex; flex-direction: column; gap: var(--space-10x); }

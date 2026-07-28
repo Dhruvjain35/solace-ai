@@ -1,0 +1,306 @@
+---
+/* Letters and forms — and a 6s film.
+
+   The visit note is the famous part. The paperwork is the part that actually
+   eats the evening: work notes, school notes, FMLA, return-to-play, fitness to
+   travel. Every one of them is a form somebody fills in by hand from a chart
+   they have to re-read first.
+
+   So the clip is not "look, a document". It is: pick the form, and it is
+   already written from the visit that just happened — down to the signature
+   line, which is the one thing Solace deliberately does NOT fill.
+
+   Neumorphic rules per materials.css: light from directly above so offsets are
+   Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the offset,
+   real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   6.0s.
+
+     0.00s   the library on the left, an empty sheet on the right
+     0.42s   the cursor crosses to "Work or school note"
+     0.90s   click — the template takes the selection
+     1.20s   the sheet fills itself in, clause by clause, from the visit
+     3.30s   the clinician's signature strokes across the line. A human signs;
+             the draft is only ever a draft until they do.
+     4.50s   sent
+     5.10s   hold
+     5.58s   dissolve back; 100% equals 0% so the loop has no seam */
+import ClipCursor from './ClipCursor.astro';
+
+const templates = [
+  'Work or school note',
+  'FMLA certification',
+  'Return to play',
+  'Fitness to travel',
+  'Medical necessity',
+];
+---
+
+<div class="lt" data-clip>
+  <div class="lt__head">
+    <span class="lt__title">Letters and forms</span>
+    <span class="lt__meta">Drafted from today&rsquo;s visit</span>
+  </div>
+
+  <div class="lt__body">
+    <div class="lt__lib">
+      <p class="lt__label"><b>24</b> templates, chart-aware</p>
+      <ul class="lt__list">
+        {templates.map((name, i) => (
+          <li class:list={['lt__tpl', i === 0 && 'lt__tpl--on']}>{name}</li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="lt__paper">
+      <p class="lt__idle" aria-hidden="true">Pick a form. Solace fills it from the chart.</p>
+
+      <div class="lt__sheet">
+        <p class="lt__sheet-head">
+          <span class="lt__sheet-title">Work or school note</span>
+          <span class="lt__sent">Sent to the patient</span>
+        </p>
+        <p class="lt__pg lt__pg--a">To whom it may concern,</p>
+        <p class="lt__pg lt__pg--b">
+          Marisol was evaluated in our emergency department today for chest
+          tightness. She was assessed, observed, and discharged in stable
+          condition.
+        </p>
+        <p class="lt__pg lt__pg--c">
+          She may return to work on Monday. No strenuous activity for 48 hours.
+        </p>
+
+        <div class="lt__sign">
+          <svg class="lt__ink" viewBox="0 0 200 52" fill="none" aria-hidden="true">
+            <path
+              pathLength="1"
+              d="M6 40C16 12 27 8 31 24c4 16-4 24-8 14s7-22 21-18c10 3 12 16 20 16 10 0 14-18 24-18 8 0 8 18 16 18 10 0 14-24 26-22 10 2 6 22 16 24 12 2 20-12 36-16"
+              stroke="var(--slate-black)"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span class="lt__rule"></span>
+          <span class="lt__by">Signed by the treating clinician</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <span class="lt__cursor" aria-hidden="true"><ClipCursor /></span>
+</div>
+
+<style>
+  .lt {
+    --clip-dur: 6s;
+    position: relative;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.6cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .lt__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .lt__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .lt__meta { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-80); }
+
+  .lt__body { display: grid; gap: 3.2cqw; }
+  @container (min-width: 420px) { .lt__body { grid-template-columns: 33% 1fr; align-items: start; } }
+
+  /* Pressed in: the library is a source you pick from, not an artefact. */
+  .lt__lib {
+    display: flex; flex-direction: column; gap: 2.4cqw;
+    padding: 3.6cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+  }
+  .lt__label { font-size: 2.9cqw; color: var(--neutral-80); }
+  .lt__label b { color: var(--solace-80); font-weight: var(--font-weight-semibold); font-size: 3.8cqw; }
+  .lt__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.4cqw; }
+  .lt__tpl {
+    padding: 2.2cqw 2.8cqw;
+    border-radius: var(--radius-2x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.16);
+    font-size: 3cqw;
+    color: var(--neutral-80);
+  }
+  .lt__tpl--on {
+    background-color: var(--solace-10);
+    border-color: rgb(from var(--solace-60) r g b / 0.45);
+    color: var(--solace-100);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Raised: the sheet is the thing being made. */
+  .lt__paper {
+    position: relative;
+    display: grid;
+    min-block-size: 46cqw;
+    padding: 4cqw 4.2cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.20);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.10),
+      0 8px 20px rgb(from var(--neutral-40) r g b / 0.14);
+  }
+  .lt__paper > .lt__idle,
+  .lt__paper > .lt__sheet { grid-area: 1 / 1; }
+  .lt__idle {
+    align-self: center;
+    justify-self: center;
+    max-inline-size: 24ch;
+    text-align: center;
+    font-size: 3.1cqw;
+    line-height: 1.5;
+    color: var(--neutral-60);
+    opacity: 0;
+  }
+
+  .lt__sheet { display: flex; flex-direction: column; gap: 2.2cqw; }
+  /* The sent chip sits IN the title row. Floated over the corner it landed on
+     top of the document title, which is the one line that has to stay legible. */
+  .lt__sheet-head { display: flex; align-items: center; gap: 2.4cqw; }
+  .lt__sheet-title { font-size: 3.4cqw; font-weight: var(--font-weight-semibold); color: var(--solace-80); }
+  .lt__pg { font-size: 3cqw; line-height: 1.55; color: var(--neutral-90); }
+
+  .lt__sign { position: relative; margin-block-start: auto; padding-block-start: 6cqw; }
+  /* The stroke sits ON the rule, overlapping it the way a real signature does,
+     rather than in a box above it. */
+  .lt__ink {
+    position: absolute;
+    inset-block-end: 3.4cqw;
+    inset-inline-start: 1cqw;
+    inline-size: 34cqw;
+    block-size: auto;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+  .lt__rule { display: block; block-size: 1px; background-color: var(--neutral-30); }
+  .lt__by { display: block; margin-block-start: 1.4cqw; font-size: 2.7cqw; color: var(--neutral-60); }
+
+  .lt__sent {
+    margin-inline-start: auto;
+    flex: none;
+    padding: 1.2cqw 2.6cqw;
+    border-radius: 100px;
+    background-color: var(--solace-10);
+    color: var(--solace-80);
+    font-size: 2.7cqw;
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Parked over the first template. The clip brings it here from the corner. */
+  .lt__cursor {
+    position: absolute;
+    inset-block-start: 34cqw;
+    inset-inline-start: 15cqw;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  @keyframes lt-cursor {
+    0%      { opacity: 0; translate: 46cqw 22cqw; }
+    5%      { opacity: 1; translate: 46cqw 22cqw; }
+    14%     { opacity: 1; translate: 0 0; }
+    26%     { opacity: 1; translate: 0 0; }
+    34%     { opacity: 0; translate: 40cqw 18cqw; }
+    100%    { opacity: 0; translate: 46cqw 22cqw; }
+  }
+  @keyframes lt-click {
+    0%, 14%   { opacity: 0; scale: 0.3; }
+    16%       { opacity: 0.55; }
+    22%, 100% { opacity: 0; scale: 1.8; }
+  }
+  @keyframes lt-select {
+    0%, 15%  {
+      background-color: var(--white);
+      border-color: rgb(from var(--neutral-40) r g b / 0.16);
+      color: var(--neutral-80);
+    }
+    18%, 93% {
+      background-color: var(--solace-10);
+      border-color: rgb(from var(--solace-60) r g b / 0.45);
+      color: var(--solace-100); animation-timing-function: steps(1, end); }
+    100%     {
+      background-color: var(--white);
+      border-color: rgb(from var(--neutral-40) r g b / 0.16);
+      color: var(--neutral-80);
+    }
+  }
+  @keyframes lt-idle {
+    0%, 15%  { opacity: 1; }
+    19%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes lt-title {
+    0%, 16%  { opacity: 0; }
+    21%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes lt-pg-a {
+    0%, 20%  { opacity: 0; filter: blur(2px); }
+    25%, 93% { opacity: 1; filter: blur(0); }
+    100%     { opacity: 0; filter: blur(2px); }
+  }
+  @keyframes lt-pg-b {
+    0%, 26%  { opacity: 0; filter: blur(2px); }
+    33%, 93% { opacity: 1; filter: blur(0); }
+    100%     { opacity: 0; filter: blur(2px); }
+  }
+  @keyframes lt-pg-c {
+    0%, 36%  { opacity: 0; filter: blur(2px); }
+    43%, 93% { opacity: 1; filter: blur(0); }
+    100%     { opacity: 0; filter: blur(2px); }
+  }
+  /* pathLength="1" makes the dash units fractions of the stroke, so the wipe is
+     exact no matter what the path geometry actually measures. */
+  @keyframes lt-ink {
+    0%, 52%  { stroke-dashoffset: 1; }
+    72%, 93% { stroke-dashoffset: 0; animation-timing-function: steps(1, end); }
+    100%     { stroke-dashoffset: 1; }
+  }
+  @keyframes lt-sent {
+    0%, 74%  { opacity: 0; scale: 0.85; }
+    80%, 93% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.85; }
+  }
+
+  .lt[data-play] .lt__cursor { animation: lt-cursor var(--clip-dur) var(--ease-hero) infinite both; }
+  .lt[data-play] .lt__cursor::after {
+    content: '';
+    position: absolute;
+    inset-block-start: -2.2cqw;
+    inset-inline-start: -2.2cqw;
+    inline-size: 8cqw;
+    block-size: 8cqw;
+    border-radius: 100px;
+    border: 0.55cqw solid var(--solace-60);
+    animation: lt-click var(--clip-dur) var(--ease-hero) infinite both;
+  }
+  .lt[data-play] .lt__tpl--on   { animation: lt-select var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__idle      { animation: lt-idle var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__sheet-title { animation: lt-title var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__pg--a     { animation: lt-pg-a var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__pg--b     { animation: lt-pg-b var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__pg--c     { animation: lt-pg-c var(--clip-dur) var(--ease-ui) infinite both; }
+  .lt[data-play] .lt__ink path  { animation: lt-ink var(--clip-dur) linear infinite both; }
+  .lt[data-play] .lt__sent      { animation: lt-sent var(--clip-dur) var(--ease-hero) infinite both; }
+</style>

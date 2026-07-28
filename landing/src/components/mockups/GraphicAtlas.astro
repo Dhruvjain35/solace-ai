@@ -1,5 +1,5 @@
 ---
-/* Atlas — the EHR copilot.
+/* Atlas — the EHR copilot. And a 6.5s film.
 
    Rebuilt light. The dark version broke the section: every other figure here
    sits on the warm neutral bed, and one near-black slab in the middle read as
@@ -13,10 +13,31 @@
    Neumorphic rules followed as set out in materials.css: light from directly
    above so every offset is Y-only, warm taupe shade rather than blue-grey,
    contrast held in the 4-18% band, blur 2-3x the offset, and a real hairline on
-   every surface so the shapes survive forced-colors. */
+   every surface so the shapes survive forced-colors.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   6.5s — the longest of the set, because this one has the most to say. A
+   clinician asks a question in plain language and gets back an answer that
+   cites itself, including from documents that were never structured data.
+
+     0.00s   an empty field. Cursor parked at the corner.
+     0.30s   it travels to the question box
+     0.90s   click — the placeholder clears
+     1.10s   the question types itself in
+     2.15s   the cursor leaves the frame; the work is Atlas's now
+     2.15s   the receipts tick in first, because that is the real order: a
+             scanned fax, an outside hospital's summary, then structured labs.
+             Two of the three were never in your EHR.
+     3.10s   the answer rises in their place
+     3.65s   the first citation lights, then the second
+     4.35s   "never completed" flashes — the thing nobody would have found
+     4.70s   the open thread is called out
+     5.15s   hold
+     6.05s   dissolve back; 100% equals 0% so the loop has no seam */
+import ClipCursor from './ClipCursor.astro';
 ---
 
-<div class="atl">
+<div class="atl" data-clip>
   <div class="atl__head">
     <span class="atl__mark" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.8v12.4M1.8 8h12.4" stroke="currentColor" stroke-width="1.1" opacity=".55"/><path d="M8 1.8c2 2 3 3.8 3 6.2s-1 4.2-3 6.2c-2-2-3-3.8-3-6.2s1-4.2 3-6.2Z" stroke="currentColor" stroke-width="1.1" opacity=".55"/></svg>
@@ -25,28 +46,42 @@
     <span class="atl__pt">Reyes, Marisol &middot; 47</span>
   </div>
 
-  <p class="atl__ask">Has she presented with this before, and what was ruled out?</p>
+  <p class="atl__ask" data-placeholder="Ask anything about this patient"
+    ><span class="atl__ph atl__ph--a">Has she presented </span
+    ><span class="atl__ph atl__ph--b">with this before, </span
+    ><span class="atl__ph atl__ph--c">and what was ruled out?</span
+  ></p>
 
-  <div class="atl__ans">
-    <p>
-      Twice. <span class="atl__cite">March 2024</span> and
-      <span class="atl__cite">November 2023</span>, both for chest tightness. ACS
-      was ruled out on the second visit by serial troponins. A stress echo was
-      ordered and <mark>never completed</mark>.
+  <div class="atl__ansbed">
+    <p class="atl__idle" aria-hidden="true">
+      Atlas holds this patient&rsquo;s whole history &mdash; including everything
+      that arrived as paper.
     </p>
+
+    <div class="atl__ans">
+      <p>
+        Twice. <span class="atl__cite atl__cite--a">March 2024</span> and
+        <span class="atl__cite atl__cite--b">November 2023</span>, both for chest tightness. ACS
+        was ruled out on the second visit by serial troponins. A stress echo was
+        ordered and <mark class="atl__mark-open">never completed</mark>.
+      </p>
+
+      <div class="atl__flag">
+        <span class="atl__flag-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.6 15 14H1L8 1.6Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 6.2v3.3M8 11.4v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
+        <span>The incomplete stress echo is the open thread from last time.</span>
+      </div>
+    </div>
   </div>
 
-  <div class="atl__flag">
-    <span class="atl__flag-icon" aria-hidden="true">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.6 15 14H1L8 1.6Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 6.2v3.3M8 11.4v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    </span>
-    <span>The incomplete stress echo is the open thread from last time.</span>
-  </div>
-
-  <p class="atl__label">Read for this answer</p>
+  <p class="atl__label">
+    <span class="atl__lbl atl__lbl--pre" aria-hidden="true">In this patient&rsquo;s chart</span>
+    <span class="atl__lbl atl__lbl--post">Read for this answer</span>
+  </p>
 
   <ul class="atl__srcs">
-    <li>
+    <li class="atl__src-row atl__src-row--a">
       <span class="atl__ico" aria-hidden="true">
         <svg viewBox="0 0 16 16" fill="none"><path d="M4 5.4V2.4h8v3M3 5.4h10a1.4 1.4 0 0 1 1.4 1.4v3.4A1.4 1.4 0 0 1 13 11.6h-1v2H4v-2H3a1.4 1.4 0 0 1-1.4-1.4V6.8A1.4 1.4 0 0 1 3 5.4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
       </span>
@@ -55,7 +90,7 @@
         <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </li>
-    <li>
+    <li class="atl__src-row atl__src-row--b">
       <span class="atl__ico" aria-hidden="true">
         <svg viewBox="0 0 16 16" fill="none"><path d="M4 2h5l3.2 3.2V14H4V2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.8 2.2v3.2H12" stroke="currentColor" stroke-width="1.3"/></svg>
       </span>
@@ -64,7 +99,7 @@
         <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </li>
-    <li>
+    <li class="atl__src-row atl__src-row--c">
       <span class="atl__ico" aria-hidden="true">
         <svg viewBox="0 0 16 16" fill="none"><path d="M6.4 2v4.3L2.8 12a1.6 1.6 0 0 0 1.4 2.4h7.6A1.6 1.6 0 0 0 13.2 12L9.6 6.3V2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.4 2h5.2M4.9 9.8h6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       </span>
@@ -76,10 +111,14 @@
   </ul>
 
   <p class="atl__foot">Reads and writes to your EHR. Every one of them logged.</p>
+
+  <span class="atl__cursor" aria-hidden="true"><ClipCursor /></span>
 </div>
 
 <style>
   .atl {
+    --clip-dur: 6.5s;
+    position: relative;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -107,11 +146,12 @@
   }
   .atl__mark svg { inline-size: 4cqw; block-size: 4cqw; }
   .atl__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
-  .atl__pt { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-60); }
+  .atl__pt { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-80); }
 
   /* Pressed into the surface rather than raised — it is an input, and the
      inset is what tells you so without a border or a label. */
   .atl__ask {
+    position: relative;
     padding: 3.2cqw 4cqw;
     border-radius: var(--radius-3x);
     background-color: var(--neutral-10);
@@ -123,9 +163,40 @@
     line-height: 1.45;
     color: var(--neutral-90);
   }
+  /* The empty state, drawn from the attribute so it can never drift from the
+     markup. Invisible in the finished frame; the clip fades it out on click. */
+  .atl__ask::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    inset-block-start: 3.2cqw;
+    inset-inline-start: 4cqw;
+    color: var(--neutral-60);
+    opacity: 0;
+  }
+
+  /* The answer and the state it replaces share one cell, so the graphic never
+     has to reserve empty space for a card that has not arrived yet. Without
+     this the clip opened on two seconds of blank plinth, which reads as a
+     rendering fault rather than as a pause. */
+  .atl__ansbed { display: grid; }
+  .atl__ansbed > * { grid-area: 1 / 1; }
+  .atl__idle {
+    align-self: center;
+    justify-self: center;
+    max-inline-size: 34ch;
+    padding-inline: 4cqw;
+    text-align: center;
+    font-size: 3.3cqw;
+    line-height: 1.5;
+    color: var(--neutral-80);
+    opacity: 0;
+  }
 
   /* Raised above the bed: the answer is the object with weight here. */
   .atl__ans {
+    display: flex;
+    flex-direction: column;
+    gap: 3.2cqw;
     padding: 4cqw 4.4cqw;
     border-radius: var(--radius-3x);
     background-color: var(--white);
@@ -149,10 +220,13 @@
     padding: 0.2cqw 1.1cqw;
   }
 
+  /* The flag belongs to the answer, so it lives inside the answer card. As a
+     sibling it reserved its own strip of empty plinth for the four seconds
+     before it arrived; here it costs nothing until the card does. */
   .atl__flag {
     display: flex; align-items: center; gap: 2.6cqw;
     padding: 3cqw 3.6cqw;
-    border-radius: var(--radius-3x);
+    border-radius: var(--radius-2_5x);
     background-color: var(--red-0);
     border: 1px solid rgb(from var(--red-30) r g b / 0.34);
     font-size: 3.2cqw;
@@ -162,7 +236,9 @@
   .atl__flag-icon { inline-size: 4.2cqw; block-size: 4.2cqw; flex: none; color: var(--red-60); }
   .atl__flag-icon svg { inline-size: 100%; block-size: 100%; }
 
-  .atl__label { font-size: 3cqw; color: var(--neutral-60); }
+  .atl__label { display: grid; font-size: 3cqw; color: var(--neutral-80); }
+  .atl__lbl { grid-area: 1 / 1; }
+  .atl__lbl--pre { opacity: 0; }
 
   .atl__srcs { margin: 0; padding: 0; list-style: none; display: grid; gap: 2.2cqw; }
   .atl__srcs li {
@@ -199,6 +275,149 @@
     padding-block-start: 3cqw;
     border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
     font-size: 3cqw;
-    color: var(--neutral-60);
+    color: var(--neutral-80);
   }
+
+  /* Parked over the question field. The clip moves it FROM the corner TO here,
+     so the resting coordinates are the ones that have to be right. */
+  .atl__cursor {
+    position: absolute;
+    inset-block-start: 21cqw;
+    inset-inline-start: 30cqw;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  @keyframes atlas-cursor {
+    0%       { opacity: 0; translate: 44cqw 52cqw; }
+    5%       { opacity: 1; translate: 44cqw 52cqw; }
+    13%      { opacity: 1; translate: 0 0; }
+    /* A real hand does not teleport off a button. It lingers, then leaves. */
+    35%      { opacity: 1; translate: 0 0; }
+    44%      { opacity: 0; translate: 40cqw 46cqw; }
+    100%     { opacity: 0; translate: 44cqw 52cqw; }
+  }
+  @keyframes atlas-click {
+    0%, 13%   { opacity: 0; scale: 0.3; }
+    15%       { opacity: 0.55; }
+    21%, 100% { opacity: 0; scale: 1.8; }
+  }
+  /* The placeholder is fully gone before the first word lands. Overlapping the
+     two put grey placeholder text directly under grey typed text and the field
+     read as double-exposed. */
+  @keyframes atlas-placeholder {
+    0%, 13%  { opacity: 1; }
+    16%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes atlas-type-a {
+    0%, 17%  { opacity: 0; }
+    21%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes atlas-type-b {
+    0%, 22%  { opacity: 0; }
+    26%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes atlas-type-c {
+    0%, 27%  { opacity: 0; }
+    31%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  /* The documents are in the chart before anyone asks anything, so the rows
+     never animate — only the TICKS do. What the clip shows is Atlas reading
+     each one, which is the actual event, and it means the lower half of the
+     graphic is never a blank reserved space waiting for content.
+
+     Reading happens before answering, which is also the honest order. */
+  @keyframes atlas-read-a {
+    0%, 33%  { opacity: 0; scale: 0.5; }
+    38%, 93% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.5; }
+  }
+  @keyframes atlas-read-b {
+    0%, 37%  { opacity: 0; scale: 0.5; }
+    42%, 93% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.5; }
+  }
+  @keyframes atlas-read-c {
+    0%, 41%  { opacity: 0; scale: 0.5; }
+    46%, 93% { opacity: 1; scale: 1; }
+    100%     { opacity: 0; scale: 0.5; }
+  }
+  @keyframes atlas-lbl-pre {
+    0%, 44%  { opacity: 1; }
+    47%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes atlas-lbl-post {
+    0%, 47%  { opacity: 0; }
+    50%, 93% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+  @keyframes atlas-idle {
+    0%, 44%  { opacity: 1; }
+    48%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes atlas-answer {
+    0%, 47%  { opacity: 0; translate: 0 2.4cqw; }
+    55%, 93% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 2.4cqw; }
+  }
+  /* Citations arrive as plain text and are then marked — the highlight is the
+     act of attribution, so it has to happen visibly after the sentence. */
+  @keyframes atlas-cite-a {
+    0%, 56%  { background-color: transparent; color: var(--neutral-90); }
+    60%, 93% { background-color: var(--solace-10); color: var(--solace-100); animation-timing-function: steps(1, end); }
+    100%     { background-color: transparent; color: var(--neutral-90); }
+  }
+  @keyframes atlas-cite-b {
+    0%, 60%  { background-color: transparent; color: var(--neutral-90); }
+    64%, 93% { background-color: var(--solace-10); color: var(--solace-100); animation-timing-function: steps(1, end); }
+    100%     { background-color: transparent; color: var(--neutral-90); }
+  }
+  @keyframes atlas-open {
+    0%, 65%  { background-color: transparent; color: var(--neutral-90); }
+    69%      { background-color: var(--red-10); color: var(--red-90); }
+    74%, 93% { background-color: var(--red-0); color: var(--red-90); animation-timing-function: steps(1, end); }
+    100%     { background-color: transparent; color: var(--neutral-90); }
+  }
+  @keyframes atlas-flag {
+    0%, 72%  { opacity: 0; translate: 0 1.8cqw; }
+    79%, 93% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.8cqw; }
+  }
+
+  .atl[data-play] .atl__cursor {
+    animation: atlas-cursor var(--clip-dur) var(--ease-hero) infinite both;
+  }
+  .atl[data-play] .atl__cursor::after {
+    content: '';
+    position: absolute;
+    inset-block-start: -2.2cqw;
+    inset-inline-start: -2.2cqw;
+    inline-size: 8cqw;
+    block-size: 8cqw;
+    border-radius: 100px;
+    border: 0.55cqw solid var(--solace-60);
+    animation: atlas-click var(--clip-dur) var(--ease-hero) infinite both;
+  }
+  .atl[data-play] .atl__ask::before  { animation: atlas-placeholder var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__ph--a        { animation: atlas-type-a var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__ph--b        { animation: atlas-type-b var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__ph--c        { animation: atlas-type-c var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__idle         { animation: atlas-idle var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__ans          { animation: atlas-answer var(--clip-dur) var(--ease-hero) infinite both; }
+  .atl[data-play] .atl__cite--a      { animation: atlas-cite-a var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__cite--b      { animation: atlas-cite-b var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__mark-open    { animation: atlas-open var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__src-row--a .atl__tick { animation: atlas-read-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .atl[data-play] .atl__src-row--b .atl__tick { animation: atlas-read-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .atl[data-play] .atl__src-row--c .atl__tick { animation: atlas-read-c var(--clip-dur) var(--ease-hero) infinite both; }
+  .atl[data-play] .atl__lbl--pre     { animation: atlas-lbl-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__lbl--post    { animation: atlas-lbl-post var(--clip-dur) var(--ease-ui) infinite both; }
+  .atl[data-play] .atl__flag         { animation: atlas-flag var(--clip-dur) var(--ease-hero) infinite both; }
 </style>

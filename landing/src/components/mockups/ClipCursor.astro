@@ -1,0 +1,30 @@
+---
+/* The pointer used inside product clips.
+
+   Appearance only. Every clip owns its own path and its own click ring, drawn
+   on the positioned wrapper it sits in — a shared cursor that also carried its
+   choreography would have to know about every graphic it appears in.
+
+   Drawn rather than imaged: it has to stay crisp at whatever size the graphic
+   renders at, and it has to pick up the drop shadow that separates it from a
+   white card underneath. */
+---
+
+<svg class="cur" viewBox="0 0 14 20" fill="none" aria-hidden="true">
+  <path
+    d="M1.2 1.1 12.4 11.6H6.9l-1.6.2-.4 1.5-1.7 5.4Z"
+    fill="var(--white)"
+    stroke="var(--neutral-100)"
+    stroke-width="1.3"
+    stroke-linejoin="round"
+  />
+</svg>
+
+<style>
+  .cur {
+    display: block;
+    inline-size: 4.6cqw;
+    block-size: auto;
+    filter: drop-shadow(0 1px 2px rgb(from var(--neutral-100) r g b / 0.28));
+  }
+</style>

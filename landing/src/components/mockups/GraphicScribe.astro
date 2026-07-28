@@ -1,5 +1,5 @@
 ---
-/* Ambient scribe — a clinician-side surface, not a phone.
+/* Ambient scribe — a clinician-side surface, not a phone. And a 6s film.
 
    The phone belongs to the patient. Intake is the only patient-facing step in
    this section; the scribe runs in the room while the clinician works, so it is
@@ -13,23 +13,39 @@
 
    Neumorphic rules per materials.css: light from directly above so every offset
    is Y-only, warm taupe shade, contrast in the 4-18% band, blur 2-3x the
-   offset, real hairline on every surface. */
+   offset, real hairline on every surface.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   6.0s. The whole point is CAUSALITY, so the cut is built around it: the
+   patient says a thing, and a beat later that exact clause appears in the note
+   already carrying its citation. Watch the left and the right light up together
+   at 2.6s — that link is the product.
+
+     0.00s   room mic live, transcript empty, note empty
+     0.36s   the clinician's question lands
+     1.08s   the patient answers. Their line takes the accent rail.
+     1.80s   the first clause is drafted from what was already said
+     2.52s   "worse when lying flat" writes itself — and the spoken line it came
+             from brightens at the same instant
+     3.36s   the remaining negatives are drafted
+     4.32s   the note is ready for a human to read and sign
+     5.52s   dissolve back; 100% equals 0% so the loop has no seam */
 ---
 
-<div class="scb">
+<div class="scb" data-clip>
   <div class="scb__head">
     <span class="scb__live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
     <span class="scb__title">Listening in the room</span>
-    <span class="scb__time">04:18</span>
+    <span class="scb__time" aria-hidden="true">04:1<span class="scb__tick"><span class="scb__strip"><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i></span></span></span>
   </div>
 
   <div class="scb__panes">
     <div class="scb__said">
       <p class="scb__label">What was said</p>
-      <p class="scb__line"><b>Clinician</b>Does anything make it worse?</p>
+      <p class="scb__line scb__line--a"><b>Clinician</b>Does anything make it worse?</p>
       <p class="scb__line scb__line--src"><b>Patient</b>It gets worse when I lie down flat.</p>
-      <p class="scb__line"><b>Clinician</b>Any fever or fainting?</p>
-      <p class="scb__line"><b>Patient</b>No, neither.</p>
+      <p class="scb__line scb__line--c"><b>Clinician</b>Any fever or fainting?</p>
+      <p class="scb__line scb__line--d"><b>Patient</b>No, neither.</p>
     </div>
 
     <div class="scb__note">
@@ -37,12 +53,20 @@
         <span>Visit note</span>
         <span class="scb__state">Drafting</span>
       </div>
-      <p class="scb__body">
-        Substernal chest tightness with exertional dyspnoea,
-        <span class="scb__cited">worse when lying flat</span>. No fever, no
-        syncope.
-      </p>
-      <p class="scb__attr">Every line traces back to the moment it came from.</p>
+      <div class="scb__notebed">
+        <p class="scb__idle" aria-hidden="true">
+          Nothing to type. The note drafts from the room.
+        </p>
+
+        <div class="scb__drafted">
+          <p class="scb__body"
+            ><span class="scb__ph scb__ph--a">Substernal chest tightness with exertional dyspnoea, </span
+            ><span class="scb__ph scb__ph--b"><span class="scb__cited">worse when lying flat</span>. </span
+            ><span class="scb__ph scb__ph--c">No fever, no syncope.</span
+          ></p>
+          <p class="scb__attr">Every line traces back to the moment it came from.</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -54,6 +78,7 @@
 
 <style>
   .scb {
+    --clip-dur: 6s;
     inline-size: 100%;
     display: flex;
     flex-direction: column;
@@ -70,18 +95,36 @@
   }
 
   .scb__head { display: flex; align-items: center; gap: 2.6cqw; }
-  /* A captured level readout with fixed bar heights. It does not animate. */
-  .scb__live { display: flex; align-items: center; gap: 0.9cqw; block-size: 5cqw; flex: none; }
+  /* A room-level readout: thin bars, height-modulated. */
+  .scb__live { display: flex; align-items: center; gap: 1cqw; block-size: 5.4cqw; flex: none; }
   .scb__live i {
-    inline-size: 0.9cqw; border-radius: 0.45cqw;
+    /* Thin. At 0.9cqw against a 5cqw well the short bars were nearly square and
+       started reading as a row of dots, which is the one thing this must not
+       look like. */
+    inline-size: 0.6cqw; border-radius: 0.3cqw;
     background-color: var(--solace-60);
+    block-size: var(--h);
   }
-  .scb__live i:nth-child(1) { block-size: 36% } .scb__live i:nth-child(2) { block-size: 72% }
-  .scb__live i:nth-child(3) { block-size: 96% } .scb__live i:nth-child(4) { block-size: 54% }
-  .scb__live i:nth-child(5) { block-size: 84% } .scb__live i:nth-child(6) { block-size: 42% }
-  .scb__live i:nth-child(7) { block-size: 68% } .scb__live i:nth-child(8) { block-size: 30% }
+  .scb__live i:nth-child(1) { --h: 36%; --l: 78% } .scb__live i:nth-child(2) { --h: 72%; --l: 30% }
+  .scb__live i:nth-child(3) { --h: 96%; --l: 42% } .scb__live i:nth-child(4) { --h: 54%; --l: 88% }
+  .scb__live i:nth-child(5) { --h: 84%; --l: 34% } .scb__live i:nth-child(6) { --h: 42%; --l: 80% }
+  .scb__live i:nth-child(7) { --h: 68%; --l: 26% } .scb__live i:nth-child(8) { --h: 30%; --l: 66% }
   .scb__title { font-size: 3.4cqw; font-weight: var(--font-weight-medium); }
-  .scb__time { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-60); font-variant-numeric: tabular-nums; }
+  /* line-height 1 on all three of these is load-bearing. An overflow-hidden
+     inline-block takes its baseline from its bottom margin edge, so the window
+     only sits on the text baseline if its box and the surrounding line box are
+     the same height. Any mismatch drops the rolling digit below its neighbours,
+     which is exactly what it did at 1.3em inside a 1.5 line box. */
+  .scb__time {
+    margin-inline-start: auto;
+    font-size: 3.1cqw;
+    line-height: 1;
+    color: var(--neutral-60);
+    font-variant-numeric: tabular-nums;
+  }
+  .scb__tick { display: inline-block; block-size: 1em; overflow: hidden; vertical-align: bottom; }
+  .scb__strip { display: block; translate: 0 -83.333%; }
+  .scb__strip i { display: block; block-size: 1em; line-height: 1; font-style: normal; }
 
   .scb__panes { display: grid; gap: 3cqw; }
   @container (min-width: 420px) { .scb__panes { grid-template-columns: 0.85fr 1fr; align-items: start; } }
@@ -136,7 +179,26 @@
     color: var(--solace-80);
     font-size: 2.7cqw;
   }
+  /* The empty note and the drafted note share one cell, so the pane is never a
+     reserved white rectangle waiting two seconds for its first word. */
+  .scb__notebed { display: grid; flex: 1; }
+  .scb__notebed > * { grid-area: 1 / 1; }
+  .scb__drafted { display: flex; flex-direction: column; gap: 2.6cqw; }
+  .scb__idle {
+    align-self: center;
+    justify-self: center;
+    max-inline-size: 26ch;
+    text-align: center;
+    font-size: 3.1cqw;
+    line-height: 1.5;
+    color: var(--neutral-60);
+    opacity: 0;
+  }
+
   .scb__body { font-size: 3.3cqw; line-height: 1.58; color: var(--neutral-90); }
+  /* .scb__ph carries no styling of its own on purpose. The phrases stay in
+     flow while hidden, so the paragraph never reflows as it fills — the note
+     grows by inking in, not by pushing lines around. */
   .scb__cited {
     background-color: var(--solace-10);
     border-block-end: 0.5cqw solid var(--solace-40);
@@ -150,7 +212,7 @@
     padding-block-start: 3.2cqw;
     border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
     font-size: 3.1cqw;
-    color: var(--neutral-60);
+    color: var(--neutral-80);
   }
   .scb__forms b { color: var(--solace-80); font-weight: var(--font-weight-semibold); font-size: 4cqw; }
   .scb__sign {
@@ -167,4 +229,94 @@
       inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
       0 2px 5px rgb(from var(--solace-100) r g b / 0.24);
   }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  @keyframes scribe-said-a {
+    0%, 5%   { opacity: 0; translate: 0 1.4cqw; }
+    12%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  /* The source line arrives, then brightens again at 44% — the moment its
+     clause lands in the note. Two events on one element, one rail. */
+  @keyframes scribe-said-src {
+    0%, 17%  { opacity: 0; translate: 0 1.4cqw; border-inline-start-color: var(--neutral-20); }
+    24%      { opacity: 1; translate: 0 0; border-inline-start-color: var(--neutral-20); }
+    44%      { border-inline-start-color: var(--solace-50); }
+    52%, 92% { opacity: 1; translate: 0 0; border-inline-start-color: var(--solace-40); }
+    100%     { opacity: 0; translate: 0 1.4cqw; border-inline-start-color: var(--neutral-20); }
+  }
+  @keyframes scribe-said-c {
+    0%, 30%  { opacity: 0; translate: 0 1.4cqw; }
+    37%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes scribe-said-d {
+    0%, 36%  { opacity: 0; translate: 0 1.4cqw; }
+    43%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  /* Ink, not slide: a drafted clause appears where it belongs. */
+  @keyframes scribe-ink-a {
+    0%, 28%  { opacity: 0; filter: blur(2px); }
+    34%, 92% { opacity: 1; filter: blur(0); }
+    100%     { opacity: 0; filter: blur(2px); }
+  }
+  @keyframes scribe-ink-b {
+    0%, 41%  { opacity: 0; filter: blur(2px); }
+    47%, 92% { opacity: 1; filter: blur(0); }
+    100%     { opacity: 0; filter: blur(2px); }
+  }
+  @keyframes scribe-ink-c {
+    0%, 55%  { opacity: 0; filter: blur(2px); }
+    61%, 92% { opacity: 1; filter: blur(0); }
+    100%     { opacity: 0; filter: blur(2px); }
+  }
+  @keyframes scribe-idle {
+    0%, 24%  { opacity: 1; }
+    28%, 92% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes scribe-attr {
+    0%, 62% { opacity: 0; }
+    70%, 92% { opacity: 1; }
+    100%    { opacity: 0; }
+  }
+  /* The one moment the button asks for a human. It settles and stays; it does
+     not throb. */
+  @keyframes scribe-ready {
+    0%, 70%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
+                           0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
+    78%, 92% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
+                           0 0 0 0.9cqw rgb(from var(--solace-40) r g b / 0.34); }
+    100%     { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 5px rgb(from var(--solace-100) r g b / 0.24),
+                           0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
+  }
+  @keyframes scribe-timer {
+    from { translate: 0 0; }
+    to   { translate: 0 -83.333%; }
+  }
+  @keyframes scribe-level {
+    0%, 100% { block-size: var(--h); }
+    50%      { block-size: var(--l); }
+  }
+
+  .scb[data-play] .scb__line--a   { animation: scribe-said-a   var(--clip-dur) var(--ease-hero) infinite both; }
+  .scb[data-play] .scb__line--src { animation: scribe-said-src var(--clip-dur) var(--ease-hero) infinite both; }
+  .scb[data-play] .scb__line--c   { animation: scribe-said-c   var(--clip-dur) var(--ease-hero) infinite both; }
+  .scb[data-play] .scb__line--d   { animation: scribe-said-d   var(--clip-dur) var(--ease-hero) infinite both; }
+  .scb[data-play] .scb__idle      { animation: scribe-idle     var(--clip-dur) var(--ease-ui)   infinite both; }
+  .scb[data-play] .scb__ph--a     { animation: scribe-ink-a    var(--clip-dur) var(--ease-ui)   infinite both; }
+  .scb[data-play] .scb__ph--b     { animation: scribe-ink-b    var(--clip-dur) var(--ease-ui)   infinite both; }
+  .scb[data-play] .scb__ph--c     { animation: scribe-ink-c    var(--clip-dur) var(--ease-ui)   infinite both; }
+  .scb[data-play] .scb__attr      { animation: scribe-attr     var(--clip-dur) var(--ease-ui)   infinite both; }
+  .scb[data-play] .scb__sign      { animation: scribe-ready    var(--clip-dur) var(--ease-ui)   infinite both; }
+  .scb[data-play] .scb__strip     { animation: scribe-timer    var(--clip-dur) steps(6, jump-none) infinite both; }
+  .scb[data-play] .scb__live i    { animation: scribe-level var(--_p) ease-in-out infinite alternate; }
+  .scb[data-play] .scb__live i:nth-child(4n + 1) { --_p: 640ms; }
+  .scb[data-play] .scb__live i:nth-child(4n + 2) { --_p: 820ms; }
+  .scb[data-play] .scb__live i:nth-child(4n + 3) { --_p: 560ms; }
+  .scb[data-play] .scb__live i:nth-child(4n + 4) { --_p: 720ms; }
 </style>

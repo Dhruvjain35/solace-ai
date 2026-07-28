@@ -1,0 +1,242 @@
+---
+/* The first screen a patient sees, as live DOM inside the phone aperture.
+
+   It exists to make one promise before it asks for anything: you are not
+   waiting in the dark. So the wait estimate is on the FIRST screen, above the
+   fold, before a single question — which is the opposite of how a waiting room
+   normally works.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   6.0s. Nothing here is a flourish. The only thing that moves is the estimate
+   resolving, because that is the only thing on the screen that is genuinely
+   live, and then the invitation to begin.
+
+     0.00s   the promise, already on screen. It is not a loading state.
+     0.60s   the queue position lands
+     1.20s   the estimate settles as the board recalculates
+     2.40s   what happens next, spelled out
+     3.30s   the button becomes the obvious thing to do
+     5.58s   dissolve back; 100% equals 0% so the loop has no seam */
+import MarkPaths from '../brand/MarkPaths.astro';
+import WordPaths from '../brand/WordPaths.astro';
+---
+
+<div class="wel" data-clip>
+  <div class="wel__bar">
+    <span>9:41</span>
+    <span class="wel__bar-right" aria-hidden="true">
+      <svg viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor" opacity=".35"/></svg>
+      <svg viewBox="0 0 24 12" fill="none"><rect x="0.6" y="1.2" width="19" height="9.6" rx="3" stroke="currentColor" stroke-width="1.1"/><rect x="2.2" y="2.8" width="13" height="6.4" rx="1.6" fill="currentColor"/><path d="M21.4 4.6v2.8a2 2 0 0 0 0-2.8Z" fill="currentColor"/></svg>
+    </span>
+  </div>
+
+  <div class="wel__head">
+    <svg class="wel__mark" viewBox="0 0 800 990" fill="currentColor" aria-hidden="true"><MarkPaths /></svg>
+    <svg class="wel__word" viewBox="0 0 1648 560" fill="currentColor" role="img" aria-label="Solace"><WordPaths /></svg>
+  </div>
+
+  <p class="wel__promise">You are not waiting alone.</p>
+  <p class="wel__sub">
+    Tell us what brought you in while you wait. Your care team will have it
+    before they call your name.
+  </p>
+
+  <div class="wel__card">
+    <div class="wel__row">
+      <span class="wel__k">People ahead of you</span>
+      <span class="wel__v wel__v--ahead">3</span>
+    </div>
+    <div class="wel__row">
+      <span class="wel__k">Typical wait from here</span>
+      <span class="wel__v">
+        <span class="wel__tick"><span class="wel__strip"><i>41</i><i>36</i><i>31</i><i>28</i><i>26</i><i>25</i></span></span>
+        min
+      </span>
+    </div>
+    <p class="wel__note">Updated every 15 seconds, from the live board.</p>
+  </div>
+
+  <ol class="wel__steps">
+    <li class="wel__step wel__step--a"><b>1</b>Tell us what brought you in, in your language</li>
+    <li class="wel__step wel__step--b"><b>2</b>Your team reads it before they call you</li>
+    <li class="wel__step wel__step--c"><b>3</b>You get a clear plan, and a real wait time</li>
+  </ol>
+
+  <p class="wel__next">If it gets worse while you wait, one press reaches the team.</p>
+
+  <span class="wel__cta">Start &mdash; about 3 minutes</span>
+  <p class="wel__foot">No app. No account. Twenty languages.</p>
+</div>
+
+<style>
+  .wel {
+    --clip-dur: 6s;
+    inline-size: 100%;
+    block-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3cqw;
+    padding: 0 6cqw 5cqw;
+    background: linear-gradient(180deg, var(--neutral-0) 0%, var(--solace-0) 100%);
+    color: var(--neutral-100);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  /* Straddles the Dynamic Island the way iOS does. */
+  .wel__bar {
+    display: flex; align-items: center; justify-content: space-between;
+    block-size: 12.3cqw;
+    flex: none;
+    font-size: 4.6cqw; font-weight: var(--font-weight-semibold);
+  }
+  .wel__bar-right { display: flex; align-items: center; gap: 1.6cqw; }
+  .wel__bar-right svg { block-size: 3.6cqw; inline-size: auto; }
+
+  .wel__head { display: flex; align-items: center; gap: 1.8cqw; margin-block-start: 1.4cqw; }
+  .wel__mark { block-size: 5.6cqw; inline-size: auto; color: var(--solace-80); }
+  .wel__word { block-size: 3.6cqw; inline-size: auto; color: var(--neutral-100); }
+
+  .wel__promise {
+    margin-block-start: 2cqw;
+    font-size: 8.4cqw;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.14;
+    letter-spacing: -0.03em;
+  }
+  .wel__sub { font-size: 4.4cqw; color: var(--neutral-60); }
+
+  .wel__card {
+    margin-block-start: 1.6cqw;
+    display: flex; flex-direction: column; gap: 2.6cqw;
+    padding: 4.4cqw;
+    border-radius: 4.4cqw;
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.16);
+    box-shadow:
+      0 1px 2px rgb(from var(--neutral-100) r g b / 0.05),
+      0 8px 18px rgb(from var(--neutral-100) r g b / 0.06);
+  }
+  .wel__row { display: flex; align-items: baseline; gap: 3cqw; }
+  .wel__k { font-size: 4.2cqw; color: var(--neutral-60); }
+  .wel__v {
+    margin-inline-start: auto;
+    display: flex; align-items: center; gap: 1.2cqw;
+    font-size: 4.4cqw;
+    color: var(--neutral-60);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .wel__v--ahead { font-size: 6cqw; font-weight: var(--font-weight-semibold); color: var(--solace-80); }
+
+  /* Six estimates behind a one-value window. The type size lives on the WINDOW,
+     not on the digits: block-size:1em resolves against the element's own
+     font-size, so a 4.4cqw window holding 6cqw digits is a window shorter than
+     its contents, and overflow:hidden shaves the glyphs. */
+  .wel__tick {
+    display: inline-block;
+    font-size: 6cqw;
+    line-height: 1;
+    font-weight: var(--font-weight-semibold);
+    color: var(--solace-80);
+    block-size: 1em;
+    overflow: hidden;
+  }
+  .wel__strip { display: block; translate: 0 -83.333%; }
+  .wel__strip i { display: block; block-size: 1em; line-height: 1; font-style: normal; }
+  .wel__note { font-size: 3.6cqw; color: var(--neutral-60); }
+
+  /* Three steps, not decoration: they fill the middle of the screen with the
+     one thing a person in a waiting room actually wants, which is to know what
+     is about to happen to them. */
+  .wel__steps {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: 2.6cqw;
+    margin-block-start: 1.4cqw;
+  }
+  .wel__step {
+    display: flex; align-items: flex-start; gap: 2.6cqw;
+    font-size: 4cqw;
+    line-height: 1.35;
+    color: var(--neutral-80);
+  }
+  .wel__step b {
+    display: grid; place-items: center;
+    inline-size: 6cqw; block-size: 6cqw; flex: none;
+    border-radius: 100px;
+    background-color: var(--solace-10);
+    color: var(--solace-80);
+    font-size: 3.4cqw;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .wel__next { margin-block-start: auto; font-size: 3.8cqw; color: var(--neutral-60); }
+
+  .wel__cta {
+    display: block;
+    padding: 4cqw;
+    border-radius: 3.4cqw;
+    text-align: center;
+    background: linear-gradient(180deg, var(--solace-60) 0%, var(--solace-80) 100%);
+    border: 1px solid var(--solace-90);
+    color: var(--white);
+    font-size: 4.6cqw;
+    font-weight: var(--font-weight-medium);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+      0 2px 6px rgb(from var(--solace-100) r g b / 0.26);
+  }
+  .wel__foot { text-align: center; font-size: 3.8cqw; color: var(--neutral-60); }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════ */
+  @keyframes wel-ahead {
+    0%, 8%   { opacity: 0; translate: 0 1.4cqw; }
+    14%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes wel-estimate {
+    from { translate: 0 0; }
+    to   { translate: 0 -83.333%; }
+  }
+  @keyframes wel-step-a {
+    0%, 26%  { opacity: 0; translate: 0 1.4cqw; }
+    33%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes wel-step-b {
+    0%, 32%  { opacity: 0; translate: 0 1.4cqw; }
+    39%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes wel-step-c {
+    0%, 38%  { opacity: 0; translate: 0 1.4cqw; }
+    45%, 92% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes wel-next {
+    0%, 46%  { opacity: 0; }
+    53%, 92% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes wel-ready {
+    0%, 52%  { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 6px rgb(from var(--solace-100) r g b / 0.26),
+                           0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
+    60%, 92% { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 6px rgb(from var(--solace-100) r g b / 0.26),
+                           0 0 0 1.4cqw rgb(from var(--solace-40) r g b / 0.30); }
+    100%     { box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.28),
+                           0 2px 6px rgb(from var(--solace-100) r g b / 0.26),
+                           0 0 0 0 rgb(from var(--solace-40) r g b / 0); }
+  }
+
+  .wel[data-play] .wel__v--ahead { animation: wel-ahead var(--clip-dur) var(--ease-hero) infinite both; }
+  /* Five discrete recalculations, not a smooth countdown: the board publishes a
+     new number, it does not tween between two of them. */
+  .wel[data-play] .wel__strip    { animation: wel-estimate var(--clip-dur) steps(6, jump-none) infinite both; }
+  .wel[data-play] .wel__step--a  { animation: wel-step-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .wel[data-play] .wel__step--b  { animation: wel-step-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .wel[data-play] .wel__step--c  { animation: wel-step-c var(--clip-dur) var(--ease-hero) infinite both; }
+  .wel[data-play] .wel__next     { animation: wel-next var(--clip-dur) var(--ease-ui) infinite both; }
+  .wel[data-play] .wel__cta      { animation: wel-ready var(--clip-dur) var(--ease-ui) infinite both; }
+</style>

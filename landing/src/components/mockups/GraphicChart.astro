@@ -1,0 +1,217 @@
+---
+/* Into the chart — and a 6s film.
+
+   The last mile is where most of this category quietly fails. A summary that
+   lands as a PDF stapled to the record is not in the chart; it is next to it.
+   What matters is that the write is CODED, that it goes through the same
+   standard interfaces everything else does, and that every read and write left
+   a line behind with a name against it.
+
+   So the film is deliberately unglamorous: three resources written, three audit
+   lines appended. That is the whole product promise of this step.
+
+   Neumorphic rules per materials.css: light from directly above, warm taupe
+   shade, contrast in the 4-18% band, blur 2-3x the offset, real hairline.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   6.0s.
+
+     0.00s   three resources queued
+     0.72s   the encounter is written, then the coded diagnosis, then the note
+     2.40s   the audit lines append underneath, one per write, each with the
+             clinician who owns it
+     4.20s   the promise, stated once everything behind it is on screen
+     5.58s   dissolve back; 100% equals 0% so the loop has no seam */
+
+const writes = [
+  { key: 'a', name: 'Encounter', sub: 'Arrival, triage level, disposition' },
+  { key: 'b', name: 'Condition', sub: 'Chest pain &middot; ICD-10 R07.9' },
+  { key: 'c', name: 'DocumentReference', sub: 'Visit note, as text and as PDF' },
+];
+
+const audit = [
+  { key: 'a', t: '09:14:02', what: 'Atlas read 3 documents', who: 'Dr Alvarez' },
+  { key: 'b', t: '09:14:06', what: 'Note written to the chart', who: 'Dr Alvarez' },
+  { key: 'c', t: '09:14:06', what: 'Triage raised 3 &rarr; 2', who: 'Bedside vitals' },
+];
+---
+
+<div class="ch" data-clip>
+  <div class="ch__head">
+    <span class="ch__title">Into the chart</span>
+    <span class="ch__std">HL7 &middot; FHIR R4</span>
+  </div>
+
+  <ul class="ch__writes">
+    {writes.map((w) => (
+      <li class:list={['ch__write', `ch__write--${w.key}`]}>
+        <span class="ch__who">
+          <b>{w.name}</b>
+          <i set:html={w.sub} />
+        </span>
+        <span class="ch__state">
+          <span class="ch__st ch__st--pre" aria-hidden="true">Queued</span>
+          <span class="ch__st ch__st--post">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Written
+          </span>
+        </span>
+      </li>
+    ))}
+  </ul>
+
+  <div class="ch__log">
+    <p class="ch__log-label">Audit trail</p>
+    <ul class="ch__lines">
+      {audit.map((a) => (
+        <li class:list={['ch__line', `ch__line--${a.key}`]}>
+          <span class="ch__t">{a.t}</span>
+          <span class="ch__what" set:html={a.what} />
+          <span class="ch__by">{a.who}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <p class="ch__foot">Every AI read and every AI write, in the record.</p>
+</div>
+
+<style>
+  .ch {
+    --clip-dur: 6s;
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.4cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .ch__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .ch__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .ch__std { margin-inline-start: auto; font-size: 3cqw; color: var(--neutral-80); }
+
+  .ch__writes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2.2cqw; }
+  .ch__write {
+    display: flex; align-items: center; gap: 3cqw;
+    padding: 3.2cqw 3.6cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+  }
+  .ch__who { display: flex; flex-direction: column; gap: 0.2cqw; min-inline-size: 0; }
+  .ch__who b { font-size: 3.3cqw; font-weight: var(--font-weight-medium); }
+  .ch__who i { font-style: normal; font-size: 2.9cqw; color: var(--neutral-60); }
+
+  .ch__state { margin-inline-start: auto; display: grid; flex: none; justify-items: end; }
+  .ch__st {
+    grid-area: 1 / 1;
+    display: flex; align-items: center; gap: 1.2cqw;
+    padding: 1.2cqw 2.6cqw;
+    border-radius: 100px;
+    font-size: 2.8cqw;
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+  .ch__st svg { inline-size: 3cqw; block-size: 3cqw; }
+  .ch__st--pre  { background-color: var(--neutral-10); color: var(--neutral-60); opacity: 0; }
+  .ch__st--post { background-color: var(--solace-10); color: var(--solace-80); }
+
+  /* Pressed in: a log is a record you read, never a surface you act on. */
+  .ch__log {
+    display: flex; flex-direction: column; gap: 2cqw;
+    padding: 3.6cqw 3.8cqw;
+    border-radius: var(--radius-3x);
+    background-color: var(--neutral-10);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow:
+      inset 0 2px 4px rgb(from var(--neutral-40) r g b / 0.20),
+      inset 0 -1px 0 rgb(from var(--white) r g b / 0.7);
+  }
+  .ch__log-label { font-size: 2.9cqw; color: var(--neutral-80); }
+  .ch__lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.6cqw; }
+  .ch__line { display: flex; align-items: baseline; gap: 2.6cqw; font-size: 2.9cqw; color: var(--neutral-90); }
+  .ch__t { flex: none; color: var(--neutral-80); font-variant-numeric: tabular-nums; }
+  .ch__by { margin-inline-start: auto; flex: none; color: var(--neutral-80); }
+
+  .ch__foot {
+    padding-block-start: 3cqw;
+    border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    font-size: 3cqw;
+    color: var(--neutral-80);
+  }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     Sequential, never crossfaded: "Queued" and "Written" sit in one grid cell,
+     and overlapping their opacities would render a third illegible word. */
+  @keyframes ch-queued {
+    0%, 10%  { opacity: 1; }
+    13%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes ch-queued-b {
+    0%, 19%  { opacity: 1; }
+    22%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes ch-queued-c {
+    0%, 28%  { opacity: 1; }
+    31%, 93% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes ch-written {
+    0%, 13%  { opacity: 0; }
+    16%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes ch-written-b {
+    0%, 22%  { opacity: 0; }
+    25%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  @keyframes ch-written-c {
+    0%, 31%  { opacity: 0; }
+    34%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+  /* Log lines append. They arrive from below, the way a tail does. */
+  @keyframes ch-line-a {
+    0%, 38%  { opacity: 0; translate: 0 1.4cqw; }
+    44%, 93% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes ch-line-b {
+    0%, 45%  { opacity: 0; translate: 0 1.4cqw; }
+    51%, 93% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes ch-line-c {
+    0%, 52%  { opacity: 0; translate: 0 1.4cqw; }
+    58%, 93% { opacity: 1; translate: 0 0; }
+    100%     { opacity: 0; translate: 0 1.4cqw; }
+  }
+  @keyframes ch-foot {
+    0%, 66%  { opacity: 0; }
+    73%, 93% { opacity: 1; }
+    100%     { opacity: 0; }
+  }
+
+  .ch[data-play] .ch__write--a .ch__st--pre  { animation: ch-queued    var(--clip-dur) var(--ease-ui) infinite both; }
+  .ch[data-play] .ch__write--b .ch__st--pre  { animation: ch-queued-b  var(--clip-dur) var(--ease-ui) infinite both; }
+  .ch[data-play] .ch__write--c .ch__st--pre  { animation: ch-queued-c  var(--clip-dur) var(--ease-ui) infinite both; }
+  .ch[data-play] .ch__write--a .ch__st--post { animation: ch-written   var(--clip-dur) var(--ease-ui) infinite both; }
+  .ch[data-play] .ch__write--b .ch__st--post { animation: ch-written-b var(--clip-dur) var(--ease-ui) infinite both; }
+  .ch[data-play] .ch__write--c .ch__st--post { animation: ch-written-c var(--clip-dur) var(--ease-ui) infinite both; }
+  .ch[data-play] .ch__line--a { animation: ch-line-a var(--clip-dur) var(--ease-hero) infinite both; }
+  .ch[data-play] .ch__line--b { animation: ch-line-b var(--clip-dur) var(--ease-hero) infinite both; }
+  .ch[data-play] .ch__line--c { animation: ch-line-c var(--clip-dur) var(--ease-hero) infinite both; }
+  .ch[data-play] .ch__foot    { animation: ch-foot   var(--clip-dur) var(--ease-ui)   infinite both; }
+</style>

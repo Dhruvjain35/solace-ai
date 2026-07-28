@@ -1,0 +1,216 @@
+---
+/* The live queue — and a 6s film.
+
+   A waiting-room board sorted by arrival is just a list. What makes this one
+   worth showing is that it RE-SORTS: a patient who has been waiting quietly for
+   twenty-two minutes gets moved to the front the moment a reading says they
+   should be. So the clip is the reorder, and nothing else.
+
+   Neumorphic rules per materials.css: light from directly above, warm taupe
+   shade, contrast in the 4-18% band, blur 2-3x the offset, real hairline.
+
+   ══ THE CLIP ══════════════════════════════════════════════════════════════
+   6.0s.
+
+     0.00s   the board as arrival order left it. Okonkwo is fourth, a 3.
+     1.32s   a bedside reading lands on him and the chip goes 3 -> 2
+     1.92s   he travels two rows up; the two patients he passes settle down
+             into the slots he left
+     2.80s   the board states what just happened
+     3.40s   hold
+     5.58s   the reorder resets under the dissolve. The row translations use a
+             stepped tail so they snap back exactly ON the loop boundary rather
+             than visibly un-sorting themselves on the way out. */
+
+const rows = [
+  { key: 'a', name: 'Reyes, M.', why: 'Chest tightness, short of breath', level: '2', tone: 'red', wait: '6m' },
+  { key: 'b', name: 'Okonkwo, D.', why: 'Abdominal pain, vomiting', level: '2', tone: 'red', wait: '22m' },
+  { key: 'c', name: 'Vance, T.', why: 'Ankle injury after a fall', level: '3', tone: 'amber', wait: '14m' },
+  { key: 'd', name: 'Bell, R.', why: 'Rash, no fever', level: '4', tone: 'calm', wait: '31m' },
+];
+---
+
+<div class="q" data-clip>
+  <div class="q__head">
+    <span class="q__title">Waiting now</span>
+    <span class="q__count">4 patients</span>
+  </div>
+
+  <ul class="q__rows">
+    {rows.map((r) => (
+      <li class:list={['q__row', `q__row--${r.key}`]}>
+        <span class:list={['q__level', `q__level--${r.tone}`]}>
+          {r.key === 'b' ? (
+            <span class="q__flip"><i>3</i><i>2</i></span>
+          ) : (
+            r.level
+          )}
+        </span>
+        <span class="q__who">
+          <b>{r.name}</b>
+          <i>{r.why}</i>
+        </span>
+        <span class="q__wait">{r.wait}</span>
+      </li>
+    ))}
+  </ul>
+
+  <p class="q__foot">
+    <span class="q__foot-pre" aria-hidden="true">Ordered by arrival</span>
+    <span class="q__foot-post">Reordered by need. Your clinicians still make the call.</span>
+  </p>
+</div>
+
+<style>
+  .q {
+    /* One pitch value for the whole component. Every row translation is a
+       multiple of it, so the reorder lands on the grid instead of near it. */
+    --row-h: 15cqw;
+    --row-gap: 2.2cqw;
+    --pitch: calc(var(--row-h) + var(--row-gap));
+    --clip-dur: 6s;
+
+    inline-size: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3.6cqw;
+    padding: 5.5cqw;
+    border-radius: var(--radius-6x);
+    background: linear-gradient(180deg, var(--neutral-5) 0%, var(--neutral-10) 100%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 0.9),
+      0 1px 2px rgb(from var(--neutral-40) r g b / 0.14),
+      0 10px 24px rgb(from var(--neutral-40) r g b / 0.16);
+    color: var(--neutral-100);
+  }
+
+  .q__head { display: flex; align-items: baseline; gap: 3cqw; }
+  .q__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
+  .q__count { margin-inline-start: auto; font-size: 3.1cqw; color: var(--neutral-80); }
+
+  .q__rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--row-gap); }
+  .q__row {
+    display: flex;
+    align-items: center;
+    gap: 3.2cqw;
+    block-size: var(--row-h);
+    padding-inline: 3.4cqw;
+    border-radius: var(--radius-2_5x);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.18);
+    box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08);
+  }
+
+  .q__level {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    inline-size: 8.4cqw; block-size: 8.4cqw; flex: none;
+    border-radius: var(--radius-2x);
+    font-size: 4.4cqw;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: -0.03em;
+    color: var(--white);
+    box-shadow: inset 0 1px 0 rgb(from var(--white) r g b / 0.3);
+  }
+  .q__level--red   { background: linear-gradient(180deg, var(--red-40) 0%, var(--red-80) 100%); }
+  .q__level--amber { background: linear-gradient(180deg, var(--orange-30) 0%, var(--orange-80) 100%); }
+  .q__level--calm  { background: linear-gradient(180deg, var(--neutral-30) 0%, var(--neutral-60) 100%); }
+
+  /* Okonkwo's chip carries both numbers; the strip rests on the second. */
+  .q__flip { display: block; translate: 0 -50%; }
+  .q__flip i { display: grid; place-items: center; block-size: 8.4cqw; font-style: normal; }
+  /* The amber it wore as a 3, crossfaded rather than tweened — two gradients
+     cannot interpolate, but their opacities can. */
+  .q__row--b .q__level { position: relative; }
+  .q__row--b .q__level::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, var(--orange-30) 0%, var(--orange-80) 100%);
+    opacity: 0;
+  }
+  .q__row--b .q__flip { position: relative; }
+
+  .q__who { display: flex; flex-direction: column; gap: 0.2cqw; min-inline-size: 0; }
+  .q__who b { font-size: 3.4cqw; font-weight: var(--font-weight-medium); }
+  .q__who i { font-style: normal; font-size: 2.9cqw; color: var(--neutral-60); }
+  .q__wait {
+    margin-inline-start: auto;
+    flex: none;
+    font-size: 3.1cqw;
+    color: var(--neutral-60);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .q__foot {
+    display: grid;
+    padding-block-start: 3cqw;
+    border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
+    font-size: 3cqw;
+    color: var(--neutral-80);
+  }
+  .q__foot > * { grid-area: 1 / 1; }
+  .q__foot-pre { opacity: 0; }
+
+  /* ══ CLIP ═══════════════════════════════════════════════════════════════
+     The stepped tail on every translate is the whole trick. Interpolating back
+     to the opening position would play the sort in reverse for half a second
+     at the end of each loop; holding through 96% and jumping at 100% puts the
+     reset exactly on the boundary, where it cannot be seen. */
+  @keyframes q-up-two {
+    0%, 22%  { translate: 0 calc(var(--pitch) * 2); }
+    38%, 96% { translate: 0 0; animation-timing-function: steps(1, end); }
+    100%     { translate: 0 calc(var(--pitch) * 2); }
+  }
+  @keyframes q-down-one {
+    0%, 22%  { translate: 0 calc(var(--pitch) * -1); }
+    38%, 96% { translate: 0 0; animation-timing-function: steps(1, end); }
+    100%     { translate: 0 calc(var(--pitch) * -1); }
+  }
+  @keyframes q-flip {
+    0%, 18%  { translate: 0 0; }
+    24%, 96% { translate: 0 -50%; animation-timing-function: steps(1, end); }
+    100%     { translate: 0 0; }
+  }
+  @keyframes q-amber {
+    0%, 18%  { opacity: 1; }
+    24%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  /* The moved row lifts off the board while it travels, then sets back down —
+     the shadow is what tells you it is being carried rather than redrawn. */
+  @keyframes q-carry {
+    0%, 22%  { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
+    30%      { box-shadow: 0 8px 20px rgb(from var(--neutral-40) r g b / 0.26); }
+    42%, 96% { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
+    100%     { box-shadow: 0 1px 2px rgb(from var(--neutral-40) r g b / 0.08); }
+  }
+  @keyframes q-foot-pre {
+    0%, 42%  { opacity: 1; }
+    47%, 96% { opacity: 0; animation-timing-function: steps(1, end); }
+    100%     { opacity: 1; }
+  }
+  @keyframes q-foot-post {
+    0%, 47%  { opacity: 0; }
+    52%, 96% { opacity: 1; animation-timing-function: steps(1, end); }
+    100%     { opacity: 0; }
+  }
+
+  /* The travelling row rides above the two it passes, so the carry shadow falls
+     ON them rather than under them. */
+  .q[data-play] .q__row--b {
+    position: relative;
+    z-index: 1;
+    animation:
+      q-up-two var(--clip-dur) var(--ease-hero) infinite both,
+      q-carry  var(--clip-dur) var(--ease-ui)   infinite both;
+  }
+  .q[data-play] .q__row--c,
+  .q[data-play] .q__row--d { animation: q-down-one var(--clip-dur) var(--ease-hero) infinite both; }
+  .q[data-play] .q__row--b .q__flip { animation: q-flip var(--clip-dur) var(--ease-hero) infinite both; }
+  .q[data-play] .q__row--b .q__level::before { animation: q-amber var(--clip-dur) var(--ease-ui) infinite both; }
+  .q[data-play] .q__foot-pre  { animation: q-foot-pre var(--clip-dur) var(--ease-ui) infinite both; }
+  .q[data-play] .q__foot-post { animation: q-foot-post var(--clip-dur) var(--ease-ui) infinite both; }
+</style>

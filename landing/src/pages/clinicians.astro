@@ -2,6 +2,8 @@
 import Page from '../layouts/Page.astro';
 import PageHeader from '../components/PageHeader.astro';
 import CtaPrimary from '../components/CtaPrimary.astro';
+import PhoneFrame from '../components/mockups/PhoneFrame.astro';
+import ScreenIntake from '../components/mockups/ScreenIntake.astro';
 
 /* /clinicians — ported from legacy/src/pages/Clinicians.tsx (713 lines).
    The legacy page was the forhims category rhythm: white opening statement,
@@ -159,33 +161,15 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         </p>
       </div>
 
-      <div class="waiting__shots">
-        <figure class="phone phone--pale reveal">
-          <span class="phone__shot">
-            <img
-              src="/assets/screens/meds.webp"
-              alt="Solace intake confirming the medications a patient takes"
-              width="1179"
-              height="2556"
-              loading="lazy"
-              decoding="async"
-            />
-          </span>
-</figure>
-
-        <figure class="phone phone--deep reveal">
-          <span class="phone__shot">
-            <img
-              src="/assets/screens/medical.webp"
-              alt="Solace intake asking a patient about past medical history"
-              width="1179"
-              height="2556"
-              loading="lazy"
-              decoding="async"
-            />
-          </span>
-</figure>
-      </div>
+      <!-- One device, live DOM. This was two soft 560px captures cropped by a
+           gradient card; the real shell renders the screen as vector text, and
+           a single phone reads as the patient's own phone rather than as a
+           product shot. -->
+      <figure class="waiting__stage reveal">
+        <div class="waiting__device">
+          <PhoneFrame width="clamp(216px, 26vw, 292px)"><ScreenIntake /></PhoneFrame>
+        </div>
+      </figure>
     </div>
   </section>
 
@@ -1009,51 +993,25 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
 
   .waiting__tail { max-inline-size: 36ch; }
 
-  .waiting__shots { display: grid; grid-template-columns: 1fr; gap: var(--space-6x); }
-  @media (min-width: 640.02px) {
-    .waiting__shots { grid-template-columns: repeat(2, 1fr); align-items: start; }
-    /* the second card sits low, the way the drifting pair did */
-    .waiting__shots > :last-child { margin-block-start: var(--space-16x); }
-  }
-
-  /* Gradient card whose curved edge crops the screenshot, the hims idiom
-     rebuilt without the composited hand plate. */
-  .phone {
+  /* A tinted bed with the device floating on it — the same stage material the
+     seven acts on /how-it-works use, so the two pages read as one system. */
+  .waiting__stage {
     position: relative;
+    overflow: hidden;
     margin: 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    aspect-ratio: 1728 / 1910;
-    padding-inline: var(--space-7x);
-    padding-block-start: var(--space-10x);
-    border-radius: var(--radius-12x);
-    overflow: hidden;
+    display: grid;
+    place-items: center;
+    padding: var(--space-10x) var(--space-5x);
+    border-radius: var(--radius-8x);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 18%);
+    background-image:
+      radial-gradient(ellipse 62% 48% at 26% 10%, rgb(from var(--white) r g b / 55%), transparent 72%),
+      linear-gradient(158deg, var(--solace-10) 0%, var(--solace-20) 52%, #a0d7c4 100%);
   }
-  .phone--pale { background-image: linear-gradient(166deg, var(--solace-10) 0%, var(--solace-20) 100%); }
-  .phone--deep { background-image: linear-gradient(166deg, var(--solace-90) 0%, var(--solace-100) 55%, var(--slate-black) 100%); }
-
-  .phone__shot {
-    display: block;
-    inline-size: min(100%, 74%);
-    block-size: 100%;
-    overflow: hidden;
-    border-start-start-radius: var(--radius-6x);
-    border-start-end-radius: var(--radius-6x);
-    box-shadow: var(--elevation-large);
+  @media (min-width: 640.02px) {
+    .waiting__stage { padding: var(--space-12x) var(--space-8x); }
   }
-  .phone__shot img {
-    inline-size: 100%;
-    block-size: 100%;
-    object-fit: cover;
-    object-position: top center;
-  }
-
-  .phone .tag {
-    position: absolute;
-    inset-block-start: var(--space-3x);
-    inset-inline-end: var(--space-3x);
-  }
+  .waiting__device { position: relative; }
 
   /* ══════════════════════════════════════════════════════════════════════
      SHOWCASE HEADS
