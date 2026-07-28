@@ -65,7 +65,71 @@ is the obvious next candidate.
   replaced by the CSS gradient field.
 
 
-## The scroll morph — added 2026-07-27
+## The scroll morph — replaced 2026-07-28
+
+**nurse.webp / nurse@2x.webp** — a masked clinician in scrubs and a surgical
+cap, supplied by the client (1024x1536 PNG, opaque, shot on a lit studio grey).
+It replaces an earlier frame that was the same face as the hero subject. This
+one is a different person, which the mask makes workable: with the nose and
+mouth covered there is far less identity to cross-fade, and what carries the
+morph is the head angle, the jaw line and the eye — all of which register.
+
+Built by `scratchpad/nurse2/`, and the interesting part is the three attempts
+that did not work, because each failed for a reason worth keeping.
+
+1. **Cut against a fitted plate — failed.** A degree-3 polynomial through the
+   corners is 50 to 90 levels too dark down her right side, because the key
+   light throws a rim onto the backdrop that only exists next to her. Every
+   pixel of that rim then reads as subject.
+2. **Cut against a diffusion-inpainted plate — failed the same way.** Rebuilding
+   the backdrop by diffusing known pixels into the subject's hole follows the
+   clouds beautifully and still cannot invent a rim that is only ever underneath
+   her.
+3. **Recover true coverage rather than difference — closer, still wrong.** For a
+   dark subject on a light plate, `a = (B - I) / (B - F_dark)` is a real estimate
+   of coverage, and it fixed the hair. It could not fix the rim, because the rim
+   is a plate error, not a matte error.
+
+What shipped: **cut inside the fringe.** The silhouette is reliable; only its
+last few pixels are not. Feathering INWARD discards every partially covered
+pixel instead of guessing at it, so the matte reaches zero while it is still
+over hair. Under `mix-blend-mode: screen` that matters more than the strands do
+— a halo is the one artefact with nowhere to hide, and the frame this dissolves
+with loses its own hair to black in exactly the same way.
+
+Three further things the pipeline needed:
+
+- **A scanline trim.** Walking in from the right of each row and dropping pixels
+  while they are still plate-bright removes the rim; the first dark pixel is the
+  real hair edge. Skipped above y=150, where the silhouette IS the bright cap.
+- **A read shoulder line.** Below the hair the plate has fallen into its own
+  vignette and the scrubs are navy, so the two meet in the same range and no
+  threshold separates them. Twelve points read off a gridded crop, interpolated,
+  pulled in 8px. The only hand-placed numbers here, and they are here because
+  measurement beat inference.
+- **A feather that varies with what it cuts.** 4px over the bright edges — jaw,
+  cap, mask — and nearly 40 over the dark ones. A single narrow feather gave the
+  hair a ruled edge, and smoothing that edge only made the slice look
+  deliberate. Hair has to dissolve, not end.
+
+**Registration** is two landmarks, not correlation: the pupil at (665,335) and
+the ear canal at (445,445), against (485,340) and (255,460) in the frame it
+dissolves with. Scale 1.0546, offset (-216,-13), ear landing within 4px. No
+correlation would have found this — the new face is behind a mask and has
+almost nothing to correlate against.
+
+**The grade is selective.** Skin is warmed toward the subject it dissolves with
+and nothing else is touched, weighted by how far red already leads blue. A flat
+per-channel gain lands identically on the mask and the scrubs and turns both a
+yellow-grey.
+
+**Consent, unchanged and still unresolved.** This frame depicts an identifiable
+person presented as a healthcare professional, and no model release accompanies
+it. Flagged, not cleared.
+
+---
+
+## The previous morph frame — added 2026-07-27, replaced 2026-07-28
 
 **nurse.webp / nurse@2x.webp** — the same subject in scrubs, supplied by the
 client as a generated frame (1024x1536, with a usable alpha channel already in
