@@ -19,18 +19,12 @@ industry.
 
 ## The plates
 
-**hands.webp** — `photo-1482164565953-04b62dcac1cd`. Two hands cupping warm
-string lights on near-black. Runs on the home page's manifesto, replacing a
-cloudscape: the section says calm should be standard care, and a sky says calm
-without saying care. Composited with `mix-blend-mode: screen` and a radial
-mask, the same treatment the hero subject gets, so the light appears to come
-out of the section rather than out of a framed rectangle.
-
-**aurora.webp** — `photo-1635776062360-af423602aff3`. Teal falling into
-near-black. Carries the closing band on /product, which was three stops of
-mint. Denoised 1.2px before encoding: it is heavily grained and would not
-compress — 624KB at the quality knee, 86KB after. Nothing is lost, because the
-section lays its own grain back over the top.
+**peak.webp** — `photo-1757332224684-44aec99ee4bf`. A peak above cloud at first
+light. It IS the home page's manifesto section rather than a picture inside it:
+full bleed, masked so it dissolves across the left half, with the copy on the
+clean dark ground it leaves behind. Two earlier attempts put a framed image on
+the left with copy beside it, and a framed rectangle inside a section always
+reads as an illustration of the text.
 
 **dawn.webp** — `photo-1557316655-8715fdecd2d1`. Still water and mountains at
 first light. Carries the close on /clinicians, masked at both ends so it
@@ -39,7 +33,10 @@ landscape on the site and the only one it gets.
 
 ## Encoding
 
-Quality was found rather than guessed: step up until PSNR against the graded
-master clears 40dB, which is where WebP loss starts to show on gradients.
-hands and dawn cleared it at q58 (20KB and 24KB). aurora never cleared it at
-any quality, which is what exposed the grain problem.
+Both are pulled at 3840px and served at 3200px, q88.
+
+An earlier pass encoded to a PSNR target and landed at q58 / 24KB. That is the
+right answer for a 400px figure inside a card and the wrong one for a plate
+stretched across a whole section — the target was met and the result was
+visibly soft, because the metric was measuring the wrong thing. Full-bleed
+backgrounds get resolution and quality, not a threshold.

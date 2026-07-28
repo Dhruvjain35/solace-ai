@@ -1,23 +1,22 @@
 ---
-/* The visual is a photograph of two hands cupping warm light on black.
+/* The scenic plate IS the section, not a picture inside it.
 
-   It replaces a cloudscape, and the swap is the point: the section says calm
-   should be standard care, and a sky says calm without saying care. Hands
-   holding a light say both, and they do it without a stock clinician in a
-   corridor — which would have said neither and looked like filler.
+   Two versions preceded this and both were the same mistake in different
+   clothes: an image sitting in a box on the left with copy beside it. A
+   framed rectangle inside a section always reads as an illustration of the
+   text. Letting the photograph BE the background and fading it out across the
+   left half gives the copy clean, dark ground to sit on and gives the section
+   somewhere to be — the same trick the hero uses, at a different scale.
 
-   Shot on near-black, so it screens into this section the way the hero subject
-   screens into the top of the page rather than sitting in a box on top of it.
-   See public/assets/photos/CREDITS.md. */
+   The plate is a peak above cloud at first light: scenic, calm, and carrying
+   no clinical signal at all, which is the point. See
+   public/assets/photos/CREDITS.md. */
 ---
 
 <section class="manifesto" data-color-scheme="dark" aria-labelledby="manifesto-heading">
-  <div class="container page-section manifesto__inner">
-    <picture class="manifesto__visual">
-      <source srcset="/assets/photos/hands@1x.webp 1x, /assets/photos/hands.webp 2x" type="image/webp" />
-      <img src="/assets/photos/hands.webp" alt="" width="1600" height="1067" loading="lazy" decoding="async" />
-    </picture>
+  <div class="manifesto__plate" aria-hidden="true"></div>
 
+  <div class="container page-section manifesto__inner">
     <div class="manifesto__copy">
       <h2 id="manifesto-heading" class="manifesto__heading">Calm should be standard care.</h2>
       <p class="manifesto__body">
@@ -33,107 +32,93 @@
 <style>
   .manifesto {
     position: relative;
+    isolation: isolate;
     overflow: hidden;
-    /* Not flat slate. The same two lights the hero uses, at a fraction of the
-       strength, so the one dark section on the page belongs to the same world
-       as the top of it rather than being a grey box in the middle. */
     background-color: var(--slate-90);
-    background-image:
-      radial-gradient(ellipse 68% 60% at 12% 8%, rgb(from var(--solace-60) r g b / 0.24), transparent 66%),
-      radial-gradient(ellipse 72% 64% at 92% 96%, rgb(from var(--solace-90) r g b / 0.44), transparent 70%);
     color: var(--color-text-base);
   }
 
-  .manifesto__inner { display: flex; flex-direction: column; gap: var(--space-10x); }
+  /* Full bleed, and masked so it dissolves across the left half rather than
+     ending at an edge. Two masks multiplied: a horizontal ramp that clears the
+     copy, and a vertical one so the plate does not butt against the sections
+     above and below. */
+  .manifesto__plate {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: image-set(url('/assets/photos/peak@1x.webp') 1x, url('/assets/photos/peak.webp') 2x);
+    background-size: cover;
+    background-position: center 42%;
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 4%, rgb(0 0 0 / 0.35) 34%, #000 68%),
+      linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
+    mask-image:
+      linear-gradient(90deg, transparent 4%, rgb(0 0 0 / 0.35) 34%, #000 68%),
+      linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+  }
+
+  .manifesto__inner {
+    position: relative;
+    display: flex;
+    min-block-size: 62vh;
+    align-items: center;
+  }
+  .manifesto__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-6x);
+    max-inline-size: 44ch;
+  }
   @media (min-width: 1080.02px) {
-    .manifesto__inner { flex-direction: row; align-items: center; gap: var(--space-16x); }
-    .manifesto__inner > * { flex: 1 1 0; min-inline-size: 0; }
-    /* Image left, copy right, matching the reference. The visual is already
-       first in the DOM, so no order override is needed; the previous
-       :last-child{order:-1} was flipping it the wrong way. */
+    .manifesto__copy { max-inline-size: 40ch; }
   }
-
-  /* Same graded sky pipeline as the hero, so the two plates read as one
-     world. Replaces the CSS-only fallback, which was three overlapping blurs
-     and looked like a placeholder next to a photographic hero. */
-  /* No frame and no shadow. The plate is on black, so a radius and a box
-     shadow would draw a rectangle around something that has no edges — the
-     mask lets it dissolve into the section instead. */
-  /* Screened, not framed. The plate is shot on near-black, so screen takes its
-     background to nothing for free and the hands appear to be lit BY the
-     section rather than pasted into it — the same compositing the hero uses on
-     its subject, which is why the two now read as one world.
-
-     The mask has to reach transparent well before the edges or the rectangle
-     survives. At 42%/100% the top edge was still around half opacity and the
-     straight line was plainly visible. */
-  .manifesto__visual {
-    display: block;
-    overflow: hidden;
-    mix-blend-mode: screen;
-    -webkit-mask-image: radial-gradient(ellipse 78% 76% at 48% 52%, #000 18%, transparent 76%);
-            mask-image: radial-gradient(ellipse 78% 76% at 48% 52%, #000 18%, transparent 76%);
-  }
-  .manifesto__visual img { display: block; inline-size: 100%; }
-
-  /* Parallax, bound to the section's own travel rather than a clock, so it
-     tracks the scroll in both directions. A still plate in a box was the one
-     thing on the page that did not respond to being scrolled past at all. */
-  /* A real move, not a nudge. It arrives pushed down and oversized and settles
-     as the section crosses — big enough to notice, slow enough not to shout. */
-  @keyframes manifesto-drift {
-    from { scale: 1.26; translate: 0 7%; }
-    to   { scale: 1.04; translate: 0 -4%; }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    @supports (animation-timeline: view()) {
-      .manifesto__visual img {
-        animation: manifesto-drift linear both;
-        animation-timeline: view();
-        animation-range: cover 0% cover 100%;
-      }
-    }
-  }
-  .manifesto__visual img {
-    inline-size: 100%;
-    block-size: auto;
-    aspect-ratio: 1080 / 888;
-    object-fit: cover;
-  }
-
-  .manifesto__copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6x); }
 
   .manifesto__heading {
-    font-size: var(--font-size-32);
-    line-height: 96%;
+    font-size: var(--font-size-display-small);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-display);
     letter-spacing: var(--letter-spacing-display);
+    max-inline-size: 14ch;
   }
-  @media (min-width: 640.02px)  { .manifesto__heading { font-size: var(--font-size-36); } }
-  @media (min-width: 1080.02px) { .manifesto__heading { font-size: var(--font-size-48); } }
-
   .manifesto__body {
-    font-size: var(--font-size-text-medium);
-    color: var(--color-text-sub);
-    max-inline-size: 54ch;
+    font-size: var(--font-size-text-large);
+    line-height: var(--line-height-open);
+    color: rgb(from var(--white) r g b / 0.86);
   }
-  @media (min-width: 1080.02px) { .manifesto__body { font-size: var(--font-size-20); } }
-  .manifesto__body em { font-style: italic; color: var(--color-text-base); }
+  .manifesto__body em { font-style: italic; color: var(--white); }
 
   .manifesto__cta {
     display: inline-flex;
     align-items: center;
     padding: var(--space-3x) var(--space-6x);
-    border-radius: var(--radius-3x);
-    border: 1px solid rgb(from var(--white) r g b / 0.32);
+    border-radius: var(--radius-full);
+    border: 1px solid rgb(from var(--white) r g b / 0.42);
+    color: var(--white);
     font-size: var(--font-size-16);
     font-weight: var(--font-weight-medium);
     letter-spacing: normal;
-    transition: background-color var(--motion-duration-base) var(--ease-ui),
-                border-color var(--motion-duration-base) var(--ease-ui);
+    transition: background-color var(--motion-duration-base) var(--ease-ui);
   }
-  .manifesto__cta:hover {
-    background-color: var(--color-transparent-hover);
-    border-color: rgb(from var(--white) r g b / 0.55);
+  .manifesto__cta:hover { background-color: rgb(from var(--white) r g b / 0.12); }
+
+  /* The plate travels as the section crosses. It arrives oversized and settles,
+     which is what stops a full-bleed photograph reading as wallpaper. */
+  @keyframes manifesto-plate {
+    from { scale: 1.18; background-position: center 30%; }
+    to   { scale: 1.02; background-position: center 56%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .manifesto__plate {
+        animation: manifesto-plate linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
+    .manifesto__cta { transition: background-color var(--motion-duration-base) var(--ease-ui); }
   }
   @media (prefers-reduced-motion: reduce) { .manifesto__cta { transition: none; } }
 </style>

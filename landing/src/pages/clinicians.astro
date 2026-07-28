@@ -77,25 +77,6 @@ const acts: Act[] = [
 /* What Solace will not do. This section exists because a clinician's first
    question about an AI product is what it will do behind their back, and a page
    that only lists capabilities never answers it. */
-const limits = [
-  {
-    title: 'It does not order anything.',
-    body: 'Every test, referral and prescription is suggested and stays suggested until a human signs it. There is no auto-order setting, and there is no plan to add one.',
-  },
-  {
-    title: 'It cannot lower an urgency.',
-    body: 'The safety rule is asymmetric by construction. New evidence can raise a level; nothing in the system is able to move one down. That is a property of the code, not a policy.',
-  },
-  {
-    title: 'It does not hide its reasoning.',
-    body: 'Every score arrives with the factors that produced it and a calibrated confidence. When the model is unsure the set gets wider, and a wide set is routed to a person rather than rounded off.',
-  },
-  {
-    title: 'It does not write without leaving a name.',
-    body: 'Every read and every write lands in the audit trail with the clinician it belongs to. If you cannot tell afterwards who did what, the feature is not finished.',
-  },
-];
-
 const STATEMENT =
   'It suggests, you decide. Everything the AI reads or writes is saved to the record, and a clinician always makes the final call.';
 const STATEMENT_WORDS = STATEMENT.split(' ');
@@ -157,29 +138,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
       </div>
     </section>
   ))}
-
-  <!-- ══ What it will not do ══════════════════════════════════════════════ -->
-  <section id="limits" class="limits" data-color-scheme="light" aria-labelledby="limits-heading">
-    <div class="container page-section limits__inner">
-      <div class="limits__head reveal">
-        <h2 id="limits-heading" class="limits__title">What it will not do.</h2>
-        <p class="limits__sub">
-          Capability lists are easy to write and impossible to check. These four
-          constraints are worth more than the list, because they are the ones
-          that hold when nobody is watching.
-        </p>
-      </div>
-
-      <ul class="limits__grid">
-        {limits.map((limit) => (
-          <li class="limits__card lglass reveal">
-            <h3 class="limits__card-title">{limit.title}</h3>
-            <p class="limits__card-body">{limit.body}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </section>
 
   <!-- ══ Statement ════════════════════════════════════════════════════════ -->
   <section class="say" data-color-scheme="light" aria-labelledby="say-heading">
@@ -272,7 +230,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
         rgb(233 246 240 / 0.52) 86%,
         rgb(255 255 255) 100%);
   }
-  .hero, .act, .limits, .close, .say {
+  .hero, .act, .close, .say {
     position: relative;
     overflow: hidden;
     background-color: transparent;
@@ -403,52 +361,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     container-type: inline-size;
     inline-size: 100%;
     max-inline-size: 640px;
-  }
-
-  /* ══ LIMITS ═════════════════════════════════════════════════════════════ */
-  .limits__inner {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-14x);
-    color: var(--color-text-base);
-  }
-  .limits__head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4x); }
-  .limits__title {
-    font-size: var(--font-size-heading-large);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-heading);
-    letter-spacing: var(--letter-spacing-heading);
-  }
-  .limits__sub {
-    font-size: var(--font-size-text-medium);
-    line-height: var(--line-height-open);
-    max-inline-size: 56ch;
-    color: var(--color-text-sub);
-  }
-
-  .limits__grid { display: grid; gap: var(--space-5x); }
-  @media (min-width: 640.02px) { .limits__grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1080.02px) { .limits__grid { grid-template-columns: repeat(4, 1fr); } }
-
-  .limits__card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3x);
-    padding: var(--space-7x);
-    border-radius: var(--radius-5x);
-  }
-  .limits__card-title {
-    font-size: var(--font-size-text-large);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-heading);
-    letter-spacing: var(--letter-spacing-heading);
-  }
-  .limits__card-body {
-    font-size: var(--font-size-text-medium);
-    line-height: var(--line-height-open);
-    color: var(--color-text-sub);
   }
 
   /* ══ STATEMENT ══════════════════════════════════════════════════════════ */
