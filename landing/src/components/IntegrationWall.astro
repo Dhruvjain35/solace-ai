@@ -1,20 +1,17 @@
 ---
-/* The integrations, as a scroll gallery rather than a logo grid.
+/* The integrations, as a moving gallery rather than a logo grid.
 
    What this replaces was a ten-cell bordered grid: correct, honest, and the
    single most generic block on the page. Every B2B site has one and they all
    look like the same component with different PNGs in it.
 
-   Two rails now, running in opposite directions, driven by scroll position.
-   That does three things a static grid cannot: it gives the section a reason
-   to be scrolled past rather than read, it lets the list run off both edges so
-   ten vendors imply more than ten, and the counter-motion means the eye keeps
-   finding a new pairing rather than settling on a shape.
+   Two rails, always running, in opposite directions and at different speeds.
+   That does three things a static grid cannot: the list runs off both edges so
+   ten vendors imply more than ten, the counter-motion keeps the eye finding
+   new pairings rather than settling on a shape, and the section has something
+   to do while you are reading the heading.
 
-   No JavaScript. `animation-timeline: view()` maps the section's own travel
-   through the viewport onto the rails, so the motion is bound to the scroll
-   rather than to a clock — scroll back up and it runs backwards, which is what
-   makes it feel attached to the page instead of playing at it.
+   No JavaScript.
 
    Heading is "Connects to", NOT "Trusted by" — these are integration targets,
    not customers. */
@@ -31,15 +28,31 @@ const vendors = [
   { name: 'Elation Health', src: '/assets/logos/elation.png' },
 ];
 
-/* Split so the two rails never show the same vendor side by side, then tripled
-   so each rail is wider than any viewport and the travel never runs out. */
-const railA = [...vendors.slice(0, 5), ...vendors.slice(0, 5), ...vendors.slice(0, 5)];
-const railB = [...vendors.slice(5), ...vendors.slice(5), ...vendors.slice(5)];
+/* Each rail is ONE unit repeated three times, and the units have to be
+   byte-identical or the loop cannot be seamless — the animation resets by
+   translating exactly one third of the rail's width, which only lands on a
+   matching frame if the thirds match. An earlier version interleaved a
+   different protocol chip into each copy, which changed both the content and
+   the width of every third and would have stuttered once per cycle. */
 
 /* The protocols are the actual claim; the vendor marks only say who it has
    been pointed at. These ride the second rail so the section says something
-   rather than just listing brands. */
-const protocols = ['HL7 v2', 'FHIR R4', 'SMART on FHIR', 'CDS Hooks'];
+   rather than just listing brands.
+
+   Real marks, in their own colours. They were brand-green text chips, which
+   made the two standards look like Solace features rather than the open
+   specifications they are — and green on green read as decoration. The HL7
+   FHIR lockup is the official one from hl7.org; the flame alone is HL7's own
+   emblem and carries the v2 chip. */
+const protocols = [
+  { name: 'HL7 v2', src: '/assets/logos/hl7.png', proto: true },
+  { name: '', src: '/assets/logos/fhir.png', proto: true },
+];
+
+const unitA = [...vendors.slice(0, 5), protocols[1]];
+const unitB = [...vendors.slice(5), protocols[0]];
+const railA = [...unitA, ...unitA, ...unitA];
+const railB = [...unitB, ...unitB, ...unitB];
 ---
 
 <section class="wall" data-background-color="secondary-default" aria-labelledby="wall-heading">
@@ -50,24 +63,19 @@ const protocols = ['HL7 v2', 'FHIR R4', 'SMART on FHIR', 'CDS Hooks'];
   <div class="wall__rails" aria-hidden="true">
     <div class="wall__rail wall__rail--a">
       {railA.map((v) => (
-        <span class="wall__chip">
-          <img src={v.src} alt="" loading="lazy" decoding="async" width="26" height="26" />
+        <span class:list={['wall__chip', v.proto && 'wall__chip--proto']}>
+          <img src={v.src} alt="" loading="lazy" decoding="async" />
           {v.name}
         </span>
       ))}
     </div>
 
     <div class="wall__rail wall__rail--b">
-      {railB.map((v, i) => (
-        <>
-          <span class="wall__chip">
-            <img src={v.src} alt="" loading="lazy" decoding="async" width="26" height="26" />
-            {v.name}
-          </span>
-          {i % 5 === 2 && (
-            <span class="wall__chip wall__chip--proto">{protocols[((i / 5) | 0) % protocols.length]}</span>
-          )}
-        </>
+      {railB.map((v) => (
+        <span class:list={['wall__chip', v.proto && 'wall__chip--proto']}>
+          <img src={v.src} alt="" loading="lazy" decoding="async" />
+          {v.name}
+        </span>
       ))}
     </div>
   </div>
@@ -79,11 +87,6 @@ const protocols = ['HL7 v2', 'FHIR R4', 'SMART on FHIR', 'CDS Hooks'];
     SMART on FHIR and CDS Hooks.
   </p>
 
-  <div class="container">
-    <p class="wall__note text-xsmall">
-      Vendor marks identify supported integrations. They do not imply endorsement.
-    </p>
-  </div>
 </section>
 
 <style>
@@ -112,9 +115,6 @@ const protocols = ['HL7 v2', 'FHIR R4', 'SMART on FHIR', 'CDS Hooks'];
     -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
             mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
   }
-  /* Offset resting positions so the two rails are never in register. */
-  .wall__rail--a { translate: -8% 0; }
-  .wall__rail--b { translate: -22% 0; }
 
   .wall__chip {
     display: inline-flex;
@@ -134,40 +134,27 @@ const protocols = ['HL7 v2', 'FHIR R4', 'SMART on FHIR', 'CDS Hooks'];
   }
   .wall__chip img { inline-size: 24px; block-size: 24px; flex: none; object-fit: contain; }
 
-  /* The protocol chips carry the claim, so they carry the brand colour. They
-     are the only saturated thing in the section, which is what makes them read
-     as the point rather than as decoration. */
-  .wall__chip--proto {
-    background: linear-gradient(180deg, var(--solace-80) 0%, var(--solace-90) 100%);
-    border-color: var(--solace-90);
-    color: var(--white);
-    box-shadow:
-      inset 0 1px 0 rgb(from var(--white) r g b / 22%),
-      0 2px 6px rgb(from var(--solace-100) r g b / 22%);
-  }
+  /* Protocol chips sit on the same white as the vendors and carry their own
+     marks. A brand-green fill made the two open standards look like Solace
+     features, and green on green read as decoration. */
+  .wall__chip--proto img { block-size: 20px; inline-size: auto; }
 
-  .wall__note { text-align: center; padding-block-start: var(--space-10x); color: var(--color-text-sub); }
+  /* ══ MARQUEE ════════════════════════════════════════════════════════════
+     Always moving, in opposite directions, at different speeds.
 
-  /* ══ SCROLL ═════════════════════════════════════════════════════════════
-     Bound to the section's own travel through the viewport, so the rails move
-     only while the section is on screen and reverse when the page scrolls back.
-     A time-based marquee would keep running off screen and would drift out of
-     step with whoever is reading. */
-  @keyframes wall-left  { to { translate: -34% 0; } }
-  @keyframes wall-right { to { translate: 4% 0; } }
+     The loop is seamless because each rail holds the same set three times and
+     travels exactly one third of its own width. At -33.333% the second copy is
+     sitting precisely where the first started, so the jump back to 0 lands on
+     an identical frame and there is nothing to see. Any other distance shows a
+     stutter once per cycle.
+
+     Different periods on the two rails means the pairing of what is above what
+     never repeats within a visit. */
+  @keyframes wall-left  { from { translate: 0 0; }        to { translate: -33.3333% 0; } }
+  @keyframes wall-right { from { translate: -33.3333% 0; } to { translate: 0 0; } }
 
   @media (prefers-reduced-motion: no-preference) {
-    @supports (animation-timeline: view()) {
-      .wall__rail--a {
-        animation: wall-left linear both;
-        animation-timeline: view();
-        animation-range: cover 0% cover 100%;
-      }
-      .wall__rail--b {
-        animation: wall-right linear both;
-        animation-timeline: view();
-        animation-range: cover 0% cover 100%;
-      }
-    }
+    .wall__rail--a { animation: wall-left 46s linear infinite; }
+    .wall__rail--b { animation: wall-right 61s linear infinite; }
   }
 </style>

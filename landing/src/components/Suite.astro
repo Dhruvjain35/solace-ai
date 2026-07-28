@@ -29,6 +29,7 @@ const panels = [
     sub: 'They talk the way they think. Their exact words are kept, the team reads it in English, and the answer goes back spoken.',
     link: { label: 'See the patient flow', href: '/product#patient-side' },
     mock: 'languages',
+    tone: 'dawn',
   },
   {
     id: 'suite-triage',
@@ -37,6 +38,7 @@ const panels = [
     sub: 'Most triage models hand you one number and stop. This one publishes the set the answer is actually in, and a wide set goes to a person.',
     link: { label: 'How the score works', href: '/product#patient-side' },
     mock: 'confidence',
+    tone: 'dusk',
   },
   {
     id: 'suite-scribe',
@@ -45,6 +47,7 @@ const panels = [
     sub: 'The note drafts while you talk. Click any line and the exact seconds of audio that produced it play back.',
     link: { label: 'See what it drafts', href: '/product#patient-side' },
     mock: 'evidence',
+    tone: 'field',
   },
   {
     id: 'suite-atlas',
@@ -53,6 +56,7 @@ const panels = [
     sub: 'A standard hook fires when you sign an order and the card arrives in place. No new tab, nothing extra to remember.',
     link: { label: 'Bring Atlas to your team', href: '/clinicians' },
     mock: 'hooks',
+    tone: 'tide',
   },
 ];
 ---
@@ -89,7 +93,7 @@ const panels = [
               </a>
             </div>
 
-            <figure class="suite__figure">
+            <figure class:list={['suite__figure', `suite__figure--${p.tone}`]}>
               {p.mock === 'languages'  && <div class="suite__mock"><GraphicLanguages /></div>}
               {p.mock === 'confidence' && <div class="suite__mock"><GraphicConfidence /></div>}
               {p.mock === 'evidence'   && <div class="suite__mock"><GraphicEvidence /></div>}
@@ -205,12 +209,73 @@ const panels = [
   /* Figures are components now, not images, so the old height cap and shadow
      are gone — each mockup owns its own surface and elevation. The figure just
      centres and bounds them. */
+  /* Each figure sits on its own field of colour.
+
+     The panels were four warm-grey rectangles with a white graphic in the
+     middle, which is why the section read as inert next to the hero: the hero
+     is a lit photograph and this was a spreadsheet. Superhuman solves the same
+     problem with a photograph behind every product shot. We cannot shoot four
+     of those, but the hero's own technique works at this scale — layered
+     radial lights over a base, plus grain so a field this wide does not band.
+
+     One hue family per product, so the four are told apart by colour before a
+     label is read. Only the note panel is green: using the brand colour on all
+     four would make the colour mean nothing. */
   .suite__figure {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     min-inline-size: 0;
+    padding: var(--space-10x) var(--space-6x);
+    border-radius: var(--radius-6x);
+  }
+  @media (min-width: 640.02px) {
+    .suite__figure { padding: var(--space-14x) var(--space-10x); }
+  }
+
+  .suite__figure--dawn {
+    background:
+      radial-gradient(ellipse 82% 66% at 12% 8%,   #ffd9a8 0%, transparent 68%),
+      radial-gradient(ellipse 76% 72% at 92% 22%,  #ffb3a0 0%, transparent 66%),
+      radial-gradient(ellipse 96% 80% at 62% 104%, #f6a2c0 0%, transparent 70%),
+      linear-gradient(162deg, #ffe9cf 0%, #ffd2cd 58%, #f3c4d8 100%);
+  }
+  .suite__figure--dusk {
+    background:
+      radial-gradient(ellipse 80% 64% at 14% 10%,  #b9c8ff 0%, transparent 68%),
+      radial-gradient(ellipse 74% 70% at 94% 26%,  #cdb6f2 0%, transparent 66%),
+      radial-gradient(ellipse 96% 78% at 58% 104%, #8fa8ea 0%, transparent 70%),
+      linear-gradient(162deg, #dfe6ff 0%, #cdd3f6 58%, #b8c2ee 100%);
+  }
+  .suite__figure--field {
+    background:
+      radial-gradient(ellipse 82% 66% at 12% 8%,   #b6ecd2 0%, transparent 68%),
+      radial-gradient(ellipse 76% 72% at 92% 22%,  #d8ecb0 0%, transparent 66%),
+      radial-gradient(ellipse 96% 80% at 62% 104%, #7fd6bb 0%, transparent 70%),
+      linear-gradient(162deg, #dcf4e6 0%, #c7ecd8 58%, #a9dfc9 100%);
+  }
+  .suite__figure--tide {
+    background:
+      radial-gradient(ellipse 82% 66% at 14% 8%,   #a9dced 0%, transparent 68%),
+      radial-gradient(ellipse 74% 70% at 92% 24%,  #9fc4ee 0%, transparent 66%),
+      radial-gradient(ellipse 96% 78% at 60% 104%, #7fb6dd 0%, transparent 70%),
+      linear-gradient(162deg, #d6eef7 0%, #c0dff1 58%, #a6cbe8 100%);
+  }
+
+  /* Grain. Same SVG turbulence the hero uses, so the two read as one material,
+     and without it a field this wide bands in 8-bit. */
+  .suite__figure::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.055;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .suite__figure > :global(*) { max-inline-size: 560px; inline-size: 100%; }
 
@@ -218,7 +283,16 @@ const panels = [
      container — with container-type on the graphic root, its own cqw units were
      resolving against a 1376px ancestor and every measurement came out ~2.5x
      too large. The container has to be this wrapper. */
-  .suite__mock { container-type: inline-size; inline-size: 100%; max-inline-size: 560px; }
+  .suite__mock {
+    position: relative;
+    z-index: 1;
+    container-type: inline-size;
+    inline-size: 100%;
+    max-inline-size: 560px;
+    /* A real contact shadow, so the panel sits ON the field rather than being
+       pasted over it. */
+    filter: drop-shadow(0 2px 4px hsl(210 24% 34% / 12%)) drop-shadow(0 18px 40px hsl(210 24% 34% / 18%));
+  }
 
 
 
