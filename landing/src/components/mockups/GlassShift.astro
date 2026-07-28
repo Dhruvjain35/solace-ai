@@ -6,12 +6,13 @@
    graphic is a ledger: where a ten-hour shift currently goes, and which block
    moves.
 
-   The honest part is the third bar. Patient-facing time does not go up much —
-   claiming it doubles would be a lie anybody who has worked a shift can see
-   through. What changes is the documentation block and the hour that currently
-   happens at home after the shift ends, which is the hour nobody is paid for.
+   The honest part is the third bar. Time with patients does not go up much;
+   claiming it doubles is something anybody who has worked a shift would see
+   through. What changes is the documentation block, the forms, and the work
+   that currently happens at home after the shift ends.
 
-   Material: glass on dark. Never mixed with the neumorphism on /product.
+   Material: light glass — a tinted panel carrying white cards. Depth comes
+   from a real drop shadow, not from transparency.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
    12.0s, five beats of 2.4s, narrated by the caption rail.
@@ -28,12 +29,12 @@ const CAPTIONS = [
   'A ten-hour shift, drawn to scale.',
   'Documentation is the block that moves first.',
   'Then the letters and the forms.',
-  'Patient time goes up — a little. Anything more would be a lie.',
-  'And the hour at the kitchen table stops being part of the job.',
+  'Time with patients goes up a little. Only a little.',
+  'And the hour you currently work at home goes to nearly nothing.',
 ];
 ---
 
-<div class="sh glass" data-clip>
+<div class="sh lglass" data-clip>
   <div class="sh__head">
     <span class="sh__title">Where a shift goes</span>
     <span class="sh__meta">Ten hours, to scale</span>
@@ -72,7 +73,7 @@ const CAPTIONS = [
 
   <p class="sh__note">
     <span class="sh__note-pre" aria-hidden="true">Typical emergency shift, before Solace</span>
-    <span class="sh__note-post">The hour nobody rosters, and nobody is paid for.</span>
+    <span class="sh__note-post">Unpaid, unrostered, and the first thing to go.</span>
   </p>
 
   <ClipCaption steps={CAPTIONS} />
@@ -81,39 +82,37 @@ const CAPTIONS = [
 <style>
   .sh {
     --clip-dur: 9.5s;
-    --_tint: var(--solace-100);
     inline-size: 100%;
     display: flex;
     flex-direction: column;
     gap: 3.6cqw;
     padding: 5.5cqw;
-    border-radius: var(--radius-6x);
-    color: var(--white);
+    color: var(--neutral-100);
   }
 
   .sh__head { display: flex; align-items: baseline; gap: 3cqw; }
   .sh__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
-  .sh__meta { margin-inline-start: auto; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+  .sh__meta { margin-inline-start: auto; font-size: 3cqw; color: var(--neutral-80); }
 
   .sh__rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3cqw; }
   .sh__row { display: flex; align-items: center; gap: 3cqw; }
-  .sh__k { inline-size: 26cqw; flex: none; font-size: 3.1cqw; color: rgb(from var(--white) r g b / 0.8); }
+  .sh__k { inline-size: 26cqw; flex: none; font-size: 3.1cqw; color: var(--neutral-90); }
 
   .sh__track {
     flex: 1;
     min-inline-size: 0;
     block-size: 4.6cqw;
     border-radius: 100px;
-    background-color: rgb(from var(--white) r g b / 0.1);
-    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.24);
+    background-color: var(--neutral-10);
+    box-shadow: inset 0 1px 2px rgb(from var(--neutral-40) r g b / 0.32);
     overflow: hidden;
   }
   /* The resting width is the AFTER figure, so a still frame shows the outcome
      and the clip rewinds to the before. */
   .sh__bar { display: block; block-size: 100%; inline-size: var(--to); border-radius: 100px; }
   .sh__bar--care  { background: linear-gradient(90deg, var(--solace-60) 0%, var(--solace-40) 100%); }
-  .sh__bar--notes { background: linear-gradient(90deg, rgb(from var(--white) r g b / 0.5) 0%, rgb(from var(--white) r g b / 0.32) 100%); }
-  .sh__bar--forms { background: linear-gradient(90deg, rgb(from var(--white) r g b / 0.42) 0%, rgb(from var(--white) r g b / 0.26) 100%); }
+  .sh__bar--notes { background: linear-gradient(90deg, var(--neutral-40) 0%, var(--neutral-30) 100%); }
+  .sh__bar--forms { background: linear-gradient(90deg, var(--neutral-30) 0%, var(--neutral-20) 100%); }
   .sh__bar--after { background: linear-gradient(90deg, var(--orange-40) 0%, var(--orange-30) 100%); }
 
   .sh__v {
@@ -122,11 +121,11 @@ const CAPTIONS = [
     display: flex; align-items: baseline; justify-content: flex-end; gap: 0.4cqw;
     font-size: 2.9cqw;
     line-height: 1;
-    color: rgb(from var(--white) r g b / 0.72);
+    color: var(--neutral-80);
     font-variant-numeric: tabular-nums;
   }
-  .sh__v--care  { color: var(--solace-20); }
-  .sh__v--after { color: var(--orange-20); }
+  .sh__v--care  { color: var(--solace-80); }
+  .sh__v--after { color: var(--orange-80); }
   /* Type size on the WINDOW, not the digits: block-size:1em resolves against
      the element's own font-size, so a small window holding large digits is
      shorter than its contents and overflow:hidden shaves the glyphs. */
@@ -144,12 +143,12 @@ const CAPTIONS = [
   .sh__note {
     display: grid;
     padding-block-start: 3cqw;
-    border-block-start: 1px solid rgb(from var(--white) r g b / 0.16);
+    border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
     font-size: 2.9cqw;
   }
   .sh__note > * { grid-area: 1 / 1; }
-  .sh__note-pre  { color: rgb(from var(--white) r g b / 0.66); opacity: 0; }
-  .sh__note-post { color: var(--orange-20); }
+  .sh__note-pre  { color: var(--neutral-80); opacity: 0; }
+  .sh__note-post { color: var(--orange-80); }
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════
      Five beats of 2.4s on the shared grid. Each bar moves in the beat its

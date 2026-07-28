@@ -8,10 +8,10 @@
    next action worth taking. It is small on purpose — a pre-brief you have to
    scroll is not a pre-brief.
 
-   Material: glass, not neumorphism. Per materials.css the two never mix, and
-   glass needs something behind it to refract, which is why this only ever
-   appears on the dark mesh sections of /clinicians. That split is also what
-   stops this page and the product tour from reading as the same page twice.
+   Material: light glass — a tinted panel with white cards on it, the idiom
+   Superhuman and Aave use for product figures. The dark version this replaces
+   depended on a mesh behind it to look like anything, which made it a lighting
+   effect rather than an interface.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
    12.0s, five beats of 2.4s, narrated by the caption rail.
@@ -33,7 +33,7 @@ const CAPTIONS = [
 ];
 ---
 
-<div class="pb glass" data-clip>
+<div class="pb lglass" data-clip>
   <div class="pb__head">
     <span class="pb__name">Reyes, Marisol &middot; 47</span>
     <span class="pb__room">Room 4 &middot; waiting 6 min</span>
@@ -73,27 +73,25 @@ const CAPTIONS = [
      decide how much of the mesh behind it should show through. */
   .pb {
     --clip-dur: 9.5s;
-    --_tint: var(--solace-100);
     inline-size: 100%;
     display: flex;
     flex-direction: column;
     gap: 3.4cqw;
     padding: 5.5cqw;
-    border-radius: var(--radius-6x);
-    color: var(--white);
+    color: var(--neutral-100);
   }
 
   .pb__head { display: flex; align-items: baseline; gap: 3cqw; }
   .pb__name { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
-  .pb__room { margin-inline-start: auto; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+  .pb__room { margin-inline-start: auto; font-size: 3cqw; color: var(--neutral-80); }
 
   .pb__story {
     font-size: 3.6cqw;
     line-height: 1.55;
-    color: rgb(from var(--white) r g b / 0.92);
+    color: var(--neutral-100);
   }
 
-  .pb__k { font-size: 2.9cqw; color: rgb(from var(--white) r g b / 0.66); }
+  .pb__k { font-size: 2.9cqw; color: var(--neutral-80); }
   .pb__watch { display: flex; flex-direction: column; gap: 2cqw; }
   .pb__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.8cqw; }
   .pb__w {
@@ -103,10 +101,9 @@ const CAPTIONS = [
     /* A second, denser sheet of glass rather than a solid fill — a solid card
        inside a glass panel kills the refraction that makes the panel read as
        glass at all. */
-    background: linear-gradient(180deg,
-      rgb(from var(--white) r g b / 0.14) 0%,
-      rgb(from var(--white) r g b / 0.06) 100%);
-    border: 1px solid rgb(from var(--white) r g b / 0.18);
+    background-color: var(--white);
+    box-shadow: 0 1px 2px hsl(210 24% 34% / 8%), 0 6px 16px hsl(210 24% 34% / 8%);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
     border-inline-start: 0.8cqw solid var(--red-30);
     font-size: 3.2cqw;
   }
@@ -122,28 +119,28 @@ const CAPTIONS = [
     display: flex; align-items: center; gap: 3cqw;
     padding: 3.2cqw 3.6cqw;
     border-radius: var(--radius-2_5x);
-    background: linear-gradient(180deg,
-      rgb(from var(--solace-40) r g b / 0.26) 0%,
-      rgb(from var(--solace-40) r g b / 0.12) 100%);
-    border: 1px solid rgb(from var(--solace-30) r g b / 0.38);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
+    border-inline-start: 0.7cqw solid var(--solace-60);
+    box-shadow: 0 1px 2px hsl(210 24% 34% / 8%), 0 6px 16px hsl(210 24% 34% / 8%);
   }
   .pb__next-icon {
     display: grid; place-items: center;
     inline-size: 6.4cqw; block-size: 6.4cqw; flex: none;
     border-radius: 100px;
-    background-color: rgb(from var(--solace-30) r g b / 0.24);
-    color: var(--solace-20);
+    background-color: var(--solace-80);
+    color: var(--white);
   }
   .pb__next-icon svg { inline-size: 3.6cqw; block-size: 3.6cqw; }
   .pb__next-text { display: flex; flex-direction: column; gap: 0.4cqw; }
   .pb__next-text b { font-size: 3.2cqw; font-weight: var(--font-weight-medium); }
-  .pb__next-text i { font-style: normal; font-size: 2.8cqw; color: rgb(from var(--white) r g b / 0.7); }
+  .pb__next-text i { font-style: normal; font-size: 2.8cqw; color: var(--neutral-80); }
 
   .pb__foot {
     padding-block-start: 2.8cqw;
-    border-block-start: 1px solid rgb(from var(--white) r g b / 0.16);
+    border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
     font-size: 2.9cqw;
-    color: rgb(from var(--white) r g b / 0.66);
+    color: var(--neutral-80);
   }
 
   /* ══ CLIP ═══════════════════════════════════════════════════════════════

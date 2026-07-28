@@ -214,7 +214,7 @@ const faqs = [
     lede="Eight moments, in the order they happen. Every screen below is the real interface, running."
   >
     <div class="page-hero-figure">
-      <HeroGlass tone="light" variant="intake" />
+      <HeroGlass variant="intake" />
     </div>
   </PageHeader>
 
@@ -371,7 +371,12 @@ const faqs = [
 </Page>
 
 <style>
-  .page-hero-figure { margin-block-start: var(--space-8x); display: flex; justify-content: center; }
+  .page-hero-figure {
+    margin-block-start: var(--space-8x);
+    inline-size: 100%;
+    display: flex;
+    justify-content: center;
+  }
 
   /* ══ ACTS ═══════════════════════════════════════════════════════════════ */
   .act__inner {

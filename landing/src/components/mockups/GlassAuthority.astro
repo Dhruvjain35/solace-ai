@@ -10,7 +10,8 @@
    difference is written down with a name against it — which is also what makes
    the override log a training signal rather than an apology.
 
-   Material: glass on dark. Never mixed with the neumorphism on /product.
+   Material: light glass — a tinted panel carrying white cards. Depth comes
+   from a real drop shadow, not from transparency.
 
    ══ THE CLIP ══════════════════════════════════════════════════════════════
    12.0s, five beats of 2.4s, narrated by the caption rail.
@@ -32,7 +33,7 @@ const CAPTIONS = [
 ];
 ---
 
-<div class="au glass" data-clip>
+<div class="au lglass" data-clip>
   <div class="au__head">
     <span class="au__title">Who decided</span>
     <span class="au__pt">Okonkwo, D.</span>
@@ -83,19 +84,17 @@ const CAPTIONS = [
 <style>
   .au {
     --clip-dur: 9.5s;
-    --_tint: var(--solace-100);
     inline-size: 100%;
     display: flex;
     flex-direction: column;
     gap: 3.4cqw;
     padding: 5.5cqw;
-    border-radius: var(--radius-6x);
-    color: var(--white);
+    color: var(--neutral-100);
   }
 
   .au__head { display: flex; align-items: baseline; gap: 3cqw; }
   .au__title { font-size: 4cqw; font-weight: var(--font-weight-semibold); letter-spacing: -0.02em; }
-  .au__pt { margin-inline-start: auto; font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+  .au__pt { margin-inline-start: auto; font-size: 3cqw; color: var(--neutral-80); }
 
   .au__pair { display: grid; gap: 2.4cqw; align-items: center; }
   @container (min-width: 420px) { .au__pair { grid-template-columns: 1fr auto 1fr; } }
@@ -104,46 +103,44 @@ const CAPTIONS = [
     display: flex; flex-direction: column; gap: 1cqw;
     padding: 3.6cqw 3.8cqw;
     border-radius: var(--radius-3x);
-    border: 1px solid rgb(from var(--white) r g b / 0.18);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
   }
   /* The suggestion is quieter than the decision. The material carries the
      hierarchy so no label has to say "this one counts". */
   .au__side--ai {
-    background: linear-gradient(180deg,
-      rgb(from var(--white) r g b / 0.10) 0%,
-      rgb(from var(--white) r g b / 0.04) 100%);
+    background-color: var(--neutral-5);
   }
   .au__side--human {
-    background: linear-gradient(180deg,
-      rgb(from var(--solace-40) r g b / 0.28) 0%,
-      rgb(from var(--solace-40) r g b / 0.12) 100%);
-    border-color: rgb(from var(--solace-30) r g b / 0.42);
+    background-color: var(--white);
+    border-color: rgb(from var(--neutral-40) r g b / 0.24);
+    border-inline-start: 0.7cqw solid var(--solace-60);
+    box-shadow: 0 1px 2px hsl(210 24% 34% / 8%), 0 8px 20px hsl(210 24% 34% / 10%);
   }
-  .au__k { font-size: 2.9cqw; color: rgb(from var(--white) r g b / 0.66); }
+  .au__k { font-size: 2.9cqw; color: var(--neutral-80); }
   .au__v {
     font-size: 9cqw;
     font-weight: var(--font-weight-semibold);
     line-height: 1;
     letter-spacing: -0.04em;
   }
-  .au__side--ai .au__v { color: rgb(from var(--white) r g b / 0.66); }
-  .au__side--human .au__v { color: var(--white); }
-  .au__note { font-size: 3cqw; color: rgb(from var(--white) r g b / 0.72); }
+  .au__side--ai .au__v { color: var(--neutral-80); }
+  .au__side--human .au__v { color: var(--solace-80); }
+  .au__note { font-size: 3cqw; color: var(--neutral-80); }
 
   .au__vs {
     justify-self: center;
     display: grid; place-items: center;
     inline-size: 7cqw; block-size: 7cqw;
     border-radius: 100px;
-    background-color: rgb(from var(--white) r g b / 0.12);
-    border: 1px solid rgb(from var(--white) r g b / 0.2);
-    color: var(--solace-20);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 0.2);
+    color: var(--solace-80);
   }
   .au__vs svg { inline-size: 4cqw; block-size: auto; }
 
-  .au__effect { display: grid; font-size: 3cqw; color: var(--solace-20); }
+  .au__effect { display: grid; font-size: 3cqw; color: var(--solace-80); }
   .au__effect > * { grid-area: 1 / 1; }
-  .au__effect-pre { color: rgb(from var(--white) r g b / 0.6); opacity: 0; }
+  .au__effect-pre { color: var(--neutral-80); opacity: 0; }
 
   .au__log { display: flex; flex-direction: column; gap: 2cqw; }
   .au__lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.6cqw; }
@@ -151,21 +148,21 @@ const CAPTIONS = [
     display: flex; align-items: baseline; gap: 2.6cqw;
     font-size: 3cqw;
     line-height: 1.4;
-    color: rgb(from var(--white) r g b / 0.9);
+    color: var(--neutral-100);
   }
   .au__line b {
     inline-size: 17cqw;
     flex: none;
     font-weight: var(--font-weight-medium);
-    color: rgb(from var(--white) r g b / 0.62);
+    color: var(--neutral-80);
   }
 
   .au__rate {
     display: flex; align-items: center; gap: 3cqw;
     padding-block-start: 3cqw;
-    border-block-start: 1px solid rgb(from var(--white) r g b / 0.16);
+    border-block-start: 1px solid rgb(from var(--neutral-40) r g b / 0.24);
     font-size: 3cqw;
-    color: rgb(from var(--white) r g b / 0.72);
+    color: var(--neutral-80);
   }
   /* The type size lives on the WINDOW: block-size:1em resolves against the
      element's own font-size, so a window sized at the parent's scale holding
@@ -177,7 +174,7 @@ const CAPTIONS = [
     display: flex; align-items: baseline; gap: 0.4cqw;
     font-size: 3cqw;
     line-height: 1;
-    color: var(--solace-20);
+    color: var(--solace-80);
     font-variant-numeric: tabular-nums;
   }
   .au__tick {

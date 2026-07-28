@@ -49,7 +49,6 @@ const CAPTIONS = [
   </div>
 
   <p class="hk__hook">
-    <span class="hk__hook-dot" aria-hidden="true"></span>
     <span class="hk__hook-pre" aria-hidden="true">Waiting on order-sign</span>
     <span class="hk__hook-post">order-sign &middot; Solace responded</span>
   </p>
@@ -144,21 +143,13 @@ const CAPTIONS = [
 
   .hk__hook {
     display: grid;
-    grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 2cqw;
     padding-inline: 1cqw;
     font-size: 2.9cqw;
     color: var(--neutral-80);
     font-variant-numeric: tabular-nums;
   }
-  /* A steady marker, not a blinker. */
-  .hk__hook-dot {
-    inline-size: 1.6cqw; block-size: 1.6cqw;
-    border-radius: 100px;
-    background-color: var(--solace-60);
-  }
-  .hk__hook-pre, .hk__hook-post { grid-column: 2; grid-row: 1; }
+  .hk__hook-pre, .hk__hook-post { grid-area: 1 / 1; }
   .hk__hook-pre { opacity: 0; }
 
   .hk__cards { display: flex; flex-direction: column; gap: 2.4cqw; }

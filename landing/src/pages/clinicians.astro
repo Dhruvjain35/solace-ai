@@ -125,7 +125,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   description="One line of story, the causes that must not be missed and the next action worth taking — ready before you open the door. And when you disagree, you win."
 >
   <!-- ══ Hero ═════════════════════════════════════════════════════════════ -->
-  <section class="hero" data-color-scheme="dark" aria-labelledby="hero-heading">
+  <section class="hero" data-color-scheme="light" aria-labelledby="hero-heading">
     <div class="hero__mesh" aria-hidden="true"></div>
     <div class="container hero__inner">
       <h1 id="hero-heading" class="hero__title">Meet the story before the patient.</h1>
@@ -146,7 +146,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
       </div>
 
       <div class="hero__figure">
-        <HeroGlass tone="dark" />
+        <HeroGlass variant="board" />
       </div>
     </div>
   </section>
@@ -156,7 +156,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     <section
       id={act.id}
       class:list={['act', i % 2 === 1 && 'act--flip']}
-      data-color-scheme="dark"
+      data-color-scheme="light"
       aria-labelledby={`act-${act.index}`}
     >
       <div class="act__mesh" aria-hidden="true"></div>
@@ -187,7 +187,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   ))}
 
   <!-- ══ What it will not do ══════════════════════════════════════════════ -->
-  <section id="limits" class="limits" data-color-scheme="dark" aria-labelledby="limits-heading">
+  <section id="limits" class="limits" data-color-scheme="light" aria-labelledby="limits-heading">
     <div class="limits__mesh" aria-hidden="true"></div>
     <div class="container page-section limits__inner">
       <div class="limits__head reveal">
@@ -202,7 +202,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
 
       <ul class="limits__grid">
         {limits.map((limit) => (
-          <li class="limits__card glass reveal">
+          <li class="limits__card lglass reveal">
             <h3 class="limits__card-title">{limit.title}</h3>
             <p class="limits__card-body">{limit.body}</p>
           </li>
@@ -212,7 +212,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   </section>
 
   <!-- ══ Statement ════════════════════════════════════════════════════════ -->
-  <section class="say" data-color-scheme="dark" aria-labelledby="say-heading">
+  <section class="say" data-color-scheme="light" aria-labelledby="say-heading">
     <div class="container page-section">
       <h2 id="say-heading" class="visually-hidden">How Solace treats clinical judgement</h2>
       <p class="say__text">
@@ -230,7 +230,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   </section>
 
   <!-- ══ Close ════════════════════════════════════════════════════════════ -->
-  <section class="close" data-color-scheme="dark" aria-labelledby="close-heading">
+  <section class="close" data-color-scheme="light" aria-labelledby="close-heading">
     <div class="close__mesh" aria-hidden="true"></div>
     <div class="container page-section close__inner">
       <h2 id="close-heading" class="close__heading reveal">Bring it to your team.</h2>
@@ -253,57 +253,46 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
 </Page>
 
 <style>
-  /* ══ THE MESH ═══════════════════════════════════════════════════════════
-     Glass needs something behind it or it is a grey box with a border. So every
-     section carries a radial mesh — four soft lights over the slate bed, rotated
-     differently per section so no two read as the same backdrop. Pure CSS: zero
-     bytes, and it cannot pixelate the way a mesh image would. */
-  /* The bed is a deep teal-slate, not black. Near-black with a couple of green
-     blobs on it reads as an unlit room; the whole page felt like a mistake
-     rather than a decision. This is the same hue family as the brand, lifted
-     far enough off zero that the glass has a colour to refract and the type has
-     something warmer than pure black behind it.
+  /* ══ THE FIELD ══════════════════════════════════════════════════════════
+     One gradient wash, shared by the whole page. White at the top, a soft lilac
+     drifting through the upper left, the brand mint settling toward the bottom.
 
-     Two layers do the work. A wide, low-contrast aurora gives the page its
-     depth, and a 1px grid at 3% gives it structure — the same
-     engineering-drawing motif the light pages use for their gutters, which is
-     what keeps the dark page recognisably part of the same site. */
+     This replaces a dark bed with a mesh on it. That version had the material
+     backwards: glass over a dark mesh is a lighting effect, and it only looked
+     like anything because of what was behind it. Light glass — a tinted panel
+     carrying white cards — reads as an interface at any size and does not need
+     the page to do it any favours. */
+  /* One gradient field, shared by the whole page. White at the top, a soft
+     lilac drifting through the upper left, and the brand mint settling toward
+     the bottom — the same wash the product screens sit on. It is a single
+     stack of radials on white rather than a per-section mesh, so the page
+     reads as one surface you scroll down instead of six panels stacked up. */
   .hero, .act, .limits, .close, .say {
     position: relative;
     overflow: hidden;
-    background-color: #0c1a1d;
+    background-color: var(--white);
   }
   .hero__mesh, .act__mesh, .limits__mesh, .close__mesh {
     position: absolute;
-    inset: -30%;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse 58% 50% at 22% 18%, rgb(from var(--solace-50) r g b / 0.22), transparent 68%),
-      radial-gradient(ellipse 54% 46% at 84% 30%, rgb(from var(--slate-40) r g b / 0.20), transparent 66%),
-      radial-gradient(ellipse 64% 52% at 62% 92%, rgb(from var(--solace-80) r g b / 0.30), transparent 70%);
-  }
-  .hero::after, .act::after, .limits::after, .close::after, .say::after {
-    content: '';
-    position: absolute;
     inset: 0;
     pointer-events: none;
-    background-image:
-      linear-gradient(90deg, rgb(from var(--white) r g b / 0.03) 1px, transparent 1px),
-      linear-gradient(0deg,  rgb(from var(--white) r g b / 0.03) 1px, transparent 1px);
-    background-size: 96px 96px;
-    /* Fades out toward the middle so it frames the content instead of sitting
-       behind the type. */
-    mask-image: radial-gradient(ellipse 78% 66% at 50% 50%, transparent 30%, #000 100%);
+    background:
+      radial-gradient(ellipse 74% 62% at 16% 40%, rgb(196 190 240 / 0.30), transparent 70%),
+      radial-gradient(ellipse 62% 54% at 88% 22%, rgb(178 206 236 / 0.26), transparent 68%),
+      radial-gradient(ellipse 88% 62% at 58% 108%, rgb(from var(--solace-30) r g b / 0.44), transparent 72%);
   }
-  .act__mesh { rotate: 18deg; }
-  .limits__mesh { rotate: -12deg; }
-  .close__mesh { rotate: 34deg; }
+  /* Each section samples a different part of the same field, so the wash keeps
+     moving down the page instead of restarting at every section boundary. */
+  .hero__mesh   { background-position: 0 0; }
+  .act__mesh    { background-position: 0 -18%; }
+  .limits__mesh { background-position: 0 -34%; }
+  .close__mesh  { background-position: 0 -52%; }
 
   .arrow {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2x);
-    color: var(--solace-20);
+    color: var(--color-primary-base);
     font-weight: var(--font-weight-medium);
   }
   .arrow span { text-decoration: underline; text-underline-offset: 3px; }
@@ -323,7 +312,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     text-align: center;
     gap: var(--space-5x);
     padding-block: var(--space-20x) var(--space-16x);
-    color: var(--white);
+    color: var(--color-text-base);
   }
   @media (min-width: 640.02px) {
     .hero__inner { padding-block: var(--space-24x) var(--space-20x); }
@@ -345,7 +334,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     font-size: var(--font-size-text-large);
     line-height: var(--line-height-open);
     max-inline-size: 56ch;
-    color: rgb(from var(--white) r g b / 0.82);
+    color: var(--color-text-sub);
   }
   .hero__cta {
     margin-block-start: var(--space-4x);
@@ -364,7 +353,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     gap: var(--space-10x);
     align-items: center;
     padding-block: var(--space-16x);
-    color: var(--white);
+    color: var(--color-text-base);
   }
   @media (min-width: 640.02px) { .act__inner { padding-block: var(--space-20x); } }
   @media (min-width: 1080.02px) {
@@ -386,15 +375,15 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     gap: var(--space-3x);
     font-size: var(--font-size-text-small);
     font-weight: var(--font-weight-medium);
-    color: rgb(from var(--white) r g b / 0.76);
+    color: var(--color-text-sub);
   }
-  .act__index { color: var(--solace-20); font-variant-numeric: tabular-nums; }
+  .act__index { color: var(--color-primary-base); font-variant-numeric: tabular-nums; }
   .act__rule {
     inline-size: var(--space-8x);
     block-size: 1px;
     background-image: repeating-linear-gradient(
       90deg,
-      rgb(from var(--white) r g b / 0.4) 0, rgb(from var(--white) r g b / 0.4) 4px,
+      var(--color-border-sub) 0, var(--color-border-sub) 4px,
       transparent 4px, transparent 8px
     );
   }
@@ -409,7 +398,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     font-size: var(--font-size-text-medium);
     line-height: var(--line-height-open);
     max-inline-size: 48ch;
-    color: rgb(from var(--white) r g b / 0.8);
+    color: var(--color-text-sub);
   }
   .act__points { display: grid; gap: var(--space-3x); margin-block-start: var(--space-3x); }
   .act__points li {
@@ -417,7 +406,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     padding-inline-start: var(--space-7x);
     font-size: var(--font-size-text-small);
     line-height: var(--line-height-open);
-    color: rgb(from var(--white) r g b / 0.88);
+    color: var(--color-text-sub);
   }
   /* Hollow circle, never a filled dot. */
   .act__points li::before {
@@ -427,7 +416,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     inset-block-start: 0.6em;
     inline-size: 12px;
     block-size: 12px;
-    border: 1.5px solid rgb(from var(--solace-30) r g b / 0.7);
+    border: 1.5px solid var(--color-icon-soft);
     border-radius: 50%;
   }
 
@@ -451,7 +440,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     line-height: 1;
     letter-spacing: var(--letter-spacing-display);
     font-variant-numeric: tabular-nums;
-    color: rgb(from var(--white) r g b / 0.18);
+    color: rgb(from var(--neutral-40) r g b / 0.42);
     pointer-events: none;
   }
   /* The graphics measure themselves in cqw, and an element cannot be its own
@@ -476,7 +465,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     font-size: var(--font-size-text-medium);
     line-height: var(--line-height-open);
     max-inline-size: 56ch;
-    color: rgb(from var(--white) r g b / 0.8);
+    color: var(--color-text-sub);
   }
 
   .limits__grid { display: grid; gap: var(--space-5x); }
@@ -484,7 +473,6 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   @media (min-width: 1080.02px) { .limits__grid { grid-template-columns: repeat(4, 1fr); } }
 
   .limits__card {
-    --_tint: var(--solace-100);
     display: flex;
     flex-direction: column;
     gap: var(--space-3x);
@@ -500,7 +488,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
   .limits__card-body {
     font-size: var(--font-size-text-small);
     line-height: var(--line-height-open);
-    color: rgb(from var(--white) r g b / 0.8);
+    color: var(--color-text-sub);
   }
 
   /* ══ STATEMENT ══════════════════════════════════════════════════════════ */
@@ -525,9 +513,9 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     color: transparent;
     background-image: linear-gradient(
       123.97deg,
-      var(--solace-30) 10.62%,
-      #b5d8cd 55%,
-      var(--solace-10) 89.61%
+      var(--solace-60) 10.62%,
+      #5e9da8 49.7%,
+      var(--slate-60) 89.61%
     );
   }
 
@@ -540,7 +528,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     align-items: center;
     text-align: center;
     gap: var(--space-5x);
-    color: var(--white);
+    color: var(--color-text-base);
   }
   .close__heading {
     font-size: var(--font-size-display-small);
@@ -553,7 +541,7 @@ const STATEMENT_WORDS = STATEMENT.split(' ');
     font-size: var(--font-size-text-large);
     line-height: var(--line-height-open);
     max-inline-size: 50ch;
-    color: rgb(from var(--white) r g b / 0.82);
+    color: var(--color-text-sub);
   }
   .close__cta {
     margin-block-start: var(--space-4x);

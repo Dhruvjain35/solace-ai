@@ -47,7 +47,10 @@ const CAPTIONS = [
     <span class="wf__title">Workflow builder</span>
     <span class="wf__state">
       <span class="wf__st wf__st--pre" aria-hidden="true">Draft</span>
-      <span class="wf__st wf__st--post"><i></i>Live</span>
+      <span class="wf__st wf__st--post">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.4 6.4 12 13 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Live
+      </span>
     </span>
   </div>
 
@@ -142,13 +145,9 @@ const CAPTIONS = [
     border: 1px solid rgb(from var(--neutral-40) r g b / 0.22);
     color: var(--solace-80);
   }
-  /* A steady state marker, not a blinker. It says "on", and things that are on
-     do not flash at you. */
-  .wf__st--post i {
-    inline-size: 1.6cqw; block-size: 1.6cqw;
-    border-radius: 100px;
-    background-color: var(--solace-60);
-  }
+  /* A tick, not a status light. Every small filled circle on a product page
+     reads as the same generic "live" badge. */
+  .wf__st--post svg { inline-size: 3cqw; block-size: 3cqw; }
 
   .wf__chain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2cqw; }
 
