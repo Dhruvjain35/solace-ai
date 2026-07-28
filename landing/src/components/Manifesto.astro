@@ -23,7 +23,18 @@
 </section>
 
 <style>
-  .manifesto { background-color: var(--slate-90); color: var(--color-text-base); }
+  .manifesto {
+    position: relative;
+    overflow: hidden;
+    /* Not flat slate. The same two lights the hero uses, at a fraction of the
+       strength, so the one dark section on the page belongs to the same world
+       as the top of it rather than being a grey box in the middle. */
+    background-color: var(--slate-90);
+    background-image:
+      radial-gradient(ellipse 68% 60% at 12% 8%, rgb(from var(--solace-60) r g b / 0.24), transparent 66%),
+      radial-gradient(ellipse 72% 64% at 92% 96%, rgb(from var(--solace-90) r g b / 0.44), transparent 70%);
+    color: var(--color-text-base);
+  }
 
   .manifesto__inner { display: flex; flex-direction: column; gap: var(--space-10x); }
   @media (min-width: 1080.02px) {
@@ -42,6 +53,24 @@
     border-radius: var(--radius-5x);
     overflow: hidden;
     box-shadow: var(--elevation-medium);
+  }
+  .manifesto__visual img { display: block; inline-size: 100%; }
+
+  /* Parallax, bound to the section's own travel rather than a clock, so it
+     tracks the scroll in both directions. A still plate in a box was the one
+     thing on the page that did not respond to being scrolled past at all. */
+  @keyframes manifesto-drift {
+    from { scale: 1.12; translate: 0 -3%; }
+    to   { scale: 1.12; translate: 0 3%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .manifesto__visual img {
+        animation: manifesto-drift linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
   }
   .manifesto__visual img {
     inline-size: 100%;

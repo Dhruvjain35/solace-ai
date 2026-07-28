@@ -1,7 +1,23 @@
 ---
-/* Superhuman's logo-wall pattern: a bordered cell grid with hairline rules,
-   not a row of floating logos. Note the heading is "Connects to", NOT
-   "Trusted by" — these are integration targets, not customers. */
+/* The integrations, as a scroll gallery rather than a logo grid.
+
+   What this replaces was a ten-cell bordered grid: correct, honest, and the
+   single most generic block on the page. Every B2B site has one and they all
+   look like the same component with different PNGs in it.
+
+   Two rails now, running in opposite directions, driven by scroll position.
+   That does three things a static grid cannot: it gives the section a reason
+   to be scrolled past rather than read, it lets the list run off both edges so
+   ten vendors imply more than ten, and the counter-motion means the eye keeps
+   finding a new pairing rather than settling on a shape.
+
+   No JavaScript. `animation-timeline: view()` maps the section's own travel
+   through the viewport onto the rails, so the motion is bound to the scroll
+   rather than to a clock — scroll back up and it runs backwards, which is what
+   makes it feel attached to the page instead of playing at it.
+
+   Heading is "Connects to", NOT "Trusted by" — these are integration targets,
+   not customers. */
 const vendors = [
   { name: 'Epic',           src: '/assets/logos/epic.png' },
   { name: 'Oracle Cerner',  src: '/assets/logos/cerner.png' },
@@ -14,84 +30,144 @@ const vendors = [
   { name: 'DrChrono',       src: '/assets/logos/drchrono.png' },
   { name: 'Elation Health', src: '/assets/logos/elation.png' },
 ];
+
+/* Split so the two rails never show the same vendor side by side, then tripled
+   so each rail is wider than any viewport and the travel never runs out. */
+const railA = [...vendors.slice(0, 5), ...vendors.slice(0, 5), ...vendors.slice(0, 5)];
+const railB = [...vendors.slice(5), ...vendors.slice(5), ...vendors.slice(5)];
+
+/* The protocols are the actual claim; the vendor marks only say who it has
+   been pointed at. These ride the second rail so the section says something
+   rather than just listing brands. */
+const protocols = ['HL7 v2', 'FHIR R4', 'SMART on FHIR', 'CDS Hooks'];
 ---
 
-<section data-background-color="secondary-default">
-  <div class="container page-section integration-wall">
-    <p class="integration-wall__lede text-large">Connects to the EHR you already run</p>
+<section class="wall" data-background-color="secondary-default" aria-labelledby="wall-heading">
+  <div class="container wall__head">
+    <h2 id="wall-heading" class="wall__lede">Connects to the EHR you already run</h2>
+  </div>
 
-    <ul class="integration-wall__grid">
-      {vendors.map((v) => (
-        <li class="integration-wall__cell">
-          <img src={v.src} alt="" loading="lazy" decoding="async" width="28" height="28" />
-          <span class="integration-wall__name">{v.name}</span>
-        </li>
+  <div class="wall__rails" aria-hidden="true">
+    <div class="wall__rail wall__rail--a">
+      {railA.map((v) => (
+        <span class="wall__chip">
+          <img src={v.src} alt="" loading="lazy" decoding="async" width="26" height="26" />
+          {v.name}
+        </span>
       ))}
-    </ul>
+    </div>
 
-    <p class="integration-wall__note text-xsmall text-sub">
-      Vendor marks are shown to identify supported integrations. They do not imply endorsement.
+    <div class="wall__rail wall__rail--b">
+      {railB.map((v, i) => (
+        <>
+          <span class="wall__chip">
+            <img src={v.src} alt="" loading="lazy" decoding="async" width="26" height="26" />
+            {v.name}
+          </span>
+          {i % 5 === 2 && (
+            <span class="wall__chip wall__chip--proto">{protocols[((i / 5) | 0) % protocols.length]}</span>
+          )}
+        </>
+      ))}
+    </div>
+  </div>
+
+  {/* The rails are decorative duplicates, so the real list is stated once for
+      anything that does not render CSS animations or read images. */}
+  <p class="visually-hidden">
+    Supported integrations: {vendors.map((v) => v.name).join(', ')}. Over HL7 v2, FHIR R4,
+    SMART on FHIR and CDS Hooks.
+  </p>
+
+  <div class="container">
+    <p class="wall__note text-xsmall">
+      Vendor marks identify supported integrations. They do not imply endorsement.
     </p>
   </div>
 </section>
 
 <style>
-  .integration-wall__lede { text-align: center; color: var(--color-text-sub); }
+  .wall { overflow: hidden; padding-block: var(--space-16x); }
+  @media (min-width: 640.02px) { .wall { padding-block: var(--space-20x); } }
 
-  /* One hairline grid. Cells draw only their start edges; the container draws
-     the outer ring. That avoids doubled 2px borders where cells meet. */
-  .integration-wall__grid {
-    margin-block-start: var(--space-10x);
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    border-block-start: 1px solid var(--color-border-sub);
-    border-inline-start: 1px solid var(--color-border-sub);
+  .wall__head { padding-block-end: var(--space-10x); }
+  .wall__lede {
+    text-align: center;
+    font-size: var(--font-size-heading-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-heading);
+    color: var(--color-text-base);
   }
-  @media (min-width: 640.02px)  { .integration-wall__grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (min-width: 1080.02px) { .integration-wall__grid { grid-template-columns: repeat(5, 1fr); } }
 
-  /* The vendor files are 64px icon marks with no wordmark, so a lone glyph
-     reads as a grey dot. Pairing the real mark with the name set in our own
-     type is an honest lockup and carries the row. */
-  .integration-wall__cell {
+  .wall__rails { display: flex; flex-direction: column; gap: var(--space-4x); }
+
+  /* Each rail is wider than the viewport on purpose and the section clips it,
+     so vendors enter and leave rather than sitting in a box. The mask stops
+     them appearing out of a hard edge at the sides. */
+  .wall__rail {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: var(--space-4x);
+    inline-size: max-content;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+  }
+  /* Offset resting positions so the two rails are never in register. */
+  .wall__rail--a { translate: -8% 0; }
+  .wall__rail--b { translate: -22% 0; }
+
+  .wall__chip {
+    display: inline-flex;
+    align-items: center;
     gap: var(--space-2_5x);
-    min-block-size: 104px;
-    padding: var(--space-5x) var(--space-4x);
-    border-inline-end: 1px solid var(--color-border-sub);
-    border-block-end: 1px solid var(--color-border-sub);
-  }
-
-  .integration-wall__cell img {
-    inline-size: 28px;
-    block-size: 28px;
     flex: none;
-    object-fit: contain;
-    filter: grayscale(1);
-    opacity: 0.5;
-    transition:
-      opacity var(--motion-duration-base) var(--ease-ui),
-      filter  var(--motion-duration-base) var(--ease-ui);
-  }
-
-  .integration-wall__name {
+    padding: var(--space-4x) var(--space-6x);
+    border-radius: var(--radius-full);
+    background-color: var(--white);
+    border: 1px solid rgb(from var(--neutral-40) r g b / 22%);
+    box-shadow: 0 1px 2px hsl(210 24% 34% / 6%), 0 6px 16px hsl(210 24% 34% / 6%);
     font-size: var(--font-size-text-small);
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--letter-spacing-base);
-    color: var(--color-text-sub);
+    color: var(--color-text-base);
     white-space: nowrap;
-    transition: color var(--motion-duration-base) var(--ease-ui);
+  }
+  .wall__chip img { inline-size: 24px; block-size: 24px; flex: none; object-fit: contain; }
+
+  /* The protocol chips carry the claim, so they carry the brand colour. They
+     are the only saturated thing in the section, which is what makes them read
+     as the point rather than as decoration. */
+  .wall__chip--proto {
+    background: linear-gradient(180deg, var(--solace-80) 0%, var(--solace-90) 100%);
+    border-color: var(--solace-90);
+    color: var(--white);
+    box-shadow:
+      inset 0 1px 0 rgb(from var(--white) r g b / 22%),
+      0 2px 6px rgb(from var(--solace-100) r g b / 22%);
   }
 
-  .integration-wall__cell:hover img { filter: grayscale(0); opacity: 1; }
-  .integration-wall__cell:hover .integration-wall__name { color: var(--color-text-base); }
+  .wall__note { text-align: center; padding-block-start: var(--space-10x); color: var(--color-text-sub); }
 
-  @media (prefers-reduced-motion: reduce) {
-    .integration-wall__cell img,
-    .integration-wall__name { transition: none; }
+  /* ══ SCROLL ═════════════════════════════════════════════════════════════
+     Bound to the section's own travel through the viewport, so the rails move
+     only while the section is on screen and reverse when the page scrolls back.
+     A time-based marquee would keep running off screen and would drift out of
+     step with whoever is reading. */
+  @keyframes wall-left  { to { translate: -34% 0; } }
+  @keyframes wall-right { to { translate: 4% 0; } }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .wall__rail--a {
+        animation: wall-left linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+      .wall__rail--b {
+        animation: wall-right linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
   }
-
-  .integration-wall__note { margin-block-start: var(--space-6x); text-align: center; }
 </style>

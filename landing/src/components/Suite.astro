@@ -161,9 +161,21 @@ const panels = [
                 color var(--motion-duration-base) var(--ease-ui);
   }
   .suite__tab:last-child { border-inline-end: none; }
+  /* The selected tab is the only brand-coloured thing in the bar, and it draws
+     a rule along its own bottom edge. Two greys told you nothing until you had
+     read the labels. */
   .suite__tab[aria-selected='true'] {
-    background-color: hsl(from var(--color-bg-secondary) h s calc(l - 3));
-    color: var(--color-text-base);
+    position: relative;
+    background-color: var(--white);
+    color: var(--color-primary-base);
+  }
+  .suite__tab[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -1px;
+    block-size: 2px;
+    background: linear-gradient(90deg, var(--solace-60), var(--solace-90));
   }
 
   .suite__panel {
@@ -171,7 +183,11 @@ const panels = [
     flex-direction: column;
     gap: var(--space-8x);
     padding: var(--space-8x);
-    background-color: var(--color-bg-tertiary);
+    /* A whisper of the brand rather than flat neutral. It does not read as a
+       green panel, it reads as a panel that is not grey. */
+    background-image:
+      radial-gradient(ellipse 60% 70% at 88% 6%, rgb(from var(--solace-40) r g b / 0.10), transparent 68%),
+      linear-gradient(180deg, var(--color-bg-tertiary) 0%, color-mix(in srgb, var(--solace-10) 34%, var(--color-bg-tertiary)) 100%);
     border-inline: 1px solid var(--color-border-sub);
     border-block-end: 1px solid var(--color-border-sub);
     scroll-margin-block-start: calc(var(--page-header-height) * 2);

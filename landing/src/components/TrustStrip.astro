@@ -36,8 +36,9 @@ const facts = [
     </div>
 
     <ul class="trust__grid neu-panel">
-      {facts.map((f) => (
+      {facts.map((f, i) => (
         <li class="trust__cell">
+          <span class="trust__idx" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
           <h3 class="heading-xsmall">{f.title}</h3>
           <p class="text-small text-sub">{f.body}</p>
         </li>
@@ -83,5 +84,16 @@ const facts = [
     .trust__cell { border-block-end: none; }
     .trust__cell:nth-child(2n) { border-inline-end: 1px solid var(--color-border-sub); }
     .trust__cell:last-child { border-inline-end: none; }
+  }
+
+  /* An index per cell, in the brand colour. Four identical bordered boxes gave
+     the eye nothing to enter by; a number gives it an order to read them in. */
+  .trust__idx {
+    display: block;
+    margin-block-end: var(--space-3x);
+    font-size: var(--font-size-text-small);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary-base);
   }
 </style>
