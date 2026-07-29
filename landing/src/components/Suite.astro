@@ -61,26 +61,16 @@ const panels = [
 ];
 ---
 
-<section data-background-color="secondary-default" aria-labelledby="suite-heading">
+<section class="suite-section" data-background-color="secondary-default" aria-labelledby="suite-heading">
   <div class="container page-section suite">
     <div class="suite__head">
       <h2 id="suite-heading" class="heading-large">The whole front door.</h2>
-      <a class="cta-secondary" href="/waitlist">Join the waitlist</a>
-    </div>
-
-    <div class="suite__tabs" role="tablist" aria-label="Solace suite" data-suite-tabs>
-      {panels.map((p, i) => (
-        <a class="suite__tab" href={`#${p.id}`} role="tab" data-index={i} aria-selected={i === 0 ? 'true' : 'false'}>
-          {p.tab}
-        </a>
-      ))}
+      <a class="cta-secondary" href="/demo">Book a demo</a>
     </div>
 
     <div class="suite__panels">
       {panels.map((p, i) => (
-        <>
-          {i > 0 && <div class="hatch-rule" aria-hidden="true"></div>}
-          <article class="suite__panel" id={p.id} data-panel-index={i}>
+        <article class:list={['suite__panel', i % 2 === 1 && 'suite__panel--flip']} id={p.id}>
             <div class="suite__copy">
               <h3 class="heading-medium suite__heading">{p.heading}</h3>
               <p class="text-medium text-sub">{p.sub}</p>
@@ -92,38 +82,18 @@ const panels = [
               {p.mock === 'evidence'   && <div class="suite__mock"><GraphicEvidence /></div>}
               {p.mock === 'hooks'      && <div class="suite__mock"><GraphicHooks /></div>}
             </figure>
-          </article>
-        </>
+        </article>
       ))}
     </div>
   </div>
 </section>
 
-<script>
-  // Not an animation — this is state. The bar reflects whichever panel owns the
-  // viewport. Everything that actually moves is CSS.
-  const bar = document.querySelector('[data-suite-tabs]');
-  if (bar) {
-    const tabs = Array.from(bar.querySelectorAll('.suite__tab'));
-    const panels = Array.from(document.querySelectorAll('[data-panel-index]'));
-    const setActive = (i: number) => {
-      bar.setAttribute('data-active-index', String(i));
-      tabs.forEach((t, n) => t.setAttribute('aria-selected', n === i ? 'true' : 'false'));
-    };
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActive(Number((visible.target as HTMLElement).dataset.panelIndex));
-      },
-      { rootMargin: '-45% 0px -45% 0px', threshold: [0, 0.25, 0.5, 1] },
-    );
-    panels.forEach((p) => io.observe(p));
-  }
-</script>
-
 <style>
+  /* The glow is allowed to bleed past the container on purpose — light does not
+     stop at a grid edge — so the section clips it. `clip`, not `hidden`: hidden
+     would make this a scroll container. */
+  .suite-section { overflow: clip; }
+
   .suite__head {
     display: flex;
     flex-direction: column;
@@ -132,184 +102,124 @@ const panels = [
     padding-block-end: var(--space-8x);
   }
   @media (min-width: 640.02px) {
-    .suite__head { flex-direction: row; align-items: center; justify-content: space-between; }
+    /* The glow is allowed to bleed past the container on purpose — light does not
+     stop at a grid edge — so the section clips it. `clip`, not `hidden`: hidden
+     would make this a scroll container. */
+  .suite-section { overflow: clip; }
+
+  .suite__head { flex-direction: row; align-items: center; justify-content: space-between; }
   }
 
-  /* Sticky under the site header. */
-  .suite__tabs {
-    display: none;
-    position: sticky;
-    inset-block-start: var(--page-header-height);
-    z-index: var(--z-sticky);
-    grid-template-columns: repeat(4, 1fr);
-    border: 1px solid var(--color-border-sub);
-    background-color: var(--color-bg-secondary);
-  }
-  @media (min-width: 640.02px) { .suite__tabs { display: grid; } }
+  /* Four blocks, not four cells in a table.
 
-  .suite__tab {
-    padding: var(--space-5x) var(--space-4x);
-    text-align: center;
-    font-size: var(--font-size-text-small);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-sub);
-    border-inline-end: 1px solid var(--color-border-sub);
-    transition: background-color var(--motion-duration-base) var(--ease-ui),
-                color var(--motion-duration-base) var(--ease-ui);
-  }
-  .suite__tab:last-child { border-inline-end: none; }
-  /* The selected tab is the only brand-coloured thing in the bar, and it draws
-     a rule along its own bottom edge. Two greys told you nothing until you had
-     read the labels. */
-  .suite__tab[aria-selected='true'] {
-    position: relative;
-    background-color: var(--white);
-    color: var(--color-primary-base);
-  }
-  .suite__tab[aria-selected='true']::after {
-    content: '';
-    position: absolute;
-    inset-inline: 0;
-    inset-block-end: -1px;
-    block-size: 2px;
-    background: linear-gradient(90deg, var(--solace-60), var(--solace-90));
-  }
+     What this replaces was a bordered stack under a sticky tab bar. The bar was
+     the worst of it: pinned under the site header it read as browser chrome, so
+     the section that carries the actual product looked like a settings screen.
+     Under it, hairline borders and hatched dividers turned four product moments
+     into a spreadsheet, and every figure sat on a flat pastel rectangle roughly
+     twice the size of the graphic on it — which is where all that empty space
+     came from.
 
-  .suite__panel {
+     Nothing here has an edge now. The blocks alternate so the eye crosses the
+     page instead of running down one gutter, and each figure floats in its own
+     light rather than on its own slab. */
+  .suite__panels {
     display: flex;
     flex-direction: column;
-    gap: var(--space-8x);
-    padding: var(--space-8x);
-    /* A whisper of the brand rather than flat neutral. It does not read as a
-       green panel, it reads as a panel that is not grey. */
-    background-image:
-      radial-gradient(ellipse 60% 70% at 88% 6%, rgb(from var(--solace-40) r g b / 0.10), transparent 68%),
-      linear-gradient(180deg, var(--color-bg-tertiary) 0%, color-mix(in srgb, var(--solace-10) 34%, var(--color-bg-tertiary)) 100%);
-    border-inline: 1px solid var(--color-border-sub);
-    border-block-end: 1px solid var(--color-border-sub);
-    scroll-margin-block-start: calc(var(--page-header-height) * 2);
+    gap: var(--space-16x);
   }
+  @media (min-width: 1080.02px) { .suite__panels { gap: var(--space-24x); } }
+
+  .suite__panel { display: flex; flex-direction: column; gap: var(--space-8x); }
   @media (min-width: 1080.02px) {
-    .suite__panel { flex-direction: row; align-items: center; gap: var(--space-16x); padding: var(--space-12x); }
-    .suite__copy, .suite__figure { flex: 1 1 0; min-inline-size: 0; }
+    .suite__panel { flex-direction: row; align-items: center; gap: var(--space-10x); }
+    /* The copy column is set in ch rather than as a fraction. A fraction gives
+       the figure whatever is left, and what it needs is most of it. */
+    .suite__copy { flex: 0 1 36ch; }
+    .suite__figure { flex: 1 1 0; min-inline-size: 0; }
+    .suite__panel--flip { flex-direction: row-reverse; }
   }
 
-  .suite__heading { max-inline-size: 15ch; }
   .suite__copy { display: flex; flex-direction: column; gap: var(--space-4x); align-items: flex-start; }
+  .suite__heading { max-inline-size: 15ch; }
 
+  /* Colour as light behind the card, not as a rectangle under it.
 
-
-  /* Figures are components now, not images, so the old height cap and shadow
-     are gone — each mockup owns its own surface and elevation. The figure just
-     centres and bounds them. */
-  /* Each figure sits on its own field of colour.
-
-     The panels were four warm-grey rectangles with a white graphic in the
-     middle, which is why the section read as inert next to the hero: the hero
-     is a lit photograph and this was a spreadsheet. Superhuman solves the same
-     problem with a photograph behind every product shot. We cannot shoot four
-     of those, but the hero's own technique works at this scale — layered
-     radial lights over a base, plus grain so a field this wide does not band.
-
-     One hue family per product, so the four are told apart by colour before a
-     label is read. Only the note panel is green: using the brand colour on all
-     four would make the colour mean nothing. */
+     A flat pastel plate is a shape, and four of them in a row is four shapes
+     competing with the four products they are supposed to be presenting. A glow
+     is the card being lit — it gives the same hue separation (you know which
+     product you are looking at before you read the label) without putting
+     another object on the page. It also has no edges, so it cannot band and
+     cannot look cut. */
   .suite__figure {
     position: relative;
     isolation: isolate;
-    overflow: hidden;
     margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     min-inline-size: 0;
-    padding: var(--space-10x) var(--space-6x);
-    border-radius: var(--radius-6x);
+    padding: var(--space-10x) var(--space-2x);
   }
-  @media (min-width: 640.02px) {
-    .suite__figure { padding: var(--space-14x) var(--space-10x); }
+  @media (min-width: 640.02px) { .suite__figure { padding: var(--space-12x) var(--space-6x); } }
+
+  .suite__figure::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -2% -12%;
+    background:
+      radial-gradient(ellipse 64% 60% at 44% 38%, var(--glow-a) 0%, transparent 72%),
+      radial-gradient(ellipse 58% 56% at 64% 70%, var(--glow-b) 0%, transparent 74%);
+    opacity: 0.85;
   }
 
-  .suite__figure--dawn {
-    background:
-      radial-gradient(ellipse 82% 66% at 12% 8%,   #ffd9a8 0%, transparent 68%),
-      radial-gradient(ellipse 76% 72% at 92% 22%,  #ffb3a0 0%, transparent 66%),
-      radial-gradient(ellipse 96% 80% at 62% 104%, #f6a2c0 0%, transparent 70%),
-      linear-gradient(162deg, #ffe9cf 0%, #ffd2cd 58%, #f3c4d8 100%);
-  }
-  .suite__figure--dusk {
-    background:
-      radial-gradient(ellipse 80% 64% at 14% 10%,  #b9c8ff 0%, transparent 68%),
-      radial-gradient(ellipse 74% 70% at 94% 26%,  #cdb6f2 0%, transparent 66%),
-      radial-gradient(ellipse 96% 78% at 58% 104%, #8fa8ea 0%, transparent 70%),
-      linear-gradient(162deg, #dfe6ff 0%, #cdd3f6 58%, #b8c2ee 100%);
-  }
-  .suite__figure--field {
-    background:
-      radial-gradient(ellipse 82% 66% at 12% 8%,   #b6ecd2 0%, transparent 68%),
-      radial-gradient(ellipse 76% 72% at 92% 22%,  #d8ecb0 0%, transparent 66%),
-      radial-gradient(ellipse 96% 80% at 62% 104%, #7fd6bb 0%, transparent 70%),
-      linear-gradient(162deg, #dcf4e6 0%, #c7ecd8 58%, #a9dfc9 100%);
-  }
-  .suite__figure--tide {
-    background:
-      radial-gradient(ellipse 82% 66% at 14% 8%,   #a9dced 0%, transparent 68%),
-      radial-gradient(ellipse 74% 70% at 92% 24%,  #9fc4ee 0%, transparent 66%),
-      radial-gradient(ellipse 96% 78% at 60% 104%, #7fb6dd 0%, transparent 70%),
-      linear-gradient(162deg, #d6eef7 0%, #c0dff1 58%, #a6cbe8 100%);
-  }
+  .suite__figure--dawn  { --glow-a: #ffc39a; --glow-b: #f7a8c4; }
+  .suite__figure--dusk  { --glow-a: #b4c4ff; --glow-b: #c9b0f2; }
+  .suite__figure--field { --glow-a: #9fe4c6; --glow-b: #cfe6a4; }
+  .suite__figure--tide  { --glow-a: #a2daed; --glow-b: #98bfee; }
 
-  /* The field itself moves. Two things at once and neither on a clock: the
-     background slowly drifts across its own box as the panel travels the
-     viewport, and it scales fractionally. It is the difference between a
-     printed gradient and a lit one — the hero taught the page that light in
-     this world moves, and four still fields underneath it read as flat by
-     comparison. */
-  @keyframes suite-field {
-    from { background-position: 0% 0%, 100% 0%, 50% 100%, 0% 0%; scale: 1.06; }
-    to   { background-position: 12% 14%, 88% 12%, 44% 88%, 0% 0%; scale: 1; }
+  /* The light moves as the block crosses, the way it does in the hero. Still
+     light under a moving page reads as printed. */
+  @keyframes suite-glow {
+    from { scale: 1.12; translate: 0 2%; }
+    to   { scale: 1;    translate: 0 -2%; }
   }
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: view()) {
-      .suite__figure {
-        animation: suite-field linear both;
+      .suite__figure::before {
+        animation: suite-glow linear both;
         animation-timeline: view();
         animation-range: cover 0% cover 100%;
       }
     }
   }
 
-  /* Grain. Same SVG turbulence the hero uses, so the two read as one material,
-     and without it a field this wide bands in 8-bit. */
+  /* Grain over the glow. A wash this wide bands in 8-bit, and this is the same
+     turbulence the hero uses, so the two read as one material. */
   .suite__figure::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: -1;
-    opacity: 0.055;
+    opacity: 0.05;
     pointer-events: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  .suite__figure > :global(*) { max-inline-size: 560px; inline-size: 100%; }
 
   /* The graphics size themselves in cqw, and an element cannot be its own query
-     container — with container-type on the graphic root, its own cqw units were
-     resolving against a 1376px ancestor and every measurement came out ~2.5x
-     too large. The container has to be this wrapper. */
+     container — so the container has to be this wrapper. Bigger now: the plate
+     that used to eat 120px of padding either side is gone. */
   .suite__mock {
     position: relative;
     z-index: 1;
     container-type: inline-size;
     inline-size: 100%;
-    max-inline-size: 560px;
-    /* A real contact shadow, so the panel sits ON the field rather than being
-       pasted over it. */
-    filter: drop-shadow(0 2px 4px hsl(210 24% 34% / 12%)) drop-shadow(0 18px 40px hsl(210 24% 34% / 18%));
+    max-inline-size: 620px;
+    /* A real contact shadow, so the card sits IN the light rather than on it. */
+    filter: drop-shadow(0 2px 4px hsl(210 24% 34% / 10%))
+            drop-shadow(0 14px 30px hsl(210 24% 34% / 14%))
+            drop-shadow(0 34px 60px hsl(210 24% 34% / 12%));
   }
 
-
-
-  @media (prefers-reduced-motion: reduce) {
-    .suite__tab { transition: none; }
-  }
 </style>

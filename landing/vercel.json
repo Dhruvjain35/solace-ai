@@ -7,6 +7,15 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    { "source": "/blog", "destination": "/company", "permanent": false }
+    {
+      "source": "/blog",
+      "destination": "/company",
+      "permanent": false
+    },
+    {
+      "source": "/waitlist",
+      "destination": "/demo",
+      "permanent": true
+    }
   ]
 }

@@ -16,3 +16,8 @@ build and be unreachable.
 Nothing in here is stale. They were current as of the launch cut, and the
 components they import are still in `src/components/` and still maintained by the
 landing page, so they will build the moment they are moved back.
+
+Note: `demo.astro` in here is the FULL-SITE demo page. The live one at
+`src/pages/demo.astro` is the launch-mode version — same form, copy written
+for a site with nothing else on it. Do not restore this one over that one
+without merging the two.

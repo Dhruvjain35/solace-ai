@@ -1,13 +1,12 @@
 ---
 import Page from '../layouts/Page.astro';
 
-/* The waitlist, and for now the only thing on this site you can do.
+/* Booking a demo, and for now the only thing on this site you can do.
 
-   It is built from the demo page's form rather than something new, because that
-   form already handles the case that matters: /api/lead answers 501 until a
-   delivery channel is configured, and when it does the page composes a mail
-   draft instead of pretending the signup landed. A waitlist that silently drops
-   the first fifty people is worse than no waitlist.
+   The delivery path is the one that matters: /api/lead answers 501 until a
+   channel is configured, and when it does this page composes a mail draft
+   instead of pretending the request landed. A form that silently drops the
+   first fifty people is worse than no form.
 
    Everything asked for here is something a reply actually needs. Role and
    organisation decide who picks the conversation up; nothing else is collected,
@@ -29,27 +28,27 @@ const roles = [
 ];
 
 const promises = [
-  'Early access as departments come online, in the order people joined',
-  'One email when there is something real to show, and none in between',
+  'Twenty minutes, on a workflow that looks like yours',
+  'Your own department&rsquo;s numbers, not a canned dataset',
   'A straight answer about what it would and would not change on your floor',
 ];
 ---
 
 <Page
-  title="Join the Solace waitlist"
-  description="Solace is opening to emergency departments a few at a time. Join the waitlist and we will come to you in order, with your own department's numbers."
+  title="Book a Solace demo"
+  description="See Solace on your floor. A live walkthrough on a workflow that looks like yours, in about twenty minutes."
 >
   <section class="wl" data-background-color="secondary-default" aria-labelledby="wl-heading">
     <div class="container page-section">
       <div class="wl__grid">
         <div class="wl__copy">
           <h1 id="wl-heading" class="display-medium wl__title">
-            We are opening a few departments at a time.
+            See Solace on your floor.
           </h1>
           <p class="text-large text-sub wl__lede">
-            Solace is not generally available yet. Tell us where you work and we
-            will come to you in order, with a walkthrough on a workflow that
-            looks like yours.
+            A live walkthrough on a workflow that looks like yours. Tell us
+            where you work and we will bring your own department&rsquo;s
+            numbers to it.
           </p>
           <ul class="wl__list">
             {promises.map((line) => <li class="text-medium">{line}</li>)}
@@ -95,7 +94,7 @@ const promises = [
             </div>
 
             <button type="submit" class="cta-primary lead__submit">
-              <span class="cta-primary__label">Join the waitlist</span>
+              <span class="cta-primary__label">Book a demo</span>
               <span class="cta-primary__chip" aria-hidden="true">
                 <svg aria-hidden="true" class="cta-primary__icon" viewBox="0 0 16 16" fill="none">
                   <path
@@ -125,9 +124,9 @@ const promises = [
                 stroke-linejoin="round"
               />
             </svg>
-            <p class="heading-xsmall">You are on the list.</p>
+            <p class="heading-xsmall">Request sent.</p>
             <p class="text-small text-sub lead__sent-note">
-              We will be in touch as departments open up. If your email client
+              We will reach out within one business day. If your email client
               opened instead, hit send to finish.
             </p>
           </div>
@@ -155,7 +154,7 @@ const promises = [
         org: String(data.get('org') ?? ''),
         role: String(data.get('role') ?? ''),
         website: String(data.get('website') ?? ''),
-        source: 'waitlist',
+        source: 'demo',
       };
 
       form.hidden = true;
@@ -181,12 +180,12 @@ const promises = [
           lead.org && `Organization: ${lead.org}`,
           lead.role && `Role: ${lead.role}`,
           '',
-          'Please add me to the Solace waitlist.',
+          'I would like to book a Solace demo.',
         ]
           .filter(Boolean)
           .join('\n');
         window.location.href =
-          `mailto:contacthelp.solace@gmail.com?subject=${encodeURIComponent('Solace waitlist')}` +
+          `mailto:contacthelp.solace@gmail.com?subject=${encodeURIComponent('Solace demo request')}` +
           `&body=${encodeURIComponent(body)}`;
       }
     });
