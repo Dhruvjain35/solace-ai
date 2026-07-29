@@ -16,6 +16,7 @@
 <section class="manifesto" data-color-scheme="dark" aria-labelledby="manifesto-heading">
   <div class="manifesto__plate" aria-hidden="true"></div>
   <div class="manifesto__grain" aria-hidden="true"></div>
+  <div class="manifesto__hem" aria-hidden="true"></div>
 
   <div class="container page-section manifesto__inner">
     <div class="manifesto__copy">
@@ -105,8 +106,36 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
+  /* The section met its neighbours on a ruled line at both ends: light above,
+     dark, light below, with nothing in between. The photograph already dissolves
+     at top and bottom, but the section's own dark ground did not, so the seam was
+     the background colour rather than the image.
+
+     Both ends now ramp to the colour of the section they actually touch — 242,241,237
+     from the suite above and near-white from the trust section below, sampled off
+     the render rather than taken from a token. That distinction has bitten this
+     build before: the hero hem named `--color-bg-secondary`, which resolves to a
+     different value inside a dark-scheme section, and faded the hero into a
+     slightly different dark while the seam stayed exactly where it was.
+
+     Sixteen stops on a smoothstep, for the same reason as everywhere else: a
+     two-stop ramp breaks slope at each end and a slope break reads as a line. */
+  .manifesto__hem {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(180deg, rgb(242 241 237 / 1.0000) 0.00%, rgb(242 241 237 / 0.9888) 6.25%, rgb(242 241 237 / 0.9570) 12.50%, rgb(242 241 237 / 0.9077) 18.75%, rgb(242 241 237 / 0.8438) 25.00%, rgb(242 241 237 / 0.7681) 31.25%, rgb(242 241 237 / 0.6836) 37.50%, rgb(242 241 237 / 0.5933) 43.75%, rgb(242 241 237 / 0.5000) 50.00%, rgb(242 241 237 / 0.4067) 56.25%, rgb(242 241 237 / 0.3164) 62.50%, rgb(242 241 237 / 0.2319) 68.75%, rgb(242 241 237 / 0.1562) 75.00%, rgb(242 241 237 / 0.0923) 81.25%, rgb(242 241 237 / 0.0430) 87.50%, rgb(242 241 237 / 0.0112) 93.75%, rgb(242 241 237 / 0.0000) 100.00%),
+      linear-gradient(0deg, rgb(254 255 255 / 1.0000) 0.00%, rgb(254 255 255 / 0.9888) 6.25%, rgb(254 255 255 / 0.9570) 12.50%, rgb(254 255 255 / 0.9077) 18.75%, rgb(254 255 255 / 0.8438) 25.00%, rgb(254 255 255 / 0.7681) 31.25%, rgb(254 255 255 / 0.6836) 37.50%, rgb(254 255 255 / 0.5933) 43.75%, rgb(254 255 255 / 0.5000) 50.00%, rgb(254 255 255 / 0.4067) 56.25%, rgb(254 255 255 / 0.3164) 62.50%, rgb(254 255 255 / 0.2319) 68.75%, rgb(254 255 255 / 0.1562) 75.00%, rgb(254 255 255 / 0.0923) 81.25%, rgb(254 255 255 / 0.0430) 87.50%, rgb(254 255 255 / 0.0112) 93.75%, rgb(254 255 255 / 0.0000) 100.00%);
+    background-size: 100% 148px, 100% 148px;
+    background-position: top, bottom;
+    background-repeat: no-repeat;
+  }
+
   .manifesto__inner {
     position: relative;
+    z-index: 1;
     display: flex;
     min-block-size: 62vh;
     align-items: center;
