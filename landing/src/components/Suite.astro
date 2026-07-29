@@ -167,11 +167,30 @@ const panels = [
     content: '';
     position: absolute;
     z-index: -1;
-    inset: -2% -12%;
-    background:
-      radial-gradient(ellipse 64% 60% at 44% 38%, var(--glow-a) 0%, transparent 72%),
-      radial-gradient(ellipse 58% 56% at 64% 70%, var(--glow-b) 0%, transparent 74%);
-    opacity: 0.85;
+    /* Every gradient here fits INSIDE its own layer, and that is the whole rule.
+
+       The previous version wrote `ellipse 64% 60% at 44% 38%`, which runs from
+       -20% to 108% across a box that only exists from 0 to 100. Everything past
+       those bounds is cut by the element's edge, so what should have been a
+       round glow was a rectangle with two soft corners — visible straight lines
+       down the right and along the bottom of every panel.
+
+       Sizing each layer with `background-size` and letting `closest-side` inscribe
+       an ellipse in it means the colour reaches zero at the ellipse itself, never
+       at the box. Positions are chosen so both layers sit clear of all four edges:
+       layer one spans 1.9-69.9% across, layer two 36.8-96.8%.
+
+       Falloff is a 13-stop smoothstep, not two stops, so there is no slope break
+       where it lands — and it fades to its OWN hue at zero alpha rather than to
+       `transparent`, which is rgba(0,0,0,0) and would drag every edge through
+       grey on the way out. */
+    inset: -16% -20%;
+    background-repeat: no-repeat;
+    background-image:
+      radial-gradient(closest-side, rgb(from var(--glow-a) r g b / 0.9000) 0.00%, rgb(from var(--glow-a) r g b / 0.8823) 8.33%, rgb(from var(--glow-a) r g b / 0.8333) 16.67%, rgb(from var(--glow-a) r g b / 0.7594) 25.00%, rgb(from var(--glow-a) r g b / 0.6667) 33.33%, rgb(from var(--glow-a) r g b / 0.5615) 41.67%, rgb(from var(--glow-a) r g b / 0.4500) 50.00%, rgb(from var(--glow-a) r g b / 0.3385) 58.33%, rgb(from var(--glow-a) r g b / 0.2333) 66.67%, rgb(from var(--glow-a) r g b / 0.1406) 75.00%, rgb(from var(--glow-a) r g b / 0.0667) 83.33%, rgb(from var(--glow-a) r g b / 0.0177) 91.67%, rgb(from var(--glow-a) r g b / 0.0000) 100.00%),
+      radial-gradient(closest-side, rgb(from var(--glow-b) r g b / 0.8000) 0.00%, rgb(from var(--glow-b) r g b / 0.7843) 8.33%, rgb(from var(--glow-b) r g b / 0.7407) 16.67%, rgb(from var(--glow-b) r g b / 0.6750) 25.00%, rgb(from var(--glow-b) r g b / 0.5926) 33.33%, rgb(from var(--glow-b) r g b / 0.4991) 41.67%, rgb(from var(--glow-b) r g b / 0.4000) 50.00%, rgb(from var(--glow-b) r g b / 0.3009) 58.33%, rgb(from var(--glow-b) r g b / 0.2074) 66.67%, rgb(from var(--glow-b) r g b / 0.1250) 75.00%, rgb(from var(--glow-b) r g b / 0.0593) 83.33%, rgb(from var(--glow-b) r g b / 0.0157) 91.67%, rgb(from var(--glow-b) r g b / 0.0000) 100.00%);
+    background-size: 68% 64%, 60% 56%;
+    background-position: 6% 4%, 92% 88%;
   }
 
   .suite__figure--dawn  { --glow-a: #ffc39a; --glow-b: #f7a8c4; }
@@ -204,6 +223,11 @@ const panels = [
     z-index: -1;
     opacity: 0.05;
     pointer-events: none;
+    /* Masked, because a flat 5% overlay with hard edges is a 5% step at each of
+       them — the cure drawing its own line, which is exactly what happened the
+       first time the hero hem was dithered. */
+    -webkit-mask-image: radial-gradient(closest-side, #000 0%, #000 52%, rgb(0 0 0 / 0) 100%);
+            mask-image: radial-gradient(closest-side, #000 0%, #000 52%, rgb(0 0 0 / 0) 100%);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
