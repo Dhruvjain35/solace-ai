@@ -1,392 +1,445 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Solace — Proposal for Baylor Scott &amp; White Medical Center, McKinney</title>
+<title>Solace Shadow Program at Baylor Scott and White Medical Center, McKinney</title>
 <style>
-  @page { size: A4; margin: 16mm 15mm 14mm; }
+  @page { size: A4; margin: 15mm 14mm 13mm; }
   * { box-sizing: border-box; }
-  body { font: 10pt/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #1b1f22; margin: 0; }
+  body { font: 10pt/1.52 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #1b1f22; margin: 0; }
   .page { page-break-after: always; }
   .page:last-child { page-break-after: auto; }
 
-  h1 { font-size: 21pt; line-height: 1.12; letter-spacing: -0.02em; margin: 0 0 4pt; }
-  h2 { font-size: 13pt; letter-spacing: -0.01em; margin: 20pt 0 7pt; padding-bottom: 4pt;
+  h1 { font-size: 20pt; line-height: 1.12; letter-spacing: -0.02em; margin: 0 0 5pt; }
+  h2 { font-size: 12.5pt; letter-spacing: -0.01em; margin: 17pt 0 6pt; padding-bottom: 3.5pt;
        border-bottom: 1.5px solid #0b6b52; }
-  h3 { font-size: 10.5pt; margin: 13pt 0 4pt; }
-  p  { margin: 0 0 7pt; }
-  .lede { font-size: 11pt; color: #3d4448; margin-bottom: 12pt; }
-  .meta { font-size: 8.5pt; color: #6b7378; margin: 0 0 16pt; }
+  h3 { font-size: 10.5pt; margin: 12pt 0 4pt; }
+  p  { margin: 0 0 6.5pt; }
+  .lede { font-size: 10.8pt; color: #3d4448; margin-bottom: 11pt; }
+  .meta { font-size: 8.5pt; color: #6b7378; margin: 0 0 14pt; }
   strong { font-weight: 650; }
-  em { font-style: italic; }
 
-  .rule { border: 0; border-top: 1px solid #e0e3e5; margin: 14pt 0; }
+  .rule { border: 0; border-top: 1px solid #e0e3e5; margin: 13pt 0; }
+  .box { background: #f3f7f5; border-left: 3px solid #0b6b52; padding: 8pt 11pt; margin: 9pt 0 11pt; }
+  .box p:last-child { margin-bottom: 0; }
+  .box.red { background: #fdf6f3; border-left-color: #b4451f; }
+  .box.grey { background: #f4f5f6; border-left-color: #8d9296; }
 
-  .callout { background: #f3f7f5; border-left: 3px solid #0b6b52; padding: 9pt 12pt; margin: 10pt 0 12pt; }
-  .callout p:last-child { margin-bottom: 0; }
-  .warn { background: #fdf6f3; border-left-color: #b4451f; }
-
-  table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 6pt 0 10pt; }
+  table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 5pt 0 9pt; }
   th { background: #f1f3f4; text-align: left; font-weight: 650; }
   th, td { border: 1px solid #dfe2e4; padding: 4.5pt 6pt; vertical-align: top; }
-  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-  ul { margin: 0 0 8pt; padding-left: 15pt; }
+  ul { margin: 0 0 7pt; padding-left: 15pt; }
   li { margin-bottom: 3pt; }
 
-  .src { font-size: 7.8pt; color: #6b7378; line-height: 1.4; }
+  .src { font-size: 7.6pt; color: #6b7378; line-height: 1.4; }
   .src a { color: #0b6b52; }
 
-  .kpi { display: flex; gap: 8pt; margin: 10pt 0 12pt; }
-  .kpi div { flex: 1; border: 1px solid #dfe2e4; border-radius: 4px; padding: 8pt 9pt; }
-  .kpi .n { font-size: 17pt; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;
+  .kpi { display: flex; gap: 7pt; margin: 9pt 0 11pt; }
+  .kpi div { flex: 1; border: 1px solid #dfe2e4; border-radius: 4px; padding: 7pt 8pt; }
+  .kpi .n { font-size: 16pt; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;
             font-variant-numeric: tabular-nums; color: #0b6b52; }
   .kpi .l { font-size: 8pt; color: #545b60; margin-top: 2pt; line-height: 1.3; }
 
-  figure { margin: 10pt 0 12pt; }
-  figcaption { font-size: 8pt; color: #6b7378; margin-top: 4pt; }
+  figure { margin: 9pt 0 11pt; }
+  figcaption { font-size: 8pt; color: #6b7378; margin-top: 3pt; }
 </style>
 
-<!-- ══════════════════ PAGE 1 ══════════════════ -->
+<!-- ═════════ PAGE 1 ═════════ -->
 <div class="page">
-  <h1>Solace at Baylor Scott &amp; White&nbsp;— McKinney</h1>
-  <p class="meta">Proposal for a no-cost, no-risk retrospective analysis of emergency department triage accuracy
-     · Prepared July 2026 · Solace</p>
+  <h1>Solace Shadow Program</h1>
+  <p class="meta">A 90 day shadow deployment at Baylor Scott &amp; White Medical Center, McKinney.
+     No cost. No patient contact. Nothing shown to any clinician. Prepared July 2026.</p>
 
-  <p class="lede">Solace is a single AI layer for the emergency department encounter — intake, triage
-     support, documentation and hand-off — designed to sit on top of Epic rather than replace anything.
-     We are asking for one thing: permission to run a <strong>retrospective analysis</strong> of ED
-     encounters that have already happened, and to give you the result.</p>
+  <p class="lede">Solace is one system that covers the whole emergency department visit. Intake,
+     triage support, documentation, hand off. It sits on top of Epic and replaces nothing you
+     already run.</p>
 
-  <h2>What we are asking for</h2>
-  <p>A 90-day retrospective study on de-identified historical ED data. <strong>No patient contact.
-     No clinical deployment. No change to any workflow. Nothing shown to any clinician.</strong>
-     We analyse encounters that are already closed and return a written finding.</p>
+  <p>We are asking for one thing. Let us run Solace in shadow at McKinney for 90 days, then give
+     you the results.</p>
 
-  <h2>What you get, whether or not you ever use our software</h2>
-  <p>A measured answer to a question most emergency departments cannot currently answer about
-     themselves:</p>
-  <div class="callout">
-    <p><strong>Of the patients who arrived at McKinney and later required critical care, what
-       acuity were they assigned at the door, and how many hours passed before the department
-       recognised how sick they were?</strong></p>
+  <p>Shadow means Solace watches. It scores every patient in the department in real time. It
+     displays nothing, alerts nobody, and writes nothing back into Epic. At the end you get a
+     report. Nothing else changes in the meantime.</p>
+
+  <h2>What you get at the end</h2>
+  <p>An answer to a question most emergency departments cannot currently answer about themselves:</p>
+
+  <div class="box">
+    <p><strong>Of the patients at McKinney who ended up needing critical care, what acuity were
+       they given at the door, and how long did it take before anyone recognised how sick they
+       were?</strong></p>
   </div>
-  <p>That figure is your under-triage rate and your recognition delay. It is a patient-safety
-     measure, it is not routinely computed by Epic reporting, and it belongs to you regardless of
-     what happens next between us.</p>
 
-  <h2>Why this matters — and why we cannot tell you your number yet</h2>
-  <p>The largest study of triage accuracy in the United States reviewed 5,315,176 emergency
-     department encounters across 21 hospitals. It found:</p>
+  <p>That number is your under triage rate and your recognition delay. It is a patient safety
+     figure. Epic reporting does not produce it as standard. It belongs to you whether or not
+     anything further happens between us.</p>
+
+  <p>Alongside it, for each of those patients, we show whether Solace would have raised its hand
+     earlier, and by how long. If the answer is that we would not have helped, that is what the
+     report will say.</p>
+
+  <h2>Why this is worth 90 days of your attention</h2>
+  <p>The largest study of triage accuracy done in the United States looked at 5,315,176 emergency
+     department encounters across 21 hospitals.</p>
 
   <div class="kpi">
     <div><div class="n">32.2%</div><div class="l">of encounters were mistriaged</div></div>
-    <div><div class="n">3.3%</div><div class="l">were <em>under</em>-triaged — assigned less acute than warranted</div></div>
-    <div><div class="n">66%</div><div class="l">sensitivity for identifying a critically ill patient at triage</div></div>
+    <div><div class="n">3.3%</div><div class="l">were under triaged, given a lower acuity than warranted</div></div>
+    <div><div class="n">66%</div><div class="l">sensitivity for spotting a critically ill patient at triage</div></div>
   </div>
 
-  <p>Separately, a 2026 analysis of 173,168 encounters found that 3.6% of patients deteriorated, and
-     that <strong>45% of those deteriorations occurred while the patient was still in the emergency
-     department</strong>. A related finding: only 40% of ordered vital signs were actually recorded.</p>
+  <p>A separate 2026 study of 173,168 encounters found 3.6% of patients deteriorated, and
+     <strong>45% of those deteriorations happened while the patient was still in the emergency
+     department</strong>. In the same body of work, only 40% of ordered vital signs were actually
+     recorded.</p>
 
-  <div class="callout warn">
-    <p><strong>We do not know McKinney's rate.</strong> The figures on the next page are published
-       national rates applied to your published volume. They are an illustration of scale, not a
-       claim about your department. Your actual rate may be materially better — McKinney is a Level III
-       trauma centre and Baylor Scott &amp; White publishes ED wait times well below national averages.
-       <em>Establishing your real number is the entire purpose of the proposed analysis.</em></p>
+  <div class="box red">
+    <p><strong>We do not know McKinney's numbers.</strong> Everything above is national published
+       data. The figures on page 2 apply those rates to your published visit volume, which makes
+       them an illustration of scale and not a claim about your department. Your real rate may well
+       be better. McKinney is a Level III trauma centre and Baylor Scott &amp; White publishes ED
+       wait times far below national averages. Finding your actual number is the whole point of the
+       program.</p>
   </div>
-
 </div>
 
-<!-- ══════════════════ PAGE 2 ══════════════════ -->
+<!-- ═════════ PAGE 2 ═════════ -->
 <div class="page">
   <h2>Scale at McKinney</h2>
-  <p>McKinney records <strong>43,301 emergency department visits per year</strong> — about 119 per day —
-     across 192 beds, with Advanced Level III Trauma designation. Applying the published rates above
-     to that volume gives the following <em>illustrative</em> figures.</p>
+  <p>McKinney sees <strong>43,301 emergency department visits a year</strong>, roughly 119 a day,
+     across 192 beds, with Advanced Level III Trauma designation. Applying the national rates to
+     that volume looks like this.</p>
 
   <figure>
-    <svg viewBox="0 0 700 260" width="100%" role="img" aria-label="Illustrative annual counts at McKinney volume">
-      <defs>
-        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#0b6b52"/><stop offset="1" stop-color="#12946f"/>
-        </linearGradient>
-      </defs>
-      <!-- axis -->
-      <line x1="150" y1="18" x2="150" y2="238" stroke="#c9cfd3" stroke-width="1"/>
+    <svg viewBox="0 0 700 250" width="100%" role="img" aria-label="Annual counts at McKinney volume">
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#0b6b52"/><stop offset="1" stop-color="#14a37b"/></linearGradient></defs>
+      <line x1="176" y1="14" x2="176" y2="204" stroke="#c9cfd3"/>
 
-      <!-- bar 1: all visits -->
-      <rect x="150" y="26" width="510" height="30" fill="#dfe4e7"/>
-      <text x="156" y="46" font-size="12" fill="#1b1f22" font-weight="600">43,301</text>
-      <text x="144" y="46" font-size="11" fill="#3d4448" text-anchor="end">ED visits / year</text>
+      <rect x="176" y="22" width="500" height="28" fill="#dfe4e7"/>
+      <text x="184" y="41" font-size="12" font-weight="650" fill="#1b1f22">43,301</text>
+      <text x="168" y="41" font-size="10.5" fill="#3d4448" text-anchor="end">ED visits a year</text>
 
-      <!-- bar 2: mistriaged -->
-      <rect x="150" y="76" width="164" height="30" fill="url(#g1)" opacity="0.45"/>
-      <text x="322" y="96" font-size="12" fill="#1b1f22" font-weight="600">≈ 13,900</text>
-      <text x="144" y="96" font-size="11" fill="#3d4448" text-anchor="end">mistriaged (32.2%)</text>
+      <rect x="176" y="68" width="161" height="28" fill="url(#g1)" opacity="0.4"/>
+      <text x="345" y="87" font-size="12" font-weight="650" fill="#1b1f22">13,900</text>
+      <text x="168" y="87" font-size="10.5" fill="#3d4448" text-anchor="end">mistriaged</text>
+      <text x="405" y="87" font-size="9.5" fill="#6b7378">32.2% of visits</text>
 
-      <!-- bar 3: undertriaged -->
-      <rect x="150" y="126" width="17" height="30" fill="url(#g1)"/>
-      <text x="175" y="146" font-size="12" fill="#1b1f22" font-weight="600">≈ 1,429</text>
-      <text x="144" y="146" font-size="11" fill="#3d4448" text-anchor="end">under-triaged (3.3%)</text>
-      <text x="243" y="146" font-size="10" fill="#6b7378">— about 4 patients per day</text>
+      <rect x="176" y="114" width="17" height="28" fill="url(#g1)"/>
+      <text x="201" y="133" font-size="12" font-weight="650" fill="#1b1f22">1,429</text>
+      <text x="168" y="133" font-size="10.5" fill="#3d4448" text-anchor="end">under triaged</text>
+      <text x="252" y="133" font-size="9.5" fill="#6b7378">about 4 patients every day</text>
 
-      <!-- bar 4: deterioration in ED -->
-      <rect x="150" y="176" width="8" height="30" fill="#b4451f"/>
-      <text x="166" y="196" font-size="12" fill="#1b1f22" font-weight="600">≈ 701</text>
-      <text x="144" y="196" font-size="11" fill="#3d4448" text-anchor="end">deteriorate <tspan font-style="italic">in</tspan> the ED</text>
-      <text x="215" y="196" font-size="10" fill="#6b7378">— about 13 per week</text>
+      <rect x="176" y="160" width="8" height="28" fill="#b4451f"/>
+      <text x="192" y="179" font-size="12" font-weight="650" fill="#1b1f22">701</text>
+      <text x="168" y="179" font-size="10.5" fill="#3d4448" text-anchor="end">deteriorate in the ED</text>
+      <text x="232" y="179" font-size="9.5" fill="#6b7378">about 13 every week</text>
 
-      <text x="150" y="232" font-size="9" fill="#6b7378">Illustrative only — national published rates applied to McKinney's published volume.</text>
-      <text x="150" y="246" font-size="9" fill="#6b7378">McKinney's actual rates are unknown to us and are what the proposed analysis would establish.</text>
+      <text x="176" y="224" font-size="8.5" fill="#6b7378">Illustration only. National rates applied to McKinney's published volume.</text>
+      <text x="176" y="238" font-size="8.5" fill="#6b7378">Your real rates are unknown to us. Establishing them is what the program does.</text>
     </svg>
-    <figcaption>Figure 1 — Scale of the question, at McKinney's volume.</figcaption>
+    <figcaption>Figure 1. The size of the question at McKinney's volume.</figcaption>
   </figure>
 
-  <h2>The structural gap</h2>
-  <p>Acuity is assigned once, at the door, by a triage nurse, in a few minutes, on limited information.
-     It is then rarely revisited. A patient who is under-called at minute three carries that
-     assignment for the remainder of a stay that may last many hours.</p>
+  <h2>Where the gap sits</h2>
+  <p>Acuity gets assigned once, at the door, by a triage nurse, in a couple of minutes, on limited
+     information. After that it is rarely revisited. A patient who gets under called at minute three
+     carries that number for the rest of a stay that might run eight hours.</p>
 
   <figure>
-    <svg viewBox="0 0 700 150" width="100%" role="img" aria-label="The ED encounter timeline showing where acuity is assessed">
-      <line x1="30" y1="70" x2="670" y2="70" stroke="#c9cfd3" stroke-width="2"/>
-      <!-- events -->
-      <circle cx="60"  cy="70" r="7" fill="#0b6b52"/>
-      <circle cx="200" cy="70" r="5" fill="#c9cfd3"/>
-      <circle cx="360" cy="70" r="5" fill="#c9cfd3"/>
-      <circle cx="520" cy="70" r="5" fill="#c9cfd3"/>
-      <circle cx="650" cy="70" r="7" fill="#0b6b52"/>
+    <svg viewBox="0 0 700 165" width="100%" role="img" aria-label="ED encounter timeline">
+      <line x1="40" y1="62" x2="660" y2="62" stroke="#c9cfd3" stroke-width="2"/>
+      <circle cx="68" cy="62" r="8" fill="#0b6b52"/>
+      <circle cx="215" cy="62" r="5" fill="#c9cfd3"/>
+      <circle cx="365" cy="62" r="5" fill="#c9cfd3"/>
+      <circle cx="515" cy="62" r="5" fill="#c9cfd3"/>
+      <circle cx="640" cy="62" r="8" fill="#0b6b52"/>
 
-      <text x="60"  y="56" font-size="10" text-anchor="middle" fill="#1b1f22" font-weight="600">Arrival</text>
-      <text x="60"  y="92" font-size="9"  text-anchor="middle" fill="#0b6b52" font-weight="600">acuity assigned</text>
-      <text x="200" y="92" font-size="9"  text-anchor="middle" fill="#6b7378">waiting</text>
-      <text x="360" y="92" font-size="9"  text-anchor="middle" fill="#6b7378">in a room</text>
-      <text x="520" y="92" font-size="9"  text-anchor="middle" fill="#6b7378">boarding</text>
-      <text x="650" y="56" font-size="10" text-anchor="middle" fill="#1b1f22" font-weight="600">Disposition</text>
+      <text x="68"  y="46" font-size="10" text-anchor="middle" font-weight="650">Arrival</text>
+      <text x="68"  y="84" font-size="9" text-anchor="middle" fill="#0b6b52" font-weight="650">acuity set</text>
+      <text x="215" y="84" font-size="9" text-anchor="middle" fill="#6b7378">waiting room</text>
+      <text x="365" y="84" font-size="9" text-anchor="middle" fill="#6b7378">in a bed</text>
+      <text x="515" y="84" font-size="9" text-anchor="middle" fill="#6b7378">boarding</text>
+      <text x="640" y="46" font-size="10" text-anchor="middle" font-weight="650">Disposition</text>
 
-      <!-- gap bracket -->
-      <path d="M75 112 L75 120 L635 120 L635 112" fill="none" stroke="#b4451f" stroke-width="1.2"/>
-      <text x="355" y="138" font-size="10" text-anchor="middle" fill="#b4451f" font-weight="600">
-        acuity is not systematically reassessed across this interval
-      </text>
+      <path d="M86 106 L86 116 L622 116 L622 106" fill="none" stroke="#b4451f" stroke-width="1.3"/>
+      <text x="354" y="134" font-size="10" text-anchor="middle" fill="#b4451f" font-weight="650">
+        nobody systematically re-scores the patient across this stretch</text>
+      <text x="354" y="150" font-size="9" text-anchor="middle" fill="#6b7378">
+        which is where 45% of all deteriorations happen</text>
     </svg>
-    <figcaption>Figure 2 — The interval in which 45% of deteriorations occur.</figcaption>
+    <figcaption>Figure 2. One assessment, then hours without another.</figcaption>
   </figure>
 
-  <p>Closing that gap prospectively is a clinical deployment and carries real risk, including alert
-     fatigue. <strong>We are not proposing that.</strong> We are proposing to look backwards first,
-     where the risk is zero, and to let the finding decide whether anything further is warranted.</p>
+  <p>Closing that gap live is a clinical deployment and carries real risk, alert fatigue being the
+     obvious one. We are not proposing that yet. We want to watch first, where the risk is zero, and
+     let what we find decide whether anything more is justified.</p>
 </div>
 
-<!-- ══════════════════ PAGE 3 ══════════════════ -->
+<!-- ═════════ PAGE 3 ═════════ -->
 <div class="page">
-  <h2>What Solace is</h2>
-  <p>One system covering the emergency department encounter end to end, rather than a single feature.
-     Epic remains the system of record throughout; Solace reads from and writes back to it through
-     standard interfaces (HL7 v2, FHIR R4, CDS Hooks).</p>
+  <h2>How shadow mode works</h2>
+  <p>This is the diagram your safety team will want. Data flows one way. Solace reads, scores, and
+     writes to a locked store that only your sponsor and our team can open. No path exists from
+     Solace back to a clinician, a screen, a pager, or Epic. There is no configuration in which it
+     can interrupt anyone.</p>
 
   <figure>
-    <svg viewBox="0 0 700 300" width="100%" role="img" aria-label="Where Solace sits relative to Epic and point vendors">
-      <!-- LEFT: typical -->
-      <text x="20" y="18" font-size="10.5" font-weight="650" fill="#1b1f22">Typical today</text>
-      <rect x="20" y="30" width="290" height="34" rx="4" fill="#eef0f1" stroke="#dfe2e4"/>
-      <text x="165" y="52" font-size="10" text-anchor="middle" fill="#3d4448">Epic — system of record</text>
-      <g font-size="8.5" text-anchor="middle" fill="#3d4448">
-        <rect x="20"  y="84" width="66" height="46" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="53"  y="105">scribe</text><text x="53" y="117">vendor</text>
-        <rect x="94"  y="84" width="66" height="46" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="127" y="105">triage</text><text x="127" y="117">vendor</text>
-        <rect x="168" y="84" width="66" height="46" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="201" y="105">flow</text><text x="201" y="117">vendor</text>
-        <rect x="242" y="84" width="68" height="46" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="276" y="105">intake</text><text x="276" y="117">vendor</text>
+    <svg viewBox="0 0 700 235" width="100%" role="img" aria-label="Shadow mode data flow">
+      <rect x="18" y="34" width="150" height="76" rx="5" fill="#eef0f1" stroke="#dfe2e4"/>
+      <text x="93" y="66" font-size="10.5" text-anchor="middle" font-weight="650">Epic</text>
+      <text x="93" y="82" font-size="8.5" text-anchor="middle" fill="#545b60">system of record</text>
+      <text x="93" y="96" font-size="8.5" text-anchor="middle" fill="#545b60">unchanged</text>
+
+      <rect x="272" y="34" width="150" height="76" rx="5" fill="#0b6b52"/>
+      <text x="347" y="66" font-size="10.5" text-anchor="middle" fill="#fff" font-weight="650">Solace</text>
+      <text x="347" y="82" font-size="8.5" text-anchor="middle" fill="#cfe6dd">scores every patient</text>
+      <text x="347" y="96" font-size="8.5" text-anchor="middle" fill="#cfe6dd">every few minutes</text>
+
+      <rect x="526" y="34" width="156" height="76" rx="5" fill="#f4f5f6" stroke="#8d9296" stroke-dasharray="4 3"/>
+      <text x="604" y="62" font-size="10.5" text-anchor="middle" font-weight="650">Locked store</text>
+      <text x="604" y="78" font-size="8.5" text-anchor="middle" fill="#545b60">opened at week 14</text>
+      <text x="604" y="92" font-size="8.5" text-anchor="middle" fill="#545b60">with your sponsor</text>
+
+      <g stroke="#0b6b52" stroke-width="2" fill="none">
+        <path d="M168 72 L262 72"/><path d="M256 66 L264 72 L256 78" stroke-linejoin="round"/>
+        <path d="M422 72 L516 72"/><path d="M510 66 L518 72 L510 78" stroke-linejoin="round"/>
       </g>
-      <g stroke="#c9cfd3" stroke-width="1">
-        <line x1="53" y1="84" x2="53" y2="64"/><line x1="127" y1="84" x2="127" y2="64"/>
-        <line x1="201" y1="84" x2="201" y2="64"/><line x1="276" y1="84" x2="276" y2="64"/>
+      <text x="215" y="62" font-size="8" text-anchor="middle" fill="#0b6b52">read only</text>
+      <text x="469" y="62" font-size="8" text-anchor="middle" fill="#0b6b52">write</text>
+
+      <!-- blocked return paths -->
+      <g stroke="#b4451f" stroke-width="1.6" stroke-dasharray="5 4" fill="none">
+        <path d="M347 110 L347 152"/>
       </g>
-      <text x="165" y="152" font-size="8.5" text-anchor="middle" fill="#b4451f">4 integrations · 4 security reviews · 4 audit trails</text>
-      <text x="165" y="166" font-size="8.5" text-anchor="middle" fill="#b4451f">no shared context between them</text>
+      <g stroke="#b4451f" stroke-width="2.2">
+        <line x1="336" y1="140" x2="358" y2="162"/><line x1="358" y1="140" x2="336" y2="162"/>
+      </g>
+      <text x="374" y="158" font-size="9.5" fill="#b4451f" font-weight="650">no route back to any clinician</text>
 
-      <!-- divider -->
-      <line x1="350" y1="20" x2="350" y2="200" stroke="#e0e3e5"/>
-
-      <!-- RIGHT: solace -->
-      <text x="390" y="18" font-size="10.5" font-weight="650" fill="#1b1f22">With Solace</text>
-      <rect x="390" y="30" width="290" height="34" rx="4" fill="#eef0f1" stroke="#dfe2e4"/>
-      <text x="535" y="52" font-size="10" text-anchor="middle" fill="#3d4448">Epic — system of record</text>
-      <rect x="390" y="84" width="290" height="46" rx="4" fill="#0b6b52"/>
-      <text x="535" y="103" font-size="10" text-anchor="middle" fill="#fff" font-weight="600">Solace</text>
-      <text x="535" y="118" font-size="8.5" text-anchor="middle" fill="#cfe6dd">intake · triage support · documentation · hand-off</text>
-      <line x1="535" y1="84" x2="535" y2="64" stroke="#0b6b52" stroke-width="1.5"/>
-      <text x="535" y="152" font-size="8.5" text-anchor="middle" fill="#0b6b52">1 integration · 1 security review · 1 audit trail</text>
-      <text x="535" y="166" font-size="8.5" text-anchor="middle" fill="#0b6b52">shared context across the whole encounter</text>
-
-      <!-- footnote band -->
-      <rect x="20" y="196" width="660" height="46" rx="4" fill="#f3f7f5"/>
-      <text x="34" y="216" font-size="9" fill="#3d4448">69% of health system technology leaders name vendor management and integration as their</text>
-      <text x="34" y="230" font-size="9" fill="#3d4448">top obstacle to executing AI. 62% want one comprehensive AI partner; 13% have one.</text>
+      <rect x="18" y="180" width="664" height="44" rx="4" fill="#f3f7f5"/>
+      <text x="34" y="200" font-size="9" fill="#3d4448" font-weight="650">During the 90 days:</text>
+      <text x="140" y="200" font-size="9" fill="#3d4448">no alerts, no dashboards, no orders, no notes, no messages, no changes to Epic.</text>
+      <text x="34" y="216" font-size="9" fill="#3d4448">Care at McKinney runs exactly as it does today. Solace is invisible to the department.</text>
     </svg>
-    <figcaption>Figure 3 — Solace does not replace Epic. It replaces the need for several separate contracts around it.</figcaption>
+    <figcaption>Figure 3. Shadow mode. The return path does not exist in the software, it is not switched off.</figcaption>
   </figure>
 
-  <h3>Two design decisions we would want scrutinised</h3>
-  <ul>
-    <li><strong>The model reports its own uncertainty.</strong> Rather than a single acuity number,
-        it returns a calibrated range with a stated coverage rate. A wide range is a signal to route
-        to a clinician, not a prediction to act on.</li>
-    <li><strong>Every output shows its basis.</strong> Each estimate is accompanied by the specific
-        inputs that drove it. This is deliberate: FDA's January 2026 Clinical Decision Support
-        guidance turns on whether a clinician can independently review the basis for a
-        recommendation, and we have built to that standard rather than around it.</li>
-  </ul>
+  <h2>What the report looks like</h2>
+  <p>Row per patient, for everyone who ended up in critical care. Made up numbers below, real
+     structure.</p>
 
-  <div class="callout">
-    <p>Both decisions cost accuracy on paper. We think a model that declares when it is unsure is
-       worth more in an emergency department than one that is confidently wrong 34% of the time,
-       and we would rather defend that choice to you than hide it.</p>
-  </div>
+  <figure>
+    <svg viewBox="0 0 700 190" width="100%" role="img" aria-label="Example report rows">
+      <rect x="10" y="8" width="680" height="24" fill="#f1f3f4"/>
+      <g font-size="8.5" font-weight="650" fill="#1b1f22">
+        <text x="22"  y="24">Case</text><text x="90"  y="24">ESI at door</text>
+        <text x="182" y="24">Solace flagged</text><text x="292" y="24">Team recognised</text>
+        <text x="410" y="24">Lead time</text><text x="500" y="24">Outcome</text>
+      </g>
+      <g font-size="8.5" fill="#3d4448">
+        <rect x="10" y="32" width="680" height="26" fill="#fff" stroke="#dfe2e4"/>
+        <text x="22" y="49">A-104</text><text x="90" y="49">4</text><text x="182" y="49">22 min</text>
+        <text x="292" y="49">4 h 10 min</text><text x="410" y="49" font-weight="650" fill="#0b6b52">3 h 48 min earlier</text>
+        <text x="500" y="49">ICU transfer</text>
+
+        <rect x="10" y="58" width="680" height="26" fill="#fbfcfc" stroke="#dfe2e4"/>
+        <text x="22" y="75">A-211</text><text x="90" y="75">3</text><text x="182" y="75">51 min</text>
+        <text x="292" y="75">2 h 05 min</text><text x="410" y="75" font-weight="650" fill="#0b6b52">1 h 14 min earlier</text>
+        <text x="500" y="75">ICU transfer</text>
+
+        <rect x="10" y="84" width="680" height="26" fill="#fff" stroke="#dfe2e4"/>
+        <text x="22" y="101">A-338</text><text x="90" y="101">2</text><text x="182" y="101">not flagged</text>
+        <text x="292" y="101">18 min</text><text x="410" y="101" fill="#6b7378">no gain</text>
+        <text x="500" y="101">already caught at triage</text>
+
+        <rect x="10" y="110" width="680" height="26" fill="#fbfcfc" stroke="#dfe2e4"/>
+        <text x="22" y="127">A-402</text><text x="90" y="127">4</text><text x="182" y="127">not flagged</text>
+        <text x="292" y="127">6 h 30 min</text><text x="410" y="127" fill="#b4451f" font-weight="650">missed by us</text>
+        <text x="500" y="127">ICU transfer</text>
+      </g>
+      <text x="10" y="156" font-size="8.5" fill="#6b7378">The fourth row matters as much as the first three. Cases we miss go in the report.</text>
+      <text x="10" y="172" font-size="8.5" fill="#6b7378">So does every false alarm, counted against the number of patients seen.</text>
+    </svg>
+    <figcaption>Figure 4. Structure of the week 14 report. Misses and false alarms are reported, not buried.</figcaption>
+  </figure>
 </div>
 
-<!-- ══════════════════ PAGE 4 ══════════════════ -->
+<!-- ═════════ PAGE 4 ═════════ -->
 <div class="page">
-  <h2>Proposed sequence</h2>
-  <p>Three stages. Each one has to earn the next. We are asking only for the first.</p>
+  <h2>The 90 days, week by week</h2>
 
   <figure>
-    <svg viewBox="0 0 700 200" width="100%" role="img" aria-label="Three stage proposal with risk level">
-      <g font-size="9.5">
-        <!-- stage 1 -->
-        <rect x="10" y="20" width="215" height="120" rx="5" fill="#f3f7f5" stroke="#0b6b52" stroke-width="1.5"/>
-        <text x="26" y="42" font-size="10.5" font-weight="650" fill="#0b6b52">1 · Retrospective</text>
-        <text x="26" y="60" fill="#3d4448">90 days · no cost</text>
-        <text x="26" y="76" fill="#3d4448">Closed encounters only.</text>
-        <text x="26" y="90" fill="#3d4448">Nothing shown to clinicians.</text>
-        <text x="26" y="104" fill="#3d4448">Deliverable: a written finding.</text>
-        <text x="26" y="128" font-size="9.5" font-weight="650" fill="#0b6b52">Patient risk: none</text>
-
-        <!-- stage 2 -->
-        <rect x="242" y="20" width="215" height="120" rx="5" fill="#fafbfb" stroke="#c9cfd3"/>
-        <text x="258" y="42" font-size="10.5" font-weight="650" fill="#1b1f22">2 · Silent running</text>
-        <text x="258" y="60" fill="#3d4448">Only if stage 1 warrants it</text>
-        <text x="258" y="76" fill="#3d4448">Live data, no alerts.</text>
-        <text x="258" y="90" fill="#3d4448">Measures whether it would</text>
-        <text x="258" y="104" fill="#3d4448">have flagged in time.</text>
-        <text x="258" y="128" font-size="9.5" font-weight="650" fill="#3d4448">Patient risk: none</text>
-
-        <!-- stage 3 -->
-        <rect x="474" y="20" width="216" height="120" rx="5" fill="#fafbfb" stroke="#c9cfd3"/>
-        <text x="490" y="42" font-size="10.5" font-weight="650" fill="#1b1f22">3 · Clinical use</text>
-        <text x="490" y="60" fill="#3d4448">Only with your governance</text>
-        <text x="490" y="76" fill="#3d4448">Defined alert thresholds,</text>
-        <text x="490" y="90" fill="#3d4448">tuned against stage 2, with</text>
-        <text x="490" y="104" fill="#3d4448">an agreed stop rule.</text>
-        <text x="490" y="128" font-size="9.5" font-weight="650" fill="#b4451f">Patient risk: managed</text>
+    <svg viewBox="0 0 700 210" width="100%" role="img" aria-label="Program timeline">
+      <line x1="30" y1="118" x2="670" y2="118" stroke="#dfe2e4" stroke-width="2"/>
+      <g font-size="8.5" fill="#6b7378" text-anchor="middle">
+        <text x="30" y="138">wk 1</text><text x="190" y="138">wk 2</text><text x="350" y="138">wk 6</text>
+        <text x="560" y="138">wk 13</text><text x="670" y="138">wk 14</text>
       </g>
-      <g stroke="#c9cfd3" stroke-width="1.5" fill="none">
-        <path d="M225 80 L242 80" marker-end="url(#a)"/>
-        <path d="M457 80 L474 80" marker-end="url(#a)"/>
+
+      <rect x="30" y="86" width="160" height="26" rx="3" fill="#e4eae7" stroke="#0b6b52"/>
+      <text x="110" y="103" font-size="9" text-anchor="middle" font-weight="650" fill="#0b6b52">Agree definitions</text>
+
+      <rect x="192" y="86" width="158" height="26" rx="3" fill="#e4eae7" stroke="#0b6b52"/>
+      <text x="271" y="103" font-size="9" text-anchor="middle" font-weight="650" fill="#0b6b52">Calibrate on history</text>
+
+      <rect x="352" y="86" width="208" height="26" rx="3" fill="#0b6b52"/>
+      <text x="456" y="103" font-size="9" text-anchor="middle" font-weight="650" fill="#fff">Live shadow, 8 weeks</text>
+
+      <rect x="562" y="86" width="108" height="26" rx="3" fill="#e4eae7" stroke="#0b6b52"/>
+      <text x="616" y="103" font-size="9" text-anchor="middle" font-weight="650" fill="#0b6b52">Report</text>
+
+      <g font-size="8.5" fill="#545b60">
+        <text x="30" y="44">30 minutes with your</text><text x="30" y="56">sponsor to agree what</text>
+        <text x="30" y="68">"under triage" means.</text>
+        <text x="192" y="44">12 months of closed</text><text x="192" y="56">encounters. Tunes the</text>
+        <text x="192" y="68">model to McKinney.</text>
+        <text x="352" y="44">Solace scores live patients.</text><text x="352" y="56">Nothing displayed. Care</text>
+        <text x="352" y="68">unchanged. Weekly check in.</text>
+        <text x="562" y="44">Written findings,</text><text x="562" y="56">reviewed with you</text>
+        <text x="562" y="68">before anyone else.</text>
       </g>
-      <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-        <path d="M0 1 L6 4 L0 7" fill="none" stroke="#c9cfd3" stroke-width="1.5"/></marker></defs>
-      <text x="350" y="176" font-size="9" text-anchor="middle" fill="#6b7378">
-        We expect most conversations to stop after stage 1, and that is a legitimate outcome.</text>
+
+      <rect x="30" y="160" width="640" height="38" rx="4" fill="#fdf6f3"/>
+      <text x="46" y="180" font-size="9" fill="#b4451f" font-weight="650">Stop rule:</text>
+      <text x="110" y="180" font-size="9" fill="#3d4448">you can end the program at any point, for any reason, without notice</text>
+      <text x="46" y="193" font-size="9" fill="#3d4448">or explanation. Everything we hold is destroyed on request and we confirm it in writing.</text>
     </svg>
-    <figcaption>Figure 4 — Nothing reaches a patient until two prior stages have been reviewed by you.</figcaption>
+    <figcaption>Figure 5. Fourteen weeks from yes to answer.</figcaption>
   </figure>
 
-  <h2>What we would need from Baylor Scott &amp; White</h2>
+  <h2>What we need from Baylor Scott &amp; White</h2>
   <table>
-    <tr><th style="width:32%">Item</th><th>Detail</th></tr>
-    <tr><td><strong>A named clinical sponsor</strong></td>
-        <td>An emergency physician or nursing leader willing to review the finding and tell us if it is
-            useless. Roughly two hours per month.</td></tr>
-    <tr><td><strong>Retrospective ED data</strong></td>
-        <td>A de-identified or limited data set of closed encounters, under whatever agreement your
-            privacy office requires — a Data Use Agreement, a BAA, or analysis conducted entirely
-            inside your environment. We will work to whichever your compliance team prefers, including
-            the option that no data leaves BSWH.</td></tr>
-    <tr><td><strong>Definition review</strong></td>
-        <td>Thirty minutes to agree how “under-triage” and “deterioration” should be defined for
-            McKinney before we compute anything, so the result is one you recognise.</td></tr>
-    <tr><td class="num"><strong>What we are not asking for</strong></td>
-        <td>Money, an IT integration, EHR access, a workflow change, or any commitment beyond the
-            90 days.</td></tr>
+    <tr><th style="width:30%">What</th><th>Detail</th></tr>
+    <tr><td><strong>A clinical sponsor</strong></td>
+        <td>One emergency physician or nursing leader who will look at the findings and tell us
+            honestly if they are useless. About two hours a month.</td></tr>
+    <tr><td><strong>Read access to ED data</strong></td>
+        <td>Whatever shape your privacy office is comfortable with. A limited data set under a DUA,
+            a BAA, or the whole thing running inside your own environment so nothing leaves BSWH.
+            We will build to whichever they pick.</td></tr>
+    <tr><td><strong>Half an hour up front</strong></td>
+        <td>To agree how under triage and deterioration get defined at McKinney, before we compute
+            anything. Otherwise you get a number you do not recognise.</td></tr>
+    <tr><td><strong>Not asked for</strong></td>
+        <td>Money, an IT build, a workflow change, clinician training, or any commitment past
+            week 14.</td></tr>
   </table>
 
-  <h2>What we would ask for if it works</h2>
-  <p>Permission to proceed to stage 2, and — if the finding is genuinely useful — a reference we can
-     show other Baylor Scott &amp; White facilities. Nothing more at this stage.</p>
+  <h2>What we would ask for if the findings hold up</h2>
+  <p>Permission to move to a supervised pilot, designed with your governance committee, with alert
+     thresholds tuned from the shadow data and a stop rule agreed in advance. And if the work was
+     genuinely useful, a reference we can show other Baylor Scott &amp; White sites. Nothing beyond
+     that at this stage.</p>
+
+  <div class="box grey">
+    <p>We expect a fair number of conversations like this to end at week 14, and that is a
+       legitimate result. A department that learns its under triage rate is low has learned
+       something worth knowing.</p>
+  </div>
 </div>
 
-<!-- ══════════════════ PAGE 5 ══════════════════ -->
+<!-- ═════════ PAGE 5 ═════════ -->
 <div class="page">
-  <h2>Who we are, plainly</h2>
-  <p>Solace is an early-stage team. We are not a funded company with hospital deployments behind us,
-     and we would rather you learn that from us than from a reference check.</p>
+  <h2>What Solace is, beyond this program</h2>
+  <p>One system across the whole ED visit rather than a single feature bolted on. Epic stays the
+     system of record. Solace reads and writes through standard interfaces, HL7 v2, FHIR R4 and
+     CDS Hooks.</p>
 
-  <p>What exists today: a working system covering multilingual patient intake, a calibrated triage
-     model with uncertainty reporting, ambient documentation, and interfaces to Epic, Oracle Health
-     and athenahealth built on HL7 v2, FHIR R4 and CDS Hooks. It has a documented governance layer —
-     model cards, consent enforcement, and an append-only audit log — because we built for a
-     compliance review before we built for a demo.</p>
+  <figure>
+    <svg viewBox="0 0 700 200" width="100%" role="img" aria-label="Solace compared with separate point vendors">
+      <text x="18" y="16" font-size="10" font-weight="650">How it usually looks</text>
+      <rect x="18" y="26" width="300" height="30" rx="4" fill="#eef0f1" stroke="#dfe2e4"/>
+      <text x="168" y="46" font-size="9.5" text-anchor="middle" fill="#3d4448">Epic</text>
+      <g font-size="8" text-anchor="middle" fill="#3d4448">
+        <rect x="18"  y="74" width="68" height="40" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="52"  y="92">scribe</text><text x="52" y="104">vendor</text>
+        <rect x="94"  y="74" width="68" height="40" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="128" y="92">triage</text><text x="128" y="104">vendor</text>
+        <rect x="170" y="74" width="68" height="40" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="204" y="92">flow</text><text x="204" y="104">vendor</text>
+        <rect x="246" y="74" width="72" height="40" rx="4" fill="#fff" stroke="#c9cfd3"/><text x="282" y="92">intake</text><text x="282" y="104">vendor</text>
+      </g>
+      <g stroke="#c9cfd3"><line x1="52" y1="74" x2="52" y2="56"/><line x1="128" y1="74" x2="128" y2="56"/>
+        <line x1="204" y1="74" x2="204" y2="56"/><line x1="282" y1="74" x2="282" y2="56"/></g>
+      <text x="168" y="134" font-size="8.5" text-anchor="middle" fill="#b4451f">four integrations, four security reviews, four audit trails</text>
+      <text x="168" y="148" font-size="8.5" text-anchor="middle" fill="#b4451f">and none of them share what they know</text>
 
-  <div class="callout warn">
-    <p><strong>What does not exist:</strong> a completed clinical validation, a health system
-       deployment, or FDA clearance. Our triage model is currently trained on a public research
-       dataset, not on real patient data. <strong>That limitation is precisely why we are asking for a
-       retrospective study rather than a clinical pilot.</strong> A model validated against McKinney's
-       own historical encounters is worth more — to you and to us — than any claim we could make today.</p>
+      <line x1="352" y1="14" x2="352" y2="160" stroke="#e0e3e5"/>
+
+      <text x="382" y="16" font-size="10" font-weight="650">With Solace</text>
+      <rect x="382" y="26" width="300" height="30" rx="4" fill="#eef0f1" stroke="#dfe2e4"/>
+      <text x="532" y="46" font-size="9.5" text-anchor="middle" fill="#3d4448">Epic</text>
+      <rect x="382" y="74" width="300" height="40" rx="4" fill="#0b6b52"/>
+      <text x="532" y="91" font-size="9.5" text-anchor="middle" fill="#fff" font-weight="650">Solace</text>
+      <text x="532" y="105" font-size="8" text-anchor="middle" fill="#cfe6dd">intake · triage support · documentation · hand off</text>
+      <line x1="532" y1="74" x2="532" y2="56" stroke="#0b6b52" stroke-width="1.5"/>
+      <text x="532" y="134" font-size="8.5" text-anchor="middle" fill="#0b6b52">one integration, one security review, one audit trail</text>
+      <text x="532" y="148" font-size="8.5" text-anchor="middle" fill="#0b6b52">and everything it learns at intake is still there at discharge</text>
+
+      <rect x="18" y="168" width="664" height="26" rx="4" fill="#f3f7f5"/>
+      <text x="34" y="185" font-size="8.5" fill="#3d4448">69% of health system technology leaders name vendor management and integration as their top obstacle to AI. 62% want one AI partner. 13% have one.</text>
+    </svg>
+    <figcaption>Figure 6. Solace does not replace Epic. It replaces the need for several contracts around it.</figcaption>
+  </figure>
+
+  <h3>Two choices we made that we would like picked apart</h3>
+  <ul>
+    <li><strong>The model says when it is unsure.</strong> Instead of one acuity number it returns a
+        calibrated range with a measured coverage rate. A wide range means get a person to look, not
+        act on this.</li>
+    <li><strong>Every output shows its working.</strong> Each estimate comes with the specific inputs
+        behind it. That is deliberate. FDA's January 2026 guidance on clinical decision support turns
+        on whether a clinician can independently review the basis for a recommendation, and we built
+        to that line rather than up against it.</li>
+  </ul>
+  <p>Both choices cost accuracy on a leaderboard. In an emergency department we think a model that
+     admits doubt beats one that is confidently wrong a third of the time.</p>
+
+  <h2>Who we are</h2>
+  <p>Solace is an early stage team. We have no hospital deployments behind us and we would rather
+     tell you that than have you find it in a reference check.</p>
+
+  <p>What works today: multilingual patient intake, a calibrated triage model that reports its own
+     uncertainty, ambient documentation, and interfaces to Epic, Oracle Health and athenahealth.
+     There is a governance layer underneath it, model cards, consent enforcement and an append only
+     audit log, because we built for a compliance review before we built for a demo.</p>
+
+  <div class="box red">
+    <p><strong>What does not exist yet:</strong> a completed clinical validation, a live deployment,
+       or FDA clearance. Our triage model is trained on a public research dataset rather than real
+       patient data. That gap is exactly why we are asking to run in shadow instead of asking you to
+       switch something on. A model calibrated against McKinney's own encounters is worth more to
+       both of us than anything we could claim today.</p>
   </div>
 
-  <p>We are aware this is an unusual thing to put in a proposal. We think a Chief Medical Officer
-     should be told what a system cannot yet do before being told what it might one day do.</p>
-
-  <h2>Why McKinney, specifically</h2>
+  <h2>Why McKinney</h2>
   <ul>
-    <li><strong>Volume sufficient to reach significance.</strong> 43,301 annual visits gives enough
-        events to produce a statistically meaningful finding within 90 days.</li>
-    <li><strong>Level III trauma designation</strong> means acuity assignment carries real
-        consequence, and there is an existing quality infrastructure that already reviews it.</li>
-    <li><strong>A high-performing department is the harder and more useful test.</strong> Baylor
-        Scott &amp; White publishes ED wait times four to six times shorter than national averages.
-        If a mistriage signal exists at McKinney, it exists everywhere. If it does not, that is a
-        finding worth having and we would say so.</li>
-  </ul>
-
-  <h2>The regulatory context, briefly</h2>
-  <ul>
-    <li><strong>CMS 2026 OPPS</strong> adopted an Emergency Care Access and Timeliness measure,
-        including the proportion of patients boarding beyond four hours. ED throughput moves from an
-        operational concern to a reported one.</li>
-    <li><strong>ONC HTI-1 §170.315(b)(11)</strong> requires 31 source attributes to be surfaced for
-        every predictive decision support intervention. Solace publishes these by default for its own
-        models.</li>
-    <li><strong>FDA CDS guidance (January 2026)</strong> turns on whether a clinician can
-        independently review the basis for a recommendation. Our outputs are built to that standard.</li>
+    <li><strong>Enough volume to mean something.</strong> 43,301 visits a year gives enough events
+        for the 90 days to produce a real answer rather than a suggestive one.</li>
+    <li><strong>Level III trauma.</strong> Acuity decisions carry weight, and there is already a
+        quality structure that reviews them.</li>
+    <li><strong>A good department is the harder test.</strong> Baylor Scott &amp; White publishes ED
+        wait times four to six times shorter than national averages. If a signal shows up at
+        McKinney it exists everywhere. If it does not, that is worth knowing and we will say so.</li>
   </ul>
 
   <hr class="rule">
-
-  <h2>The single question we are asking</h2>
-  <div class="callout">
-    <p>May we analyse McKinney's closed emergency department encounters, at no cost and with no
-       patient contact, and tell you your own under-triage rate and recognition delay?</p>
-    <p style="margin-top:6pt">If the answer to that is yes, everything else can follow from what we find.
-       If the finding is unremarkable, you will have a number you did not have before, and we will
-       have learned something worth knowing.</p>
+  <div class="box">
+    <p><strong>The question we are asking:</strong> may we run Solace in shadow at McKinney for 90
+       days, at no cost, with nothing shown to anyone, and then tell you your own under triage rate
+       and how much earlier we would have caught the cases you missed?</p>
   </div>
 
   <hr class="rule">
   <p class="src"><strong>References.</strong>
-    Mistriage rates: Kaiser Permanente Division of Research, <em>JAMA Network Open</em>, n=5,315,176 —
+    Mistriage rates: Kaiser Permanente Division of Research, <em>JAMA Network Open</em>, n=5,315,176,
     <a href="https://pubmed.ncbi.nlm.nih.gov/36930151/">pubmed.ncbi.nlm.nih.gov/36930151</a>.
-    ED deterioration: <em>Annals of Emergency Medicine</em> (2026), n=173,168 —
+    ED deterioration: <em>Annals of Emergency Medicine</em>, 2026, n=173,168,
     <a href="https://www.annemergmed.com/article/S0196-0644(26)00071-5/fulltext">annemergmed.com</a>.
-    Vendor consolidation figures: health system technology leader survey reporting, 2026.
-    CMS 2026 OPPS ED boarding measure —
+    CMS 2026 OPPS emergency care access and timeliness measure,
     <a href="https://www.emergencyphysicians.org/press-releases/2025/11-21-25-acep-statement-on-cms-2026-opps-final-rule-and-new-emergency-department-boarding-measure">ACEP</a>.
-    ONC HTI-1 Decision Support Interventions —
+    ONC HTI-1 decision support interventions,
     <a href="https://healthit.gov/test-method/decision-support-interventions/">healthit.gov</a>.
-    FDA Clinical Decision Support Software guidance, January 2026 —
+    FDA clinical decision support software guidance, January 2026,
     <a href="https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-support-software">fda.gov</a>.
-    McKinney facility data —
+    McKinney facility figures,
     <a href="https://www.bswhealth.com/locations/hospital/mckinney">bswhealth.com</a>.
   </p>
 </div>
