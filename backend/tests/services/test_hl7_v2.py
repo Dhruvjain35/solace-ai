@@ -9,7 +9,10 @@ from datetime import datetime, timezone
 
 import pytest
 
-hl7 = pytest.importorskip("services.hl7_v2")
+# Imported directly rather than via pytest.importorskip. A guard turns
+# "this module is broken" into "these tests were skipped" and lets a red
+# build report green, which is how a genuine import failure went unnoticed.
+import services.hl7_v2 as hl7
 
 
 def _patient():

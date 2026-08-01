@@ -11,7 +11,10 @@ import base64
 
 import pytest
 
-fw = pytest.importorskip("services.fhir_writer")
+# Imported directly rather than via pytest.importorskip. A guard turns
+# "this module is broken" into "these tests were skipped" and lets a red
+# build report green, which is how a genuine import failure went unnoticed.
+import services.fhir_writer as fw
 
 
 @pytest.fixture(autouse=True)

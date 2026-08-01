@@ -1,4 +1,4 @@
-"""Vendor EHR adapter tests — guarded by ``pytest.importorskip``.
+"""Vendor EHR adapter tests.
 
 The vendor-specific adapter modules (``services.ehr_epic``,
 ``services.ehr_oracle``, ``services.ehr_athena``) are part of the EHR
@@ -24,9 +24,8 @@ PATIENT_REF = "Patient/test-patient-001"
 class TestEpicAdapter:
     @pytest.fixture
     def ehr_epic(self):
-        return pytest.importorskip(
-            "services.ehr_epic",
-            reason="services.ehr_epic adapter not implemented yet")
+        import services.ehr_epic as _m
+        return _m
 
     def test_module_exposes_adapter(self, ehr_epic):
         assert hasattr(ehr_epic, "EpicAdapter")
@@ -102,9 +101,8 @@ class TestEpicAdapter:
 class TestOracleAdapter:
     @pytest.fixture
     def ehr_oracle(self):
-        return pytest.importorskip(
-            "services.ehr_oracle",
-            reason="services.ehr_oracle adapter not implemented yet")
+        import services.ehr_oracle as _m
+        return _m
 
     def test_module_exposes_client(self, ehr_oracle):
         assert hasattr(ehr_oracle, "OracleEHRClient")
@@ -179,9 +177,8 @@ class TestOracleAdapter:
 class TestAthenaAdapter:
     @pytest.fixture
     def ehr_athena(self):
-        return pytest.importorskip(
-            "services.ehr_athena",
-            reason="services.ehr_athena adapter not implemented yet")
+        import services.ehr_athena as _m
+        return _m
 
     def test_module_exposes_client(self, ehr_athena):
         assert hasattr(ehr_athena, "AthenaWriteClient")
@@ -262,11 +259,11 @@ class TestAthenaAdapter:
 # ==========================================================================
 class TestEHRVendorRegistry:
     def test_vendor_registry_importable(self):
-        ehr_vendors = pytest.importorskip("lib.ehr_vendors")
+        import lib.ehr_vendors as ehr_vendors
         assert hasattr(ehr_vendors, "EHRVendor")
 
     def test_ehr_vendor_to_public_dict_hides_secrets(self):
-        ehr_vendors = pytest.importorskip("lib.ehr_vendors")
+        import lib.ehr_vendors as ehr_vendors
         vendor = ehr_vendors.EHRVendor(
             id="smart", label="SMART Sandbox", color="#0a84ff",
             fhir_base_url="https://launch.smarthealthit.org/v/r4/fhir",
@@ -285,11 +282,12 @@ class TestEHRVendorRegistry:
 
 
 # ==========================================================================
-# ehr_gateway — vendor dispatch facade (importorskip-guarded)
+# ehr_gateway — vendor dispatch facade
 # ==========================================================================
 class TestEHRGateway:
-    def test_gateway_importable_or_skip(self):
-        gateway = pytest.importorskip(
-            "services.ehr_gateway",
-            reason="services.ehr_gateway not present")
+    def test_gateway_is_importable(self):
+        """Was written as import-or-skip, which is a test that cannot fail.
+        The gateway is the dispatch point for every vendor adapter, so if it
+        stops importing the run should go red."""
+        import services.ehr_gateway as gateway
         assert gateway is not None

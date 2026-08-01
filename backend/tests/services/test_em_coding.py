@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import pytest
 
-em = pytest.importorskip("services.em_coding")
+# Imported directly rather than via pytest.importorskip. A guard turns
+# "this module is broken" into "these tests were skipped" and lets a red
+# build report green, which is how a genuine import failure went unnoticed.
+import services.em_coding as em
 
 
 # ---- _element_score --------------------------------------------------------

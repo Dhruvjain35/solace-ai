@@ -12,7 +12,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib import provenance
@@ -431,6 +431,12 @@ def specialty_get(
 
 # ---- AI override audit ----------------------------------------------------------
 class OverrideBody(BaseModel):
+    # `model_name` collides with pydantic's reserved `model_` prefix, which it
+    # warns about on every import of the app. The field name is the right one
+    # for the payload (it is the name of the AI model that produced the draft),
+    # so the namespace is opened rather than the field renamed.
+    model_config = ConfigDict(protected_namespaces=())
+
     purpose: str
     model_name: str = "claude-sonnet-4-5"
     decision: str  # accepted | edited | rejected
