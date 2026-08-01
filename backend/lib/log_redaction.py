@@ -47,15 +47,54 @@ class RedactPatientUUIDsFilter(logging.Filter):
         return True
 
 
-def install() -> None:
-    """Attach the redaction filter to every relevant logger.
+_FILTER = RedactPatientUUIDsFilter()
+_patched = False
 
-    uvicorn names its access logger "uvicorn.access"; we also attach to root
-    + our own "solace" logger so exceptions don't leak UUIDs from tracebacks.
+
+def _attach(handler: logging.Handler) -> None:
+    if not any(isinstance(f, RedactPatientUUIDsFilter) for f in handler.filters):
+        handler.addFilter(_FILTER)
+
+
+def install() -> None:
+    """Attach the redaction filter to every handler that can emit a record.
+
+    Filters go on HANDLERS, not on loggers, and that distinction is the whole
+    point of this function.
+
+    A Logger's filters run only against records created on that logger. A record
+    from a child logger propagates to ancestor *handlers* and skips ancestor
+    *filters* completely. The previous version attached to five named loggers,
+    root among them, which reads as full coverage and is not: 97 modules in this
+    codebase log through ``logging.getLogger(__name__)``, and not one of those
+    records was ever seen by the filter. Only the single module using
+    ``getLogger("solace")``, plus uvicorn's own lines, were redacted.
+
+    Handlers are the choke point every record passes through regardless of which
+    logger created it, so that is where the filter belongs.
+
+    ``Logger.addHandler`` is also patched, once, because uvicorn and the Lambda
+    runtime install their handlers at times we do not control. Attaching only to
+    the handlers present right now would pass every test and still leak in
+    production, where uvicorn configures logging after this import.
     """
-    f = RedactPatientUUIDsFilter()
-    for name in ("uvicorn.access", "uvicorn.error", "solace", "", "mangum"):
+    global _patched
+
+    for name in ("", "uvicorn.access", "uvicorn.error", "solace", "mangum"):
         logger = logging.getLogger(name)
-        # Avoid stacking duplicate filters if install() runs twice (warm starts)
-        if not any(isinstance(h, RedactPatientUUIDsFilter) for h in logger.filters):
-            logger.addFilter(f)
+        for handler in logger.handlers:
+            _attach(handler)
+        # Kept as well as, not instead of. Covers a record logged directly to
+        # one of these loggers in a process that has no handlers attached yet.
+        if not any(isinstance(f, RedactPatientUUIDsFilter) for f in logger.filters):
+            logger.addFilter(_FILTER)
+
+    if not _patched:
+        _original_add_handler = logging.Logger.addHandler
+
+        def add_handler(self: logging.Logger, hdlr: logging.Handler) -> None:
+            _attach(hdlr)
+            _original_add_handler(self, hdlr)
+
+        logging.Logger.addHandler = add_handler  # type: ignore[method-assign]
+        _patched = True
