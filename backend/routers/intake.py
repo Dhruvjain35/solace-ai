@@ -12,9 +12,11 @@ from fastapi import APIRouter, File, Form, HTTPException, Path, Request, UploadF
 
 from db import media, storage
 from db.constants import STATUS_WAITING
-from lib import ai_log, blocklist, content_guard, idempotency, quota, uploads
+from lib import ai_log, blocklist, consent, content_guard, idempotency, quota, uploads
 
-CONSENT_VERSION_CURRENT = "1.0"
+# One definition, in lib.consent. Kept as an alias so the two call sites below
+# read the same as before.
+CONSENT_VERSION_CURRENT = consent.CURRENT_VERSION
 from lib.fallbacks import ESI_LABELS, GENERIC_PATIENT_EXPLANATION
 from services import (
     care_routing,
@@ -73,24 +75,18 @@ async def create_intake(
     # Auto-block check FIRST — short-circuits identities flagged as abusive
     blocklist.enforce(identity, source_ip=src_ip)
 
-    # HIPAA consent gate — §164.508 requires explicit authorization before PHI
-    # flows to AI processors (AWS Bedrock / Transcribe / Polly).
-    if str(consent_granted or "").lower() not in {"true", "1", "yes"}:
-        from lib import audit as _audit  # noqa: PLC0415
-
-        _audit.record(
-            clinician_id=None, clinician_name=None,
-            action="abuse.intake_no_consent",
-            source_ip=src_ip, status_code=403,
-            extra={"identity": identity},
-        )
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "Consent required. You must agree to AI processing of your voice, symptoms,"
-                " and photos before submitting intake."
-            ),
-        )
+    # SEC-004 / HIPAA §164.508. Everything downstream of this line — voice,
+    # symptoms, photos — reaches AWS Bedrock, Transcribe or Polly.
+    consent.require(
+        consent_granted,
+        action="abuse.intake_no_consent",
+        identity=identity,
+        source_ip=src_ip,
+        detail=(
+            "Consent required. You must agree to AI processing of your voice, symptoms,"
+            " and photos before submitting intake."
+        ),
+    )
 
     # Start an AI-processing log for this patient's request. Services append to it;
     # we serialize onto the patient record at the end.

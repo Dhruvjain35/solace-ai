@@ -15,6 +15,7 @@ import httpx
 
 from db import storage
 from lib import audit as _audit
+from lib import consent
 from lib.config import settings
 from services import sms
 
@@ -543,10 +544,41 @@ def to_public_list() -> list[dict]:
     ]
 
 
+# Actions that put context — which includes the patient row — in front of an AI
+# provider. CONSTITUTION SEC-004 applies to these and not to the rest.
+#
+# Kept as an explicit list rather than inferred at runtime, because a wrong
+# inference here fails open. `test_every_ai_action_is_declared` asserts the list
+# matches the handlers that actually reach lib.claude, so adding a fourth AI
+# action without listing it breaks the build rather than quietly skipping the
+# gate.
+AI_ACTIONS = frozenset({"run_claude_prompt", "draft_message", "generate_letter"})
+
+
 def run(action_type: str, config: dict, context: dict) -> dict:
     a = by_type(action_type)
     if not a:
         return {"success": False, "reason": "unknown_action_type", "type": action_type}
+
+    # SEC-004 at the choke point. Fifteen routers can trigger a workflow, and
+    # any of them can reach Claude through the three actions above by
+    # interpolating {{patient.*}} into a prompt. Gating here covers all fifteen
+    # at once; gating in each router is how the rule got broken the first time.
+    #
+    # The patient is not present to answer when a workflow fires, so the stored
+    # record is the only evidence there is, and its absence is a no.
+    if action_type in AI_ACTIONS:
+        patient = context.get("patient")
+        if not consent.for_patient(patient):
+            pid = (patient or {}).get("id") or (patient or {}).get("patient_id")
+            consent.audit_refusal(f"workflow.{action_type}_no_consent", identity=pid)
+            log.warning("workflow action %s blocked: no recorded consent", action_type)
+            # A blocked result, not an exception. A workflow is a side effect of
+            # someone booking an appointment or finishing an intake, and a
+            # consent gap in a background step must not fail the thing the
+            # patient was actually doing. Matches care_ops' blocked_no_consent.
+            return {"success": False, "reason": "blocked_no_consent"}
+
     try:
         return a.handler(config, context)
     except Exception as e:  # noqa: BLE001

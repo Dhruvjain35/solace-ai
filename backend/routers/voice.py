@@ -33,7 +33,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
-from lib import blocklist, content_guard, quota
+from lib import blocklist, consent, content_guard, quota
 from lib.auth import audit, require_clinician
 from services import transcription
 from services.voice_agent import intents, prompts, session, tts_cache
@@ -107,10 +107,15 @@ async def twilio_incoming(request: Request) -> Response:
     )
 
     hospital = storage.get_hospital(hospital_id) or {}
-    greeting = prompts.GREETINGS["en"].format(hospital_name=hospital.get("name", "the clinic"))
-    session.append_turn(rec["call_id"], role="assistant", text=greeting)
+    # SEC-004, phone path. The caller is told this is an automated assistant and
+    # that the call is recorded and transcribed, before the first <Record> — so
+    # before they have said anything for us to record. The session then carries
+    # proof of what they were told, and /turn refuses to transcribe without it.
+    opening = prompts.opening_for("en", hospital.get("name", "the clinic"))
+    session.update(rec["call_id"], consent.record_disclosure(prompts.DISCLOSURE_VERSION))
+    session.append_turn(rec["call_id"], role="assistant", text=opening)
 
-    body = _say_or_play(greeting, "en", base_url) + _record_block(rec["call_id"], base_url)
+    body = _say_or_play(opening, "en", base_url) + _record_block(rec["call_id"], base_url)
     return _twiml(body)
 
 
@@ -128,6 +133,19 @@ async def twilio_turn(call_id: str = Path(...), request: Request = None) -> Resp
     if not rec:
         # Stale callback — bail gracefully.
         return _twiml('<Hangup/>')
+
+    # SEC-004. The next line downloads the caller's audio and sends it to a
+    # transcription provider. Do not do that for a caller who was never told the
+    # call is recorded — which includes any session that started before the
+    # disclosure shipped, and any session where /incoming failed to persist it.
+    if not consent.for_call(rec):
+        consent.audit_refusal("voice.turn_no_disclosure", identity=call_id)
+        log.warning("voice turn %s refused: no recorded disclosure on session", call_id)
+        session.end(call_id, disposition="no_consent")
+        return _twiml(
+            _say_or_play(prompts.CONSENT_UNAVAILABLE, rec.get("language", "en"), base_url)
+            + "<Hangup/>"
+        )
 
     user_text = ""
     if recording_url:
@@ -246,13 +264,18 @@ def simulator_start(body: SimulatorStartBody, request: Request = None) -> dict:
     )
     hospital = storage.get_hospital(body.hospital_id) or {}
     lang = (body.language or "en")[:2]
-    template = prompts.GREETINGS.get(lang, prompts.GREETINGS["en"])
-    greeting = template.format(hospital_name=hospital.get("name", "the clinic"))
-    session.append_turn(rec["call_id"], role="assistant", text=greeting)
-    audio_url = tts_cache.get_or_generate(greeting, language=lang)
+    # Same disclosure as the phone path. The simulator is a public,
+    # unauthenticated endpoint that puts whatever is typed into it in front of
+    # Claude, so "it is only a demo" is not a basis for skipping it — and a demo
+    # that hides the disclosure misrepresents the product to the people
+    # evaluating it.
+    opening = prompts.opening_for(lang, hospital.get("name", "the clinic"))
+    session.update(rec["call_id"], consent.record_disclosure(prompts.DISCLOSURE_VERSION))
+    session.append_turn(rec["call_id"], role="assistant", text=opening)
+    audio_url = tts_cache.get_or_generate(opening, language=lang)
     return {
         "call_id": rec["call_id"],
-        "say": greeting,
+        "say": opening,
         "audio_url": audio_url,
         "language": lang,
     }
@@ -267,6 +290,12 @@ def simulator_turn(body: SimulatorTurnBody, request: Request = None) -> dict:
     rec = session.get(body.call_id)
     if not rec:
         raise HTTPException(status_code=404, detail="unknown call_id")
+    # SEC-004, same rule as the phone path: nothing typed here reaches Claude
+    # unless the session carries the disclosure /simulator/start records.
+    if not consent.for_call(rec):
+        consent.audit_refusal("voice.simulator_turn_no_disclosure",
+                              identity=body.call_id, source_ip=source_ip)
+        raise HTTPException(status_code=403, detail="Session has no recorded disclosure.")
     user_text = (body.text or "").strip()
     if not user_text:
         raise HTTPException(status_code=400, detail="text required")

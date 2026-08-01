@@ -15,11 +15,11 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, Path, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Path, Request, UploadFile
 from pydantic import BaseModel
 
 from db import storage
-from lib import blocklist, quota, uploads
+from lib import blocklist, consent, quota, uploads
 from lib.config import settings
 from services import fhir_patient_search, id_ocr
 
@@ -32,6 +32,7 @@ router = APIRouter()
 async def scan_id(
     hospital_id: str = Path(...),
     image_file: UploadFile = File(...),
+    consent_granted: str | None = Form(None, max_length=16),
     request: Request = None,
 ) -> dict:
     """OCR a US driver's license / state ID via Claude vision."""
@@ -43,6 +44,17 @@ async def scan_id(
     identity_hash = quota.identity_of(source_ip, user_agent)
     blocklist.enforce(identity_hash, source_ip=source_ip)
     quota.check_and_consume(identity_hash, "scan_insurance", source_ip=source_ip)
+    # SEC-004 / HIPAA §164.508. This endpoint is unauthenticated and sends a
+    # photograph of a government ID — name, address, date of birth, licence
+    # number, face — to a third-party model. Of everything the patient hands us
+    # this is the most identifying, and it was the last thing to get a gate.
+    consent.require(
+        consent_granted,
+        action="abuse.scan_id_no_consent",
+        identity=identity_hash,
+        source_ip=source_ip,
+        detail="Consent required before an ID photo can be read by AI.",
+    )
     raw_bytes = await uploads.read_and_validate(image_file, "image", source_ip=source_ip)
     fields = id_ocr.extract(raw_bytes, mime_type="image/jpeg")
     if "error" in fields:

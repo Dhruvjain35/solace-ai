@@ -18,7 +18,7 @@ import time
 from fastapi import APIRouter, File, Form, HTTPException, Path, Request, UploadFile
 
 from db import storage
-from lib import blocklist, content_guard, quota, uploads
+from lib import blocklist, consent, content_guard, quota, uploads
 from services import followups, transcription
 
 log = logging.getLogger(__name__)
@@ -44,21 +44,15 @@ async def transcribe_and_ask(
     identity = quota.identity_of(source_ip, user_agent)
     blocklist.enforce(identity, source_ip=source_ip)
 
-    # HIPAA §164.508 consent gate — patient audio contains PHI (spoken symptoms,
-    # name, conditions) that will be sent to AWS Transcribe or OpenAI Whisper.
-    if str(consent_granted or "").lower() not in {"true", "1", "yes"}:
-        from lib import audit as _audit  # noqa: PLC0415
-
-        _audit.record(
-            clinician_id=None, clinician_name=None,
-            action="abuse.transcribe_no_consent",
-            source_ip=source_ip, status_code=403,
-            extra={"identity": identity},
-        )
-        raise HTTPException(
-            status_code=403,
-            detail="Consent required before audio can be processed by AI.",
-        )
+    # SEC-004 / HIPAA §164.508. Patient audio carries spoken symptoms, names
+    # and conditions, and goes to AWS Transcribe or OpenAI Whisper.
+    consent.require(
+        consent_granted,
+        action="abuse.transcribe_no_consent",
+        identity=identity,
+        source_ip=source_ip,
+        detail="Consent required before audio can be processed by AI.",
+    )
 
     quota.check_and_consume(identity, "transcribe", source_ip=source_ip)
 

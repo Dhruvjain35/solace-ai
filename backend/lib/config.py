@@ -59,6 +59,17 @@ class Settings(BaseSettings):
     local_media_dir: str = str(ROOT / "backend" / "tmp" / "media")
     local_media_base_url: str = "http://localhost:8000/media"
 
+    # Voice consent basis (CONSTITUTION SEC-004, phone path).
+    #   "disclosure" — the caller hears that this is an automated assistant and
+    #     that the call is recorded and transcribed, before the first <Record>.
+    #     Continuing to speak is the consent. This is how healthcare IVR
+    #     normally works and is the default.
+    #   "explicit" — the caller must additionally answer yes before anything
+    #     they say reaches a transcription or language model.
+    # Which one is sufficient is a question for the deploying hospital's counsel
+    # and its state's law, not something the code should decide on their behalf.
+    voice_consent_mode: Literal["disclosure", "explicit"] = "disclosure"
+
     # Demo hospital seed
     demo_hospital_id: str = "demo"
     demo_hospital_name: str = "Demo Medical Center"

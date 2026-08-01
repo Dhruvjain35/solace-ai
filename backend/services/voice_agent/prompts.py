@@ -34,6 +34,51 @@ The call so far is below. Reply with EITHER one short spoken line OR a tool call
 NEVER both."""
 
 
+# --- Disclosure ---------------------------------------------------------------
+#
+# Played before the first <Record>, so the caller knows three things before they
+# say anything: they are talking to an AI, the call is recorded and transcribed,
+# and a person is one word away.
+#
+# The greeting used to be "Hi, this is Solace at {hospital_name}. How can I
+# help?", which discloses none of that. A caller could describe their symptoms
+# to a recording, transcribed by a third-party model, believing they were
+# talking to hospital staff.
+#
+# Bump DISCLOSURE_VERSION whenever this wording changes. It is recorded on every
+# call session, so a later review can tell what any given caller was told rather
+# than what the text happens to say today.
+DISCLOSURE_VERSION = "1.0"
+
+DISCLOSURES: dict[str, str] = {
+    "en": "You're speaking with an automated assistant, and this call is recorded and transcribed to help with your care. Say 'agent' at any time for a person.",
+    "es": "Está hablando con un asistente automatizado. Esta llamada se graba y se transcribe para ayudar con su atención. Diga 'agente' en cualquier momento para hablar con una persona.",
+    "zh": "您正在与自动助理通话,本次通话将被录音并转录,用于协助您的诊疗。您可以随时说“人工”转接人工服务。",
+    "vi": "Quý vị đang nói chuyện với trợ lý tự động. Cuộc gọi này được ghi âm và chuyển thành văn bản để hỗ trợ việc chăm sóc quý vị. Hãy nói 'nhân viên' bất cứ lúc nào để gặp người thật.",
+    "ar": "أنت تتحدث مع مساعد آلي، ويتم تسجيل هذه المكالمة وتفريغها نصيًا للمساعدة في رعايتك. قل 'موظف' في أي وقت للتحدث مع شخص.",
+    "fr": "Vous parlez à un assistant automatisé. Cet appel est enregistré et transcrit pour faciliter votre prise en charge. Dites 'conseiller' à tout moment pour parler à une personne.",
+    "pt": "Você está falando com um assistente automatizado. Esta chamada é gravada e transcrita para ajudar no seu atendimento. Diga 'atendente' a qualquer momento para falar com uma pessoa.",
+    "ko": "자동 응답 도우미와 통화하고 계십니다. 이 통화는 진료를 돕기 위해 녹음되고 텍스트로 기록됩니다. 상담원을 원하시면 언제든 '상담원'이라고 말씀해 주세요.",
+    "hi": "आप एक स्वचालित सहायक से बात कर रहे हैं। आपकी देखभाल में मदद के लिए यह कॉल रिकॉर्ड और ट्रांसक्राइब की जाती है। किसी व्यक्ति से बात करने के लिए कभी भी 'एजेंट' कहें।",
+    "ru": "Вы говорите с автоматическим ассистентом. Этот звонок записывается и расшифровывается, чтобы помочь в оказании вам помощи. Скажите «оператор» в любой момент, чтобы поговорить с человеком.",
+}
+
+
+def disclosure_for(language: str) -> str:
+    return DISCLOSURES.get((language or "en")[:2], DISCLOSURES["en"])
+
+
+def opening_for(language: str, hospital_name: str) -> str:
+    """The disclosure followed by the greeting — what the caller hears first.
+
+    Disclosure first, deliberately. A caller who is going to hang up on hearing
+    "recorded" should hear it before they have said anything worth recording.
+    """
+    lang = (language or "en")[:2]
+    greeting = GREETINGS.get(lang, GREETINGS["en"]).format(hospital_name=hospital_name)
+    return f"{disclosure_for(lang)} {greeting}"
+
+
 # Greeting per language. ElevenLabs caches these MP3s by hash so they cost $0
 # after the first generation.
 GREETINGS: dict[str, str] = {
@@ -65,6 +110,15 @@ EMERGENCY_RESPONSE = (
 GOODBYE_DEFAULT = "Take care. Goodbye."
 TRANSFER_PROMPT = "Connecting you now. Please hold."
 NO_INPUT_PROMPT = "I didn't catch that — could you say it again?"
+
+# Said when a call reaches the transcription step without a recorded disclosure.
+# Deliberately vague about the reason: the caller does not need our compliance
+# problem, they need the clinic's front desk. Routing them to a person is the
+# correct behaviour, not an error message.
+CONSENT_UNAVAILABLE = (
+    "I'm sorry, I can't take this call automatically right now. "
+    "Please hold or call back to reach the front desk."
+)
 
 
 # =====================================================================================
