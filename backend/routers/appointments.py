@@ -16,11 +16,26 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _identity(request: Request | None) -> tuple[str | None, str]:
+    """Caller identity for the unauthenticated appointment routes."""
+    source_ip = user_agent = None
+    if request is not None:
+        source_ip = request.headers.get(
+            "x-forwarded-for", request.client.host if request.client else None
+        )
+        user_agent = request.headers.get("user-agent")
+    return source_ip, quota.identity_of(source_ip, user_agent)
+
+
 @router.get("/appointments/availability")
 def availability(
     hospital_id: str = Path(...),
     days: int = Query(7, ge=1, le=14),
+    request: Request = None,
 ) -> dict[str, Any]:
+    source_ip, identity = _identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "appointments.availability", source_ip=source_ip)
     if not storage.get_hospital(hospital_id):
         raise HTTPException(status_code=404, detail="hospital not found")
     slots = scheduling.open_slots(hospital_id=hospital_id, days=days)
@@ -94,7 +109,17 @@ def book(
 def lookup(
     hospital_id: str = Path(...),
     confirmation_code: str = Path(...),
+    request: Request = None,
 ) -> dict[str, Any]:
+    # SEC-003. The confirmation code is six characters from a 32-symbol
+    # alphabet: about a billion combinations, which is plenty against someone
+    # mistyping and nothing at all against a machine working through them. The
+    # response carries the patient's name and the reason for the visit, so this
+    # is the read half of that surface and the ceiling is what protects it.
+    source_ip, identity = _identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "appointments.lookup", source_ip=source_ip)
+
     appt = scheduling.lookup(hospital_id=hospital_id, confirmation_code=confirmation_code)
     if not appt:
         raise HTTPException(status_code=404, detail="appointment not found")
@@ -109,7 +134,14 @@ class CancelBody(BaseModel):
 def cancel(
     hospital_id: str = Path(...),
     body: CancelBody | None = None,
+    request: Request = None,
 ) -> dict[str, Any]:
+    # The write half of the same surface, and the more damaging one: a hit here
+    # cancels a real appointment. Ceiling is tighter than lookup for that reason.
+    source_ip, identity = _identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "appointments.cancel", source_ip=source_ip)
+
     if body is None or not body.confirmation_code:
         raise HTTPException(status_code=400, detail="confirmation_code required")
     ok = storage.cancel_appointment(body.confirmation_code, hospital_id=hospital_id)

@@ -84,9 +84,27 @@ def _record_block(call_id: str, base_url: str) -> str:
 # --- Twilio: incoming call -----------------------------------------------------------
 
 
+def _sim_identity(request: Request | None) -> tuple[str | None, str | None, str]:
+    """Extract source IP, UA, and computed identity for simulator rate limiting."""
+    source_ip = None
+    user_agent = None
+    if request:
+        source_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else None)
+        user_agent = request.headers.get("user-agent")
+    return source_ip, user_agent, quota.identity_of(source_ip, user_agent)
+
+
 @router.post("/incoming")
 async def twilio_incoming(request: Request) -> Response:
     """Twilio hits this on first ring. We greet the caller and start the first turn."""
+    # SEC-003. Twilio is the only legitimate caller here, but the URL is public:
+    # anyone can POST to it, and each request opens a session and synthesises
+    # speech on our account. This is the file SEC-003 names in its own scope and
+    # the control was never on any of its Twilio routes.
+    source_ip, _ua, identity = _sim_identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "voice.inbound", source_ip=source_ip)
+
     form = dict(await request.form())
     call_sid = form.get("CallSid", "")
     caller = form.get("From", "")
@@ -126,6 +144,10 @@ async def twilio_incoming(request: Request) -> Response:
 async def twilio_turn(call_id: str = Path(...), request: Request = None) -> Response:
     """Twilio posts the recording URL after each <Record>. We transcribe with Whisper,
     pass to Claude, and reply with the next TwiML."""
+    source_ip, _ua, identity = _sim_identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "voice.inbound", source_ip=source_ip)
+
     form = dict(await request.form()) if request else {}
     recording_url = form.get("RecordingUrl", "")
     base_url = _base_url(request)
@@ -238,16 +260,6 @@ class SimulatorTurnBody(BaseModel):
 
     call_id: str = Field(..., max_length=64)
     text: str = Field(..., max_length=4_000)
-
-
-def _sim_identity(request: Request | None) -> tuple[str | None, str | None, str]:
-    """Extract source IP, UA, and computed identity for simulator rate limiting."""
-    source_ip = None
-    user_agent = None
-    if request:
-        source_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else None)
-        user_agent = request.headers.get("user-agent")
-    return source_ip, user_agent, quota.identity_of(source_ip, user_agent)
 
 
 @router.post("/simulator/start")

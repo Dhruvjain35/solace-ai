@@ -59,6 +59,25 @@ LIMITS: dict[str, Limit] = {
     # Request-to-join is public (unauthenticated) — tight ceiling blunts spam
     # against a workspace's admin inbox.
     "onboarding.access_request": Limit("onboarding.access_request", per_hour=10),
+    # Patient asking for their own care plan by SMS. Every send costs the clinic
+    # money on their Twilio account, so this is the tightest ceiling here: a
+    # patient needs one message, maybe two if the first did not arrive. Before
+    # this existed the route had no limit at all and would send indefinitely.
+    "sms.care_instructions": Limit("sms.care_instructions", per_hour=10),
+    # Public patient status page. Polled by the waiting-room screen every few
+    # seconds, so the ceiling is high; it exists to bound scraping, not polling.
+    "patients.public_view": Limit("patients.public_view", per_hour=3000),
+    # Appointment self-service. The confirmation code is six characters from a
+    # 32-symbol alphabet, so roughly a billion combinations — safe against a
+    # patient mistyping, not against a machine trying codes at speed. These
+    # ceilings are what makes the code space actually hold up.
+    "appointments.lookup": Limit("appointments.lookup", per_hour=60),
+    "appointments.cancel": Limit("appointments.cancel", per_hour=30),
+    "appointments.availability": Limit("appointments.availability", per_hour=300),
+    # Inbound telephony. Twilio is the only legitimate caller, but the webhook
+    # is a public URL: without a ceiling, anyone posting to it opens sessions and
+    # generates speech at our expense.
+    "voice.inbound": Limit("voice.inbound", per_hour=600),
 }
 
 # Per-upload absolute caps (checked before charging the hourly quota)

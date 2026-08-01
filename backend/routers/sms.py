@@ -11,11 +11,12 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib import audit as _audit
+from lib import blocklist, quota
 from lib.auth import audit, require_clinician
 from services import sms
 
@@ -108,15 +109,44 @@ class CareInstructionsBody(BaseModel):
 def send_self_serve_instructions(
     hospital_id: str = Path(...),
     body: CareInstructionsBody | None = None,
+    request: Request = None,
 ) -> dict[str, Any]:
-    """Patient self-serve — sends their own care plan to a phone they enter on
-    the result page. Throttled by the existing identity-based quota; no auth.
+    """Patient self-serve — sends their own care plan to their own phone.
+
+    Two controls, both of which this route claimed and did not have. The
+    docstring said "Throttled by the existing identity-based quota" and no quota
+    was consumed: 25 requests in a row all sent, each one billed to the clinic's
+    Twilio account. And the destination was whatever the request named, so
+    anyone holding a patient_id could forward that patient's discharge plan,
+    with their name on it, to any handset.
     """
+    source_ip, user_agent, identity = _identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "sms.care_instructions", source_ip=source_ip)
+
     if body is None or not body.patient_id or not body.phone:
         raise HTTPException(status_code=400, detail="patient_id + phone required")
     patient = storage.get_patient(body.patient_id)
     if not patient or patient.get("hospital_id") != hospital_id:
         raise HTTPException(status_code=404, detail="patient not found")
+
+    # The message carries the patient's name and their medications, so it goes
+    # to the number already on their record. When intake captured no number
+    # there is nothing to check against and the supplied one is used, which is
+    # the case this is a match rather than a lookup.
+    on_file = _patient_phone(patient)
+    if on_file and _digits(on_file) != _digits(body.phone):
+        _audit.record(
+            clinician_id=None, clinician_name=None,
+            action="abuse.sms_care_instructions_phone_mismatch",
+            source_ip=source_ip, status_code=403,
+            extra={"identity": identity, "patient_id": body.patient_id},
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="That number doesn't match the one on file. Ask the front desk.",
+        )
+
     hospital = storage.get_hospital(hospital_id) or {}
     text = sms.render_discharge_template(
         patient_name=patient.get("name", ""),
@@ -160,6 +190,29 @@ def _when_to_return_from_patient(p: dict) -> str:
         if wtr:
             return str(wtr)
     return "symptoms get worse, you can't keep fluids down, or new symptoms appear"
+
+
+def _identity(request: Request | None) -> tuple[str | None, str | None, str]:
+    source_ip = user_agent = None
+    if request is not None:
+        source_ip = request.headers.get(
+            "x-forwarded-for", request.client.host if request.client else None
+        )
+        user_agent = request.headers.get("user-agent")
+    return source_ip, user_agent, quota.identity_of(source_ip, user_agent)
+
+
+def _digits(phone: str) -> str:
+    """Compare phone numbers by their digits, ignoring how they were typed.
+
+    A patient reading their own number off a card writes "(512) 555-0100";
+    intake stored "+15125550100". Refusing someone their own discharge plan over
+    punctuation is how a check like this gets deleted within a week.
+
+    The last ten digits, so a number stored with a country code still matches
+    one typed without it.
+    """
+    return "".join(c for c in str(phone or "") if c.isdigit())[-10:]
 
 
 def _patient_phone(p: dict) -> str:

@@ -5,11 +5,12 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from db.constants import STATUS_SEEN, STATUS_WAITING
+from lib import blocklist, quota
 from lib.auth import audit, require_clinician
 
 router = APIRouter()
@@ -115,11 +116,32 @@ def get_patient_detail(
 
 # Public patient endpoint — no clinician PIN. The patient's own phone polls this
 # to see education updates published by the clinician. Returns only patient-safe fields.
+
+def _public_identity(request):
+    """Identity for the unauthenticated patient-facing routes in this module."""
+    source_ip = user_agent = None
+    if request is not None:
+        source_ip = request.headers.get(
+            "x-forwarded-for", request.client.host if request.client else None
+        )
+        user_agent = request.headers.get("user-agent")
+    return source_ip, user_agent, quota.identity_of(source_ip, user_agent)
+
 @router.get("/public-patients/{patient_id}")
 def get_public_patient(
     hospital_id: str = Path(...),
     patient_id: str = Path(...),
+    request: Request = None,
 ) -> dict:
+    # SEC-003. Unauthenticated, and returns the patient's own explanation of
+    # their condition, their comfort protocol and their care recommendation.
+    # The patient_id is a uuid4, so this is a capability URL rather than an
+    # enumerable one, but a capability with no ceiling is still a surface worth
+    # bounding — and a PHI read with no audit trail is a §164.312(b) gap.
+    source_ip, _ua, identity = _public_identity(request)
+    blocklist.enforce(identity, source_ip=source_ip)
+    quota.check_and_consume(identity, "patients.public_view", source_ip=source_ip)
+
     p = storage.get_patient(patient_id)
     if not p or p.get("hospital_id") != hospital_id:
         raise HTTPException(status_code=404, detail="patient not found")

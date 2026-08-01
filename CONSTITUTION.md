@@ -1,9 +1,30 @@
 # Solace Project Constitution
 
-> Version: 1.0.0 | Last Updated: 2026-05-12
+> Version: 1.1.0 | Last Updated: 2026-08-01
 > Project Type: single-app (FastAPI+Mangum Lambda backend + Vite+React+TS frontend)
 
 Solace is a clinical triage web app handling **PHI**. Every rule here is grounded in evidence from the live codebase. Frameworks referenced: **HIPAA**, **SOC 2**, **CCPA**, **AWS Shared Responsibility**, **WCAG 2.1 AA**.
+
+### On the word "evidence"
+
+Each rule below cites evidence. For a while that meant file and line numbers, and
+that turned out to be the weak part of this document rather than the strong part.
+
+SEC-002 cited `lib/log_redaction.py:1-62` and `main.py:25-27`. Both existed. Both
+were correct. The filter was attached to five named loggers, which reads as full
+coverage and is not: in Python a logger's filters only run on records created on
+that logger, and 97 of 98 modules here log through `getLogger(__name__)`. Almost
+every line the application produced went out unredacted while the cited code sat
+there looking right.
+
+SEC-003 named `voice.py` in its own scope and none of that file's three Twilio
+routes enforced anything. SEC-004 was held up by three routers each carrying
+their own copy of the same check, and broken by everything written afterwards.
+
+A line number proves code was written. It does not prove the code covers what
+the rule claims. So the L1 rules now cite a test, and the tests derive their own
+scope from the source tree rather than trusting a list written by hand, because
+a hand-written scope is the thing that goes stale first.
 
 ## Level System
 
@@ -37,29 +58,57 @@ scope: backend/main.py
 message: Log redaction filter not installed first — patient UUIDs or tokens may leak into CloudWatch.
 ```
 
-Evidence: `backend/lib/log_redaction.py:1-62`, `backend/main.py:25-27`.
+Evidence: `backend/tests/services/test_log_redaction.py` (16 tests, 100% of
+`lib/log_redaction.py`). Asserts the property the rule needs — a UUID logged from
+any module does not reach a handler intact — including handlers attached after
+`install()` runs, which is when uvicorn attaches its own.
 
 ### SEC-003 — Blocklist Enforcement on Patient Endpoints (L1)
 
 ```yaml
 level: L1
-check: Every endpoint in /api/{hospital_id}/(intake|pain_flag|voice) must call blocklist.enforce(identity) as the first statement, before any request parsing.
-scope: backend/routers/intake.py, backend/routers/pain_flag.py, backend/routers/voice.py
+check: Every public route that reads or writes patient data must call blocklist.enforce(identity) and consume a quota before any request parsing.
+scope: derived from the route table — any handler with no auth dependency
 message: Patient endpoint missing blocklist.enforce() — abusive identities will not be short-circuited.
 ```
 
-Evidence: `backend/routers/intake.py:69`, `backend/lib/blocklist.py:54-67`.
+Evidence: `backend/tests/test_public_endpoint_throttling.py`. The scope is derived
+from the routes rather than listed here, because the listed version named three
+files and the public surface had since grown to twenty-odd. What it found:
+`/sms/care-instructions` documented itself as "throttled by the existing
+identity-based quota" and consumed none — 25 rapid requests all sent, each one a
+named patient's discharge plan delivered to whatever number the request supplied.
+Also unthrottled: the public patient status page, all three appointment
+self-service routes, and both Twilio webhooks, in the file this rule already
+named.
 
 ### SEC-004 — Consent Gate Before AI Calls (L1)
 
 ```yaml
 level: L1
-check: Before any AI provider call (transcription, triage, TTS, scribe, differential), verify consent_granted == "true" or reject with 403.
-scope: backend/routers/intake.py, backend/services/*.py
+check: Before any AI provider call, patient-facing routes must verify consent via lib/consent.py. Clinician-authenticated routes acting on an existing chart run under treatment and operations and are out of scope.
+scope: derived from the import graph — any route reaching services.transcription, services.tts, lib.claude or services.voice_agent.tts_cache
 message: Missing consent check before AI inference — violates HIPAA §164.508 authorization requirement.
 ```
 
-Evidence: `backend/routers/intake.py:73-88`.
+Evidence: `backend/tests/services/test_consent_gate.py` and
+`backend/tests/test_voice_consent_flow.py`. `lib/consent.py` is the only
+implementation, at 100% coverage. The scope is computed by walking imports from
+the four modules that construct a provider client; a tripwire test fails if a
+fifth appears.
+
+What the derived scope found that the written one missed: `routers/voice.py`
+answered "Hi, this is Solace at {hospital}" and transcribed the caller with no AI
+disclosure, no recording disclosure and no check. `POST /scan-id` sent a
+photograph of a driver's licence to Claude vision, unauthenticated and ungated.
+Three workflow actions interpolated the patient row into a Claude prompt, and
+fifteen routers can trigger a workflow.
+
+The phone path now opens with a disclosure in all ten supported languages before
+the first `<Record>`, and records what was played on the session. Whether
+continuing to speak after a disclosure constitutes §164.508 authorization is a
+question for the deploying hospital's counsel; `VOICE_CONSENT_MODE=explicit`
+requires a spoken yes for deployments that answer it differently.
 
 ### SEC-005 — Content Guard Scan Before AI Submission (L1)
 
