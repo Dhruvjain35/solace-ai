@@ -19,3 +19,11 @@ boto3==1.35.36
 
 # Dev
 pytest==8.3.3
+
+# Auth and outbound HTTP. These are imported by lib/auth.py, lib/jwt_auth.py,
+# lib/intake_nonce.py, services/fhir_writer.py and services/cohort_export.py,
+# and were previously declared only in requirements-lambda.txt. A fresh clone
+# following the README could not run sign-in at all. Pins match the deployed set.
+PyJWT==2.10.1
+bcrypt==4.2.0
+requests==2.32.3

@@ -18,9 +18,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-import pandas as pd
-from scipy.sparse import hstack as sp_hstack
 
 log = logging.getLogger(__name__)
 
@@ -174,6 +171,8 @@ def _safe_encode(le, value: Any, modal_fallback: str | None = None) -> int:
 
 
 def _apply_clinical_features(df: pd.DataFrame, keywords: dict[str, str]) -> pd.DataFrame:
+    import numpy as np
+    import pandas as pd
     df = df.copy()
     for col in ["systolic_bp", "diastolic_bp", "respiratory_rate", "temperature_c", "spo2"]:
         df[f"miss_{col}"] = df[col].isnull().astype(np.int8)
@@ -357,6 +356,9 @@ def build_row(patient: dict, vitals: dict) -> dict:
 
 def _build_feature_matrix(art: dict, patient: dict, vitals: dict) -> pd.DataFrame:
     """Shared feature construction for all model types."""
+    import numpy as np
+    import pandas as pd
+    from scipy.sparse import hstack as sp_hstack
     row = build_row(patient, vitals)
     df = pd.DataFrame([row])
 
@@ -393,10 +395,14 @@ def _build_feature_matrix(art: dict, patient: dict, vitals: dict) -> pd.DataFram
 
 
 def _predict_lgb(art: dict, X: pd.DataFrame) -> np.ndarray:
+    import numpy as np
+    import pandas as pd
     return np.mean([b.predict(X) for b in art["boosters"]], axis=0)
 
 
 def _predict_xgb(art: dict, X: pd.DataFrame) -> np.ndarray:
+    import numpy as np
+    import pandas as pd
     import xgboost as xgb
     dmat = xgb.DMatrix(X)
     preds = [m.predict(dmat).reshape(-1, 5) for m in art["xgb_models"]]
@@ -404,11 +410,15 @@ def _predict_xgb(art: dict, X: pd.DataFrame) -> np.ndarray:
 
 
 def _predict_cat(art: dict, X: pd.DataFrame) -> np.ndarray:
+    import numpy as np
+    import pandas as pd
     preds = [m.predict_proba(X) for m in art["cat_models"]]
     return np.mean(preds, axis=0)
 
 
 def _predict_mlp(art: dict, X: pd.DataFrame) -> np.ndarray:
+    import numpy as np
+    import pandas as pd
     preds = []
     for model, scaler in zip(art["mlp_models"], art["mlp_scalers"]):
         X_scaled = scaler.transform(X.fillna(0))
@@ -418,6 +428,8 @@ def _predict_mlp(art: dict, X: pd.DataFrame) -> np.ndarray:
 
 def _stacked_predict(art: dict, X: pd.DataFrame) -> np.ndarray:
     """Full stacked ensemble: 4 base models → meta-learner → threshold opt."""
+    import numpy as np
+    import pandas as pd
     lgb_p = _predict_lgb(art, X)
     xgb_p = _predict_xgb(art, X)
     cat_p = _predict_cat(art, X)
@@ -447,6 +459,7 @@ def _stacked_predict(art: dict, X: pd.DataFrame) -> np.ndarray:
 
 def _apply_threshold_opt(art: dict, probs: np.ndarray) -> tuple[int, float]:
     """Apply ordinal threshold optimization if available."""
+    import numpy as np
     opt_thresh = art.get("opt_thresholds")
     if opt_thresh is not None:
         ev = probs @ np.arange(1, 6)
@@ -513,6 +526,8 @@ def _shap_top_features(
     k: int = 5, art: dict | None = None,
 ) -> list[dict]:
     """Per-patient SHAP via LightGBM pred_contrib."""
+    import numpy as np
+    import pandas as pd
     n_features = len(feature_names)
     n_classes = 5
     b = boosters[0]

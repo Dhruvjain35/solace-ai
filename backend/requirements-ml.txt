@@ -8,3 +8,7 @@ lightgbm==4.5.0
 xgboost==2.1.1
 catboost==1.2.7
 shap==0.46.0
+
+# Imported by services/triage_ml.py on the artifact path. Shipped to Lambda but
+# was missing from both local files.
+scipy==1.13.1
