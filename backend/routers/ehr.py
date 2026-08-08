@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 from db import storage
+from lib import tenancy
 from lib.auth import audit, require_clinician
 from lib.config import settings
 from services import ehr_gateway, fhir_patient_search
@@ -90,9 +91,7 @@ def lookup_by_patient(
     a "not in EHR" pill instead of silently hiding the gap.
     """
     audit(caller, "ehr.lookup_by_patient", patient_id=patient_id)
-    p = storage.get_patient(patient_id)
-    if not p or p.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    p = tenancy.require_patient(patient_id, hospital_id)
 
     # 0. Fast-path: patient was already matched to a FHIR Patient at intake.
     # Fetch that exact resource by id — no name/DOB ambiguity.

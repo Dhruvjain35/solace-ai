@@ -57,13 +57,24 @@ _SANITIZE_PATTERNS = [
 # not regex-matchable in text and are handled by other layers (EXIF stripping,
 # upload sanitization).
 _PII_REDACTIONS = [
-    # 1. SSN (###-##-#### and ###.##.####)
+    # 1. SSN (###-##-####, ###.##.####, and the bare 9-digit form when labelled)
     (r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED:SSN]"),
     (r"\b\d{3}\.\d{2}\.\d{4}\b", "[REDACTED:SSN]"),
+    # Bare nine digits only behind an SSN label. Unlabelled, nine digits is also
+    # an account number, a lab accession and an NPI-adjacent id, and redacting
+    # all of those would make scribe notes unreadable.
+    (r"(?i)(?:\bssn\b|social\s+security(?:\s+(?:number|no\.?|#))?)\s*[:=#]?\s*\d{9}\b",
+     "[REDACTED:SSN]"),
 
-    # 2. Credit/debit card numbers (16-digit continuous or spaced/dashed groups)
+    # 2. Credit/debit card numbers.
+    #    16-digit (Visa/Mastercard/Discover) grouped or continuous, and 15-digit
+    #    Amex in its 4-6-5 grouping. Amex was missing, so the 16-digit patterns
+    #    below made this section look complete while one major network went
+    #    through untouched.
     (r"\b\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}\b", "[REDACTED:CARD]"),
     (r"\b\d{16}\b", "[REDACTED:CARD]"),
+    (r"\b\d{4}[\s-]\d{6}[\s-]\d{5}\b", "[REDACTED:CARD]"),
+    (r"\b3[47]\d{13}\b", "[REDACTED:CARD]"),
 
     # 3. Phone numbers (US formats: ###-###-####, (###) ###-####, +1##########)
     (r"\b\d{3}-\d{3}-\d{4}\b", "[REDACTED:PHONE]"),
@@ -74,9 +85,18 @@ _PII_REDACTIONS = [
     # 4. Email addresses
     (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "[REDACTED:EMAIL]"),
 
-    # 5. Date of birth patterns (MM/DD/YYYY, MM-DD-YYYY, YYYY-MM-DD, "born on", "DOB:")
-    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|birthdate|birth\s+date)\s*[:=]?\s*"
+    # 5. Date of birth (MM/DD/YYYY, MM-DD-YYYY, YYYY-MM-DD, "born on", "DOB:").
+    #    The ISO form is the one that matters most and was the one missing: FHIR
+    #    Patient.birthDate is always YYYY-MM-DD, so every chart pulled from an
+    #    EHR carried a date of birth straight through to the provider while the
+    #    comment above claimed otherwise.
+    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|born|birthdate|birth\s+date|birthdate)\s*[:=]?\s*"
      r"\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}", "[REDACTED:DOB]"),
+    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|born|birthdate|birth\s+date)\s*[:=]?\s*"
+     r"(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b", "[REDACTED:DOB]"),
+    # Bare ISO date. Kept last in this group so a labelled one is caught above
+    # and tagged DOB rather than the generic DATE.
+    (r"\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b", "[REDACTED:DATE]"),
     (r"\b(?:0[1-9]|1[0-2])[/\-](?:0[1-9]|[12]\d|3[01])[/\-](?:19|20)\d{2}\b", "[REDACTED:DATE]"),
 
     # 6. Street addresses (number + street name + suffix)
@@ -84,8 +104,18 @@ _PII_REDACTIONS = [
      r"(?:St(?:reet)?|Ave(?:nue)?|Blvd|Boulevard|Dr(?:ive)?|Ln|Lane|Rd|Road|Way|Ct|Court|Pl|Place|Pkwy|Cir(?:cle)?)"
      r"\.?\b", "[REDACTED:ADDRESS]"),
 
-    # 7. ZIP codes (5-digit and ZIP+4)
+    # 7. ZIP codes (5-digit and ZIP+4).
+    #    ZIP+4 was the only pattern here, which is the rarer form. Five digits is
+    #    how a person writes a ZIP, and Safe Harbor at 164.514(b)(2)(i)(B) is
+    #    about the geographic subdivision, not about the punctuation.
+    #    The 5-digit form is matched behind a ZIP label or after a state
+    #    abbreviation: unlabelled, five digits is also a dose, a room number and
+    #    a lab value, and redacting those would make a scribe note unreadable.
     (r"\b\d{5}-\d{4}\b", "[REDACTED:ZIP]"),
+    (r"(?i)\b(?:zip|zipcode|zip\s+code|postal\s+code)\s*[:=#]?\s*\d{5}\b", "[REDACTED:ZIP]"),
+    (r"\b(?:A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
+     r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY])\s+\d{5}\b",
+     "[REDACTED:ZIP]"),
 
     # 8. Medical record numbers (MRN patterns: MRN/MR# followed by digits)
     (r"(?i)(?:MRN|MR#|medical\s+record\s*#?)\s*[:=]?\s*[A-Z0-9\-]{4,15}", "[REDACTED:MRN]"),

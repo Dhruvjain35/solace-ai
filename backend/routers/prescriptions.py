@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
+from lib import tenancy
 from lib.auth import audit, require_clinician
 from services import prescription
 
@@ -49,9 +50,7 @@ def create_prescription(
     audit(caller, "prescriptions.create", patient_id=patient_id)
     if body is None or not body.drug.strip():
         raise HTTPException(status_code=400, detail="drug is required")
-    patient = storage.get_patient(patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(patient_id, hospital_id)
 
     record = {
         "prescription_id": str(uuid.uuid4()),
@@ -74,9 +73,7 @@ def list_prescriptions(
     caller: dict = Depends(require_clinician),
 ) -> dict:
     audit(caller, "prescriptions.list", patient_id=patient_id)
-    patient = storage.get_patient(patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(patient_id, hospital_id)
     return {"prescriptions": storage.list_prescriptions(patient_id)}
 
 
@@ -87,9 +84,7 @@ def suggest_prescriptions(
     caller: dict = Depends(require_clinician),
 ) -> dict:
     audit(caller, "prescriptions.suggest", patient_id=patient_id)
-    patient = storage.get_patient(patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(patient_id, hospital_id)
 
     transcript = patient.get("transcript", "")
     esi = int(patient.get("esi_level") or 3)

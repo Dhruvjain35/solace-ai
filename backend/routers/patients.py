@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from db.constants import STATUS_SEEN, STATUS_WAITING
-from lib import blocklist, quota
+from lib import blocklist, quota, tenancy
 from lib.auth import audit, require_clinician
 
 router = APIRouter()
@@ -67,9 +67,7 @@ def get_patient_detail(
     caller: dict = Depends(require_clinician),
 ) -> dict:
     audit(caller, "patients.detail", patient_id=patient_id)
-    p = storage.get_patient(patient_id)
-    if not p or p.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    p = tenancy.require_patient(patient_id, hospital_id)
     return {
         **_summary(p),
         "transcript": p.get("transcript", ""),
@@ -142,9 +140,7 @@ def get_public_patient(
     blocklist.enforce(identity, source_ip=source_ip)
     quota.check_and_consume(identity, "patients.public_view", source_ip=source_ip)
 
-    p = storage.get_patient(patient_id)
-    if not p or p.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    p = tenancy.require_patient(patient_id, hospital_id)
     # Compute a live wait-time estimate based on the current queue
     from services import wait_time as _wt  # noqa: PLC0415
 
@@ -189,9 +185,7 @@ def resolve_patient(
     audit(caller, "patients.resolve", patient_id=patient_id)
     if body is None:
         raise HTTPException(status_code=400, detail="clinician_name required")
-    p = storage.get_patient(patient_id)
-    if not p or p.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    p = tenancy.require_patient(patient_id, hospital_id)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     short_ttl = int(_time.time()) + 30 * 60  # 30 minutes
     storage.update_patient(

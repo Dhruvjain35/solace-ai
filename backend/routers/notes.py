@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
+from lib import tenancy
 from lib.auth import audit, require_clinician
 from services import patient_education
 
@@ -35,9 +36,7 @@ def create_note(
     audit(caller, "notes.create", patient_id=patient_id)
     if body is None or not body.text.strip():
         raise HTTPException(status_code=400, detail="text is required")
-    patient = storage.get_patient(patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(patient_id, hospital_id)
 
     # Prefer the authenticated clinician's name when available; fall back to body
     author = caller.get("name") if caller.get("auth_method") == "jwt" else (body.author.strip() or "Clinician")
@@ -61,6 +60,11 @@ def list_notes(
     caller: dict = Depends(require_clinician),
 ) -> dict:
     audit(caller, "notes.list", patient_id=patient_id)
+    # SEC-008. This was the one route of twelve with no tenant check. The JWT
+    # check above passes cleanly when a clinician uses their OWN hospital in the
+    # path and another hospital's patient_id, which is the actual attack, and
+    # this returned the note text.
+    tenancy.require_patient(patient_id, hospital_id)
     return {"notes": storage.list_notes(patient_id)}
 
 
@@ -79,9 +83,7 @@ def publish_summary(
     caller: dict = Depends(require_clinician),
 ) -> dict:
     audit(caller, "notes.publish_summary", patient_id=patient_id)
-    patient = storage.get_patient(patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(patient_id, hospital_id)
 
     notes = storage.list_notes(patient_id)
     selected_text = ""

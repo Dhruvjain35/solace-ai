@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
-from lib import audit as _audit
+from lib import audit as _audit, tenancy
 from lib import blocklist, quota
 from lib.auth import audit, require_clinician
 from services import sms
@@ -62,9 +62,7 @@ def send_discharge(
         raise HTTPException(status_code=400, detail="patient_id required")
     audit(caller, "sms.discharge", patient_id=body.patient_id)
 
-    patient = storage.get_patient(body.patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(body.patient_id, hospital_id)
 
     hospital = storage.get_hospital(hospital_id) or {}
     name = patient.get("name") or ""
@@ -126,9 +124,7 @@ def send_self_serve_instructions(
 
     if body is None or not body.patient_id or not body.phone:
         raise HTTPException(status_code=400, detail="patient_id + phone required")
-    patient = storage.get_patient(body.patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(body.patient_id, hospital_id)
 
     # The message carries the patient's name and their medications, so it goes
     # to the number already on their record. When intake captured no number

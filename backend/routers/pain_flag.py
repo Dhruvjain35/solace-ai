@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
-from lib import audit as _audit
+from lib import audit as _audit, tenancy
 from lib import blocklist, quota
 from lib.auth import audit, require_clinician
 
@@ -59,9 +59,7 @@ def flag(
     if body is None:
         raise HTTPException(status_code=400, detail="patient_id is required")
 
-    patient = storage.get_patient(body.patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(body.patient_id, hospital_id)
     now = _now_iso()
     # Re-pressing the button should re-arm the alarm even if a clinician already
     # acknowledged a previous escalation -- this is a NEW worsening event.
@@ -127,9 +125,7 @@ def acknowledge(
 ) -> dict:
     if body is None:
         raise HTTPException(status_code=400, detail="patient_id is required")
-    patient = storage.get_patient(body.patient_id)
-    if not patient or patient.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    patient = tenancy.require_patient(body.patient_id, hospital_id)
     if not patient.get("pain_flagged"):
         # No-op rather than 400 -- concurrent clinicians both ack'ing a flag is a
         # normal race and shouldn't surface a scary error in either UI.

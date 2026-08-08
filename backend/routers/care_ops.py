@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel
 
 from db import storage
+from lib import tenancy
 from lib.auth import audit, require_clinician
 from services import eligibility, fhir_writer, hedis, no_show, scheduling, screeners, sdoh
 
@@ -133,9 +134,7 @@ def care_gaps(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "care_gaps.view", patient_id=patient_id)
-    p = storage.get_patient(patient_id)
-    if not p or p.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    p = tenancy.require_patient(patient_id, hospital_id)
     try:
         return {"gaps": hedis.evaluate(p)}
     except (KeyError, ValueError, TypeError) as e:
@@ -168,9 +167,7 @@ def care_gaps_sidebar(
 ) -> dict[str, Any]:
     """Top-`limit` HEDIS care gaps ranked by impact for the encounter sidebar."""
     audit(caller, "care_gaps.sidebar", patient_id=patient_id)
-    p = storage.get_patient(patient_id)
-    if not p or p.get("hospital_id") != hospital_id:
-        raise HTTPException(status_code=404, detail="patient not found")
+    p = tenancy.require_patient(patient_id, hospital_id)
     try:
         return hedis.encounter_sidebar(p, limit=limit)
     except (KeyError, ValueError, TypeError) as e:
