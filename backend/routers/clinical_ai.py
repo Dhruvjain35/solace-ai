@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
-from lib import provenance
+from lib import provenance, tenancy
 from lib.auth import audit, require_clinician
 from services import (
     ambient_scribe,
@@ -399,6 +399,9 @@ def discharge_build(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "discharge.build")
+    # SEC-008. patient_id arrives in the body, so the JWT-versus-path check
+    # never sees it.
+    tenancy.require_patient(body.patient_id, hospital_id)
     hospital = storage.get_hospital(hospital_id) or {}
     return discharge_plan.build_discharge_plan(
         clinician_note=body.clinician_note,
@@ -451,6 +454,9 @@ def ai_override(
     body: OverrideBody = ...,
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
+    # SEC-008. patient_id arrives in the body, so the JWT-versus-path check
+    # never sees it.
+    tenancy.require_patient(body.patient_id, hospital_id)
     provenance.record_override(
         purpose=body.purpose,
         model_name=body.model_name,
@@ -626,6 +632,10 @@ def result_loop_open(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "result_loop.open", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     return redaction.open_loop(
         patient_id=body.patient_id,
         clinician_id=caller.get("clinician_id", "unknown"),

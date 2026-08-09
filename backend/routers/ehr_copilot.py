@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 
+from lib import tenancy
 from lib.auth import audit, require_clinician
 from services import ehr_copilot
 
@@ -36,6 +37,10 @@ def copilot_ask(
 ) -> dict[str, Any]:
     """Grounded Q&A over the patient's chart, with citations."""
     audit(caller, "copilot.ask", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     result = ehr_copilot.ask(hospital_id, body.patient_id, body.question)
     if result.get("error"):
         raise HTTPException(status_code=503, detail=result["error"])
@@ -50,6 +55,10 @@ def copilot_summary(
 ) -> dict[str, Any]:
     """Catch-me-up longitudinal summary of the patient."""
     audit(caller, "copilot.summary", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     result = ehr_copilot.summary(hospital_id, body.patient_id)
     if result.get("error"):
         raise HTTPException(status_code=503, detail=result["error"])
@@ -64,6 +73,10 @@ def copilot_scan(
 ) -> dict[str, Any]:
     """Proactive fixable-issue finder — care gaps, drug interactions."""
     audit(caller, "copilot.scan", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     return ehr_copilot.scan(hospital_id, body.patient_id)
 
 
@@ -75,4 +88,8 @@ def copilot_autopopulate(
 ) -> dict[str, Any]:
     """EHR→chart field diff for a review/accept UI (read-only)."""
     audit(caller, "copilot.autopopulate", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     return ehr_copilot.autopopulate(hospital_id, body.patient_id)

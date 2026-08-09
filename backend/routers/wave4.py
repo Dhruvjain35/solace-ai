@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from pydantic import BaseModel, ConfigDict
 
+from lib import tenancy
 from lib.auth import audit, require_clinician
 from services import (
     cohort_export,
@@ -385,6 +386,10 @@ def portal_inbound(
     caller: dict = Depends(require_clinician),
 ) -> dict[str, Any]:
     audit(caller, "portal.inbound", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     msg = portal_messages.post_inbound(hospital_id=hospital_id, patient_id=body.patient_id, body=body.body, sender_name=body.sender_name)
     # Auto-attach AI draft for the clinician to review
     draft = inbox_drafts.draft_reply(body.body, hospital_name="our clinic")
@@ -571,6 +576,10 @@ def results_closure_new(
 ) -> dict[str, Any]:
     """Open a fresh loop closure (state 'outstanding') for one abnormal result."""
     audit(caller, "results.closure_new", patient_id=body.patient_id)
+    # SEC-008. patient_id arrives in the body here, so the JWT-versus-path
+    # check never sees it: a clinician uses their own hospital in the path and
+    # any patient id they like in the payload.
+    tenancy.require_patient(body.patient_id, hospital_id)
     try:
         return followups.new_closure(
             patient_id=body.patient_id,
@@ -703,6 +712,9 @@ def discharge_detailed_plan(
 ) -> dict[str, Any]:
     """Deep, condition-specific discharge plan with sectioned instructions and
     tiered (911 / ED / call-office) return precautions."""
+    # SEC-008. patient_id arrives in the body, so the JWT-versus-path check
+    # never sees it.
+    tenancy.require_patient(body.patient_id, hospital_id)
     audit(caller, "discharge.detailed_plan")
     try:
         return discharge_plan.build_detailed_discharge_plan(

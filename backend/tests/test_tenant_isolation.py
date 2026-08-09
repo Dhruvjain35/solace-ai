@@ -137,12 +137,39 @@ _AUTH_HINTS = ("require_clinician", "current_clinician", "require_auth", "requir
 # Resolving patient-scoped data without going through the shared helper.
 _RESOLVERS = (
     "storage.get_patient(", "storage.list_notes(", "storage.list_prescriptions(",
+    # Services that load a patient by id on the caller's behalf. ehr_copilot.load
+    # in particular fetches globally, so a route calling it without scoping first
+    # hands another hospital's chart to a language model.
+    "ehr_copilot.", "copilot.", "_load_patient(", "storage.get_appointment(",
 )
+
+
+def _body_models_carrying_patient_id() -> set[str]:
+    """Pydantic models with a patient_id field.
+
+    A route can take the patient_id in the path or in the body, and only the
+    first shape shows up in the handler's own signature. The first version of
+    this test looked at signatures only, passed, and left ten routes exposed —
+    including POST /copilot/ask, which happily summarised another hospital's
+    chart. Same rule, different parameter style.
+    """
+    models = set()
+    for path in ROUTERS.glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ClassDef) and any(
+                isinstance(s, ast.AnnAssign) and getattr(s.target, "id", None) == "patient_id"
+                for s in node.body
+            ):
+                models.add(node.name)
+    return models
+
+
+_PATIENT_BODY_MODELS = _body_models_carrying_patient_id()
 
 
 def _clinician_patient_routes():
     """(module, route, uses_helper, resolves_directly) for clinician routes that
-    take a patient_id."""
+    take a patient_id, in the path or in the body."""
     out = []
     for path in sorted(ROUTERS.glob("*.py")):
         for node in ast.walk(ast.parse(path.read_text())):
@@ -158,7 +185,11 @@ def _clinician_patient_routes():
             signature = ast.unparse(node.args)
             if not any(h in signature for h in _AUTH_HINTS):
                 continue
-            if "patient_id" not in signature:
+            takes_patient = (
+                "patient_id" in signature
+                or any(m in signature for m in _PATIENT_BODY_MODELS)
+            )
+            if not takes_patient:
                 continue
             body = ast.unparse(node)
             route = (verbs[0].args[0].value
@@ -172,8 +203,17 @@ def _clinician_patient_routes():
 
 
 CLINICIAN_PATIENT_ROUTES = _clinician_patient_routes()
-UNSCOPED = [(m, r) for m, r, helper, resolves in CLINICIAN_PATIENT_ROUTES
-            if resolves and not helper]
+# Routes that take a patient_id and legitimately do not resolve it, with why.
+SCOPED_ELSEWHERE: dict[str, str] = {}
+
+# The rule, stated as simply as it can be: if a clinician route accepts a
+# patient_id, it scopes that patient to the hospital. Not "if it resolves the
+# patient through one of these known functions" — that version passed while ten
+# routes were exposed, because the list of known functions is another hand-kept
+# scope that goes stale. A route that takes a patient_id and does not check it
+# is either a bug or an exemption somebody has to write down.
+UNSCOPED = [(m, r) for m, r, helper, _resolves in CLINICIAN_PATIENT_ROUTES
+            if not helper and f"{m}:{r}" not in SCOPED_ELSEWHERE]
 
 
 def test_the_route_scan_works():
