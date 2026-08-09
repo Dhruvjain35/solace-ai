@@ -85,9 +85,53 @@ _ALLOWED_REDIRECT_ORIGINS = [
 ]
 
 
+def _origin_of(uri: str) -> tuple[str, str, int | None] | None:
+    """(scheme, host, port) for a URL, or None if it is not one we can compare.
+
+    Anything with userinfo is refused outright. "https://good.example@evil.com"
+    is a URL whose host is evil.com, and a browser goes there, but it reads as
+    the good host to a person skimming a link and to any check that works on the
+    string rather than on the parse.
+    """
+    from urllib.parse import urlsplit  # noqa: PLC0415
+
+    try:
+        parts = urlsplit((uri or "").strip())
+    except ValueError:
+        return None
+    if parts.scheme not in {"http", "https"} or not parts.hostname:
+        return None
+    if "@" in (parts.netloc or ""):
+        return None
+    try:
+        port = parts.port
+    except ValueError:
+        return None
+    if port is None:
+        port = 443 if parts.scheme == "https" else 80
+    return (parts.scheme, parts.hostname.lower(), port)
+
+
+_ALLOWED_ORIGIN_TUPLES = [o for o in (_origin_of(u) for u in _ALLOWED_REDIRECT_ORIGINS) if o]
+
+
 def _validate_redirect_uri(uri: str) -> bool:
-    """Ensure redirect_uri starts with one of our allowed origins."""
-    return any(uri.startswith(origin) for origin in _ALLOWED_REDIRECT_ORIGINS)
+    """Whether redirect_uri is on the allowlist (CONSTITUTION SEC-006).
+
+    Compared as a parsed origin — scheme, host, port — rather than by string
+    prefix. The previous version was::
+
+        any(uri.startswith(origin) for origin in _ALLOWED_REDIRECT_ORIGINS)
+
+    which accepted "https://solaceaidemo.vercel.app.evil.com/steal",
+    "...app%2eevil.com/x", "http://localhost:5173.evil.com/" and
+    "https://solaceaidemo.vercel.app@evil.com/". The last is the dangerous one:
+    everything before the "@" is userinfo, so the browser goes to evil.com while
+    the string reads as the real host. This redirect carries a SMART-on-FHIR
+    authorization code.
+    """
+    origin = _origin_of(uri)
+    return origin is not None and origin in _ALLOWED_ORIGIN_TUPLES
 
 
 # DynamoDB-backed state store for OAuth CSRF tokens + handoff codes.
@@ -715,6 +759,17 @@ def _format_practitioner_role(res: dict) -> str:
 # ----------------------------------------------------------------------------------
 
 
+def _require_offline_demo() -> None:
+    """The mock vendor endpoints exist so a fully-offline demo works. In a
+    deployed environment they are an unauthenticated authorize/token pair that
+    approves anything, which is not something to leave switched on next to a real
+    SMART-on-FHIR flow."""
+    from lib.config import is_deployed  # noqa: PLC0415
+
+    if is_deployed():
+        raise HTTPException(status_code=404, detail="Not Found")
+
+
 @router.get("/mock-authorize")
 def mock_authorize(
     response_type: str = Query("code"),
@@ -729,6 +784,12 @@ def mock_authorize(
     """Stand-in for vendor authorize. Instant approve so a fully-offline demo
     works. PKCE challenge is accepted but not validated — the matching mock-token
     endpoint also skips PKCE."""
+    _require_offline_demo()
+    # SEC-006. This stand-in approves anything and then 302s wherever it is told,
+    # so without the allowlist it is an open redirect on our own domain: a link
+    # that looks like Solace and lands on a phishing page.
+    if not _validate_redirect_uri(redirect_uri):
+        raise HTTPException(status_code=400, detail="redirect_uri is not an allowed origin")
     code = f"mock-code-{secrets.token_hex(8)}"
     return RedirectResponse(f"{redirect_uri}?code={code}&state={state}", status_code=302)
 
@@ -736,6 +797,7 @@ def mock_authorize(
 @router.post("/mock-token")
 async def mock_token(request: Request) -> JSONResponse:
     """Synthetic token + Practitioner identity for offline demos."""
+    _require_offline_demo()
     form = await request.form()
     client_id = form.get("client_id", "")
     vendor_id = "smart"
@@ -763,6 +825,7 @@ async def mock_token(request: Request) -> JSONResponse:
 
 @router.get("/mock-fhir/{vendor_id}/metadata")
 def mock_fhir_metadata(vendor_id: str = Path(...)) -> dict:
+    _require_offline_demo()
     return {
         "resourceType": "CapabilityStatement",
         "fhirVersion": "4.0.1",
