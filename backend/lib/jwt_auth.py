@@ -127,6 +127,53 @@ def dummy_verify() -> None:
         pass
 
 
+# In-process fallback for the brute-force lockout (CONSTITUTION COMP-006).
+#
+# The shared counter lives in DynamoDB and every operation on it was wrapped in
+# `except: return False` — commented "fail open — don't block legitimate login on
+# DDB errors". The reasoning is right and the scope was too wide: a brute-force
+# run heavy enough to throttle DynamoDB raises exactly that exception, so the
+# attack switched off the control aimed at it.
+#
+# Failing closed instead is worse. A DynamoDB outage would lock every clinician
+# out of an emergency department, and that is a patient-safety event, not a
+# security win. So the fallback is a per-container counter: weaker than the
+# shared one, since an attacker spread across warm Lambdas gets a few extra
+# tries, and enormously stronger than no limit at all.
+_local_attempts: dict[str, list[float]] = {}
+_local_locks: dict[str, float] = {}
+
+
+def reset_local_attempts() -> None:
+    _local_attempts.clear()
+    _local_locks.clear()
+
+
+def _local_record_failure(clinician_id: str) -> None:
+    now = time.time()
+    window = [t for t in _local_attempts.get(clinician_id, []) if now - t < LOCKOUT_WINDOW_SECONDS]
+    window.append(now)
+    _local_attempts[clinician_id] = window
+    if len(window) >= MAX_FAILED_ATTEMPTS:
+        _local_locks[clinician_id] = now + LOCKOUT_DURATION_SECONDS
+        log.warning(
+            "clinician %s locked out locally for %d minutes after %d failed attempts "
+            "(shared counter unavailable)",
+            clinician_id, LOCKOUT_DURATION_SECONDS // 60, len(window),
+        )
+
+
+def _local_is_locked(clinician_id: str) -> bool:
+    until = _local_locks.get(clinician_id)
+    if until is None:
+        return False
+    if time.time() < until:
+        return True
+    _local_locks.pop(clinician_id, None)
+    _local_attempts.pop(clinician_id, None)
+    return False
+
+
 def check_lockout(clinician_id: str) -> bool:
     """Return True if the clinician is currently locked out due to too many failed attempts."""
     try:
@@ -144,8 +191,10 @@ def check_lockout(clinician_id: str) -> bool:
             return True
         return False
     except Exception as e:  # noqa: BLE001
-        log.warning("lockout check failed for %s: %s", clinician_id, e)
-        return False  # fail open — don't block legitimate login on DDB errors
+        # Degrade to the per-container counter rather than to no counter. See the
+        # note above _local_attempts for why this is not fail-closed.
+        log.warning("lockout check falling back to local counter for %s: %s", clinician_id, e)
+        return _local_is_locked(clinician_id)
 
 
 def record_failed_attempt(clinician_id: str) -> None:
@@ -153,6 +202,16 @@ def record_failed_attempt(clinician_id: str) -> None:
     try:
         now = int(time.time())
         tbl = _table("solace-clinicians")
+
+        # Read the previous timestamp before the increment overwrites it — the
+        # window test below needs the gap since the last failure, not the gap
+        # since this one.
+        prior = tbl.get_item(
+            Key={"clinician_id": clinician_id},
+            ProjectionExpression="last_failed_at",
+            ConsistentRead=True,
+        ).get("Item") or {}
+        previous_failed_at = int(prior.get("last_failed_at", 0))
 
         # Atomic increment of failed_attempts counter
         resp = tbl.update_item(
@@ -170,12 +229,19 @@ def record_failed_attempt(clinician_id: str) -> None:
         )
         attrs = resp.get("Attributes", {})
         attempts = int(attrs.get("failed_attempts", 0))
-        last_failed = int(attrs.get("last_failed_at", 0))
 
-        # Check if window has expired — reset if so
-        if last_failed and (now - last_failed) > LOCKOUT_WINDOW_SECONDS and attempts <= 1:
-            # Counter was reset by the increment above, which is fine
-            pass
+        # Apply the counting window. COMP-006 names LOCKOUT_WINDOW_SECONDS and
+        # this branch used to be a literal `pass`, so the counter never reset and
+        # five mistyped PINs a year apart locked an account as surely as five in
+        # a row. `last_failed` is the value from BEFORE this increment, so a gap
+        # wider than the window means the run that is being counted is stale.
+        if previous_failed_at and (now - previous_failed_at) > LOCKOUT_WINDOW_SECONDS:
+            tbl.update_item(
+                Key={"clinician_id": clinician_id},
+                UpdateExpression="SET failed_attempts = :one",
+                ExpressionAttributeValues={":one": 1},
+            )
+            attempts = 1
 
         if attempts >= MAX_FAILED_ATTEMPTS:
             # Lock the account
@@ -191,7 +257,8 @@ def record_failed_attempt(clinician_id: str) -> None:
                 clinician_id, LOCKOUT_DURATION_SECONDS // 60, attempts,
             )
     except Exception as e:  # noqa: BLE001
-        log.warning("failed to record login failure for %s: %s", clinician_id, e)
+        log.warning("recording login failure locally for %s: %s", clinician_id, e)
+        _local_record_failure(clinician_id)
 
 
 def clear_failed_attempts(clinician_id: str) -> None:

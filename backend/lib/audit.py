@@ -35,14 +35,59 @@ def _table():
     return boto3.resource("dynamodb", region_name=settings.aws_region).Table(AUDIT_TABLE)
 
 
+# Audit records lost because both backends failed, counted for the life of the
+# process. A silent hole in an audit trail is the shape of hole that turns out to
+# be missing the incident you needed it for, so this is surfaced on /health.
+_write_failures = 0
+
+
+def failure_count() -> int:
+    return _write_failures
+
+
+def reset_failure_count() -> None:
+    global _write_failures
+    _write_failures = 0
+
+
 def _write_sync(item: dict[str, Any]) -> None:
+    """Write to DynamoDB and archive to S3 (CONSTITUTION COMP-002).
+
+    Neither failure raises. Blocking a clinician from a chart because logging is
+    down trades a record-keeping problem for a patient-safety one, and an
+    emergency department is the wrong place to make that trade.
+
+    What both failures do is get loud. Previously a DDB failure logged a warning
+    and an S3 failure logged nothing above it, so losing a record entirely left
+    one warning in a stream nobody reads until afterwards.
+    """
+    global _write_failures
+
+    ddb_ok = False
     try:
         _table().put_item(Item=item)
+        ddb_ok = True
     except Exception as e:  # noqa: BLE001
         log.warning("audit write to DDB failed: %s", e)
 
     # Archive to S3 for 6-year HIPAA retention
-    _archive_to_s3(item)
+    s3_ok = True
+    try:
+        _archive_to_s3(item)
+    except Exception as e:  # noqa: BLE001
+        s3_ok = False
+        log.warning("audit archive to S3 failed: %s", e)
+
+    if not ddb_ok and not s3_ok:
+        _write_failures += 1
+        # Deliberately names the action and not the item. The patient id is what
+        # would make this line useful and is exactly what SEC-002 keeps out of
+        # CloudWatch, so the log says what was lost, not who it was about.
+        log.error(
+            "AUDIT RECORD LOST: action=%s status=%s. Both DynamoDB and S3 "
+            "rejected the write. %d record(s) lost this process.",
+            item.get("action"), item.get("status_code"), _write_failures,
+        )
 
 
 def _archive_to_s3(item: dict[str, Any]) -> None:

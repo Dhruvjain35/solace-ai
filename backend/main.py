@@ -95,10 +95,17 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
+    from lib import audit as _audit  # noqa: PLC0415
+
+    lost = _audit.failure_count()
     return {
-        "status": "ok",
+        # Degraded, not ok: a lost audit record means PHI was disclosed with no
+        # record of it, and that should be visible to whatever polls this rather
+        # than only to whoever reads the logs afterwards.
+        "status": "ok" if lost == 0 else "degraded",
         "mode": settings.solace_mode,
         "triage": "trained_ensemble" if _triage_models_present() else "clinical_simulation",
+        "audit_write_failures": lost,
     }
 
 
