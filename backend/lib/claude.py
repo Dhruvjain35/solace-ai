@@ -100,6 +100,68 @@ def _bedrock_client():
     return boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
 
 
+
+def _redact_outbound(system: str, messages: list[dict[str, Any]], purpose: str):
+    """Strip Safe Harbor identifiers from everything on its way to a provider.
+
+    CONSTITUTION SEC-005 asks each call site to scan first. About thirty call
+    sites reach this function, and asking thirty places to remember a rule is
+    exactly how SEC-002 and SEC-004 were broken. Three had already missed it —
+    the patient's own portal message among them — and each delivered an SSN, an
+    ISO date of birth and a ZIP to the provider verbatim.
+
+    So this is the floor. Call-site scans stay, because they reject bad input
+    early and with a useful error; this is underneath them and does not depend on
+    anybody remembering.
+
+    Redaction only, never rejection. A reject at this depth would fire on a
+    clinician saying "ignore the previous instructions about the diet" during a
+    recorded encounter and silently swap a chart note for a stub. Deciding
+    whether text is a patient's message or a doctor's dictation needs context
+    this function does not have; redacting an identifier is safe without it.
+
+    Returns (system, messages, fired). The caller's structures are never
+    mutated — a caller that logs its own payload afterwards must not find it
+    rewritten underneath.
+    """
+    from lib.content_guard import redact_pii  # noqa: PLC0415
+
+    fired = False
+
+    clean_system, hit = redact_pii(system or "")
+    fired = fired or hit
+
+    clean_messages = []
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, str):
+            new_content, hit = redact_pii(content)
+            fired = fired or hit
+        elif isinstance(content, list):
+            new_content = []
+            for block in content:
+                # Text blocks only. Redacting a base64 image would corrupt it,
+                # and the ID-scan and insurance-card paths send those.
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    text, hit = redact_pii(block["text"])
+                    fired = fired or hit
+                    new_content.append({**block, "text": text})
+                else:
+                    new_content.append(block)
+        else:
+            new_content = content
+        clean_messages.append({**message, "content": new_content})
+
+    if fired:
+        # The floor firing means a call site did not scan. Name the purpose so
+        # the gap is findable rather than merely closed.
+        log.warning(
+            "SEC-005: identifiers were redacted at the provider boundary for "
+            "purpose=%s. The call site should scan before calling.", purpose,
+        )
+    return clean_system, clean_messages, fired
+
+
 def messages_create(
     *,
     model: str,
@@ -113,6 +175,9 @@ def messages_create(
     """Unified entrypoint. Shape-compatible with the old `anthropic` SDK response
     (exposes `.content[0].text`), and auto-records to the current AI-log context."""
     prov = provider()
+    # SEC-005 floor. Everything below this line has had its identifiers removed,
+    # whether or not the caller remembered to scan.
+    system, messages, _redacted = _redact_outbound(system, messages, purpose)
     input_bytes = _estimate_bytes(system) + _estimate_messages(messages)
     try:
         if prov == "bedrock":

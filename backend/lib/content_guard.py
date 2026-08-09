@@ -63,7 +63,7 @@ _PII_REDACTIONS = [
     # Bare nine digits only behind an SSN label. Unlabelled, nine digits is also
     # an account number, a lab accession and an NPI-adjacent id, and redacting
     # all of those would make scribe notes unreadable.
-    (r"(?i)(?:\bssn\b|social\s+security(?:\s+(?:number|no\.?|#))?)\s*[:=#]?\s*\d{9}\b",
+    (r"(?i)(?:\bssn\b|social\s+security(?:\s+(?:number|no\.?|#))?)[\s:=#]{0,4}\d{9}\b",
      "[REDACTED:SSN]"),
 
     # 2. Credit/debit card numbers.
@@ -90,9 +90,9 @@ _PII_REDACTIONS = [
     #    Patient.birthDate is always YYYY-MM-DD, so every chart pulled from an
     #    EHR carried a date of birth straight through to the provider while the
     #    comment above claimed otherwise.
-    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|born|birthdate|birth\s+date|birthdate)\s*[:=]?\s*"
+    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|born|birthdate|birth\s+date|birthdate)[\s:=]{0,4}"
      r"\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}", "[REDACTED:DOB]"),
-    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|born|birthdate|birth\s+date)\s*[:=]?\s*"
+    (r"(?i)(?:date\s+of\s+birth|dob|born\s+on|born|birthdate|birth\s+date)[\s:=]{0,4}"
      r"(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b", "[REDACTED:DOB]"),
     # Bare ISO date. Kept last in this group so a labelled one is caught above
     # and tagged DOB rather than the generic DATE.
@@ -112,30 +112,30 @@ _PII_REDACTIONS = [
     #    abbreviation: unlabelled, five digits is also a dose, a room number and
     #    a lab value, and redacting those would make a scribe note unreadable.
     (r"\b\d{5}-\d{4}\b", "[REDACTED:ZIP]"),
-    (r"(?i)\b(?:zip|zipcode|zip\s+code|postal\s+code)\s*[:=#]?\s*\d{5}\b", "[REDACTED:ZIP]"),
+    (r"(?i)\b(?:zip|zipcode|zip\s+code|postal\s+code)[\s:=#]{0,4}\d{5}\b", "[REDACTED:ZIP]"),
     (r"\b(?:A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
      r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY])\s+\d{5}\b",
      "[REDACTED:ZIP]"),
 
     # 8. Medical record numbers (MRN patterns: MRN/MR# followed by digits)
-    (r"(?i)(?:MRN|MR#|medical\s+record\s*#?)\s*[:=]?\s*[A-Z0-9\-]{4,15}", "[REDACTED:MRN]"),
+    (r"(?i)(?:MRN|MR#|medical\s{1,3}record[\s#]{0,3})[\s:=]{0,4}[A-Z0-9\-]{4,15}", "[REDACTED:MRN]"),
 
     # 9. Health plan beneficiary numbers
-    (r"(?i)(?:member\s*(?:id|#|number)|subscriber\s*(?:id|#|number)|policy\s*(?:id|#|number)|"
-     r"group\s*(?:id|#|number))\s*[:=]?\s*[A-Z0-9\-]{4,20}", "[REDACTED:MEMBER_ID]"),
+    (r"(?i)(?:member[\s]{0,3}(?:id|#|number)|subscriber[\s]{0,3}(?:id|#|number)|policy[\s]{0,3}(?:id|#|number)|"
+     r"group[\s]{0,3}(?:id|#|number))[\s:=]{0,4}[A-Z0-9\-]{4,20}", "[REDACTED:MEMBER_ID]"),
 
     # 10. Account numbers (generic labeled account/acct patterns)
-    (r"(?i)(?:account|acct)\s*(?:#|number|no\.?)\s*[:=]?\s*\d{6,17}", "[REDACTED:ACCOUNT]"),
+    (r"(?i)(?:account|acct)[\s]{0,3}(?:#|number|no\.?)[\s:=]{0,4}\d{6,17}", "[REDACTED:ACCOUNT]"),
 
     # 11. Certificate/license numbers
-    (r"(?i)(?:license|licence|certificate|cert)\s*(?:#|number|no\.?)\s*[:=]?\s*[A-Z0-9\-]{4,15}",
+    (r"(?i)(?:license|licence|certificate|cert)[\s]{0,3}(?:#|number|no\.?)[\s:=]{0,4}[A-Z0-9\-]{4,15}",
      "[REDACTED:LICENSE]"),
 
     # 12. Vehicle identifiers (VIN: 17 alphanumeric, license plate patterns)
     (r"\b[A-HJ-NPR-Z0-9]{17}\b", "[REDACTED:VIN]"),
 
     # 13. Device serial numbers / identifiers (labeled patterns)
-    (r"(?i)(?:serial\s*(?:#|number|no\.?)|device\s*(?:id|#))\s*[:=]?\s*[A-Z0-9\-]{6,20}",
+    (r"(?i)(?:serial[\s]{0,3}(?:#|number|no\.?)|device\s*(?:id|#))[\s:=]{0,4}[A-Z0-9\-]{6,20}",
      "[REDACTED:DEVICE_ID]"),
 
     # 14. URLs (web/ftp) — can contain patient portal links with embedded identifiers
@@ -157,6 +157,27 @@ def _compile():
 
 
 _REJECT, _SANITIZE, _REDACT = _compile()
+
+
+def redact_pii(text: str) -> tuple[str, bool]:
+    """Remove Safe Harbor identifiers. Returns (cleaned, anything_changed).
+
+    The redaction half of ``scan`` on its own, with no rejection and no audit
+    write. ``lib.claude`` calls this on every outbound payload as a floor under
+    the per-call-site scans, and that runs on paths where rejecting would be
+    wrong: a clinician saying "ignore the previous instructions about the diet"
+    during an encounter must not have their chart note replaced by a stub.
+
+    No audit line, deliberately. It runs on every provider call, and one row per
+    call would bury the abuse signal that ``scan`` exists to raise.
+    """
+    if not text:
+        return text, False
+    cleaned = text
+    for rx, replacement in _REDACT:
+        if rx.search(cleaned):
+            cleaned = rx.sub(replacement, cleaned)
+    return cleaned, cleaned != text
 
 
 def scan(
