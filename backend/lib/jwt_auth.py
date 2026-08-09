@@ -59,6 +59,20 @@ def _auth_secret() -> dict:
     never used in aws mode, where Secrets Manager is the sole source.
     """
     if settings.solace_mode != "aws":
+        # Second lock on the same door. main.py refuses to boot a Lambda in local
+        # mode, and this refuses to hand out the dev key there regardless of how
+        # the process got started — an import-time path, a script, a future entry
+        # point that skips the startup assertion. The key below is committed to
+        # this repository, so anything signed with it is forgeable by anyone who
+        # has read the source, and the cost of being wrong once is every
+        # clinician token on the platform.
+        from lib.config import is_deployed  # noqa: PLC0415
+
+        if is_deployed():
+            raise RuntimeError(
+                "Refusing to issue the local dev signing key inside AWS Lambda. "
+                "SOLACE_MODE must be 'aws' in a deployed environment."
+            )
         return {
             "JWT_SIGNING_KEY": "local-dev-only-signing-key-not-for-production",
             "JWT_ALGORITHM": "HS256",

@@ -10,7 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 
-from lib.config import hydrate_from_secrets_manager, settings
+from lib.config import (
+    assert_signing_key_present,
+    harden_for_deployment,
+    hydrate_from_secrets_manager,
+    settings,
+)
 from db import storage
 from routers import (
     admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
@@ -33,6 +38,11 @@ log = logging.getLogger("solace")
 # In local mode this is a no-op. Safe to run multiple times.
 log.info("Solace starting in %s mode", settings.solace_mode)
 hydrate_from_secrets_manager()
+harden_for_deployment()
+# SEC-001: the clinician signing key lives in a different secret and was
+# fetched lazily on first login, so a missing one surfaced as a 500 for the
+# first clinician of the day rather than as a failure to deploy.
+assert_signing_key_present()
 
 
 @asynccontextmanager

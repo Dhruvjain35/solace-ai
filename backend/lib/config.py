@@ -99,6 +99,99 @@ def _load() -> Settings:
 settings = _load()
 
 
+# Environment variables the Lambda runtime sets and a laptop never does. They are
+# the only trustworthy answer to "am I actually deployed", which matters because
+# SOLACE_MODE defaults to "local" and an unset variable is indistinguishable from
+# a developer's machine.
+_LAMBDA_MARKERS = ("AWS_LAMBDA_FUNCTION_NAME", "AWS_EXECUTION_ENV", "AWS_LAMBDA_RUNTIME_API")
+
+
+def is_deployed() -> bool:
+    import os  # noqa: PLC0415
+
+    return any(os.environ.get(m) for m in _LAMBDA_MARKERS)
+
+
+def assert_deployment_is_configured(mode: str) -> None:
+    """Refuse to run a deployed process in local mode (CONSTITUTION SEC-001).
+
+    SEC-001 promises that missing secrets crash the app. That promise is made by
+    code inside ``if settings.solace_mode == "aws"``, and the mode defaults to
+    "local", so a deployment that never sets SOLACE_MODE does not crash. It skips
+    hydration, and ``jwt_auth._auth_secret()`` hands it a signing key that is
+    committed to this repository. Every clinician JWT it issues is then forgeable
+    by anyone who has read the source.
+
+    Pydantic already rejects a misspelled value. The hole is the variable being
+    absent, and no amount of documentation closes that. The Lambda runtime tells
+    us what the environment variable did not.
+    """
+    if mode != "aws" and is_deployed():
+        raise RuntimeError(
+            "Refusing to start: this process is running in AWS Lambda but "
+            f"SOLACE_MODE is {mode!r}. In that mode secrets are never hydrated "
+            "and clinician JWTs are signed with the dev key committed to this "
+            "repo, so every token would be forgeable. Set SOLACE_MODE=aws."
+        )
+
+
+def harden_for_deployment() -> None:
+    """Turn off settings that are safe on a laptop and dangerous in production.
+
+    EMAIL_DEV_ECHO returns the magic-link login URL in the API response body so
+    local and sandbox flows work without a mailbox. The comment on the setting
+    says it MUST stay false in production. It was "true" on the production Lambda
+    anyway, and POST /auth/magic/request is unauthenticated, so knowing a
+    clinician's email address was enough to be handed their working single-use
+    login link and sign in as them.
+
+    A comment saying MUST is not a control. This makes the setting inert wherever
+    it would do harm.
+
+    Forced off rather than refusing to boot: the leak closes either way, and
+    taking the whole API down over an email flag trades one outage for another.
+    Logged at error level so the misconfiguration stays visible instead of being
+    silently papered over.
+    """
+    import logging  # noqa: PLC0415
+
+    log = logging.getLogger(__name__)
+    if is_deployed() and settings.email_dev_echo:
+        object.__setattr__(settings, "email_dev_echo", False)
+        log.error(
+            "EMAIL_DEV_ECHO was enabled in a deployed environment and has been "
+            "forced off. While it was on, POST /auth/magic/request returned the "
+            "clinician's login link in the response body to any unauthenticated "
+            "caller. Remove the variable from the function configuration."
+        )
+
+
+def assert_signing_key_present() -> None:
+    """Fail at boot if the clinician signing key is missing (SEC-001).
+
+    ``hydrate_from_secrets_manager`` requires exactly one key, DEMO_CLINICIAN_PIN.
+    The JWT signing key lives in a separate secret, ``solace/clinician-auth``,
+    fetched lazily the first time somebody logs in. A missing or malformed one
+    therefore showed up as a 500 for the first clinician of the day rather than as
+    a failure to deploy, which is the opposite of what SEC-001 asks for.
+    """
+    if settings.solace_mode != "aws":
+        return
+    from lib import jwt_auth  # noqa: PLC0415
+
+    try:
+        secret = jwt_auth._auth_secret()
+    except Exception as e:  # noqa: BLE001
+        raise RuntimeError(
+            f"Refusing to start: clinician auth secret could not be read ({e})."
+        ) from e
+    if not secret.get("JWT_SIGNING_KEY"):
+        raise RuntimeError(
+            "Refusing to start: solace/clinician-auth has no JWT_SIGNING_KEY. "
+            "Clinician tokens cannot be signed."
+        )
+
+
 def hydrate_from_secrets_manager() -> None:
     """In aws mode: pull API keys from Secrets Manager. Fail loudly if it can't.
 
@@ -106,6 +199,7 @@ def hydrate_from_secrets_manager() -> None:
     are intentionally blank, so a fetch failure means the app cannot serve and must crash.
     """
     global settings
+    assert_deployment_is_configured(settings.solace_mode)
     if settings.solace_mode != "aws":
         return
 
