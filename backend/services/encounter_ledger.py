@@ -43,6 +43,8 @@ from typing import Any
 
 __all__ = [
     "Entry",
+    "LedgerUnavailable",
+    "SequenceTaken",
     "MissingUncertainty",
     "VerifyResult",
     "latest",
@@ -51,6 +53,8 @@ __all__ = [
     "timeline",
     "verify",
 ]
+
+LEDGER_TABLE = "solace-encounter-ledger"
 
 # Predictions must state their uncertainty. Events are things that happened.
 _EVENT_MODEL = "event"
@@ -85,6 +89,132 @@ class VerifyResult:
 
 _entries: dict[str, list[Entry]] = {}
 _lock = threading.Lock()
+
+
+class SequenceTaken(Exception):
+    """Another writer already holds this sequence number for this encounter."""
+
+    def __init__(self, seq: int):
+        super().__init__(f"sequence {seq} is already taken")
+        self.seq = seq
+
+
+class LedgerUnavailable(RuntimeError):
+    """The entry could not be durably recorded.
+
+    Raised rather than swallowed. A ledger that drops writes quietly is worse
+    than no ledger at all: the gap reads as "nothing happened to this patient"
+    rather than "we failed to write it down", and the second is the one an
+    auditor needs to see.
+    """
+
+
+# How many times a writer will step to the next sequence number before giving
+# up. Contention is one competing writer per attempt, so anything past a handful
+# means something is badly wrong and spinning inside a request will not fix it.
+_MAX_SEQ_ATTEMPTS = 8
+
+
+def _use_dynamo() -> bool:
+    from lib.config import settings  # noqa: PLC0415
+
+    return settings.solace_mode == "aws"
+
+
+def _table():
+    import boto3  # noqa: PLC0415
+
+    from lib.config import settings  # noqa: PLC0415
+
+    return boto3.resource("dynamodb", region_name=settings.aws_region).Table(LEDGER_TABLE)
+
+
+def _persist(entry: Entry) -> None:
+    """Write one entry durably, refusing to overwrite an existing sequence.
+
+    The ConditionExpression is the whole point. In memory, append-only is
+    enforced by not exposing an update function, which stops honest mistakes and
+    nothing else. Here the *database* rejects a write onto a sequence number
+    that already exists, so code that tries to rewrite history fails at the
+    storage layer rather than at the manners layer. Paired with an IAM policy
+    denying UpdateItem and DeleteItem on this table, it is an immutability claim
+    an auditor can check without reading our source.
+    """
+    if not _use_dynamo():
+        return  # in-memory chain is the store in local mode
+
+    from botocore.exceptions import ClientError  # noqa: PLC0415
+
+    item = {
+        "encounter_id": entry.encounter_id,
+        "seq": entry.seq,
+        "model": entry.model,
+        "model_version": entry.model_version,
+        "observed_at": entry.observed_at.isoformat(),
+        "recorded_at": entry.recorded_at.isoformat(),
+        "inputs": json.dumps(entry.inputs, sort_keys=True, default=str),
+        "output": json.dumps(entry.output, sort_keys=True, default=str),
+        "uncertainty": (
+            json.dumps(entry.uncertainty, sort_keys=True, default=str)
+            if entry.uncertainty is not None else None
+        ),
+        "prev_hash": entry.prev_hash,
+        "entry_hash": entry.entry_hash,
+    }
+    try:
+        _table().put_item(
+            Item={k: v for k, v in item.items() if v is not None},
+            ConditionExpression="attribute_not_exists(encounter_id) AND attribute_not_exists(seq)",
+        )
+    except ClientError as e:
+        if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+            raise SequenceTaken(entry.seq) from e
+        raise
+
+
+def _load_all(encounter_id: str) -> list[Entry]:
+    """Every persisted entry for an encounter, ordered by sequence."""
+    if not _use_dynamo():
+        return []
+
+    from boto3.dynamodb.conditions import Key  # noqa: PLC0415
+
+    resp = _table().query(
+        KeyConditionExpression=Key("encounter_id").eq(encounter_id),
+        ScanIndexForward=True,
+        ConsistentRead=True,
+    )
+    return [_from_item(i) for i in resp.get("Items", [])]
+
+
+def _from_item(item: dict[str, Any]) -> Entry:
+    return Entry(
+        encounter_id=item["encounter_id"],
+        seq=int(item["seq"]),
+        model=item["model"],
+        model_version=item["model_version"],
+        observed_at=datetime.fromisoformat(item["observed_at"]),
+        inputs=json.loads(item.get("inputs") or "{}"),
+        output=json.loads(item.get("output") or "{}"),
+        uncertainty=json.loads(item["uncertainty"]) if item.get("uncertainty") else None,
+        recorded_at=datetime.fromisoformat(item["recorded_at"]),
+        prev_hash=item.get("prev_hash"),
+        entry_hash=item["entry_hash"],
+    )
+
+
+def _chain(encounter_id: str) -> list[Entry]:
+    """The chain for an encounter, reading through to storage on a cold cache.
+
+    A Lambda container that never saw this encounter has an empty dict and a
+    full table. Without this read-through it would start numbering at 1 again
+    and write a second, unlinked chain over the top of the real one.
+    """
+    chain = _entries.get(encounter_id)
+    if chain is None:
+        chain = _load_all(encounter_id)
+        _entries[encounter_id] = chain
+    return chain
 
 
 def reset() -> None:
@@ -167,38 +297,60 @@ def record(
     _check_uncertainty(model, uncertainty)
 
     with _lock:
-        chain = _entries.setdefault(encounter_id, [])
-        prev = chain[-1] if chain else None
-        entry = Entry(
-            encounter_id=encounter_id,
-            seq=len(chain) + 1,
-            model=model,
-            model_version=model_version,
-            observed_at=observed_at,
-            # Deep copies on the way in, so a caller that reuses and mutates its
-            # payload dict cannot retroactively change what we recorded.
-            inputs=copy.deepcopy(inputs or {}),
-            output=copy.deepcopy(output),
-            uncertainty=copy.deepcopy(uncertainty),
-            recorded_at=datetime.now(observed_at.tzinfo),
-            prev_hash=prev.entry_hash if prev else None,
+        chain = _chain(encounter_id)
+        last_error: Exception | None = None
+
+        for _attempt in range(_MAX_SEQ_ATTEMPTS):
+            prev = chain[-1] if chain else None
+            entry = Entry(
+                encounter_id=encounter_id,
+                seq=len(chain) + 1,
+                model=model,
+                model_version=model_version,
+                observed_at=observed_at,
+                # Deep copies on the way in, so a caller that reuses and mutates
+                # its payload dict cannot retroactively change what we recorded.
+                inputs=copy.deepcopy(inputs or {}),
+                output=copy.deepcopy(output),
+                uncertainty=copy.deepcopy(uncertainty),
+                recorded_at=datetime.now(observed_at.tzinfo),
+                prev_hash=prev.entry_hash if prev else None,
+            )
+            entry.entry_hash = _digest(entry)
+            try:
+                _persist(entry)
+            except SequenceTaken as e:
+                # Another writer took this number. Re-read the tail and rebuild
+                # on top of whatever actually landed, rather than assuming our
+                # own next number is free — their entry is now our prev_hash.
+                last_error = e
+                chain = _load_all(encounter_id) or chain + [entry]
+                _entries[encounter_id] = chain
+                continue
+            except Exception as e:  # noqa: BLE001
+                raise LedgerUnavailable(
+                    f"could not record entry for encounter {encounter_id!r}: {e}"
+                ) from e
+            chain.append(entry)
+            return copy.deepcopy(entry)
+
+        raise LedgerUnavailable(
+            f"could not allocate a sequence number for encounter {encounter_id!r} "
+            f"after {_MAX_SEQ_ATTEMPTS} attempts: {last_error}"
         )
-        entry.entry_hash = _digest(entry)
-        chain.append(entry)
-        return copy.deepcopy(entry)
 
 
 def timeline(encounter_id: str) -> list[Entry]:
     """Every entry for an encounter, in the order it was written."""
     with _lock:
-        return [copy.deepcopy(e) for e in _entries.get(encounter_id, [])]
+        return [copy.deepcopy(e) for e in _chain(encounter_id)]
 
 
 def latest(encounter_id: str, model: str | None = None) -> Entry | None:
     """The most recent entry, optionally for one model. ``None`` if there is
     nothing to return, which is not an error."""
     with _lock:
-        chain = _entries.get(encounter_id, [])
+        chain = _chain(encounter_id)
         for entry in reversed(chain):
             if model is None or entry.model == model:
                 return copy.deepcopy(entry)
@@ -212,7 +364,7 @@ def verify(encounter_id: str) -> VerifyResult:
     with, and treating absence as failure would make the result meaningless.
     """
     with _lock:
-        chain = _entries.get(encounter_id, [])
+        chain = _chain(encounter_id)
         expected_prev: str | None = None
         for i, entry in enumerate(chain, start=1):
             if entry.seq != i:

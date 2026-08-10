@@ -473,6 +473,13 @@ def _apply_threshold_opt(art: dict, probs: np.ndarray) -> tuple[int, float]:
     return esi_level, confidence
 
 
+# Coverage a conformal set is assumed to hold at when the artifacts do not record
+# the calibration target. Retraining should write `conformal_coverage` into
+# artifacts.pkl so this is never used; until then, every output that falls back
+# to it says so in `conformal_coverage_source`.
+DEFAULT_CONFORMAL_COVERAGE = 0.90
+
+
 def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
     art = _load()
     if art is None:
@@ -493,6 +500,18 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
 
         # Conformal prediction set
         q_hat = float(art.get("conformal_q_hat_noisy", art.get("conformal_q_hat", 0.5)))
+        # What coverage level was this set calibrated to hold at?
+        #
+        # The artifacts store q_hat and not the alpha it was calibrated against,
+        # so for existing artifacts that number is genuinely unknown here. A
+        # prediction set is only a claim if it says what it claims, so rather
+        # than quietly asserting 90%, the output carries where the figure came
+        # from. `declared_default` means nobody wrote the calibration target
+        # down; it is a placeholder, not a measurement, and anything reading it
+        # should treat it as such.
+        coverage = art.get("conformal_coverage")
+        coverage_source = "calibrated_artifact" if coverage is not None else "declared_default"
+        coverage = float(coverage) if coverage is not None else DEFAULT_CONFORMAL_COVERAGE
         conformal_set = [int(i + 1) for i, p in enumerate(probs) if (1 - p) <= q_hat]
         if not conformal_set:
             conformal_set = [esi_level]
@@ -508,6 +527,8 @@ def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:
             "probabilities": {str(i + 1): float(p) for i, p in enumerate(probs)},
             "conformal_set": conformal_set,
             "conformal_q_hat": q_hat,
+            "conformal_coverage": coverage,
+            "conformal_coverage_source": coverage_source,
             "top_features": top_features,
             "source": source,
             "model_metrics": {

@@ -7,6 +7,8 @@ on the next clinician decision (accept/edit/reject) via /override.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import base64
 import logging
 from typing import Any
@@ -16,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from db import storage
 from lib import provenance, tenancy
+from services import encounter_ledger
 from lib.auth import audit, require_clinician
 from services import (
     ambient_scribe,
@@ -467,6 +470,34 @@ def ai_override(
         diff_chars=body.diff_chars,
         notes=body.notes,
     )
+    # The same decision, on the encounter's append-only timeline. provenance
+    # keeps an in-memory list for accept-rate metrics; the ledger is the record
+    # that has to still be there, and still be checkable, in fourteen weeks when
+    # somebody asks what happened to this patient and why.
+    #
+    # A clinician decision is an event, not a prediction: it has no coverage
+    # rate, and the ledger exempts events from the uncertainty requirement for
+    # exactly that reason.
+    try:
+        encounter_ledger.record(
+            encounter_id=body.patient_id,
+            model="event",
+            model_version="clinician",
+            observed_at=datetime.now(timezone.utc),
+            inputs={"model_name": body.model_name, "purpose": body.purpose},
+            output={
+                "decision": body.decision,
+                "clinician_id": caller.get("clinician_id", "unknown"),
+                "diff_chars": body.diff_chars,
+                "notes": body.notes,
+            },
+        )
+    except encounter_ledger.LedgerUnavailable:
+        # The override itself has already been accepted and recorded by
+        # provenance. Failing the clinician's request because the timeline write
+        # failed would turn a record-keeping outage into a care interruption,
+        # which is the same trade COMP-002 refuses to make.
+        log.exception("could not append override to the encounter ledger")
     return {"ok": True}
 
 

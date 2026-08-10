@@ -19,7 +19,8 @@ from lib.config import (
 from db import storage
 from routers import (
     admin, appointments, auth, care_ops, cds_hooks_router, clinical_ai, ehr, ehr_auth,
-    ehr_copilot, governance, hospitals, identity, insurance, intake, notes, onboarding,
+    ehr_copilot, encounters, governance, hospitals, identity, insurance, intake, notes,
+    onboarding,
     pain_flag, patients, prescriptions, public, sms as sms_router, transcribe, triage,
     voice, wave4, workflows,
 )
@@ -137,6 +138,7 @@ if settings.solace_mode == "local":
 # would otherwise match (with hospital_id="auth", mrn="vendors") and require auth.
 app.include_router(ehr_auth.router)
 app.include_router(identity.router, prefix="/api/{hospital_id}", tags=["identity"])
+app.include_router(encounters.router, prefix="/api/{hospital_id}", tags=["encounters"])
 app.include_router(appointments.router, prefix="/api/{hospital_id}", tags=["appointments"])
 app.include_router(sms_router.router, prefix="/api/{hospital_id}", tags=["sms"])
 app.include_router(transcribe.router, prefix="/api/{hospital_id}", tags=["transcribe"])
