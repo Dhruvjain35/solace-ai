@@ -15,6 +15,7 @@ import logging
 import pickle
 import re
 from functools import lru_cache
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -478,6 +479,44 @@ def _apply_threshold_opt(art: dict, probs: np.ndarray) -> tuple[int, float]:
 # artifacts.pkl so this is never used; until then, every output that falls back
 # to it says so in `conformal_coverage_source`.
 DEFAULT_CONFORMAL_COVERAGE = 0.90
+
+
+@lru_cache(maxsize=1)
+def model_version() -> tuple[str, str]:
+    """Which model produced a score. Returns (version, how_it_was_derived).
+
+    The ledger refuses an entry that cannot name its model, and wiring triage
+    into it found that nothing here had a version: not artifacts.pkl, not
+    predict()'s output, nowhere. For a shadow programme that is not a formality.
+    The week-14 claim is a comparison between what Solace said and what the team
+    did, and if a retrain lands mid-programme with no entry recording which model
+    was speaking, the report averages two systems and presents one number.
+
+    A content hash rather than a hand-maintained string, because a version
+    somebody has to remember to bump is a version that eventually lies. A digest
+    of the bytes that produced the score cannot: retrain and forget, and the
+    identity changes anyway.
+
+    A version the artifacts declare for themselves wins, because "v7-sepsis-recal"
+    means something to a person and "sha256:4f2a..." does not. Which of the two
+    it got is returned alongside, so nobody has to work it out later.
+    """
+    art = _load()
+    if art is None:
+        return "no-artifacts", "absent"
+    declared = art.get("model_version") if isinstance(art, dict) else None
+    if declared:
+        return str(declared), "declared"
+
+    path = MODELS_DIR / "artifacts.pkl"
+    try:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    except OSError:
+        # Loaded from somewhere else (the /tmp cache, or an in-test stub). The
+        # score is still real, so say what is true rather than inventing a
+        # version or refusing to record it.
+        return "unhashable-artifacts", "absent"
+    return f"sha256:{digest}", "content_hash"
 
 
 def predict(patient: dict, vitals: dict) -> dict[str, Any] | None:

@@ -7,6 +7,7 @@ ESI + conformal set + top features on the patient.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -16,7 +17,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from db import storage
 from lib import tenancy
 from lib.auth import audit, require_clinician
-from services import triage_ml
+from services import encounter_ledger, triage_ml
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -73,6 +76,46 @@ def refine_triage(
         "measured_vitals": json.dumps({k: v for k, v in vitals.items() if v is not None}),
     }
     storage.update_patient(patient_id, updates)
+
+    # The score, on the encounter's append-only timeline.
+    #
+    # This is the entry the shadow programme is actually made of. "Solace flagged
+    # this patient at 22 minutes and the team recognised it at 4 hours 10" is a
+    # claim about two rows here, so what goes in has to be enough to defend it
+    # later: which model, which version, what it saw, what it said, and how sure
+    # it was. `observed_at` is when the vitals were taken, not when we wrote the
+    # row, because the 22 minutes is measured from the former.
+    model_version, version_source = triage_ml.model_version()
+    try:
+        encounter_ledger.record(
+            encounter_id=patient_id,
+            model="triage_ml",
+            model_version=model_version,
+            observed_at=datetime.now(timezone.utc),
+            inputs={k: v for k, v in vitals.items() if v is not None},
+            output={
+                "esi_level": result["esi_level"],
+                "probabilities": result["probabilities"],
+                "top_features": result["top_features"],
+                "source": result["source"],
+                "previous_esi_level": patient.get("esi_level"),
+            },
+            uncertainty={
+                "coverage": result.get("conformal_coverage"),
+                # Says whether that coverage was measured during calibration or
+                # is a declared placeholder. Without it the ledger would assert a
+                # guarantee nobody has established.
+                "coverage_source": result.get("conformal_coverage_source"),
+                "conformal_set": result["conformal_set"],
+                "confidence": result["confidence"],
+                "model_version_source": version_source,
+            },
+        )
+    except encounter_ledger.LedgerUnavailable:
+        # The score is already on the patient record and in front of the
+        # clinician. Failing the request because the timeline write failed would
+        # turn a record-keeping outage into a care interruption.
+        log.exception("could not append refined triage to the encounter ledger")
 
     # Fire the esi.refined workflow trigger so admins can audit / alert on upticks.
     from services.workflows import engine as _wf  # noqa: PLC0415
