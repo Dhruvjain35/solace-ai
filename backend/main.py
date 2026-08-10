@@ -180,42 +180,102 @@ app.include_router(voice.router)
 _mangum = Mangum(app, lifespan="off")
 
 
+# A warm ping is an optimisation, and an optimisation that can consume the whole
+# request budget is not one. Before this, every warmup ran to the 60-second Lambda
+# timeout — matplotlib rebuilding its font cache on a read-only filesystem, pulled
+# in by unpickling artifacts.pkl. A timeout is a failure, so Lambda retried twice,
+# turning 360 scheduled pings a day into 1,080 minute-long invocations at 2 GB.
+# Eighteen hours of billed compute daily, and since it never completed, it never
+# warmed anything either.
+WARMUP_BUDGET_SECONDS = 20.0
+
+
+def _warmup_budget(context) -> float:
+    """How long the warm path may take: the standing budget, or less if Lambda
+    says there is less time left than that."""
+    remaining = getattr(context, "get_remaining_time_in_millis", None)
+    if remaining is None:
+        return WARMUP_BUDGET_SECONDS
+    try:
+        # Leave a second to serialise a response rather than being killed mid-write.
+        return max(0.1, min(WARMUP_BUDGET_SECONDS, remaining() / 1000.0 - 1.0))
+    except Exception:  # noqa: BLE001
+        return WARMUP_BUDGET_SECONDS
+
+
+def _run_warmup(budget: float) -> tuple[bool, str | None]:
+    """Load the artifacts and run one dry prediction, giving up after ``budget``.
+
+    Runs on a daemon thread and joins with a timeout, rather than checking a
+    deadline between steps. Checking between steps bounds the gaps and not the
+    steps, which is no use at all here: the call that hung in production was
+    ``_load()`` itself, and it never came back to be checked.
+
+    The thread is not killed — Python cannot — but Lambda freezes the container
+    the moment the handler returns, so the runaway work freezes with it and stops
+    being billed. Billing follows the handler, not the thread.
+
+    Returns (ml_ok, ml_error). The deploy smoke test reads these to catch broken
+    imports and missing artifacts, so giving up is reported rather than dressed
+    up as success.
+    """
+    import threading  # noqa: PLC0415
+
+    outcome: dict[str, tuple[bool, str | None]] = {}
+
+    def work() -> None:
+        try:
+            from services import triage_ml  # noqa: PLC0415
+
+            art = triage_ml._load()
+            if art is None:
+                outcome["r"] = (False, "artifacts_missing")
+                return
+            dry_patient = {
+                "patient_id": "warm",
+                "transcript": "chest pain",
+                "medical_info": {"age": 40, "sex": "male", "conditions": ["Hypertension"]},
+                "language": "en",
+            }
+            dry_vitals = {
+                "systolic_bp": 120, "diastolic_bp": 80, "heart_rate": 80,
+                "respiratory_rate": 16, "temperature_c": 37.0, "spo2": 98,
+                "gcs_total": 15, "pain_score": 3, "mental_status": "alert",
+            }
+            result = triage_ml.predict(dry_patient, dry_vitals)
+            ok = result is not None and result.get("esi_level") in {1, 2, 3, 4, 5}
+            outcome["r"] = (ok, None if ok else "predict_returned_invalid")
+        except Exception as e:  # noqa: BLE001
+            outcome["r"] = (False, f"{type(e).__name__}: {e}")
+
+    thread = threading.Thread(target=work, daemon=True, name="warmup")
+    thread.start()
+    thread.join(timeout=budget)
+    if thread.is_alive():
+        return False, f"warmup_exceeded_budget_after_{budget:.0f}s"
+    return outcome.get("r", (False, "warmup_produced_no_result"))
+
+
 def handler(event, context):
     """Lambda entry point. Warm pings pre-load the ML model AND run a dry prediction
     so the code path is fully JIT-warmed — first real user gets pure compute time.
     The warmup response reports whether the ML path succeeded, which our deploy smoke
     test checks so broken imports / missing artifacts fail the deploy."""
     if isinstance(event, dict) and (event.get("warmup") or event.get("source") == "aws.events"):
-        ml_ok = False
-        ml_error: str | None = None
-        try:
-            from services import triage_ml  # noqa: PLC0415
-
-            art = triage_ml._load()
-            if art is None:
-                ml_error = "artifacts_missing"
-            else:
-                dry_patient = {
-                    "patient_id": "warm",
-                    "transcript": "chest pain",
-                    "medical_info": {"age": 40, "sex": "male", "conditions": ["Hypertension"]},
-                    "language": "en",
-                }
-                dry_vitals = {
-                    "systolic_bp": 120, "diastolic_bp": 80, "heart_rate": 80,
-                    "respiratory_rate": 16, "temperature_c": 37.0, "spo2": 98,
-                    "gcs_total": 15, "pain_score": 3, "mental_status": "alert",
-                }
-                result = triage_ml.predict(dry_patient, dry_vitals)
-                ml_ok = result is not None and result.get("esi_level") in {1, 2, 3, 4, 5}
-                if not ml_ok:
-                    ml_error = "predict_returned_invalid"
-        except Exception as e:  # noqa: BLE001
-            ml_error = f"{type(e).__name__}: {e}"
         import json as _json  # noqa: PLC0415
+        import time as _time  # noqa: PLC0415
 
+        budget = _warmup_budget(context)
+        started = _time.monotonic()
+        try:
+            ml_ok, ml_error = _run_warmup(budget)
+        except Exception as e:  # noqa: BLE001
+            ml_ok, ml_error = False, f"{type(e).__name__}: {e}"
         return {
             "statusCode": 200,
-            "body": _json.dumps({"warm": True, "ml_ok": ml_ok, "ml_error": ml_error}),
+            "body": _json.dumps({
+                "warm": True, "ml_ok": ml_ok, "ml_error": ml_error,
+                "elapsed_ms": int((_time.monotonic() - started) * 1000),
+            }),
         }
     return _mangum(event, context)

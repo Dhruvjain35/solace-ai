@@ -16,6 +16,23 @@ COPY requirements-lambda.txt /tmp/requirements-lambda.txt
 RUN pip install --no-cache-dir -r /tmp/requirements-lambda.txt \
     && rm -f /tmp/requirements-lambda.txt
 
+# Matplotlib arrives transitively (shap and catboost both pull it in, and
+# unpickling artifacts.pkl imports them). On a read-only Lambda filesystem it
+# cannot write its font cache to $HOME, so on every cold start it logged
+#
+#   mkdir -p failed for path /home/sbx_user1051/.config/matplotlib: Read-only file system
+#   Matplotlib created a temporary cache directory at /tmp/matplotlib-...
+#
+# and then rebuilt the font cache from scratch. That was the last thing in the
+# log before every single warmup invocation hit the 60-second timeout.
+#
+# Point it at a writable path and build the cache once, here, so it is baked into
+# the image instead of reconstructed on every cold start.
+ENV MPLCONFIGDIR=/tmp/matplotlib
+RUN MPLCONFIGDIR=/var/task/.mplcache python -c "\
+import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot" 2>/dev/null \
+    || echo "matplotlib not installed in this image — nothing to pre-cache"
+
 # App code
 COPY backend/main.py ${LAMBDA_TASK_ROOT}/
 COPY backend/lib ${LAMBDA_TASK_ROOT}/lib
