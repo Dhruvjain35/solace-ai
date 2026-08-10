@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LedgerIsAppendOnly",
+      "Effect": "Deny",
+      "Action": [
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PartiQLUpdate",
+        "dynamodb:PartiQLDelete"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:704229156617:table/solace-encounter-ledger",
+        "arn:aws:dynamodb:us-east-1:704229156617:table/solace-encounter-ledger/index/*"
+      ]
+    },
+    {
+      "Sid": "LedgerTableCannotBeDropped",
+      "Effect": "Deny",
+      "Action": [
+        "dynamodb:DeleteTable",
+        "dynamodb:DisableKinesisStreamingDestination",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:UpdateTimeToLive"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:704229156617:table/solace-encounter-ledger"
+      ]
+    }
+  ]
+}

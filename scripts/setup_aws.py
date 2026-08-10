@@ -156,8 +156,41 @@ def setup_tables() -> None:
             }
         ],
     )
+    # The encounter ledger (CONSTITUTION COMP-002, and the spine of the shadow
+    # programme). Composite key: one partition per encounter, sequence as the
+    # range key so a query returns the chain already in order.
+    #
+    # Deliberately NO TTL on this table. Every other transient table here gets
+    # one; this is the record that has to still be there in six years when
+    # somebody asks what the system decided and when.
+    #
+    # Point-in-time recovery is on below, because the append-only guarantee
+    # protects against entries being edited, not against the table being
+    # dropped.
+    _create(
+        "solace-encounter-ledger",
+        AttributeDefinitions=[
+            {"AttributeName": "encounter_id", "AttributeType": "S"},
+            {"AttributeName": "seq", "AttributeType": "N"},
+        ],
+        KeySchema=[
+            {"AttributeName": "encounter_id", "KeyType": "HASH"},
+            {"AttributeName": "seq", "KeyType": "RANGE"},
+        ],
+    )
     _wait(["solace-patients", "solace-hospitals", "solace-prescriptions", "solace-notes",
-           "solace-calls", "solace-appointments"])
+           "solace-calls", "solace-appointments", "solace-encounter-ledger"])
+
+    print("Point-in-time recovery:")
+    for tbl in ("solace-encounter-ledger",):
+        try:
+            ddb.update_continuous_backups(
+                TableName=tbl,
+                PointInTimeRecoverySpecification={"PointInTimeRecoveryEnabled": True},
+            )
+            print(f"  [ok]    PITR enabled on {tbl}")
+        except ClientError as e:
+            print(f"  [warn]  PITR on {tbl}: {e.response['Error']['Code']}")
 
     print("Enabling TTL:")
     for tbl, attr in [("solace-patients", "ttl"), ("solace-calls", "ttl")]:
