@@ -111,10 +111,19 @@ def refine_triage(
                 "model_version_source": version_source,
             },
         )
-    except encounter_ledger.LedgerUnavailable:
+    except (encounter_ledger.LedgerUnavailable, encounter_ledger.MissingUncertainty):
         # The score is already on the patient record and in front of the
         # clinician. Failing the request because the timeline write failed would
         # turn a record-keeping outage into a care interruption.
+        #
+        # MissingUncertainty is caught here too, and deliberately. It is a
+        # ValueError, so before this it would have escaped as a 500 on a live
+        # clinician endpoint. The coverage figure above is
+        # `result.get("conformal_coverage")`, so the only thing standing between
+        # a malformed prediction and a failed request was predict() happening to
+        # populate that key — a coupling this call site cannot see and does not
+        # control. The log.exception keeps the bug loud without making it the
+        # clinician's problem.
         log.exception("could not append refined triage to the encounter ledger")
 
     # Fire the esi.refined workflow trigger so admins can audit / alert on upticks.

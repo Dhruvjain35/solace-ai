@@ -173,18 +173,44 @@ def _persist(entry: Entry) -> None:
 
 
 def _load_all(encounter_id: str) -> list[Entry]:
-    """Every persisted entry for an encounter, ordered by sequence."""
+    """Every persisted entry for an encounter, ordered by sequence.
+
+    Paginated, and it has to be. DynamoDB caps a Query response at 1MB and
+    reports the truncation only by returning ``LastEvaluatedKey`` — a caller
+    that ignores it gets a prefix and no error. Every entry here carries its
+    inputs, its output and a SHAP attribution as JSON, so a long encounter
+    reaches 1MB on a timescale that matters: a patient scored every five
+    minutes generates ~288 entries a day, and a boarding patient is exactly the
+    population the under-triage number is about.
+
+    The failure that produced was silent in both directions. ``record`` derives
+    the next sequence from ``len(chain) + 1``, so a truncated read allocates a
+    number that already exists; the conditional put rejects it; it retries eight
+    times against the same truncated prefix and raises LedgerUnavailable. The
+    encounter is then permanently unwritable. Meanwhile ``verify`` walks the
+    same prefix, finds it internally consistent, and returns ok — so the record
+    stops growing while continuing to report that it is intact.
+    """
     if not _use_dynamo():
         return []
 
     from boto3.dynamodb.conditions import Key  # noqa: PLC0415
 
-    resp = _table().query(
-        KeyConditionExpression=Key("encounter_id").eq(encounter_id),
-        ScanIndexForward=True,
-        ConsistentRead=True,
-    )
-    return [_from_item(i) for i in resp.get("Items", [])]
+    table = _table()
+    items: list[dict[str, Any]] = []
+    kwargs: dict[str, Any] = {
+        "KeyConditionExpression": Key("encounter_id").eq(encounter_id),
+        "ScanIndexForward": True,
+        "ConsistentRead": True,
+    }
+    while True:
+        resp = table.query(**kwargs)
+        items.extend(resp.get("Items", []))
+        last = resp.get("LastEvaluatedKey")
+        if not last:
+            break
+        kwargs["ExclusiveStartKey"] = last
+    return [_from_item(i) for i in items]
 
 
 def _from_item(item: dict[str, Any]) -> Entry:
@@ -263,6 +289,27 @@ def _check_uncertainty(model: str, uncertainty: dict[str, Any] | None) -> None:
             f"model {model!r} supplied an uncertainty without a coverage figure; "
             "a prediction set with no stated coverage is not a calibrated claim"
         )
+    # Presence was the whole check, so {"coverage": None} satisfied it. That is
+    # the rule the ledger rests on being defeated by the value that means "we
+    # did not work it out" — and it would have passed every test in this suite,
+    # because every test supplied a real number. A key whose value is None is
+    # not a stated coverage; it is the absence of one, spelled differently.
+    coverage = uncertainty["coverage"]
+    if coverage is None:
+        raise MissingUncertainty(
+            f"model {model!r} supplied coverage=None; a coverage key with no "
+            "value is not a stated coverage figure"
+        )
+    if not isinstance(coverage, (int, float)) or isinstance(coverage, bool):
+        raise MissingUncertainty(
+            f"model {model!r} supplied a non-numeric coverage {coverage!r}; "
+            "coverage is a probability and has to be a number"
+        )
+    if not 0 < float(coverage) <= 1:
+        raise MissingUncertainty(
+            f"model {model!r} supplied coverage {coverage!r}, which is outside "
+            "(0, 1]; a coverage figure outside that range is not a probability"
+        )
 
 
 def record(
@@ -299,12 +346,18 @@ def record(
     with _lock:
         chain = _chain(encounter_id)
         last_error: Exception | None = None
+        # Tracked separately from len(chain) so that stepping past a contended
+        # number never requires putting something in the chain to make it longer.
+        # The previous code advanced the sequence by appending the very entry the
+        # store had just rejected, which is why the chain could disagree with the
+        # store — see the SequenceTaken handler below.
+        next_seq = len(chain) + 1
 
         for _attempt in range(_MAX_SEQ_ATTEMPTS):
             prev = chain[-1] if chain else None
             entry = Entry(
                 encounter_id=encounter_id,
-                seq=len(chain) + 1,
+                seq=next_seq,
                 model=model,
                 model_version=model_version,
                 observed_at=observed_at,
@@ -324,8 +377,44 @@ def record(
                 # on top of whatever actually landed, rather than assuming our
                 # own next number is free — their entry is now our prev_hash.
                 last_error = e
-                chain = _load_all(encounter_id) or chain + [entry]
+                if not _use_dynamo():
+                    # No durable store to reconcile against: in local mode the
+                    # in-memory chain IS the store, and `_load_all` returns []
+                    # by definition rather than because anything is wrong. Step
+                    # past the contended number and rebuild. Nothing is appended
+                    # to the chain, so the rejected entry is discarded rather
+                    # than recorded — which is the distinction the old code lost.
+                    next_seq += 1
+                    continue
+                reread = _load_all(encounter_id)
+                if not reread:
+                    # An empty re-read here is a contradiction, and it used to be
+                    # papered over with `_load_all(...) or chain + [entry]`. That
+                    # fallback spliced `entry` — which by definition did NOT
+                    # persist, because the conditional put just rejected it — into
+                    # the in-memory chain as though it had. The consequences were
+                    # exactly backwards from what a ledger is for: this process
+                    # went on reporting the entry as present and verify() returned
+                    # ok, while the store held one fewer row. After the next cold
+                    # start the chain reloads from DynamoDB, the fabricated entry
+                    # is gone, and verify() reports a sequence gap — the ledger
+                    # accusing itself of tampering over a record nobody touched.
+                    #
+                    # SequenceTaken means a row exists at that sequence. A read
+                    # that comes back empty therefore is not telling the truth,
+                    # and the only safe response to an untrustworthy read is to
+                    # refuse the write. A caller that gets LedgerUnavailable knows
+                    # the entry is not recorded. A caller that got the old
+                    # behaviour was told it was.
+                    raise LedgerUnavailable(
+                        f"sequence {entry.seq} for encounter {encounter_id!r} was "
+                        "taken, but re-reading the chain returned nothing; the "
+                        "store is not answering consistently and this entry has "
+                        "not been recorded"
+                    ) from e
+                chain = reread
                 _entries[encounter_id] = chain
+                next_seq = len(chain) + 1
                 continue
             except Exception as e:  # noqa: BLE001
                 raise LedgerUnavailable(
