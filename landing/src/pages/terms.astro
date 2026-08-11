@@ -177,7 +177,15 @@ const clauses: Clause[] = [
     blocks: [
       {
         kind: 'p',
-        html: 'Questions about these Terms? Email <a href="mailto:legal@solace.health"><strong>legal@solace.health</strong></a>. We respond within one business day.',
+        // INTERIM ADDRESS. Previously legal@solace.health -- a domain we do not own.
+        // solace.health is an unrelated healthcare company with live MX records, so
+        // legal notices served on Solace via these Terms were being delivered to a
+        // third party. A notice provision that routes to someone else is worse than
+        // no notice provision, because it looks like service was effected.
+        //
+        // mysolaceclinic.com has no MX yet. Replace with legal@mysolaceclinic.com as
+        // soon as mail is configured. See HANDOFF.md P0-2.
+        html: 'Questions about these Terms? Email <a href="mailto:contacthelp.solace@gmail.com"><strong>contacthelp.solace@gmail.com</strong></a>. We respond within one business day.',
       },
       {
         kind: 'note',

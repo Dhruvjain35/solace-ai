@@ -198,7 +198,18 @@ const clauses: Clause[] = [
     blocks: [
       {
         kind: 'p',
-        html: 'Questions about this policy or our data practices? Email <a href="mailto:privacy@solace.health"><strong>privacy@solace.health</strong></a>. We respond within one business day.',
+        // INTERIM ADDRESS. This previously read privacy@solace.health, which is a
+        // domain we do not own -- solace.health belongs to an unrelated healthcare
+        // company (a patient-advocacy service) and has live Google Workspace MX
+        // records, so every privacy inquiry sent from this page was deliverable to
+        // them. Privacy complaints routinely contain the very information the
+        // complaint is about, so this was a disclosure channel, not just a dead link.
+        //
+        // mysolaceclinic.com has NO MX records, so it cannot receive mail yet. Until
+        // Workspace is stood up on it, this points at the one mailbox we are
+        // confirmed to control. Replace with privacy@mysolaceclinic.com the moment
+        // mail is configured. See HANDOFF.md P0-2.
+        html: 'Questions about this policy or our data practices? Email <a href="mailto:contacthelp.solace@gmail.com"><strong>contacthelp.solace@gmail.com</strong></a>. We respond within one business day.',
       },
       {
         kind: 'note',
