@@ -142,24 +142,13 @@ CARDS: dict[str, dict[str, Any]] = {
         "intended_population": "Patients presenting to a US emergency department for nurse-driven triage, all ages. Contraindicated as the sole basis for triage of psychiatric-only presentations and of high-acuity neonates (<2y), where representation is thin.",
         "intended_output": "An Emergency Severity Index (ESI 1-5) point estimate plus a conformal prediction set at 90% / 95% coverage and SHAP feature attributions. Intended to inform, never replace, the triage nurse's acuity assignment.",
         "model_type": "Gradient-boosted decision trees (LightGBM 5-fold ensemble) with a CatBoost + XGBoost stacked layer; SHAP-based feature attribution.",
-        "training_data": {
-            "source": "Triagegeist Kaggle clinical pipeline (publicly published) — 1.2M de-identified triage encounters",
-            "label": "Discharge ESI from accredited US ED encounters",
-            "demographics": "Adult and pediatric mix; 53% female; multi-payer; geographic mix US",
-        },
-        "data_provenance": {
-            "origin": "Triagegeist Kaggle clinical pipeline — publicly published, de-identified ED triage encounters.",
-            "lineage": "Raw encounters -> HIPAA Safe Harbor de-identification (upstream) -> Triagegeist feature engineering -> Solace 5-fold ensemble training.",
-            "consent_basis": "Secondary use of de-identified data; no individually identifiable PHI retained, so HIPAA authorization is not implicated.",
-            "time_range": "Historical retrospective encounters; not continuously refreshed in v1.2.",
-            "known_gaps": "US-only; thin high-acuity peds (<2y); psychiatric-only encounters under-represented.",
-        },
+        # training_data, data_provenance, performance and synthetic_data_caveat
+        # are NOT written here. They are filled at read time by
+        # _apply_triage_provenance() from the artifact the running model was
+        # loaded from. See that function for why. Anything hand-written in this
+        # block would be a second copy of a fact, and the second copy is the one
+        # that goes stale.
         "risk_tier": "tier_1_high",
-        "performance": {
-            "auroc_overall": 0.94,
-            "macro_f1": 0.78,
-            "within_one_level_accuracy": 0.92,
-        },
         "calibration": "Conformal prediction sets at 90% and 95% coverage",
         "monitoring_plan": {
             "cadence": "Monthly subgroup bias audit (Tier 1); continuous override-rate tracking via /api/governance/override-metrics.",
@@ -167,11 +156,12 @@ CARDS: dict[str, dict[str, Any]] = {
             "triggers": "Subgroup FNR disparate-impact ratio < 0.80, macro-F1 drop > 3 points, or sustained override (reject) rate > 20% triggers model-owner review.",
             "rollback": "Prior ensemble version is retained and hot-swappable if a shipped version regresses a subgroup FNR.",
         },
-        "synthetic_data_caveat": "No synthetic or generative augmentation used; the ensemble trains exclusively on real de-identified encounters. Class imbalance handled by reweighting, not by synthetic minority oversampling.",
         "limitations": [
+            "Not clinically validated. No prospective or retrospective evaluation against real patient outcomes has been completed.",
             "Trained on US ED data; transfer to non-US triage systems unverified",
             "Limited high-acuity peds (<2y) representation",
             "Not validated for psychiatric-only encounters",
+            "On real free-text the ensemble can over-default to the modal class (ESI 3). A deterministic safety floor (services/triage_rules.py) can only raise acuity, never lower it.",
         ],
         "fairness": {
             "fnr_by_group_under_audit": True,
@@ -528,6 +518,123 @@ CARDS: dict[str, dict[str, Any]] = {
 }
 
 
+# --------------------------------------------------------------------------
+# Provenance overlay — the triage card describes the model that is running.
+# --------------------------------------------------------------------------
+TRIAGE_CARD_ID = "triage_lightgbm"
+
+
+def _apply_triage_provenance(card: dict[str, Any]) -> dict[str, Any]:
+    """Fill the triage card's training-data claims from the loaded artifact.
+
+    The card used to carry a hand-written block saying the ensemble trained on
+    "1.2M de-identified triage encounters" and that "no synthetic or generative
+    augmentation" was used. The artifact the model actually loads from records
+    "Kaggle Triagegeist (80k synthetic ED encounters)". The card was wrong, and
+    it was wrong in the one document written specifically to be read by people
+    deciding whether to trust the model.
+
+    Two ways to fix that. Correct the string, or remove the possibility. A
+    corrected string is one retrain away from being wrong again, and nothing in
+    CI would notice, because a hand-written claim has nothing to disagree with.
+    So the claim is derived instead: this reads services.triage_ml.provenance(),
+    which reads the artifact that predict() scores against. If the shipped model
+    changes, the card changes with it, and if the two ever disagree the test in
+    tests/services/test_model_card_provenance.py fails.
+
+    The import is local. model_cards is served at /api/model-cards without auth
+    and must stay importable on a container where the 340MB artifacts were never
+    staged; triage_ml pulls in pandas and numpy at module scope.
+    """
+    try:
+        from services import triage_ml
+
+        prov = triage_ml.provenance()
+        version, version_source = triage_ml.model_version()
+    except Exception:  # pragma: no cover - defensive; card must still render
+        prov = {"known": False, "source": "provenance_unavailable"}
+        version, version_source = "unknown", "absent"
+
+    enriched = dict(card)
+    enriched["model_version_running"] = {"version": version, "derived_from": version_source}
+
+    if not prov.get("known"):
+        enriched["training_data"] = {
+            "source": None,
+            "status": "unknown",
+            "explanation": (
+                "No model artifact is loaded in this environment, so the training "
+                "corpus cannot be read. This card will not assert a provenance it "
+                "cannot verify. Reason: " + str(prov.get("source", "unknown"))
+            ),
+        }
+        enriched["data_provenance"] = {
+            "origin": None,
+            "status": "unknown",
+            "explanation": "Not asserted. No artifact loaded to read it from.",
+        }
+        enriched["performance"] = {
+            "status": "unknown",
+            "explanation": "Not asserted. No artifact loaded to read metrics from.",
+        }
+        enriched["synthetic_data_caveat"] = (
+            "Unknown in this environment — no artifact loaded. Do not treat the "
+            "absence of a caveat as an assurance that training data was real."
+        )
+        return enriched
+
+    dataset = prov["dataset"]
+    is_synthetic = bool(prov.get("is_synthetic"))
+    metrics = prov.get("metrics", {})
+
+    enriched["training_data"] = {
+        "source": dataset,
+        "label": "Triage acuity (ESI 1-5) as recorded in the source corpus",
+        "read_from": "artifacts.pkl of the loaded model",
+        "is_synthetic": is_synthetic,
+    }
+    enriched["data_provenance"] = {
+        "origin": dataset,
+        "lineage": (
+            "Source corpus -> feature engineering (scripts/train_triage_model.py) "
+            "-> 5-fold stacked ensemble training -> split-conformal calibration."
+        ),
+        "consent_basis": (
+            "Synthetic data. No individually identifiable PHI is implicated, because "
+            "no real patient contributed a record."
+            if is_synthetic
+            else "Secondary use of de-identified data; verify the licence permits "
+            "commercial deployment before shipping a model trained on it."
+        ),
+        "time_range": "Retrospective; not continuously refreshed.",
+        "known_gaps": "US-only; thin high-acuity peds (<2y); psychiatric-only encounters under-represented.",
+        "read_from": "artifacts.pkl of the loaded model",
+    }
+    enriched["performance"] = {
+        **metrics,
+        "measured_on": dataset,
+        "clinically_validated": False,
+        "interpretation": (
+            "These figures are the clean synthetic-data ceiling and do not estimate "
+            "real-patient performance. Published ESI models on real data typically "
+            "reach QWK 0.65-0.85. Treat any figure here as an upper bound that has "
+            "not been earned on real patients."
+            if is_synthetic
+            else "Measured on the source corpus. Not a substitute for prospective "
+            "clinical validation."
+        ),
+    }
+    enriched["synthetic_data_caveat"] = (
+        f"TRAINED ON SYNTHETIC DATA. The corpus is '{dataset}'. No real patient "
+        "record contributed to these weights. The model is not clinically validated "
+        "and must not be represented as a clinical model. A deterministic safety "
+        "floor (services/triage_rules.py) can only raise acuity, never lower it."
+        if is_synthetic
+        else f"Training corpus is '{dataset}'; the artifact does not mark it synthetic."
+    )
+    return enriched
+
+
 def list_cards() -> list[dict[str, Any]]:
     return [
         {
@@ -545,7 +652,7 @@ def get_card(card_id: str) -> dict[str, Any] | None:
     card = CARDS.get(card_id)
     if card is None:
         return None
-    enriched = dict(card)
+    enriched = _apply_triage_provenance(card) if card_id == TRIAGE_CARD_ID else dict(card)
     tier_id = card.get("risk_tier")
     if tier_id:
         enriched["risk_tier_detail"] = RISK_TIERS.get(tier_id)
@@ -736,7 +843,12 @@ def transparency_summary() -> dict[str, Any]:
     tier_counts: dict[str, int] = {t: 0 for t in RISK_TIERS}
     models: list[dict[str, Any]] = []
 
-    for cid, card in CARDS.items():
+    for cid, static_card in CARDS.items():
+        # Read through get_card so the triage row reflects the artifact-derived
+        # provenance rather than the static literal, which deliberately no longer
+        # carries those attributes. Counting the literal would report the triage
+        # model as disclosing fewer attributes than it does.
+        card = get_card(cid) or static_card
         tier = card.get("risk_tier")
         if tier in tier_counts:
             tier_counts[tier] += 1

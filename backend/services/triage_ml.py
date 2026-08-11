@@ -481,6 +481,73 @@ def _apply_threshold_opt(art: dict, probs: np.ndarray) -> tuple[int, float]:
 DEFAULT_CONFORMAL_COVERAGE = 0.90
 
 
+# A dataset string that names synthetic data, matched case-insensitively. The
+# training set is currently Kaggle Triagegeist, which is synthetic; the card has
+# to say so. Matching on the word rather than on the specific dataset name means
+# a future synthetic corpus with a different name is still caught.
+_SYNTHETIC_MARKERS = ("synthetic", "simulated", "generated")
+
+
+@lru_cache(maxsize=1)
+def provenance() -> dict[str, Any]:
+    """What the shipped model was actually trained on, read from the artifact.
+
+    This exists because the model card said something different from the truth.
+    ``model_cards.py`` carried a hand-written ``training_data`` block claiming
+    "1.2M de-identified triage encounters" and "the ensemble trains exclusively
+    on real de-identified encounters", while ``scripts/train_triage_model.py``
+    wrote "Kaggle Triagegeist (80k synthetic ED encounters)" into the artifact it
+    produced. Both statements sat in the repo for months. The one a procurement
+    reviewer reads was the false one.
+
+    So the card no longer holds its own copy. It asks here, and here reads the
+    artifact that the running model was loaded from — the same object ``predict``
+    scores against, so the card cannot describe a model other than the one
+    serving. This is the SEC-002 lesson applied to a compliance artifact: a
+    hand-maintained duplicate of a fact is a fact that eventually goes stale, and
+    the duplicate that goes stale is always the one nobody is scoring against.
+
+    When no artifact is loaded the answer is "unknown", explicitly. A model card
+    that says it does not know what it was trained on is embarrassing. One that
+    invents a number is a false statement in an HTI-1 disclosure, and those are
+    not the same size of problem.
+    """
+    art = _load()
+    if art is None:
+        return {
+            "dataset": None,
+            "known": False,
+            "is_synthetic": None,
+            "metrics": {},
+            "source": "no_artifacts_loaded",
+        }
+
+    dataset = art.get("dataset")
+    if not dataset:
+        return {
+            "dataset": None,
+            "known": False,
+            "is_synthetic": None,
+            "metrics": {},
+            "source": "artifact_declares_no_dataset",
+        }
+
+    dataset = str(dataset)
+    lowered = dataset.lower()
+    metrics = {
+        key: art.get(key)
+        for key in ("oof_qwk", "oof_accuracy", "conformal_q_hat", "conformal_q_hat_noisy")
+        if art.get(key) is not None
+    }
+    return {
+        "dataset": dataset,
+        "known": True,
+        "is_synthetic": any(marker in lowered for marker in _SYNTHETIC_MARKERS),
+        "metrics": metrics,
+        "source": "artifact",
+    }
+
+
 @lru_cache(maxsize=1)
 def model_version() -> tuple[str, str]:
     """Which model produced a score. Returns (version, how_it_was_derived).
