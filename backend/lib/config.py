@@ -103,13 +103,35 @@ settings = _load()
 # the only trustworthy answer to "am I actually deployed", which matters because
 # SOLACE_MODE defaults to "local" and an unset variable is indistinguishable from
 # a developer's machine.
-_LAMBDA_MARKERS = ("AWS_LAMBDA_FUNCTION_NAME", "AWS_EXECUTION_ENV", "AWS_LAMBDA_RUNTIME_API")
+# Set by the Lambda runtime and by nothing else.
+_LAMBDA_ONLY_MARKERS = ("AWS_LAMBDA_FUNCTION_NAME", "AWS_LAMBDA_RUNTIME_API")
+
+# Set by Lambda *and* by other AWS compute — CodeBuild among them. Lambda's value
+# is always prefixed "AWS_Lambda_" (e.g. "AWS_Lambda_python3.12"), so the value
+# discriminates where the bare presence of the name does not.
+_EXECUTION_ENV = "AWS_EXECUTION_ENV"
+_LAMBDA_EXECUTION_ENV_PREFIX = "AWS_Lambda"
 
 
 def is_deployed() -> bool:
+    """True only inside the Lambda runtime.
+
+    This used to treat the presence of AWS_EXECUTION_ENV as proof of Lambda. It
+    is not: CodeBuild sets it too, so `assert_deployment_is_configured` fired
+    during CI and took the whole test suite down at collection with "Refusing to
+    start: this process is running in AWS Lambda". It was never noticed because
+    the CodeBuild project was configured with an inline buildspec that had no
+    test phase, so the tests added in 9a7fb18 had never actually run there.
+
+    Widening a security check until it fires on things that are not the hazard is
+    not extra safety. A guard that blocks the build is a guard somebody deletes
+    in order to ship, and then it protects nothing at all.
+    """
     import os  # noqa: PLC0415
 
-    return any(os.environ.get(m) for m in _LAMBDA_MARKERS)
+    if any(os.environ.get(m) for m in _LAMBDA_ONLY_MARKERS):
+        return True
+    return str(os.environ.get(_EXECUTION_ENV, "")).startswith(_LAMBDA_EXECUTION_ENV_PREFIX)
 
 
 def assert_deployment_is_configured(mode: str) -> None:
