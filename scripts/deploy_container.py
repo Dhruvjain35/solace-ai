@@ -154,10 +154,52 @@ def point_apigw(lambda_arn: str) -> str:
     return endpoint
 
 
+def pin_async_retries() -> None:
+    """Async retries = 0, in code, because the console copy does not survive here.
+
+    Commit 42abe22 attributes the Lambda bill to three things: matplotlib
+    rebuilding its font cache, the warm path having no time budget, and — the
+    multiplier — Lambda's default **two async retries**, which turned 360
+    scheduled pings a day into 1,080 minute-long 2GB invocations.
+
+    Two of those three fixes are in this repo. This one was not: it was applied
+    by hand in the console, and `backend/tests/test_warmup_is_bounded.py` states
+    in its docstring that retries are "now zero for this function" while nothing
+    in the tree makes that true. Two ways it silently reverts:
+
+      * `recreate_function` calls `lam.delete_function` on the Zip->Image path.
+        A deleted function takes its EventInvokeConfig with it, and
+        `create_function` below never set one, so the default 2 comes back.
+      * `point_warmer` calls `put_targets` with the same Id and no RetryPolicy
+        on EVERY deploy, which overwrites any target-level policy set by hand.
+        This is the path that fires today, since the function is already in
+        Image mode — so the erasure is not hypothetical or rare, it happens
+        every time anyone ships.
+
+    So it is set here, on the function, and again on the EventBridge target in
+    `point_warmer`. Both, because they govern different layers and either one
+    alone leaves a gap.
+    """
+    lam.put_function_event_invoke_config(
+        FunctionName=FUNCTION,
+        MaximumRetryAttempts=0,
+        MaximumEventAgeInSeconds=60,
+    )
+    print("  [ok]     async retries pinned to 0, max event age 60s")
+
+
 def point_warmer(lambda_arn: str) -> None:
     events.put_targets(
         Rule=RULE_NAME,
-        Targets=[{"Id": "solace-lambda", "Arn": lambda_arn, "Input": '{"warmup": true}'}],
+        Targets=[{
+            "Id": "solace-lambda",
+            "Arn": lambda_arn,
+            "Input": '{"warmup": true}',
+            # Without this, put_targets erases the console-set policy on every
+            # deploy and restores the 3x multiplier from 42abe22. See
+            # pin_async_retries().
+            "RetryPolicy": {"MaximumRetryAttempts": 0, "MaximumEventAgeInSeconds": 60},
+        }],
     )
     try:
         lam.add_permission(
@@ -198,6 +240,10 @@ def main() -> None:
     print("Lambda (container mode, arm64):")
     lambda_arn = recreate_function(image_uri)
     print(f"  arn: {lambda_arn}")
+    # Immediately after the function exists, and before anything can invoke it
+    # asynchronously. Both branches of recreate_function land here, so a
+    # recreate cannot ship without it.
+    pin_async_retries()
     print()
 
     print("API Gateway → container Lambda:")
