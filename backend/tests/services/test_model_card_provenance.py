@@ -223,3 +223,62 @@ def test_summary_renders_without_an_artifact_present():
     assert summary["model_count"] == len(model_cards.CARDS)
     row = next(m for m in summary["models"] if m["model_id"] == TRIAGE)
     assert row["risk_tier"] == "tier_1_high"
+
+
+# ---------------------------------------------------------------------------
+# The shipped artifact does not describe itself. Production proved it.
+# ---------------------------------------------------------------------------
+
+BARE_TRIAGEGEIST_PROV = {
+    "dataset": "triagegeist",
+    "known": True,
+    "is_synthetic": True,
+    "synthetic_basis": "known_corpus",
+    "corpus_note": "Kaggle Triagegeist — a synthetic ED triage corpus.",
+    "metrics": {"oof_qwk": 0.9999},
+    "source": "artifact",
+}
+
+
+def test_a_bare_corpus_name_is_still_disclosed_as_synthetic(rendered):
+    """The artifact in S3 records only "triagegeist".
+
+    Word-matching found nothing, so the first version of this fix published
+    "the artifact does not mark it synthetic" — true about the artifact, and
+    useless to the reader. Recognising the named corpus closes that.
+    """
+    card = rendered(BARE_TRIAGEGEIST_PROV)
+    caveat = card["synthetic_data_caveat"]
+    assert "TRAINED ON SYNTHETIC DATA" in caveat
+    assert card["training_data"]["is_synthetic"] is True
+
+
+def test_the_card_says_how_it_concluded_synthetic(rendered):
+    """A reader must be able to audit the conclusion, not just accept it."""
+    card = rendered(BARE_TRIAGEGEIST_PROV)
+    assert "does not say 'synthetic'" in card["synthetic_data_caveat"]
+
+
+def test_absence_of_a_marker_is_never_phrased_as_reassurance(rendered):
+    """The non-synthetic branch must not read as a clean bill of health."""
+    card = rendered({
+        "dataset": "Partner health system LDS 2024-2026",
+        "known": True,
+        "is_synthetic": False,
+        "synthetic_basis": None,
+        "corpus_note": None,
+        "metrics": {},
+        "source": "artifact",
+    })
+    caveat = card["synthetic_data_caveat"]
+    assert "not an attestation" in caveat
+    assert "confirm provenance" in caveat
+
+
+def test_the_real_shipped_dataset_string_is_recognised():
+    """Guards the mapping itself against the live artifact's actual value."""
+    from services import triage_ml
+
+    assert any(
+        key in "triagegeist" for key in triage_ml._KNOWN_SYNTHETIC_CORPORA
+    ), "the corpus string the deployed artifact actually carries must be recognised"

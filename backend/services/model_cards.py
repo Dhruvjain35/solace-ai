@@ -624,14 +624,34 @@ def _apply_triage_provenance(card: dict[str, Any]) -> dict[str, Any]:
             "clinical validation."
         ),
     }
-    enriched["synthetic_data_caveat"] = (
-        f"TRAINED ON SYNTHETIC DATA. The corpus is '{dataset}'. No real patient "
-        "record contributed to these weights. The model is not clinically validated "
-        "and must not be represented as a clinical model. A deterministic safety "
-        "floor (services/triage_rules.py) can only raise acuity, never lower it."
-        if is_synthetic
-        else f"Training corpus is '{dataset}'; the artifact does not mark it synthetic."
-    )
+    if is_synthetic:
+        note = prov.get("corpus_note")
+        basis = prov.get("synthetic_basis")
+        enriched["synthetic_data_caveat"] = (
+            f"TRAINED ON SYNTHETIC DATA. The corpus is '{dataset}'. "
+            + (f"{note} " if note else "")
+            + "No real patient record contributed to these weights. The model is "
+            "not clinically validated and must not be represented as a clinical "
+            "model. A deterministic safety floor (services/triage_rules.py) can "
+            "only raise acuity, never lower it."
+            + (
+                " (The artifact's own dataset string does not say 'synthetic'; "
+                "this is recorded against the named corpus.)"
+                if basis == "known_corpus"
+                else ""
+            )
+        )
+    else:
+        # Deliberately not phrased as "the artifact does not mark it synthetic".
+        # That reads as a clean bill of health, and the absence of a marker is
+        # not evidence of anything — the shipped artifact's dataset string was
+        # the bare word "triagegeist" and said nothing either way.
+        enriched["synthetic_data_caveat"] = (
+            f"Training corpus is '{dataset}'. It is not recognised as a known "
+            "synthetic corpus and its own metadata does not describe it as "
+            "synthetic. That is not an attestation that the data is real — "
+            "confirm provenance against the corpus itself before relying on it."
+        )
     return enriched
 
 

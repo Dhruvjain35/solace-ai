@@ -497,11 +497,31 @@ def _apply_threshold_opt(art: dict, probs: np.ndarray) -> tuple[int, float]:
 DEFAULT_CONFORMAL_COVERAGE = 0.90
 
 
-# A dataset string that names synthetic data, matched case-insensitively. The
-# training set is currently Kaggle Triagegeist, which is synthetic; the card has
-# to say so. Matching on the word rather than on the specific dataset name means
-# a future synthetic corpus with a different name is still caught.
+# A dataset string that names synthetic data, matched case-insensitively.
+# Matching on the word rather than on a specific dataset name means a future
+# synthetic corpus is caught without anyone remembering to add it here.
 _SYNTHETIC_MARKERS = ("synthetic", "simulated", "generated")
+
+# Corpora known to be synthetic, keyed by a substring of the dataset name.
+#
+# Word-matching alone is not enough, and production proved it. The artifact
+# currently in S3 records its dataset as the bare string "triagegeist" — it was
+# built before scripts/train_triage_model.py:561 started writing the fuller
+# "Kaggle Triagegeist (80k synthetic ED encounters)". So the marker words found
+# nothing and the published card said "the artifact does not mark it synthetic",
+# which is true about the artifact and useless to the person reading it.
+#
+# This is a curated fact about a named public corpus, not a hand-written claim
+# about our model, which is the distinction that matters. Whether Triagegeist is
+# synthetic is checkable by anyone against its Kaggle page and does not change
+# when we retrain. The thing that went wrong before was a claim about *us* that
+# only we could verify and nobody did.
+_KNOWN_SYNTHETIC_CORPORA = {
+    "triagegeist": (
+        "Kaggle Triagegeist — a synthetic ED triage corpus. No real patient "
+        "record contributed to it."
+    ),
+}
 
 
 @lru_cache(maxsize=1)
@@ -555,10 +575,21 @@ def provenance() -> dict[str, Any]:
         for key in ("oof_qwk", "oof_accuracy", "conformal_q_hat", "conformal_q_hat_noisy")
         if art.get(key) is not None
     }
+    by_marker = any(marker in lowered for marker in _SYNTHETIC_MARKERS)
+    known_note = next(
+        (note for key, note in _KNOWN_SYNTHETIC_CORPORA.items() if key in lowered),
+        None,
+    )
     return {
         "dataset": dataset,
         "known": True,
-        "is_synthetic": any(marker in lowered for marker in _SYNTHETIC_MARKERS),
+        "is_synthetic": bool(by_marker or known_note),
+        # How we concluded that, so a reader can audit the conclusion rather
+        # than take it. "known_corpus" means the artifact did not say so itself.
+        "synthetic_basis": (
+            "artifact_string" if by_marker else "known_corpus" if known_note else None
+        ),
+        "corpus_note": known_note,
         "metrics": metrics,
         "source": "artifact",
     }
