@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import threading
 import time
 from dataclasses import dataclass
 
@@ -84,6 +85,29 @@ LIMITS: dict[str, Limit] = {
 MAX_AUDIO_SECONDS = 300  # 5 min per single upload — covers verbose patients
 
 
+# In-memory counters for local mode. Same atomicity guarantee within a process
+# (one lock around the increment) and none across processes, which is the correct
+# trade for a single dev server or a test run.
+_local_counts: dict[str, int] = {}
+_local_lock = threading.Lock()
+
+
+def _use_dynamo() -> bool:
+    return settings.solace_mode == "aws"
+
+
+def _local_add(key: str, units: int) -> int:
+    with _local_lock:
+        _local_counts[key] = _local_counts.get(key, 0) + units
+        return _local_counts[key]
+
+
+def reset_local() -> None:
+    """Clear the in-process counters. For tests and the dev server only."""
+    with _local_lock:
+        _local_counts.clear()
+
+
 def _table():
     import boto3  # noqa: PLC0415
 
@@ -125,6 +149,18 @@ def check_and_consume(
     bucket_end = ((now // BUCKET_SECONDS) + 1) * BUCKET_SECONDS
     key = _bucket_key(identity, action, now)
 
+    if not _use_dynamo():
+        # No DynamoDB in local mode. This function previously called boto3
+        # unconditionally, which had two consequences nobody had looked at:
+        # on a developer machine with credentials the test suite incremented
+        # counters in the *production* solace-quotas table, and anywhere
+        # without permission for that table the except below swallowed the
+        # AccessDenied and returned — so rate limiting was silently off while
+        # every test that did not assert on it still passed.
+        new_count = _local_add(key, units)
+        _enforce(action, limit, identity, new_count, units, bucket_end, now, source_ip)
+        return
+
     try:
         resp = _table().update_item(
             Key={"bucket_key": key},
@@ -143,27 +179,38 @@ def check_and_consume(
         return  # fail-open so infra blips don't break real patients
 
     new_count = int(resp["Attributes"]["count"])
-    if new_count > limit.per_hour:
-        _audit.record(
-            clinician_id=None, clinician_name=None,
-            action=f"abuse.quota_exceeded.{action}",
-            source_ip=source_ip, status_code=429,
-            extra={
-                "identity": identity,
-                "current": new_count,
-                "limit_per_hour": limit.per_hour,
-                "units_added": units,
-            },
-        )
-        wait_seconds = bucket_end - now
-        raise HTTPException(
-            status_code=429,
-            detail=(
-                f"rate limit: {action} capped at {limit.per_hour}/hour — "
-                f"retry in {wait_seconds}s"
-            ),
-            headers={"Retry-After": str(wait_seconds)},
-        )
+    _enforce(action, limit, identity, new_count, units, bucket_end, now, source_ip)
+
+
+def _enforce(action, limit, identity, new_count, units, bucket_end, now, source_ip) -> None:
+    """Audit and raise 429 once a counter is over its hourly cap.
+
+    Shared by the DynamoDB and local paths so the two cannot drift — the
+    behaviour a test observes locally is the behaviour a patient gets in
+    production.
+    """
+    if new_count <= limit.per_hour:
+        return
+    _audit.record(
+        clinician_id=None, clinician_name=None,
+        action=f"abuse.quota_exceeded.{action}",
+        source_ip=source_ip, status_code=429,
+        extra={
+            "identity": identity,
+            "current": new_count,
+            "limit_per_hour": limit.per_hour,
+            "units_added": units,
+        },
+    )
+    wait_seconds = bucket_end - now
+    raise HTTPException(
+        status_code=429,
+        detail=(
+            f"rate limit: {action} capped at {limit.per_hour}/hour — "
+            f"retry in {wait_seconds}s"
+        ),
+        headers={"Retry-After": str(wait_seconds)},
+    )
 
 
 def check_audio_duration(

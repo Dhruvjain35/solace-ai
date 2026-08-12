@@ -80,8 +80,24 @@ def _load() -> dict | None:
         log.warning("triage_ml: artifacts.pkl not present at %s", art_path)
         return None
 
-    with art_path.open("rb") as f:
-        art = pickle.load(f)
+    try:
+        with art_path.open("rb") as f:
+            art = pickle.load(f)
+    except ModuleNotFoundError as e:
+        # Unpickling imports whatever the pickle references, and artifacts.pkl
+        # carries the MLP scalers and the logistic-regression meta-learner — all
+        # sklearn objects. So `pickle.load` needs sklearn even though nothing in
+        # this module imports it.
+        #
+        # The three loaders below each guard their own library with `except
+        # ImportError` so a missing one degrades to a smaller ensemble. This line
+        # had no such guard, which made the module's documented promise —
+        # "falls back to LightGBM-only if full artifacts aren't present, or None
+        # if no artifacts exist at all" — false in the one case that actually
+        # happens: core requirements installed, artifacts present, ML extras not.
+        # That is precisely CI, and it is why the suite could not run there.
+        log.warning("triage_ml: cannot unpickle artifacts without %s", e.name)
+        return None
 
     n_folds = art["n_folds"]
 
